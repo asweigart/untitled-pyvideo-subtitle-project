@@ -1,0 +1,1820 @@
+1
+00:00:00,000 --> 00:00:07,880
+All right, everyone, welcome to my talk.
+
+2
+00:00:07,880 --> 00:00:09,520
+I'm super excited to be speaking here today.
+
+3
+00:00:09,520 --> 00:00:14,920
+This is my first in-person talk in over two years, so hopefully I still remember how to
+
+4
+00:00:14,920 --> 00:00:15,920
+do this.
+
+5
+00:00:15,920 --> 00:00:17,760
+My name is Paul Gansel.
+
+6
+00:00:17,760 --> 00:00:19,680
+You may know me from some of my open source work.
+
+7
+00:00:19,680 --> 00:00:21,040
+I'm a Python core dev.
+
+8
+00:00:21,040 --> 00:00:24,480
+I usually work on date, time, and related things.
+
+9
+00:00:24,480 --> 00:00:30,400
+I added the zone info module to Python, and I maintained date utility and set up tools
+
+10
+00:00:30,400 --> 00:00:32,280
+for many years.
+
+11
+00:00:32,280 --> 00:00:36,220
+In my day job, I work on a machine learning team at Google, which has a beautiful office
+
+12
+00:00:36,220 --> 00:00:38,120
+just like two or three blocks away from here.
+
+13
+00:00:38,120 --> 00:00:42,680
+If you ever get a chance, it has stunning views of the rivers, or just the one river,
+
+14
+00:00:42,680 --> 00:00:43,680
+right?
+
+15
+00:00:43,680 --> 00:00:45,160
+It's the Colorado River.
+
+16
+00:00:45,160 --> 00:00:50,160
+So I always enjoy visiting Austin.
+
+17
+00:00:50,160 --> 00:00:53,840
+But today, I'm not going to talk about how awesome the Google office is.
+
+18
+00:00:53,840 --> 00:00:58,580
+I'm going to talk to you about testing, and specifically how and why you would want to
+
+19
+00:00:58,580 --> 00:01:02,780
+add tests to your test suite that you know are going to fail.
+
+20
+00:01:02,780 --> 00:01:06,440
+So I thought I'd start by clearing up a common source of confusion.
+
+21
+00:01:06,440 --> 00:01:11,120
+If you've never heard of these things and you're not confused about them, that's fine.
+
+22
+00:01:11,120 --> 00:01:16,080
+But I certainly came across this initially when I would go through some test suite or
+
+23
+00:01:16,080 --> 00:01:19,280
+something, and I would see, all right, some of these failing tests are being marked as
+
+24
+00:01:19,280 --> 00:01:22,760
+skips, and some of them are being marked as X-fail, like what's the difference?
+
+25
+00:01:22,760 --> 00:01:24,640
+Why are they there?
+
+26
+00:01:24,640 --> 00:01:27,720
+There's sort of two flavors of difference here, right?
+
+27
+00:01:27,720 --> 00:01:30,240
+There's a behavioral difference and a semantic difference.
+
+28
+00:01:30,240 --> 00:01:36,560
+The behavioral difference between the two is that for a skip-if, like skip or skip-if,
+
+29
+00:01:36,560 --> 00:01:37,720
+you don't run the test.
+
+30
+00:01:37,720 --> 00:01:41,680
+So you'll run the test suite, and any time it encounters a skip, it will just, none of
+
+31
+00:01:41,680 --> 00:01:44,040
+this code will get executed.
+
+32
+00:01:44,040 --> 00:01:51,240
+With X-fail, what it does is it executes the test, and then it just marks whether it failed
+
+33
+00:01:51,240 --> 00:01:52,480
+or succeeded.
+
+34
+00:01:52,480 --> 00:01:58,640
+But if it fails, it doesn't cause the total test suite as a whole to fail.
+
+35
+00:01:58,640 --> 00:02:03,100
+The semantic difference is related to this, but it's a bit subtler, right?
+
+36
+00:02:03,100 --> 00:02:09,440
+With skip-if, you're saying these tests are supposed to fail, which is why you're almost
+
+37
+00:02:09,440 --> 00:02:15,060
+always going to be using, well, you're basically always going to be using skip-if with a conditional.
+
+38
+00:02:15,060 --> 00:02:19,560
+So it's for something like this, where in DateUtil, we added lazy loading for modules
+
+39
+00:02:19,560 --> 00:02:21,960
+or for sub-modules.
+
+40
+00:02:21,960 --> 00:02:27,800
+But it uses some features that are only present in 3.8 and above, and we still support older
+
+41
+00:02:27,800 --> 00:02:29,360
+versions of Python.
+
+42
+00:02:29,360 --> 00:02:34,760
+So we say, okay, these tests, we're not expecting these tests to pass on Python 3.7, and there's
+
+43
+00:02:34,760 --> 00:02:39,520
+never going to be a point where we go and backport this feature into Python 3.7.
+
+44
+00:02:39,520 --> 00:02:45,440
+So I'm just going to permanently have this skip function on this test until we stop supporting
+
+45
+00:02:45,440 --> 00:02:47,320
+Python 3.9.
+
+46
+00:02:47,320 --> 00:02:52,480
+For xfail, these are tests that are currently failing, but I would prefer it if they were
+
+47
+00:02:52,480 --> 00:02:53,560
+passing, right?
+
+48
+00:02:53,560 --> 00:03:00,800
+So also in DateUtil, we have a parser that parses ISO 8601 dates.
+
+49
+00:03:00,800 --> 00:03:04,080
+This is a particularly obscure ISO 8601 format.
+
+50
+00:03:04,080 --> 00:03:06,520
+It allows you to have fractional hours.
+
+51
+00:03:06,520 --> 00:03:09,200
+No one ever uses this format.
+
+52
+00:03:09,200 --> 00:03:12,840
+No, people don't even know that it's possible.
+
+53
+00:03:12,840 --> 00:03:18,320
+So when I was writing this parser, I didn't get around to adding this.
+
+54
+00:03:18,320 --> 00:03:21,760
+But the parser is supposed to parse all the valid functions.
+
+55
+00:03:21,760 --> 00:03:24,640
+So it's a low-priority bug, but I can write a test for it.
+
+56
+00:03:24,640 --> 00:03:29,400
+And if I mark it as xfail, it's still going to run every time, and it's just going to
+
+57
+00:03:29,400 --> 00:03:34,340
+say, yep, you're still a bad maintainer because you did this wrong.
+
+58
+00:03:34,340 --> 00:03:39,940
+So when I first encountered this, I mean, you may be skeptical, as I was, about why
+
+59
+00:03:39,940 --> 00:03:42,800
+would you ever want to check in tests that are failing, right?
+
+60
+00:03:42,800 --> 00:03:44,400
+It's kind of like checking in commented code.
+
+61
+00:03:44,400 --> 00:03:46,600
+It seems like a code smell.
+
+62
+00:03:46,600 --> 00:03:50,400
+I was given a little bit of pause when someone brought up a DateUtil issue, and one of my
+
+63
+00:03:50,400 --> 00:03:57,080
+co-maintainers, Brock Mendel, he said, look, I'm going to get around to this, but I like
+
+64
+00:03:57,080 --> 00:03:58,080
+your example.
+
+65
+00:03:58,080 --> 00:04:00,000
+Can you add it to our test suite and mark it as xfail?
+
+66
+00:04:00,000 --> 00:04:02,600
+And I was like, why are you doing this?
+
+67
+00:04:02,600 --> 00:04:03,600
+But whatever.
+
+68
+00:04:03,600 --> 00:04:04,600
+I'm open-minded.
+
+69
+00:04:04,600 --> 00:04:06,920
+He's a smart guy.
+
+70
+00:04:06,920 --> 00:04:11,320
+And of course, you can tell from the fact that I'm giving this talk now that I was so
+
+71
+00:04:11,400 --> 00:04:14,680
+persuaded that just four years later, I'm writing multiple blog posts, and I'm trying
+
+72
+00:04:14,680 --> 00:04:17,600
+to go on a world tour to get everybody to use xfail.
+
+73
+00:04:17,600 --> 00:04:21,960
+So that's just a bit of a teaser, and hopefully, in the next couple slides, I'm going to convince
+
+74
+00:04:21,960 --> 00:04:23,160
+you as well.
+
+75
+00:04:23,160 --> 00:04:24,840
+So let's start with an example.
+
+76
+00:04:24,840 --> 00:04:26,000
+So here's some function.
+
+77
+00:04:26,000 --> 00:04:27,000
+It's called isPerfectSquare.
+
+78
+00:04:27,000 --> 00:04:28,960
+It tells you whether a number is a perfect square.
+
+79
+00:04:28,960 --> 00:04:31,080
+It takes an integer.
+
+80
+00:04:31,080 --> 00:04:34,400
+So I write this Friday in the morning.
+
+81
+00:04:34,400 --> 00:04:35,960
+I integrate it into our thing.
+
+82
+00:04:35,960 --> 00:04:36,960
+I add tests for it.
+
+83
+00:04:36,960 --> 00:04:38,800
+I get really great test coverage, right?
+
+84
+00:04:38,800 --> 00:04:40,160
+It's a parameterized test.
+
+85
+00:04:40,160 --> 00:04:44,200
+I have one test that's all these perfect squares, and then another set of things that are not
+
+86
+00:04:44,200 --> 00:04:45,200
+perfect squares.
+
+87
+00:04:45,200 --> 00:04:46,480
+I've got 14 tests.
+
+88
+00:04:46,480 --> 00:04:48,720
+Every one of them passes straight to production.
+
+89
+00:04:48,720 --> 00:04:49,720
+This is great.
+
+90
+00:04:49,720 --> 00:04:50,720
+I deploy it.
+
+91
+00:04:50,720 --> 00:04:51,720
+Monday morning, I'm sitting around.
+
+92
+00:04:51,720 --> 00:04:52,720
+I'm like, wait.
+
+93
+00:04:52,720 --> 00:04:54,800
+I didn't test this with any negative numbers.
+
+94
+00:04:54,800 --> 00:04:55,800
+That's probably fine, right?
+
+95
+00:04:55,800 --> 00:04:57,380
+I'll just write this test.
+
+96
+00:04:57,380 --> 00:05:02,880
+It's just going to say it's a negative number, so by the domain of the function, it's going
+
+97
+00:05:02,880 --> 00:05:03,880
+to be false.
+
+98
+00:05:03,880 --> 00:05:08,480
+But no, it's actually this value error, and that's not the intended semantics of the function.
+
+99
+00:05:08,480 --> 00:05:12,480
+So now I have this failing test, and I'm like, well, here's the thing.
+
+100
+00:05:12,480 --> 00:05:14,560
+We never use this with negative numbers anyway.
+
+101
+00:05:14,560 --> 00:05:20,720
+It only gets ever called by something that uses positive numbers, and I've got five other
+
+102
+00:05:20,720 --> 00:05:24,600
+things that are on fire because I pushed to production on Fridays.
+
+103
+00:05:24,600 --> 00:05:29,480
+So what I'm going to do is I'm just going to say, I'll fix this later.
+
+104
+00:05:29,480 --> 00:05:31,440
+But I've already written a test.
+
+105
+00:05:31,440 --> 00:05:36,800
+I might as well check it in, because I'm obviously the sort of scatterbrained person who can't
+
+106
+00:05:36,800 --> 00:05:39,600
+really keep track of the schedule and things like that.
+
+107
+00:05:39,600 --> 00:05:45,320
+So what I'm going to do is I'm just going to mark it as X fail.
+
+108
+00:05:45,320 --> 00:05:49,360
+I'll just slap some parameters on there and say, all right, at some point, this test should
+
+109
+00:05:49,360 --> 00:05:53,240
+start passing, but it's not passing now.
+
+110
+00:05:53,240 --> 00:05:57,120
+And what happens is when I start running the test suite, it'll run, and it'll say, oh,
+
+111
+00:05:57,120 --> 00:06:00,040
+look, there's three little Xs, three things X failed.
+
+112
+00:06:00,040 --> 00:06:02,760
+Yep, it's failing just like you expected.
+
+113
+00:06:02,760 --> 00:06:05,480
+Wednesday morning, I'm like, oh, wait, why was I putting this off?
+
+114
+00:06:05,480 --> 00:06:07,240
+It's two lines.
+
+115
+00:06:07,240 --> 00:06:09,200
+If n is less than zero, return false.
+
+116
+00:06:09,200 --> 00:06:11,560
+I could have just done this on Monday, whatever.
+
+117
+00:06:11,560 --> 00:06:18,560
+So I implement this, and what should be happening is that now my, well, that should be three
+
+118
+00:06:18,560 --> 00:06:19,560
+Xs.
+
+119
+00:06:19,560 --> 00:06:22,080
+Again, it's been a couple of years.
+
+120
+00:06:22,080 --> 00:06:26,720
+Anyway, it should be saying that I have three X passing tests.
+
+121
+00:06:26,720 --> 00:06:28,440
+It used to be X failing.
+
+122
+00:06:28,440 --> 00:06:33,320
+Now the little x turns into a big X, and it's saying it's X passed, which is to say I expected
+
+123
+00:06:33,320 --> 00:06:36,520
+a failure, but it was a pass.
+
+124
+00:06:36,520 --> 00:06:39,160
+So now this is notifying me, I fixed the bug.
+
+125
+00:06:39,160 --> 00:06:41,680
+But here's the thing.
+
+126
+00:06:41,680 --> 00:06:44,760
+Whenever I'm running my tests, it's usually run in some CI matrix, right?
+
+127
+00:06:44,760 --> 00:06:47,960
+It's like run on five different platforms and a bunch of different things.
+
+128
+00:06:47,960 --> 00:06:52,600
+I'm not manually reading the pi test outputs and noticing when the little x is turned to
+
+129
+00:06:52,600 --> 00:06:53,720
+big Xs.
+
+130
+00:06:53,720 --> 00:06:58,240
+So what I would really like to do is to treat failing to fail as a failure.
+
+131
+00:06:58,240 --> 00:07:02,000
+I'm going to give you a second to parse that.
+
+132
+00:07:02,000 --> 00:07:05,960
+So luckily, this is supported.
+
+133
+00:07:05,960 --> 00:07:09,840
+I want to pretend this is a good thing that it's supported, but honestly, this should
+
+134
+00:07:09,840 --> 00:07:11,840
+be the default, in my opinion.
+
+135
+00:07:11,840 --> 00:07:16,920
+So what you can do is you can take your X fail marker and you say strict equals true.
+
+136
+00:07:16,920 --> 00:07:20,920
+And what that's going to do is it's going to say, if there's an X pass, that is actually
+
+137
+00:07:20,920 --> 00:07:22,200
+a failure mode.
+
+138
+00:07:22,200 --> 00:07:27,860
+So normally, you might think, I don't really want my test suite to start failing more often,
+
+139
+00:07:27,860 --> 00:07:30,760
+so why would I do this?
+
+140
+00:07:30,760 --> 00:07:35,080
+I'll just remember to remove the X fail decorator.
+
+141
+00:07:35,080 --> 00:07:36,680
+But that's kind of the point, right?
+
+142
+00:07:36,680 --> 00:07:39,320
+You may not remember that you even wrote this test, right?
+
+143
+00:07:39,320 --> 00:07:43,320
+Maybe you wrote it on Friday and then you went out drinking and you forgot about it.
+
+144
+00:07:43,320 --> 00:07:48,520
+Or maybe this test was written five years ago and you accidentally fixed the bug, right?
+
+145
+00:07:48,520 --> 00:07:53,920
+You just refactored something and this test was only failing because of some implementation
+
+146
+00:07:53,920 --> 00:07:56,480
+detail that's no longer relevant.
+
+147
+00:07:56,760 --> 00:08:00,960
+So what will happen is, as soon as you fix the bug, your test suite starts to fail.
+
+148
+00:08:00,960 --> 00:08:04,880
+You go to the failure mode thinking, I'm going to have to debug some stupid, hairy thing,
+
+149
+00:08:04,880 --> 00:08:07,280
+and it's actually saying, hey, remove me.
+
+150
+00:08:07,280 --> 00:08:08,760
+I've written your test for you.
+
+151
+00:08:08,760 --> 00:08:11,520
+Isn't this great?
+
+152
+00:08:11,520 --> 00:08:13,400
+So that's why this should be the default.
+
+153
+00:08:13,400 --> 00:08:16,480
+Luckily, PyTest makes it easy to make it the default.
+
+154
+00:08:16,480 --> 00:08:20,720
+Well, I mean, easy is a relative term because there's at least three different ways you
+
+155
+00:08:20,720 --> 00:08:24,880
+can do your global configuration plus conftest.py and whatever.
+
+156
+00:08:24,880 --> 00:08:28,880
+But wherever you do your configuration, all you have to do is add xfail underscore strict
+
+157
+00:08:28,880 --> 00:08:31,840
+equals true and you're good to go.
+
+158
+00:08:31,840 --> 00:08:37,640
+Every one of your xfail markers will automatically be strict unless you turn it off by specifying
+
+159
+00:08:37,640 --> 00:08:40,520
+strict equals false.
+
+160
+00:08:40,520 --> 00:08:43,320
+The other thing is, I sort of tricked you, right?
+
+161
+00:08:43,320 --> 00:08:46,880
+Because when I wrote this parameterized test, I said, oh, it's going to start x passing.
+
+162
+00:08:46,880 --> 00:08:48,320
+That's going to be great.
+
+163
+00:08:48,320 --> 00:08:51,640
+But I deliberately made a mistake here.
+
+164
+00:08:51,640 --> 00:08:57,200
+Because if you look, the parameter is named n, but when I called it, I put is perfect
+
+165
+00:08:57,200 --> 00:08:59,000
+square m, right?
+
+166
+00:08:59,000 --> 00:09:04,200
+So this test never started passing when I fixed the bug.
+
+167
+00:09:04,200 --> 00:09:07,600
+It continued to xfail and I was never notified of this.
+
+168
+00:09:07,600 --> 00:09:11,880
+And the reason for that is because this is actually failing because of name error, not
+
+169
+00:09:11,880 --> 00:09:15,900
+because of the value errors I was expecting.
+
+170
+00:09:15,900 --> 00:09:18,960
+This is actually something you can enforce by being a little bit more specific about
+
+171
+00:09:18,960 --> 00:09:20,700
+why the test is failing.
+
+172
+00:09:20,700 --> 00:09:24,860
+So what you do is you just take this raises parameter and you pass whatever error is supposed
+
+173
+00:09:24,860 --> 00:09:25,860
+to be raised.
+
+174
+00:09:25,860 --> 00:09:30,260
+You can't be amazingly specific about this, but this will actually cover a decent amount
+
+175
+00:09:30,260 --> 00:09:32,540
+of the sort of different failure modes, right?
+
+176
+00:09:32,540 --> 00:09:35,740
+You're either going to say an assertion is going to be failing, in which case that is
+
+177
+00:09:35,740 --> 00:09:39,700
+assertion error, or it fails with some specific error type.
+
+178
+00:09:39,700 --> 00:09:44,660
+And maybe it's failing with the same error type for a different reason.
+
+179
+00:09:44,660 --> 00:09:48,120
+But this is better than nothing for sure.
+
+180
+00:09:48,120 --> 00:09:53,880
+So once you have this, you know you have this sort of library of tests that are going
+
+181
+00:09:53,880 --> 00:09:56,200
+to start failing if you accidentally fix them.
+
+182
+00:09:56,200 --> 00:10:02,520
+But maybe that's not really a problem that you have in your life.
+
+183
+00:10:02,520 --> 00:10:06,000
+But I still think that there are many reasons to care.
+
+184
+00:10:06,000 --> 00:10:10,800
+So one of them is that when you use xfailing tests, whether you fix it right away or a
+
+185
+00:10:10,800 --> 00:10:15,600
+year later, what you're doing is you're documenting your acceptance criteria, right?
+
+186
+00:10:15,600 --> 00:10:20,160
+You're programmatically saying you can close this bug when this test starts to pass.
+
+187
+00:10:20,160 --> 00:10:24,800
+So you check it in and you label it with the bug, and then once that test starts passing,
+
+188
+00:10:24,800 --> 00:10:27,200
+you remove xfail and close the bug.
+
+189
+00:10:27,200 --> 00:10:28,760
+This is great.
+
+190
+00:10:28,760 --> 00:10:31,640
+It's much more specific than some issue tracker.
+
+191
+00:10:31,640 --> 00:10:35,240
+It could be someone put a bug in an issue tracker, then they leave the company, and
+
+192
+00:10:35,240 --> 00:10:39,680
+three years later you're like, I don't know, is this still relevant?
+
+193
+00:10:39,680 --> 00:10:45,480
+You also don't necessarily know if the bug's been fixed in the past five years or something.
+
+194
+00:10:45,480 --> 00:10:48,000
+This also lets you test your tests in a way, right?
+
+195
+00:10:48,000 --> 00:10:51,600
+The TDD proponents, the test-driven development proponents, are always saying you should write
+
+196
+00:10:51,600 --> 00:10:54,840
+your test first, and then you write the thing that fixes it.
+
+197
+00:10:54,840 --> 00:10:58,160
+Well, this is a sort of longer separation between that, right?
+
+198
+00:10:58,160 --> 00:11:04,080
+You write the test first, you make sure that it's failing, and then once you fix the test,
+
+199
+00:11:04,080 --> 00:11:06,240
+you know that you have a good regression test, right?
+
+200
+00:11:06,240 --> 00:11:11,200
+Because if anything goes backwards, that test, which is no longer marked as xfail, is now
+
+201
+00:11:11,200 --> 00:11:14,200
+going to start being just regular old failure.
+
+202
+00:11:14,200 --> 00:11:18,480
+You also get to impose your regression tests immediately, right?
+
+203
+00:11:18,480 --> 00:11:24,560
+Again, this may not be a problem you have, but for a huge code base like CPython, it
+
+204
+00:11:24,560 --> 00:11:29,840
+could easily be the case that someone accidentally fixes some obscure bug and then introduces
+
+205
+00:11:29,840 --> 00:11:32,100
+the same bug or a similar bug later.
+
+206
+00:11:32,100 --> 00:11:37,000
+If you had xfailing tests for those things associated with a lot of these bugs, what
+
+207
+00:11:37,000 --> 00:11:41,520
+would happen is as soon as you fix the bug, you have your regression test immediately
+
+208
+00:11:41,520 --> 00:11:43,600
+and you never get a regression.
+
+209
+00:11:43,600 --> 00:11:48,120
+The other thing is, adding these xfailing tests might not be as cost as you think, because
+
+210
+00:11:48,120 --> 00:11:53,720
+if you're writing good bug reports, it's not actually that...
+
+211
+00:11:53,720 --> 00:11:56,000
+You sort of get a lot of this for free.
+
+212
+00:11:56,000 --> 00:12:00,600
+This blue text here, and I encourage you to check out the slides so you can get to this
+
+213
+00:12:00,600 --> 00:12:01,600
+link.
+
+214
+00:12:01,600 --> 00:12:08,320
+This is a link to Matt Rockland's blog post on crafting good bug reports, and in that
+
+215
+00:12:08,320 --> 00:12:13,800
+link, he says that your bug report should contain an example that is complete, which
+
+216
+00:12:13,800 --> 00:12:18,120
+is to say that it has as much code as you need to reproduce the issue, minimal, which
+
+217
+00:12:18,120 --> 00:12:21,960
+is to say you should have as little code as you can get away with that still reproduces
+
+218
+00:12:21,960 --> 00:12:28,080
+the issue, and it should be verifiable, which is to say that anyone who comes across this
+
+219
+00:12:28,080 --> 00:12:32,280
+example should be able to just reproduce your issue.
+
+220
+00:12:32,280 --> 00:12:35,800
+These are exactly the same properties that are a good test.
+
+221
+00:12:36,080 --> 00:12:40,520
+It's a very small, self-contained way to reproduce the issue, and you're just checking what the
+
+222
+00:12:40,520 --> 00:12:41,760
+output is.
+
+223
+00:12:41,760 --> 00:12:46,040
+Hopefully, what you can do is you write a good bug report, the maintainer says, this
+
+224
+00:12:46,040 --> 00:12:49,600
+is great, I would love to fix it, and then you just take that example and you plop it
+
+225
+00:12:49,600 --> 00:12:53,600
+right in the test suite and call it xfail and they merge it.
+
+226
+00:12:53,600 --> 00:12:57,680
+Another nice feature of that is that if you're a maintainer, you can really signal to your
+
+227
+00:12:57,680 --> 00:13:04,080
+users, I care about your issue because you're saying, I'm kind of committing to fix this
+
+228
+00:13:04,200 --> 00:13:08,240
+in some way by saying, I'm going to accept your acceptance criteria, I'm going to put
+
+229
+00:13:08,240 --> 00:13:12,120
+them directly into my test suite, and hopefully one day I'm going to look at all those x's
+
+230
+00:13:12,120 --> 00:13:17,720
+and say, I really wish those x's were dots and go fix them.
+
+231
+00:13:17,720 --> 00:13:23,880
+So now that we've gotten through the why, I thought I would go into a little bit more
+
+232
+00:13:23,880 --> 00:13:25,800
+about the how.
+
+233
+00:13:25,800 --> 00:13:28,320
+The basic use of this is with a PyTest marker.
+
+234
+00:13:28,320 --> 00:13:32,720
+PyTest is kind of weird, they have these decorators that are like marks and then you can also
+
+235
+00:13:32,800 --> 00:13:37,000
+have custom marks, and then there's fixtures, it's a little confusing, but basically you
+
+236
+00:13:37,000 --> 00:13:42,280
+know, treat these as decorators and they're under this mark namespace.
+
+237
+00:13:42,280 --> 00:13:47,200
+So with xfail, you have the bear decorator, which is, you don't have to put anything,
+
+238
+00:13:47,200 --> 00:13:49,000
+you can just mark it as xfail.
+
+239
+00:13:49,000 --> 00:13:54,680
+You can also say a reason, so that it'll say xfail, as part of your verbose text output,
+
+240
+00:13:54,680 --> 00:13:56,840
+it'll say exactly why.
+
+241
+00:13:56,840 --> 00:14:01,640
+Usually it'd be nice to put like a bug tracker number there.
+
+242
+00:14:01,640 --> 00:14:04,880
+There's also the skip decorator, that is the equivalent of these things, but you never
+
+243
+00:14:04,880 --> 00:14:06,560
+use skip.
+
+244
+00:14:06,560 --> 00:14:10,840
+I think the main reason that this is included is so you can compose it with other stuff
+
+245
+00:14:10,840 --> 00:14:14,840
+to make other decorators that have more complicated conditionals.
+
+246
+00:14:14,840 --> 00:14:18,960
+So basically, always use skipif, never skip.
+
+247
+00:14:18,960 --> 00:14:24,800
+So moving on to skipif, xfail itself is kind of equivalent to skipif in that it takes a
+
+248
+00:14:24,800 --> 00:14:29,960
+boolean condition as the first parameter, it's an optional first parameter.
+
+249
+00:14:29,960 --> 00:14:32,760
+And skipif takes a boolean condition.
+
+250
+00:14:32,760 --> 00:14:39,320
+The reason parameter is required if you use a boolean condition, and yeah, obviously,
+
+251
+00:14:39,320 --> 00:14:41,920
+you can understand why you would want booleans, right?
+
+252
+00:14:41,920 --> 00:14:46,340
+Skipif, you pretty much should always be using conditionals because otherwise why would you
+
+253
+00:14:46,340 --> 00:14:47,340
+put the test in place?
+
+254
+00:14:47,340 --> 00:14:53,000
+It's never supposed to start passing and there's no platform on which you would run it, so
+
+255
+00:14:53,000 --> 00:14:55,580
+just don't write it.
+
+256
+00:14:55,580 --> 00:15:02,420
+With xfail, you can imagine it's kind of important to have a conditional because especially
+
+257
+00:15:02,420 --> 00:15:08,060
+if you're using strict xpass, say you have something that starts breaking in Python 3.10,
+
+258
+00:15:08,060 --> 00:15:12,020
+you're working on Python 3.10 support and you want your test suite to start passing,
+
+259
+00:15:12,020 --> 00:15:19,340
+you would say, okay, Python 3.10 and greater, this is xfail, otherwise it's a regular pass.
+
+260
+00:15:19,340 --> 00:15:22,500
+So you can do that.
+
+261
+00:15:22,500 --> 00:15:25,820
+It's very encouraged that you use this boolean format with the reason.
+
+262
+00:15:25,820 --> 00:15:30,740
+There's also this sort of legacy format, which I guess is never going to be discontinued,
+
+263
+00:15:30,740 --> 00:15:37,820
+but it's discouraged, where you can specify your boolean as a string, like a conditional
+
+264
+00:15:37,820 --> 00:15:46,860
+string, and this is just going to get evaled in some weird namespace, I don't know.
+
+265
+00:15:46,860 --> 00:15:52,340
+And the main reason for doing this as opposed to the boolean is that it will take this conditional
+
+266
+00:15:52,340 --> 00:15:58,340
+string and put it as the reason, so when you look at your output, it's sort of a self-documenting
+
+267
+00:15:58,340 --> 00:15:59,340
+thing.
+
+268
+00:15:59,340 --> 00:16:05,300
+I think it's probably better to just put a bug number or whatever.
+
+269
+00:16:05,300 --> 00:16:10,780
+Other things in the markers, xfail has this weird thing that took me a little bit to understand
+
+270
+00:16:10,780 --> 00:16:14,180
+why you would want this, is the run parameter.
+
+271
+00:16:14,180 --> 00:16:18,660
+So with xfail, you can specify run equals false, and it will essentially turn xfail
+
+272
+00:16:18,780 --> 00:16:24,620
+into a skip, behaviorally speaking, so it will say don't run the test.
+
+273
+00:16:24,620 --> 00:16:29,380
+I think you mainly would want this if you want to semantically mark your thing as xfail,
+
+274
+00:16:29,380 --> 00:16:35,380
+so you're saying at some point I want this xfail decorator to go away, but for whatever
+
+275
+00:16:35,380 --> 00:16:40,380
+reason you actually can't run the test, like the failure mode is that the interpreter is
+
+276
+00:16:40,380 --> 00:16:48,140
+going to segfault and PyTest can't recover from that, or the failure mode is that it
+
+277
+00:16:48,140 --> 00:16:49,140
+runs out of memory situation.
+
+278
+00:16:49,140 --> 00:16:55,340
+You have some parser, and if you have 17 curly braces in it, it uses all the memory in your
+
+279
+00:16:55,340 --> 00:16:56,340
+computer.
+
+280
+00:16:56,340 --> 00:17:01,100
+Obviously you don't want to run that just to see if it starts passing, so you would
+
+281
+00:17:01,100 --> 00:17:03,180
+put run equals false.
+
+282
+00:17:03,180 --> 00:17:10,580
+Interestingly there is this thing where you can run PyTest with dash dash run xfail, and
+
+283
+00:17:10,580 --> 00:17:15,660
+it will ignore all the xfail stuff and just run all the xfailing tests.
+
+284
+00:17:15,660 --> 00:17:20,980
+I've never thought that I would need that sort of thing, but if I had tests like this,
+
+285
+00:17:20,980 --> 00:17:24,340
+it might be nice to be like, all right, every three months I'm going to run this and make
+
+286
+00:17:24,340 --> 00:17:27,980
+sure it's still segfaults.
+
+287
+00:17:27,980 --> 00:17:31,160
+When you're working with parameterized tests, it's a little bit more complicated to add
+
+288
+00:17:31,160 --> 00:17:37,820
+these marks, because the one option you would have is that if you have, say, a test and
+
+289
+00:17:37,820 --> 00:17:41,820
+you parameterize it and there's four different parameters, and on two of them it's failing
+
+290
+00:17:41,820 --> 00:17:44,180
+for two different reasons or something, right?
+
+291
+00:17:44,180 --> 00:17:48,420
+You could imagine just copy pasting this test three times and then marking one of them
+
+292
+00:17:48,420 --> 00:17:52,460
+as xfail with one way and then one of them with xfail another way, but PyTest has this
+
+293
+00:17:52,460 --> 00:17:57,380
+other thing, which is PyTest.param, it's just like a wrapper for whatever parameter, and
+
+294
+00:17:57,380 --> 00:18:00,100
+you can attach attributes to it, including marks.
+
+295
+00:18:00,100 --> 00:18:04,420
+So I always have to look this up, but once you know it exists, it's pretty easy to look
+
+296
+00:18:04,420 --> 00:18:05,420
+up.
+
+297
+00:18:05,420 --> 00:18:09,500
+So you just take your parameter, you wrap it, and you say what marks go, and it's essentially
+
+298
+00:18:10,260 --> 00:18:15,820
+as doing a decorator that only applies to the specific parameter that is being used
+
+299
+00:18:15,820 --> 00:18:19,980
+in that particular execution of the test.
+
+300
+00:18:19,980 --> 00:18:26,380
+There's another way that you can use xfail and skip, but this is not super recommended.
+
+301
+00:18:26,380 --> 00:18:29,540
+It's the imperative form of xfail.
+
+302
+00:18:29,540 --> 00:18:35,740
+So normally at sort of test collection time, you're adding markers to the functions themselves,
+
+303
+00:18:35,740 --> 00:18:39,020
+and these decisions happen before the function is executed.
+
+304
+00:18:39,020 --> 00:18:46,340
+You can also just call a function inside of your test function that will change the function
+
+305
+00:18:46,340 --> 00:18:51,860
+that's being executed to a skipped or an xfail test.
+
+306
+00:18:51,860 --> 00:18:54,980
+You might want to do this if it's kind of difficult to determine whether you need to
+
+307
+00:18:54,980 --> 00:18:58,460
+skip or xfail until the function is run.
+
+308
+00:18:58,460 --> 00:19:02,660
+Probably the more common use case or the better use case would be if you have a function,
+
+309
+00:19:02,660 --> 00:19:07,660
+like a test function or a context manager or a fixture where maybe it needs access to some
+
+310
+00:19:07,660 --> 00:19:11,300
+external resource or something like that.
+
+311
+00:19:11,300 --> 00:19:16,900
+What you can do is, for example, here I have this context manager that just you would run
+
+312
+00:19:16,900 --> 00:19:20,860
+a section of your test in another time zone.
+
+313
+00:19:20,860 --> 00:19:26,100
+There are some platforms where you can't change the time zone or changing the time zone changes
+
+314
+00:19:26,100 --> 00:19:31,700
+it globally for all users, and you're like, that's not happening during my test run.
+
+315
+00:19:31,700 --> 00:19:35,300
+So what you could do is you can write into your context manager, all right, if I'm on
+
+316
+00:19:35,340 --> 00:19:41,740
+one of these weird platforms, call this skip function, and then later in my function that
+
+317
+00:19:41,740 --> 00:19:48,740
+says, okay, I do my test in New York, I don't have to remember what the condition is and
+
+318
+00:19:48,980 --> 00:19:50,860
+then apply it.
+
+319
+00:19:50,860 --> 00:19:57,860
+It just happens automatically when I try and enter that context, the containing test function
+
+320
+00:19:58,020 --> 00:20:00,580
+will be marked as skip.
+
+321
+00:20:00,580 --> 00:20:06,900
+But that's much more useful with skip because with the PyTest.xfail has kind of like not
+
+322
+00:20:06,900 --> 00:20:13,900
+great semantics because the PyTest.xfail imperative form, it basically is a skip.
+
+323
+00:20:16,620 --> 00:20:22,660
+It stops execution immediately, there's no way to get xpass, xfail strict has no effect.
+
+324
+00:20:22,660 --> 00:20:23,740
+There is a solution to this.
+
+325
+00:20:23,900 --> 00:20:30,900
+Brian Ocken wrote this plug-in called PyTest.xfail, and what this does is it's just xfail with
+
+326
+00:20:34,100 --> 00:20:38,300
+the semantics you would hope for, it will continue to run the test.
+
+327
+00:20:38,300 --> 00:20:45,300
+So if you want to use something like this, if you have a use for it, I recommend this
+
+328
+00:20:47,260 --> 00:20:49,220
+plug-in, it seems pretty good.
+
+329
+00:20:49,700 --> 00:20:55,140
+There's another paper cut which is really unfortunate, which is if you use hypothesis,
+
+330
+00:20:55,140 --> 00:21:01,420
+which is a property testing framework, it doesn't really work that well with xfail.
+
+331
+00:21:01,420 --> 00:21:06,940
+So if you're not familiar with hypothesis, the idea is that you tell hypothesis what
+
+332
+00:21:06,940 --> 00:21:09,020
+your inputs are going to look like.
+
+333
+00:21:09,020 --> 00:21:14,380
+You say, this is a function that takes integers, so just give me integers, it's going to give
+
+334
+00:21:14,420 --> 00:21:21,060
+you all kinds of weird integers, and you make an assertion about properties of your function.
+
+335
+00:21:21,060 --> 00:21:24,780
+So in this case, I've said, my function is such that if you give me an integer, the result
+
+336
+00:21:24,780 --> 00:21:28,540
+is going to be an integer that's larger than the input integer.
+
+337
+00:21:28,540 --> 00:21:32,980
+But I've written this function improperly or something, and zero and negative numbers
+
+338
+00:21:32,980 --> 00:21:34,020
+don't work.
+
+339
+00:21:34,020 --> 00:21:37,820
+So this is exactly the kind of thing where you would expect, it would be really nice
+
+340
+00:21:37,820 --> 00:21:43,420
+to imperatively mark your function as xfailing, because you don't even know what your inputs
+
+341
+00:21:43,420 --> 00:21:48,540
+are going to look like until you get them, so it would be nice, and hypothesis is very
+
+342
+00:21:48,540 --> 00:21:49,860
+persnickety, right?
+
+343
+00:21:49,860 --> 00:21:53,740
+Like you slap hypothesis tests on something, and you're like, yeah, this is going to be
+
+344
+00:21:53,740 --> 00:21:57,900
+well tested, but also you have to fix every little edge case right then.
+
+345
+00:21:57,900 --> 00:22:01,900
+It would be very nice to be like, okay, this works in like 99% of the case, but there's
+
+346
+00:22:01,900 --> 00:22:06,780
+like a couple parts of this domain of inputs where it's just not working, and I'm not going
+
+347
+00:22:06,780 --> 00:22:11,580
+to fix it right now, but unfortunately, so this seems perfectly fit for xfail.
+
+348
+00:22:11,580 --> 00:22:18,580
+But the problem is, I think just based on the way hypothesis is implemented, this is
+
+349
+00:22:18,580 --> 00:22:25,340
+only ever going to report a single top level xfail, which is especially bad because it
+
+350
+00:22:25,340 --> 00:22:26,900
+disguises real failures.
+
+351
+00:22:26,900 --> 00:22:32,220
+So if this test were failing in like 90% of cases and it hits one xfail, it's still going
+
+352
+00:22:32,220 --> 00:22:37,340
+to be reported as an xfail, not as a failure.
+
+353
+00:22:37,580 --> 00:22:46,580
+I tried to get it to work with PyTest runtime xfail, but this is a function scoped fixture,
+
+354
+00:22:46,580 --> 00:22:52,180
+and hypothesis doesn't work with that, and I'm not sure that there's a way to work around
+
+355
+00:22:52,180 --> 00:22:53,180
+that.
+
+356
+00:22:53,180 --> 00:23:00,900
+This may be a fundamental failing of hypothesis, so if you're very excited about xfail, it
+
+357
+00:23:00,900 --> 00:23:04,700
+might be interesting to work with hypothesis maintainers, they seem really nice to try
+
+358
+00:23:04,700 --> 00:23:09,980
+and get this working, but until then, it's just kind of a paper cut.
+
+359
+00:23:09,980 --> 00:23:14,900
+So far, I've just talked about PyTest, because I love PyTest, and also PyTest does this very
+
+360
+00:23:14,900 --> 00:23:22,340
+well, as they do many things very well, but maybe you work for some company that started
+
+361
+00:23:22,340 --> 00:23:25,940
+doing a lot of Python testing a long time ago and now has a huge code base and a giant
+
+362
+00:23:25,940 --> 00:23:33,060
+building with a huge G on it two blocks away from here, and now all their tests are written
+
+363
+00:23:33,060 --> 00:23:38,140
+in unit test or some unit test derivative, or maybe you work on the CPython code base,
+
+364
+00:23:38,140 --> 00:23:44,500
+which doesn't pull in third party dependencies like PyTest and instead uses unit test, and
+
+365
+00:23:44,500 --> 00:23:48,780
+maybe you're chafing under the fact that you can't use this xfail.
+
+366
+00:23:48,780 --> 00:23:53,700
+I would love to say that great news, unit test has perfectly equivalent functionality,
+
+367
+00:23:53,700 --> 00:23:54,900
+but in reality, they don't.
+
+368
+00:23:54,900 --> 00:23:58,940
+They have something close that kind of works.
+
+369
+00:23:58,940 --> 00:24:04,860
+There's this expected failure decorator that gives you the xfail functionality.
+
+370
+00:24:04,860 --> 00:24:06,740
+It doesn't take any parameters.
+
+371
+00:24:06,740 --> 00:24:08,860
+You can just mark something, expected failure or not.
+
+372
+00:24:08,860 --> 00:24:13,020
+Here's what it looks like when you run it with unit test.
+
+373
+00:24:13,020 --> 00:24:19,140
+For expected failures, it marks it as expected failure, and that won't fail your test suite.
+
+374
+00:24:19,140 --> 00:24:26,980
+For xpasses, it calls it unexpected success, and that fails the test suite.
+
+375
+00:24:26,980 --> 00:24:33,260
+So it actually has the strict equals true behavior by default.
+
+376
+00:24:33,260 --> 00:24:36,660
+Sometimes what you do is you write your tests in unit test and run them with PyTest.
+
+377
+00:24:36,660 --> 00:24:38,140
+Here's what that looks like.
+
+378
+00:24:38,140 --> 00:24:44,260
+PyTest doesn't, I think, have really any way to interpret that unexpected success as an
+
+379
+00:24:44,260 --> 00:24:48,820
+xpass, so that's always going to be a failure, and I don't think there's any way to change
+
+380
+00:24:48,820 --> 00:24:49,820
+that.
+
+381
+00:24:49,820 --> 00:24:53,020
+But, you know, it doesn't totally choke on it.
+
+382
+00:24:53,060 --> 00:25:01,180
+So this is a viable alternative if you can convince people to switch over to PyTest.
+
+383
+00:25:01,180 --> 00:25:07,140
+The missing feature specifically for this is there's no way to set strict equals false.
+
+384
+00:25:07,140 --> 00:25:13,380
+You can't do run equals false, you just have to do a skip.
+
+385
+00:25:13,380 --> 00:25:18,740
+In 10 minutes of playing around with it, I found no way to implement the raises behavior,
+
+386
+00:25:18,740 --> 00:25:23,000
+so you can't be terribly specific about why it's failing.
+
+387
+00:25:23,000 --> 00:25:26,880
+You can't specify a reason string, so you're going to have to use comments to say which
+
+388
+00:25:26,880 --> 00:25:29,480
+bug it's associated with.
+
+389
+00:25:29,480 --> 00:25:34,680
+And there's no conditional xfail built in, which seems like a very odd missing feature
+
+390
+00:25:34,680 --> 00:25:41,720
+considering that strict xpassing is also on by default.
+
+391
+00:25:41,720 --> 00:25:45,480
+But luckily it's like super easy to implement this, it's just like you write your own little
+
+392
+00:25:45,480 --> 00:25:50,600
+decorator that returns the expected failure decorator if the conditional is true, and
+
+393
+00:25:50,600 --> 00:25:55,320
+otherwise returns the function itself.
+
+394
+00:25:55,320 --> 00:25:56,680
+And I don't know.
+
+395
+00:25:56,680 --> 00:26:00,680
+Maybe there's some core dev that we could persuade to try and get this into the library,
+
+396
+00:26:00,680 --> 00:26:05,800
+but I have not looked into this at all to see why this was not implemented.
+
+397
+00:26:05,800 --> 00:26:10,280
+It might be like half the time when I go to do something in CPython core, it's like this
+
+398
+00:26:10,280 --> 00:26:12,160
+seems like it should be so obvious.
+
+399
+00:26:12,160 --> 00:26:17,520
+And then like some super smart person like 15 years ago was like, no, there are like
+
+400
+00:26:17,920 --> 00:26:21,480
+16 different reasons why this is going to fail on three different platforms and we just
+
+401
+00:26:21,480 --> 00:26:25,760
+fundamentally can't do this and you're like, ah, I really respect that.
+
+402
+00:26:25,760 --> 00:26:30,800
+So, what are you going to do?
+
+403
+00:26:30,800 --> 00:26:33,040
+With unitest there's better support for skipping.
+
+404
+00:26:33,040 --> 00:26:37,000
+They have this unconditional skip decorator, but even they document like you shouldn't
+
+405
+00:26:37,000 --> 00:26:38,520
+use this.
+
+406
+00:26:38,520 --> 00:26:46,040
+This is really only used to write your own decorators that skip in specific other contexts.
+
+407
+00:26:47,040 --> 00:26:49,240
+They have skip if and oddly they have skip unless.
+
+408
+00:26:49,240 --> 00:26:50,720
+I'm not sure why these are duplicated.
+
+409
+00:26:50,720 --> 00:26:55,240
+It seems like you could just make the first one by putting a knot in the condition in
+
+410
+00:26:55,240 --> 00:27:00,600
+the second one, but maybe some people just like it aesthetically.
+
+411
+00:27:00,600 --> 00:27:02,040
+I'm not going to complain about it.
+
+412
+00:27:02,040 --> 00:27:04,200
+It seems fine.
+
+413
+00:27:04,200 --> 00:27:09,560
+There's also two ways to do imperative skipping.
+
+414
+00:27:09,560 --> 00:27:11,560
+It's possible that the method came first.
+
+415
+00:27:11,560 --> 00:27:16,840
+I'm not actually sure why they need two different ways to do this.
+
+416
+00:27:16,840 --> 00:27:25,200
+I know that the first one is to call self.skiptest and that's a method on the test case so you
+
+417
+00:27:25,200 --> 00:27:27,920
+can really only use that from within a test.
+
+418
+00:27:27,920 --> 00:27:33,800
+The second way to do it is to raise unitest.skiptest and that is convenient because you can write
+
+419
+00:27:33,800 --> 00:27:37,720
+a function or that context manager I mentioned and when you raise it you don't have to have
+
+420
+00:27:37,720 --> 00:27:42,200
+a reference to the test case that it's on so you don't have to have that self parameter.
+
+421
+00:27:42,200 --> 00:27:48,480
+So you can write just sort of generic functions unmoored from any instance of the test case.
+
+422
+00:27:48,480 --> 00:27:53,000
+It could be that the self.skiptest came first and then the second one filled in the gaps
+
+423
+00:27:53,000 --> 00:27:59,880
+and you should always use the second one, but I try not to use unitest too much.
+
+424
+00:27:59,880 --> 00:28:01,920
+So we've reached the end of the talk.
+
+425
+00:28:01,920 --> 00:28:03,720
+It seems like I made it through.
+
+426
+00:28:03,720 --> 00:28:04,720
+I'm not sure.
+
+427
+00:28:04,720 --> 00:28:05,720
+I might stumble.
+
+428
+00:28:06,720 --> 00:28:11,920
+I thought I would summarize a little bit.
+
+429
+00:28:11,920 --> 00:28:16,760
+If you take anything away from this it should be maybe that X fails for tests that you know
+
+430
+00:28:16,760 --> 00:28:19,520
+are failing but shouldn't be.
+
+431
+00:28:19,520 --> 00:28:25,360
+Skip should always be used conditionally because that is for tests that aren't supposed to
+
+432
+00:28:25,360 --> 00:28:30,160
+pass and you should always set X fail strict equals true.
+
+433
+00:28:30,160 --> 00:28:34,920
+When I first put this talk together it had a whole bunch more slides because it turns
+
+434
+00:28:34,920 --> 00:28:41,040
+out that I can talk about expected failure stuff for like a surprisingly long time.
+
+435
+00:28:41,040 --> 00:28:45,600
+I really thought this was going to be 20, 25 minute tops, but I have actually three
+
+436
+00:28:45,600 --> 00:28:46,680
+blog posts on this.
+
+437
+00:28:46,680 --> 00:28:50,240
+So this talk really only covered the first one.
+
+438
+00:28:50,240 --> 00:28:55,520
+If you want to learn some real persnickety stuff about X failing and code coverage and
+
+439
+00:28:55,520 --> 00:29:01,080
+things like that, those next two blog posts are something that I would recommend you look
+
+440
+00:29:01,080 --> 00:29:02,080
+into.
+
+441
+00:29:02,160 --> 00:29:06,360
+I also talked about those blog posts on test and code with Brian Ocken, so if you prefer
+
+442
+00:29:06,360 --> 00:29:10,600
+to listen to it just download that podcast.
+
+443
+00:29:10,600 --> 00:29:15,040
+I guess I hope I've convinced you a little bit that you should start accepting expected
+
+444
+00:29:15,040 --> 00:29:21,640
+failures as PRs because I will say that the one big thing about this, maybe I look at
+
+445
+00:29:21,640 --> 00:29:26,720
+this as an open source maintainer, but this really seems like an easy win for getting
+
+446
+00:29:27,560 --> 00:29:33,520
+on board to your libraries, right, because they come with some sort of example that says
+
+447
+00:29:33,520 --> 00:29:38,240
+like, oh, I really wish this was working, and I feel like it's a little bit of a booster
+
+448
+00:29:38,240 --> 00:29:40,360
+to say like, this is a valid contribution.
+
+449
+00:29:40,360 --> 00:29:43,040
+I would really like it if you made a pull request.
+
+450
+00:29:43,040 --> 00:29:44,040
+You don't have to fix it.
+
+451
+00:29:44,040 --> 00:29:46,160
+You don't have to know how to fix it.
+
+452
+00:29:46,160 --> 00:29:51,640
+I just want it to be in the code base to make it very clear that I want to fix this thing.
+
+453
+00:29:51,640 --> 00:29:55,040
+So it's good for you, it's good for the health of your code base, and it's good for your
+
+454
+00:29:55,040 --> 00:29:56,040
+contributors.
+
+455
+00:29:56,040 --> 00:29:58,120
+Thank you so much for listening to my talk.
+

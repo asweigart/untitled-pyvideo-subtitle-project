@@ -1,0 +1,1556 @@
+1
+00:00:00,000 --> 00:00:03,680
+Okay, so I'm Thomas.
+
+2
+00:00:03,680 --> 00:00:05,800
+I work at UStudio.
+
+3
+00:00:05,800 --> 00:00:11,520
+UStudio is a company that has a, we've got two sort of pieces to what we sell.
+
+4
+00:00:11,520 --> 00:00:16,800
+We've got a enterprise video media management platform, and then we have a product that
+
+5
+00:00:16,800 --> 00:00:22,800
+we've built on top of it, which is an enterprise podcasting application for internal podcast
+
+6
+00:00:22,800 --> 00:00:24,680
+companies.
+
+7
+00:00:24,680 --> 00:00:32,600
+And this talk is kind of about our journey with that application, and it's really about
+
+8
+00:00:32,600 --> 00:00:36,480
+one of our side quests to refer back to the great keynote.
+
+9
+00:00:36,480 --> 00:00:43,240
+So when we started building this podcasting product, we weren't entirely sure that people
+
+10
+00:00:43,240 --> 00:00:47,120
+were going to be interested in it or not, so we wanted to build something quickly, wanted
+
+11
+00:00:47,120 --> 00:00:50,800
+to get it out on the market, see what people thought about it, see if they liked it.
+
+12
+00:00:50,800 --> 00:00:51,800
+Turned out they did.
+
+13
+00:00:51,800 --> 00:00:52,800
+Great.
+
+14
+00:00:52,800 --> 00:00:53,800
+Awesome.
+
+15
+00:00:54,680 --> 00:00:57,200
+Next step is fixing all the code right now.
+
+16
+00:00:57,200 --> 00:01:01,120
+The next step is adding more features so they're happier and happier.
+
+17
+00:01:01,120 --> 00:01:05,360
+So we started adding these features, we started handling all these extra cases that this customer
+
+18
+00:01:05,360 --> 00:01:08,080
+needs this, this customer needs that, et cetera, et cetera.
+
+19
+00:01:08,080 --> 00:01:11,880
+And before you knew it, we ended up with legacy code.
+
+20
+00:01:11,880 --> 00:01:17,700
+So I don't know if anybody's read Michael Feather's Working Effectively with Legacy
+
+21
+00:01:17,700 --> 00:01:23,000
+Code, but in that book, I recommend it.
+
+22
+00:01:23,000 --> 00:01:28,000
+He defines legacy code as simply code without tests.
+
+23
+00:01:28,000 --> 00:01:30,240
+So what does that mean?
+
+24
+00:01:30,240 --> 00:01:33,720
+What he's really talking about is it's code that's difficult to change.
+
+25
+00:01:33,720 --> 00:01:38,740
+So you come in, you need to make a change, there's a bug, there's a new feature that
+
+26
+00:01:38,740 --> 00:01:43,160
+needs to be added, you want to change the code, but there's a bunch of things that you
+
+27
+00:01:43,160 --> 00:01:47,100
+don't want to change, there's a bunch of behavior that's important that you want to maintain,
+
+28
+00:01:47,100 --> 00:01:52,240
+and do you feel confident making that change without breaking other stuff?
+
+29
+00:01:52,240 --> 00:01:53,680
+Tests are one way to accomplish that.
+
+30
+00:01:53,680 --> 00:02:01,520
+And that book is really about how to ensure that you've got good tests in a code base
+
+31
+00:02:01,520 --> 00:02:06,200
+so that you can make changes with confidence.
+
+32
+00:02:06,200 --> 00:02:12,160
+As we were rapidly developing all this new functionality, we were starting to feel not
+
+33
+00:02:12,160 --> 00:02:15,680
+confident making changes.
+
+34
+00:02:15,680 --> 00:02:20,640
+We normally have a pretty rigorous TDD process at UStudio.
+
+35
+00:02:20,680 --> 00:02:24,440
+We do a lot of code review, but we were working pretty quickly.
+
+36
+00:02:24,440 --> 00:02:30,440
+We brought some new people on, and we didn't maybe do our normal sort of like, oh, this
+
+37
+00:02:30,440 --> 00:02:34,800
+is how we do TDD, this is how we pair, this is how we do code review, et cetera.
+
+38
+00:02:34,800 --> 00:02:41,160
+And so we ended up with code that was a little bit different than we're used to working with.
+
+39
+00:02:41,160 --> 00:02:48,080
+And so we were starting to find it difficult to maintain.
+
+40
+00:02:48,080 --> 00:02:55,840
+So we started feeling like we had legacy code, but we did have tests.
+
+41
+00:02:55,840 --> 00:02:59,780
+So we redefined it.
+
+42
+00:02:59,780 --> 00:03:02,060
+Legacy code is code without types.
+
+43
+00:03:02,060 --> 00:03:11,920
+We had worked with MyPy before, and we knew that we would get a lot of benefit from type
+
+44
+00:03:11,920 --> 00:03:15,520
+annotations, from a static type checker.
+
+45
+00:03:15,520 --> 00:03:21,760
+And so we thought that this was maybe a good opportunity to start adding type annotations
+
+46
+00:03:21,760 --> 00:03:24,040
+to our code.
+
+47
+00:03:24,040 --> 00:03:33,240
+So the first project we started with was a project that we used for managing users.
+
+48
+00:03:33,240 --> 00:03:43,040
+We've got our application as SSO with our customer's sort of enterprise identity provider.
+
+49
+00:03:43,040 --> 00:03:51,040
+We also have an interface so that they can on the side manage users using SCIM, which
+
+50
+00:03:51,040 --> 00:03:54,840
+is an industry standard protocol.
+
+51
+00:03:54,840 --> 00:03:58,320
+And there's all this sort of complexity around, well, the identity provider said this, but
+
+52
+00:03:58,320 --> 00:04:01,820
+SCIM said that, but then the administrator wants to go do this other thing.
+
+53
+00:04:01,820 --> 00:04:06,320
+And so it ends up being sort of complicated.
+
+54
+00:04:06,320 --> 00:04:09,920
+And so we wanted to get it under control, and we knew that what types would help us
+
+55
+00:04:09,920 --> 00:04:15,460
+do is they would help us say, OK, this thing is a request that's coming from SCIM.
+
+56
+00:04:15,460 --> 00:04:19,720
+This thing is a JWT that's coming from the identity provider, et cetera.
+
+57
+00:04:19,720 --> 00:04:26,360
+And it would help us rein it in and make the code easier to understand.
+
+58
+00:04:26,360 --> 00:04:31,240
+And several of us were familiar with this book, and we'd use these processes for adding
+
+59
+00:04:31,240 --> 00:04:32,240
+types.
+
+60
+00:04:32,240 --> 00:04:38,480
+And so we knew that the process described in this book we thought would be helpful to
+
+61
+00:04:38,480 --> 00:04:39,480
+us.
+
+62
+00:04:40,480 --> 00:04:42,480
+The first thing you do is what you don't do.
+
+63
+00:04:42,480 --> 00:04:45,520
+You don't go in and just start writing tests.
+
+64
+00:04:45,520 --> 00:04:49,560
+What you do is you say, OK, I've got this feature I need to add, or I've got this bug
+
+65
+00:04:49,560 --> 00:04:52,800
+I need to fix, or a change that I need to make for another reason.
+
+66
+00:04:52,800 --> 00:04:54,560
+My boss is asking me to make this change.
+
+67
+00:04:54,560 --> 00:04:58,400
+A customer is asking me, that's a real change I really need to make.
+
+68
+00:04:58,400 --> 00:05:00,720
+So that's identifying the change points.
+
+69
+00:05:00,720 --> 00:05:08,480
+Then you say, OK, I need to make sure that this code, the important behavior doesn't
+
+70
+00:05:08,480 --> 00:05:09,480
+change.
+
+71
+00:05:09,480 --> 00:05:11,280
+I don't have any tests, so I'm going to write tests.
+
+72
+00:05:11,280 --> 00:05:14,060
+So that's what these steps two, three, and four are.
+
+73
+00:05:14,060 --> 00:05:19,240
+They are finding places where you can write a test, breaking dependencies up so that the
+
+74
+00:05:19,240 --> 00:05:21,800
+tests are easier to write, and then writing the tests.
+
+75
+00:05:21,800 --> 00:05:24,320
+And all of this, you haven't made your change yet.
+
+76
+00:05:24,320 --> 00:05:28,500
+All you've done is write tests for the existing behavior.
+
+77
+00:05:28,500 --> 00:05:33,240
+And then once you're done, you can make changes and refactor.
+
+78
+00:05:33,240 --> 00:05:40,040
+So we knew that was a solid model to work with, and we were looking for a way to use
+
+79
+00:05:40,040 --> 00:05:41,800
+that same algorithm, but with type.
+
+80
+00:05:41,800 --> 00:05:47,240
+So our sort of idea was, again, identify the change points, figure out, OK, we need to
+
+81
+00:05:47,240 --> 00:05:51,660
+add this feature, we need to fix this bug, this is the bit of code we need to change.
+
+82
+00:05:51,660 --> 00:05:58,400
+Let's type annotate it so that we can describe all the invariants in the type system, and
+
+83
+00:05:58,400 --> 00:06:01,520
+the type checker can help validate them.
+
+84
+00:06:01,520 --> 00:06:07,160
+And then, so we type annotate them, we type check the implementations, meaning we run
+
+85
+00:06:07,160 --> 00:06:10,660
+the type checker on it, and it tells us whether something's wrong or not.
+
+86
+00:06:10,660 --> 00:06:14,840
+And then once the type checker says, OK, you're good, everything's good, in addition to the
+
+87
+00:06:14,840 --> 00:06:18,980
+tests saying everything's good, we can make changes, we can refactor, and we'll have this
+
+88
+00:06:18,980 --> 00:06:25,400
+extra layer of confidence that the type checker is helping us out.
+
+89
+00:06:25,400 --> 00:06:32,280
+The problem that we ran into is that when we started digging into this code base, it
+
+90
+00:06:32,280 --> 00:06:35,120
+was very difficult to add type annotations.
+
+91
+00:06:35,120 --> 00:06:42,720
+And the real sort of fundamental problem was that all of these representations, the SCIM
+
+92
+00:06:42,720 --> 00:06:50,400
+representation, which is the specification, the OIDC representation, which is a different
+
+93
+00:06:50,400 --> 00:06:53,420
+specification, they were just threaded throughout the code.
+
+94
+00:06:53,420 --> 00:06:57,700
+So you'd have a function, and it would take a user, and it might be a user from a JWT,
+
+95
+00:06:57,700 --> 00:07:02,460
+it might be a user from a SCIM request, it might be a user from some other interface,
+
+96
+00:07:02,460 --> 00:07:04,620
+and it was just still in that format.
+
+97
+00:07:04,620 --> 00:07:09,180
+And so the function would accept a user of any type, and then it would do something,
+
+98
+00:07:09,180 --> 00:07:13,700
+it would call another function, and that function would accept a user of any type, and et cetera,
+
+99
+00:07:13,700 --> 00:07:14,700
+et cetera.
+
+100
+00:07:14,700 --> 00:07:20,220
+And so there was not a good solid, like, this is a user, I can add a type annotation to
+
+101
+00:07:20,260 --> 00:07:25,120
+this function that says it's the data class user, or the type dict user, and it always
+
+102
+00:07:25,120 --> 00:07:27,860
+has these keys in it, that was not the way the code was written.
+
+103
+00:07:27,860 --> 00:07:31,500
+So unfortunately, we didn't do this.
+
+104
+00:07:31,500 --> 00:07:37,940
+So what we decided to do was sort of tweak it a little bit and rewrite the code.
+
+105
+00:07:37,940 --> 00:07:42,100
+So every manager, what they want to hear, we're going to rewrite the code.
+
+106
+00:07:42,100 --> 00:07:47,860
+So we didn't want to actually go rewrite the whole project.
+
+107
+00:07:47,860 --> 00:07:50,900
+It wasn't necessary.
+
+108
+00:07:50,900 --> 00:07:55,320
+And so what we did was we still followed the same algorithm.
+
+109
+00:07:55,320 --> 00:07:59,460
+We found a piece of code that we needed to change.
+
+110
+00:07:59,460 --> 00:08:02,600
+We figured out what the interface should be.
+
+111
+00:08:02,600 --> 00:08:07,780
+We wrote types to define what the interface should be, define what the operations are
+
+112
+00:08:07,780 --> 00:08:15,980
+supposed to be, and then we ignored the rest of the system.
+
+113
+00:08:15,980 --> 00:08:18,860
+So I'm in this bit of code.
+
+114
+00:08:18,860 --> 00:08:19,860
+I want to add types.
+
+115
+00:08:19,860 --> 00:08:23,260
+I know this function is also useful in this other handler, but I don't need to touch the
+
+116
+00:08:23,260 --> 00:08:24,260
+other handler.
+
+117
+00:08:24,260 --> 00:08:25,820
+We're going to leave that alone.
+
+118
+00:08:25,820 --> 00:08:26,820
+We're not going to change it.
+
+119
+00:08:26,820 --> 00:08:29,720
+We're going to accept the fact that it's not type annotated yet.
+
+120
+00:08:29,720 --> 00:08:31,100
+Maybe someday we'll get back to that.
+
+121
+00:08:31,100 --> 00:08:34,140
+It'll be another feature we need to add, another bug we need to fix over there.
+
+122
+00:08:34,140 --> 00:08:35,640
+We can handle it then.
+
+123
+00:08:35,640 --> 00:08:40,780
+But really, the goal here was to break it down into little chunks and do as small as
+
+124
+00:08:40,780 --> 00:08:42,300
+possible.
+
+125
+00:08:42,300 --> 00:08:44,980
+The other thing is some of the interfaces were internal to us.
+
+126
+00:08:44,980 --> 00:08:51,860
+They're not public interfaces, and we knew that they didn't really match the requirements
+
+127
+00:08:51,860 --> 00:08:59,540
+very well, so we knew we could change those interfaces, and so we thought that using types
+
+128
+00:08:59,540 --> 00:09:06,300
+to define what the invariants were would help us identify what the interfaces should be.
+
+129
+00:09:06,300 --> 00:09:09,380
+So if we start from the bottom, what are the invariants?
+
+130
+00:09:09,380 --> 00:09:10,380
+What do I need?
+
+131
+00:09:10,380 --> 00:09:11,380
+What do I not need?
+
+132
+00:09:11,380 --> 00:09:16,700
+That helps define the higher-level interface in a way that there's fewer corner cases.
+
+133
+00:09:16,700 --> 00:09:17,700
+You don't have to worry.
+
+134
+00:09:17,700 --> 00:09:22,700
+You know you always have the things you need because the interface has forced it.
+
+135
+00:09:22,700 --> 00:09:25,020
+So let's start with talking about how we define types.
+
+136
+00:09:25,020 --> 00:09:29,420
+So the first thing we want to do is define a canonical representation of each resource.
+
+137
+00:09:29,420 --> 00:09:36,260
+We don't want to be passing around, well, maybe this dictionary might have the username
+
+138
+00:09:37,260 --> 00:09:41,620
+but then this other one, it's full name, and this other one, it's display name, and this
+
+139
+00:09:41,620 --> 00:09:44,140
+other one, it's subject.
+
+140
+00:09:44,140 --> 00:09:45,740
+We just want one thing.
+
+141
+00:09:45,740 --> 00:09:52,160
+So we define the types, and we tend to use data classes.
+
+142
+00:09:52,160 --> 00:09:57,280
+The other rule that we have is unlike this code up here, we try to avoid using optional.
+
+143
+00:09:57,280 --> 00:10:02,080
+So the thing about optional is it means it can be none, and what that means is everywhere
+
+144
+00:10:02,080 --> 00:10:05,460
+you're doing something and you want to operate on that, you have to check to make sure it's
+
+145
+00:10:05,460 --> 00:10:09,340
+none or not, and that adds a lot of incidental complexity to the code.
+
+146
+00:10:09,340 --> 00:10:14,140
+You need a test for all of those functions, when it's none, when it's not none.
+
+147
+00:10:14,140 --> 00:10:15,140
+You need these if statements.
+
+148
+00:10:15,140 --> 00:10:16,140
+You're trying to read the code.
+
+149
+00:10:16,140 --> 00:10:18,620
+You're trying to figure out, okay, I'm debugging this issue.
+
+150
+00:10:18,620 --> 00:10:21,820
+I'm stepping through the code trying to figure out what's happening.
+
+151
+00:10:21,820 --> 00:10:23,180
+Oh, is this thing none?
+
+152
+00:10:23,180 --> 00:10:24,180
+I don't remember.
+
+153
+00:10:24,180 --> 00:10:27,660
+Let me go back and look at the handler, and does it get passed in, et cetera, et cetera.
+
+154
+00:10:27,660 --> 00:10:29,620
+So we try to avoid that.
+
+155
+00:10:29,620 --> 00:10:31,360
+Instead what we do is we break things up.
+
+156
+00:10:31,360 --> 00:10:33,740
+So in this example, let's say you've got a user.
+
+157
+00:10:33,740 --> 00:10:35,180
+A user can belong to groups.
+
+158
+00:10:35,180 --> 00:10:37,420
+Groups are probably stored in a different table.
+
+159
+00:10:37,420 --> 00:10:40,780
+When I'm querying the database, if I don't care about the groups, I probably don't want
+
+160
+00:10:40,780 --> 00:10:43,960
+to waste time doing the join.
+
+161
+00:10:43,960 --> 00:10:46,860
+But sometimes I do care about the groups and I do need the join.
+
+162
+00:10:46,860 --> 00:10:48,500
+One way to do it is with optional.
+
+163
+00:10:48,500 --> 00:10:50,820
+The other way to do it is with two types.
+
+164
+00:10:50,820 --> 00:10:51,820
+So I've got a user.
+
+165
+00:10:51,820 --> 00:10:52,820
+They've got a name.
+
+166
+00:10:52,820 --> 00:10:53,820
+They've got an ID.
+
+167
+00:10:53,820 --> 00:10:57,060
+I've left all that other stuff out.
+
+168
+00:10:57,060 --> 00:11:02,140
+And then I've got a user with groups, and that type says I've got groups and I always
+
+169
+00:11:02,140 --> 00:11:03,140
+have groups.
+
+170
+00:11:03,140 --> 00:11:07,860
+So now my function that does something with groups takes a user with groups, it doesn't
+
+171
+00:11:07,860 --> 00:11:13,100
+take a user, and the type checker will make sure that I'm always passing a user with groups
+
+172
+00:11:13,100 --> 00:11:14,100
+inside that function.
+
+173
+00:11:14,100 --> 00:11:18,020
+I don't have to worry about is groups set or not, did I accidentally call the wrong
+
+174
+00:11:18,020 --> 00:11:21,700
+function from the wrong place.
+
+175
+00:11:21,700 --> 00:11:26,160
+The other thing we do is defining operations.
+
+176
+00:11:26,160 --> 00:11:29,260
+So when you're working with a database, you want to insert a new user.
+
+177
+00:11:29,260 --> 00:11:31,740
+There's a bunch of attributes that you need.
+
+178
+00:11:31,740 --> 00:11:37,540
+Every user has to have a name and an email and an ID or whatever the rules are.
+
+179
+00:11:37,540 --> 00:11:38,900
+So that's a user to insert.
+
+180
+00:11:38,900 --> 00:11:43,620
+However, if I'm changing a user, I shouldn't need to give you their name if I want to change
+
+181
+00:11:43,620 --> 00:11:45,100
+their email address.
+
+182
+00:11:45,100 --> 00:11:47,020
+I just want to change their email address.
+
+183
+00:11:47,020 --> 00:11:57,540
+So now, here we do have optionals, and I can say, here's a user to update and only the
+
+184
+00:11:57,540 --> 00:12:01,080
+things that the user wants to change are in there.
+
+185
+00:12:01,080 --> 00:12:03,000
+And that way, we can disambiguate.
+
+186
+00:12:03,000 --> 00:12:07,140
+You're never going to send in a partial user to the creation function, but you still can
+
+187
+00:12:07,140 --> 00:12:10,440
+send in a partial user to the update function.
+
+188
+00:12:10,440 --> 00:12:13,660
+We actually don't use optional in our user to update.
+
+189
+00:12:13,660 --> 00:12:20,000
+We have a sentry value that tells us that the request isn't trying to change this value,
+
+190
+00:12:20,000 --> 00:12:23,960
+which lets you set it to null if you need to, if it's like a really optional in the
+
+191
+00:12:23,960 --> 00:12:29,780
+database, optional value, but just to keep the code shorter.
+
+192
+00:12:29,780 --> 00:12:33,220
+The other thing we did was, you can see I'm using data classes here.
+
+193
+00:12:33,220 --> 00:12:34,220
+Those are other rules.
+
+194
+00:12:34,220 --> 00:12:36,900
+We really tried hard to use data classes as much as we could.
+
+195
+00:12:36,900 --> 00:12:37,900
+They're nice.
+
+196
+00:12:37,900 --> 00:12:38,980
+They're easy.
+
+197
+00:12:38,980 --> 00:12:44,580
+They are sort of decoupled from whatever libraries you're using for doing input parsing or talking
+
+198
+00:12:44,580 --> 00:12:48,820
+to the database.
+
+199
+00:12:48,820 --> 00:12:51,660
+You really don't have to worry about, oh, I'm just going to call this function and it
+
+200
+00:12:51,660 --> 00:12:56,520
+happens to do an update in the database, and I forgot about that, and I'm in some bit of
+
+201
+00:12:56,760 --> 00:13:00,360
+code that I'm not supposed to be doing that, or I'm outside of a transaction or whatever.
+
+202
+00:13:00,360 --> 00:13:01,880
+Data classes sort of solve that problem.
+
+203
+00:13:01,880 --> 00:13:04,680
+It's just data and nothing else.
+
+204
+00:13:04,680 --> 00:13:09,400
+The one exception to that, which I think I have on the slides, is for input parsing,
+
+205
+00:13:09,400 --> 00:13:13,120
+we use pedantic for input parsing, which is really nice when you're using type annotations
+
+206
+00:13:13,120 --> 00:13:19,520
+because it's got a MyPy plugin, and so it can ensure type safety, but it does not handle
+
+207
+00:13:19,520 --> 00:13:21,060
+data classes very well right now.
+
+208
+00:13:21,060 --> 00:13:23,040
+You end up getting not that data class.
+
+209
+00:13:23,040 --> 00:13:30,040
+You get this temporary data class, which makes things difficult.
+
+210
+00:13:30,040 --> 00:13:35,800
+Those are some of the rules we followed, and then this is the process we followed to merge
+
+211
+00:13:35,800 --> 00:13:38,320
+type annotations and test-driven development.
+
+212
+00:13:38,320 --> 00:13:42,560
+One of the things you'll find if you're trying to do both is two things will start complaining
+
+213
+00:13:42,560 --> 00:13:43,560
+to you.
+
+214
+00:13:43,560 --> 00:13:47,480
+The type shugger is complaining to you that you're not handling all the types correctly,
+
+215
+00:13:47,480 --> 00:13:52,000
+and the tests are failing because you haven't implemented the code yet, and it can sometimes
+
+216
+00:13:52,000 --> 00:13:55,960
+be difficult to figure out, well, who do I want to make happy first?
+
+217
+00:13:55,960 --> 00:14:00,480
+We came up with a process and refined a process over time.
+
+218
+00:14:00,480 --> 00:14:04,800
+The first thing that we do is we define the narrowest possible type.
+
+219
+00:14:04,800 --> 00:14:07,640
+This is akin to the happy path test case.
+
+220
+00:14:07,640 --> 00:14:08,640
+Everything's good.
+
+221
+00:14:08,640 --> 00:14:10,080
+There's no errors.
+
+222
+00:14:10,080 --> 00:14:12,460
+Nothing that optional isn't set.
+
+223
+00:14:12,460 --> 00:14:14,640
+It's all good, so we define that.
+
+224
+00:14:14,640 --> 00:14:16,240
+The type shugger will be happy.
+
+225
+00:14:16,240 --> 00:14:21,760
+There's no null that we're not checking for or anything like that.
+
+226
+00:14:21,760 --> 00:14:27,960
+We write the test case for that to define what we want the function to do when it gets
+
+227
+00:14:27,960 --> 00:14:28,960
+this data.
+
+228
+00:14:28,960 --> 00:14:29,960
+It's happy.
+
+229
+00:14:29,960 --> 00:14:32,760
+We make the test pass, normal process.
+
+230
+00:14:32,760 --> 00:14:35,880
+Then we expand the type, so we say, oh, actually, you don't need a name.
+
+231
+00:14:35,880 --> 00:14:39,240
+The name can be optional, so let's go into the data class.
+
+232
+00:14:39,240 --> 00:14:41,160
+Let's make the name optional.
+
+233
+00:14:41,160 --> 00:14:46,200
+Now MyPy or your type shugger of choice is probably complaining to you that you forgot
+
+234
+00:14:46,200 --> 00:14:51,600
+to put an if statement around something.
+
+235
+00:14:51,600 --> 00:14:57,440
+Now the type shugger is telling you, hey, you need to handle this condition.
+
+236
+00:14:57,440 --> 00:14:58,440
+Now you can write a test.
+
+237
+00:14:58,440 --> 00:14:59,440
+Okay.
+
+238
+00:14:59,440 --> 00:15:00,440
+I've got this condition.
+
+239
+00:15:00,440 --> 00:15:01,440
+I want to handle it.
+
+240
+00:15:01,440 --> 00:15:02,600
+What do I want to do?
+
+241
+00:15:02,600 --> 00:15:04,920
+Well, the type shugger doesn't make sure it does the right thing.
+
+242
+00:15:04,920 --> 00:15:07,120
+It just makes sure it does something.
+
+243
+00:15:07,120 --> 00:15:11,200
+So you want a test that says the right thing happens.
+
+244
+00:15:11,200 --> 00:15:17,200
+Now you can make the type shugger and the test pass and repeat.
+
+245
+00:15:17,200 --> 00:15:18,200
+Do it for the next thing.
+
+246
+00:15:18,200 --> 00:15:19,200
+Do it for the next thing.
+
+247
+00:15:19,600 --> 00:15:27,560
+Other tricks here is depending on your editor and depending on how ADD you are, I guess,
+
+248
+00:15:27,560 --> 00:15:31,240
+it can be difficult to run the tests while the type shugger is telling you that the code
+
+249
+00:15:31,240 --> 00:15:32,240
+is wrong.
+
+250
+00:15:32,240 --> 00:15:33,720
+In Python, that works.
+
+251
+00:15:33,720 --> 00:15:34,720
+There's no compiler.
+
+252
+00:15:34,720 --> 00:15:38,040
+The type shugger can be super unhappy with you, and Python will be perfectly happy to
+
+253
+00:15:38,040 --> 00:15:40,400
+run the tests.
+
+254
+00:15:40,400 --> 00:15:47,840
+But sometimes it's advantageous to make sure that the type shugger is happy.
+
+255
+00:15:47,840 --> 00:15:54,440
+So one thing that we do there is sometimes we'll deliberately handle the case incorrectly.
+
+256
+00:15:54,440 --> 00:15:59,040
+So the type shugger says I need to make sure I do something when this is null, I write
+
+257
+00:15:59,040 --> 00:16:03,400
+code that does clearly the wrong thing when it's null, then I write my test.
+
+258
+00:16:03,400 --> 00:16:04,680
+I run the test.
+
+259
+00:16:04,680 --> 00:16:08,640
+The test will still fail, and I can make sure that it's failing for the right reason, tells
+
+260
+00:16:08,640 --> 00:16:12,840
+me that the test works correctly, and then I can go fix it.
+
+261
+00:16:12,840 --> 00:16:17,560
+So the type shugger is sort of telling you what tests to write as you go along, which
+
+262
+00:16:17,560 --> 00:16:20,680
+is very helpful.
+
+263
+00:16:20,680 --> 00:16:22,840
+So that worked great.
+
+264
+00:16:22,840 --> 00:16:25,240
+We were really happy with the results of that.
+
+265
+00:16:25,240 --> 00:16:27,200
+We were able to resolve a lot of issues.
+
+266
+00:16:27,200 --> 00:16:34,680
+We were able to start adding new features, fixing bugs.
+
+267
+00:16:34,680 --> 00:16:39,560
+We had a lot of confidence we weren't breaking things anymore.
+
+268
+00:16:39,560 --> 00:16:40,660
+But we had another project.
+
+269
+00:16:40,660 --> 00:16:45,200
+The other project was the API that was sort of the shim between our podcasting application
+
+270
+00:16:45,200 --> 00:16:46,200
+and our platform.
+
+271
+00:16:46,600 --> 00:16:51,640
+When I say the shim, it started as a shim slowly over time, became a lot more than a
+
+272
+00:16:51,640 --> 00:16:56,200
+shim, and it's got its own database with its own set of data that doesn't fit in the platform.
+
+273
+00:16:56,200 --> 00:17:00,560
+It's got administrative APIs and user APIs, and it's got a bunch of stuff.
+
+274
+00:17:00,560 --> 00:17:05,760
+And so we're running into similar problems there, and we similarly wanted to use MyPy
+
+275
+00:17:05,760 --> 00:17:07,000
+to type check it.
+
+276
+00:17:07,000 --> 00:17:14,480
+In this case, the code was pretty well decoupled, so it was actually a lot easier to gradually
+
+277
+00:17:14,480 --> 00:17:15,480
+add typing.
+
+278
+00:17:15,480 --> 00:17:18,760
+So we started using gradual typing, which is sort of the promise of MyPy.
+
+279
+00:17:18,760 --> 00:17:23,080
+Oh, you can just add some type annotations here and add some here, and we'll sort of
+
+280
+00:17:23,080 --> 00:17:24,080
+help you.
+
+281
+00:17:24,080 --> 00:17:28,600
+And then you can sort of turn up the volume as you go along and get safer and safer and
+
+282
+00:17:28,600 --> 00:17:29,600
+safer.
+
+283
+00:17:29,600 --> 00:17:31,680
+So that's what we wanted to do.
+
+284
+00:17:31,680 --> 00:17:33,920
+So this was what we ended up doing.
+
+285
+00:17:33,920 --> 00:17:41,520
+So based on the same working effectively with legacy code, we identified change points.
+
+286
+00:17:41,520 --> 00:17:43,480
+Again, we need to change this function.
+
+287
+00:17:43,480 --> 00:17:45,360
+We need to add this feature.
+
+288
+00:17:45,360 --> 00:17:49,520
+The first thing we do is, I'll say, we add the any type annotations.
+
+289
+00:17:49,520 --> 00:17:54,120
+So we add type annotations, and we're trying to get MyPy to be happy.
+
+290
+00:17:54,120 --> 00:17:56,880
+And we are usually running MyPy in a pretty strict mode.
+
+291
+00:17:56,880 --> 00:18:01,000
+So it really does allow any, but there's a lot of things that it doesn't allow.
+
+292
+00:18:01,000 --> 00:18:07,360
+It doesn't allow implicit any's, and it doesn't allow a lot of things that Python would let
+
+293
+00:18:07,360 --> 00:18:08,360
+you do.
+
+294
+00:18:08,360 --> 00:18:11,320
+So the first thing we do is we try to do a very minimal pass.
+
+295
+00:18:11,960 --> 00:18:17,240
+Add the type annotations, make MyPy happy, even if we're unhappy with the code.
+
+296
+00:18:17,240 --> 00:18:24,200
+So we can use the any type, we can use casts, it doesn't really matter, but just get MyPy
+
+297
+00:18:24,200 --> 00:18:25,200
+happy.
+
+298
+00:18:25,200 --> 00:18:29,960
+Now we can go back and start refactoring the code, removing our uses of any, removing our
+
+299
+00:18:29,960 --> 00:18:37,480
+casts, really locking down what the types are, and locking down what the invariants
+
+300
+00:18:37,480 --> 00:18:41,800
+are so that the type checker is actually checking things, and it's not just, well,
+
+301
+00:18:41,800 --> 00:18:45,760
+you gave me an any, so it must work, so sure.
+
+302
+00:18:45,760 --> 00:18:48,540
+And then we stop.
+
+303
+00:18:48,540 --> 00:18:51,280
+So at this point, we've probably got a fair number of code changes.
+
+304
+00:18:51,280 --> 00:18:53,040
+A lot of them are probably pretty rote.
+
+305
+00:18:53,040 --> 00:18:56,760
+They're probably not that complicated, but there's a lot of them.
+
+306
+00:18:56,760 --> 00:19:00,280
+There's a lot of them to sift through, and we don't want to mix them up with the change
+
+307
+00:19:00,280 --> 00:19:05,720
+that we wanted to make originally, the feature we wanted to add, the bug we wanted to fix.
+
+308
+00:19:05,760 --> 00:19:11,600
+So now we open a pull request, and we go through the normal code review release cycle.
+
+309
+00:19:11,600 --> 00:19:15,680
+So somebody comes and reviews the code, they make sure the type annotations are correct,
+
+310
+00:19:15,680 --> 00:19:19,840
+they can check that we haven't changed the behavior in a way we didn't expect, and they
+
+311
+00:19:19,840 --> 00:19:26,980
+can understand what the type annotations mean, what we're trying to encode in the type annotations.
+
+312
+00:19:26,980 --> 00:19:31,680
+We merge it, we go to stage and production where they go through QA, our whole sort of
+
+313
+00:19:31,680 --> 00:19:34,040
+continuous deployment cycle.
+
+314
+00:19:34,040 --> 00:19:40,160
+Then we make the changes that we want to make, and that now when we make the changes
+
+315
+00:19:40,160 --> 00:19:45,680
+we want to make to the tweet, Kent Beck's tweet, hopefully they're easier, because hopefully
+
+316
+00:19:45,680 --> 00:19:48,920
+the types are telling us what we need to do.
+
+317
+00:19:48,920 --> 00:19:52,920
+And then when the person reviews the changes, they're only reviewing the actual change.
+
+318
+00:19:52,920 --> 00:19:56,320
+Oh, I see that you're adding this feature, I see that you're fixing this bug, I don't
+
+319
+00:19:56,320 --> 00:20:02,200
+have all these weird refactorings that I'm reading through trying to figure out where's
+
+320
+00:20:02,200 --> 00:20:04,960
+the actual change you wanted to make.
+
+321
+00:20:04,960 --> 00:20:07,520
+Keeps things very simple.
+
+322
+00:20:07,520 --> 00:20:13,400
+So that was the process we went through, and that was working pretty well.
+
+323
+00:20:13,400 --> 00:20:21,480
+So when you're gradually typing, a lot of times it will be very difficult to keep the
+
+324
+00:20:21,480 --> 00:20:23,800
+change from really growing out of control.
+
+325
+00:20:23,800 --> 00:20:28,620
+So like I said, we like to use data classes in our type annotated code, but in our old
+
+326
+00:20:28,660 --> 00:20:31,620
+code we're basically just using dictionaries.
+
+327
+00:20:31,620 --> 00:20:35,100
+The problem with the difference between the two, we go, oh, let's go change this user,
+
+328
+00:20:35,100 --> 00:20:38,380
+make it a data class, type annotate everything, everything will be great.
+
+329
+00:20:38,380 --> 00:20:41,460
+Actually, let me start here.
+
+330
+00:20:41,460 --> 00:20:51,860
+So you've got a file, you need to call, you've got some functions that are related to admins,
+
+331
+00:20:51,860 --> 00:20:54,460
+some functions that are related to viewers, but they're all sort of users and they're
+
+332
+00:20:54,460 --> 00:20:55,820
+all in one file.
+
+333
+00:20:55,820 --> 00:20:59,780
+The feature I'm changing is just for viewers, it has nothing to do with admins.
+
+334
+00:20:59,780 --> 00:21:04,180
+I want to type check this file, but I don't want to, I also don't want to type check this
+
+335
+00:21:04,180 --> 00:21:08,060
+file because I don't want to mess around with the admin stuff.
+
+336
+00:21:08,060 --> 00:21:10,100
+So the first thing I do is I split it up.
+
+337
+00:21:10,100 --> 00:21:15,060
+So I can split the file up, I can take the admin stuff, I can put it in its own place,
+
+338
+00:21:15,060 --> 00:21:19,460
+I can take the viewer stuff, put it in, it's probably a good idea to do anyway, but often
+
+339
+00:21:19,460 --> 00:21:24,860
+times we're a little lazy and we don't want to think about, well, is this an admin thing
+
+340
+00:21:24,900 --> 00:21:28,500
+or a viewer thing or this is where the admin changes the viewer, so which one does it go
+
+341
+00:21:28,500 --> 00:21:32,300
+in, I'll just stick it in the common place.
+
+342
+00:21:32,300 --> 00:21:37,980
+So one of the things that we found is that this really encouraged us to add a lot more
+
+343
+00:21:37,980 --> 00:21:40,660
+fine-grained organization to the project.
+
+344
+00:21:40,660 --> 00:21:46,900
+We could go create a module or a package, excuse me, called admin, put user in it, we
+
+345
+00:21:46,900 --> 00:21:51,660
+can say, well, we're type annotating admin, so the type checker type checks the whole
+
+346
+00:21:51,660 --> 00:21:52,660
+thing.
+
+347
+00:21:52,660 --> 00:22:01,220
+We can maintain the list of, these are the files that are in our type check, et cetera.
+
+348
+00:22:05,220 --> 00:22:07,460
+And then the other thing we do is we can cheat.
+
+349
+00:22:07,460 --> 00:22:11,780
+So there's two ways we can cheat.
+
+350
+00:22:11,780 --> 00:22:13,520
+One is we sort of break one of our rules.
+
+351
+00:22:13,520 --> 00:22:18,300
+So maybe we want to use the data class, we've got a user, we want to use the data class
+
+352
+00:22:18,300 --> 00:22:22,540
+to represent the user, but I've got a ton of code and I'm not really interested in changing
+
+353
+00:22:22,540 --> 00:22:29,460
+all of that code, I use a typed dict instead, or I'll use a pedantic model where maybe I
+
+354
+00:22:29,460 --> 00:22:34,500
+would normally not want to use a pedantic model.
+
+355
+00:22:34,500 --> 00:22:39,820
+We're really trying to strike a balance between making sure the type checker is really doing
+
+356
+00:22:39,820 --> 00:22:45,980
+a great job asserting things about how the code behaves, but also not just opening PRs
+
+357
+00:22:45,980 --> 00:22:52,100
+that are like, here's 10,000 lines of code that changed and all we changed was user sub
+
+358
+00:22:52,100 --> 00:22:55,700
+name turned into user dot name.
+
+359
+00:22:55,700 --> 00:22:59,980
+It's not too hard to review, but it definitely gets tiresome after a while and so we try
+
+360
+00:22:59,980 --> 00:23:00,980
+to avoid that.
+
+361
+00:23:00,980 --> 00:23:09,020
+And then the other thing that we've sometimes done, although would rather not, is we can
+
+362
+00:23:09,020 --> 00:23:12,260
+type annotate functions but not add them to the type checker.
+
+363
+00:23:12,260 --> 00:23:17,420
+So I've got some file in my handler, I want that to be type checked, it's calling some
+
+364
+00:23:17,420 --> 00:23:23,940
+function, the function's in some file that's very complicated and difficult to get the
+
+365
+00:23:23,940 --> 00:23:28,820
+whole file that passed the type checking correctly, I can add type annotations to the function
+
+366
+00:23:28,820 --> 00:23:33,700
+but not have the type checker make sure they're correct and at least assuming that I got that
+
+367
+00:23:33,700 --> 00:23:39,780
+right, which is an assumption now, the code that's type checked will be correct.
+
+368
+00:23:39,780 --> 00:23:41,740
+So that's it.
+
+369
+00:23:41,740 --> 00:23:49,300
+So we are very happy with the results of type annotating the code.
+
+370
+00:23:49,300 --> 00:23:54,100
+Like I said, we were able to really hone in on some of our interfaces that are internal
+
+371
+00:23:54,100 --> 00:24:00,140
+to us, obviously we can't change external interfaces, but being able to say, okay, this
+
+372
+00:24:00,140 --> 00:24:06,060
+type represents the operation I want to perform, really lets us think about what do you need
+
+373
+00:24:07,060 --> 00:24:15,180
+what do you not need and it let us design interfaces that were really, they removed
+
+374
+00:24:15,180 --> 00:24:21,460
+a lot of the ambiguity in the requests, so you couldn't make the request, if you made
+
+375
+00:24:21,460 --> 00:24:25,940
+the request to the wrong endpoint, it was obvious in the code that this isn't going
+
+376
+00:24:25,940 --> 00:24:31,060
+to happen, you just get a 400 error or whatever and not change the database incorrectly or
+
+377
+00:24:31,060 --> 00:24:33,340
+something like that.
+
+378
+00:24:33,340 --> 00:24:38,300
+And we found that when we have to go back and tweak those things, the code that we've
+
+379
+00:24:38,300 --> 00:24:44,740
+touched already, we can make those changes a lot faster because the type checker is helping
+
+380
+00:24:44,740 --> 00:24:52,260
+us tell us when we're making a mistake, tell us what this thing needs, what this thing
+
+381
+00:24:52,260 --> 00:24:55,500
+doesn't need, etc.
+
+382
+00:24:55,500 --> 00:24:58,300
+And yeah, I think that's it.
+
+383
+00:24:58,300 --> 00:25:03,860
+I also wanted to give thanks, Tim is here, so if you have any questions about what we're
+
+384
+00:25:03,860 --> 00:25:10,860
+talking about, he's paired with me a lot on this and helped come up with a lot of these
+
+385
+00:25:10,860 --> 00:25:18,060
+processes, so it's very much team effort and John, who isn't here, but John did a ton of
+
+386
+00:25:18,060 --> 00:25:24,180
+code review for us and I wanted to thank him because I know people aren't always great.
+
+387
+00:25:24,180 --> 00:25:27,460
+Code review isn't always the thing you wake up and want to do in the morning, but it's
+
+388
+00:25:27,460 --> 00:25:32,340
+super, super important and very helpful, so I wanted to say thanks there.
+
+389
+00:25:32,340 --> 00:25:33,580
+And I think that's it for me.
+

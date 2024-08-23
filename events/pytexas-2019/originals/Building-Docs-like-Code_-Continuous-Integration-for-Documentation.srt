@@ -1,0 +1,2480 @@
+1
+00:00:00,000 --> 00:00:08,000
+I'd like to introduce Mason Egger, who's here to talk about continuous deployment of documentation.
+
+2
+00:00:08,000 --> 00:00:09,000
+Take it away.
+
+3
+00:00:09,000 --> 00:00:10,000
+Awesome.
+
+4
+00:00:10,000 --> 00:00:11,000
+Thank you, Jeremy.
+
+5
+00:00:11,000 --> 00:00:12,000
+Hey, everybody have a good lunch?
+
+6
+00:00:12,000 --> 00:00:13,000
+Yeah.
+
+7
+00:00:13,000 --> 00:00:14,000
+Yeah?
+
+8
+00:00:14,000 --> 00:00:15,000
+That's pretty good.
+
+9
+00:00:15,000 --> 00:00:16,000
+Let's give the PyTexas organizers a round of applause for that.
+
+10
+00:00:16,000 --> 00:00:17,000
+Awesome.
+
+11
+00:00:17,000 --> 00:00:28,000
+So this is my talk, Building Docs Like Code, Continuous Integration for Documentation.
+
+12
+00:00:28,000 --> 00:00:30,000
+This is my first time giving this talk as a talk.
+
+13
+00:00:30,000 --> 00:00:34,000
+This is usually a very angry rant whenever docs don't work the way I think they should.
+
+14
+00:00:34,000 --> 00:00:40,000
+So I have to make it more professional and more good for a professional audience.
+
+15
+00:00:40,000 --> 00:00:43,000
+So I'm Mason Egger and here we go.
+
+16
+00:00:43,000 --> 00:00:44,000
+So quick, who am I?
+
+17
+00:00:44,000 --> 00:00:48,000
+I am a site reliability engineer on the cloud platform team at HomeAway.
+
+18
+00:00:48,000 --> 00:00:49,000
+We're based out of Austin.
+
+19
+00:00:49,000 --> 00:00:53,000
+We have a downtown office and a north office in the domain that I work at.
+
+20
+00:00:53,000 --> 00:00:56,000
+I am also a volunteer educator with a program called Teals.
+
+21
+00:00:56,000 --> 00:01:02,000
+It is a Microsoft philanthropy that pairs industry professionals with teachers that
+
+22
+00:01:02,000 --> 00:01:06,000
+may not have traditional computer science backgrounds but are being forced to teach
+
+23
+00:01:06,000 --> 00:01:11,000
+this class inside of the classrooms because they don't have access to the knowledge that
+
+24
+00:01:11,000 --> 00:01:13,000
+people want their kids to learn this stuff.
+
+25
+00:01:13,000 --> 00:01:16,000
+So if you're interested in that at all, feel free to come and talk to me at any time during
+
+26
+00:01:16,000 --> 00:01:17,000
+the conference.
+
+27
+00:01:17,000 --> 00:01:18,000
+I love talking about that.
+
+28
+00:01:18,000 --> 00:01:23,000
+And as anyone on my team has ever been able to tell you, if you ever ask, I'm a documentation
+
+29
+00:01:23,000 --> 00:01:24,000
+fanatic.
+
+30
+00:01:24,000 --> 00:01:28,000
+I very much think that bad docs are the reason why we have bad code.
+
+31
+00:01:28,000 --> 00:01:31,000
+So we're going to talk about how to have good docs.
+
+32
+00:01:31,000 --> 00:01:33,000
+So who is this talk for?
+
+33
+00:01:33,000 --> 00:01:38,000
+This talk is for pretty much everybody, but this is a good talk for open source maintainers,
+
+34
+00:01:38,000 --> 00:01:43,000
+junior and senior level developers, program and project community managers, DevOps engineers,
+
+35
+00:01:43,000 --> 00:01:45,000
+educators, the list goes on and on.
+
+36
+00:01:45,000 --> 00:01:50,000
+The TLDR of that is anyone who writes, maintains, or manages a product that they intend to share
+
+37
+00:01:50,000 --> 00:01:53,000
+with someone else, this talk is for you.
+
+38
+00:01:53,000 --> 00:01:56,000
+So act one, the conflict arises.
+
+39
+00:01:56,000 --> 00:01:58,000
+How we manage our documentation.
+
+40
+00:01:58,000 --> 00:02:01,000
+So, a common approach to the way we manage our documentation.
+
+41
+00:02:01,000 --> 00:02:03,000
+And it's a tale as old as time.
+
+42
+00:02:03,000 --> 00:02:07,000
+There's a developer sitting up at his desk at 2 a.m. in the morning banging out some
+
+43
+00:02:07,000 --> 00:02:08,000
+code.
+
+44
+00:02:08,000 --> 00:02:11,000
+The developer writes the code, the developer becomes happy with said code and commits the
+
+45
+00:02:11,000 --> 00:02:13,000
+code to a version control system.
+
+46
+00:02:13,000 --> 00:02:17,000
+And then once he is happy with it, he sends it off to his coworkers and they do reviews
+
+47
+00:02:17,000 --> 00:02:18,000
+and tests.
+
+48
+00:02:18,000 --> 00:02:19,000
+And then we come around to this decision.
+
+49
+00:02:19,000 --> 00:02:20,000
+Is it time to release this code?
+
+50
+00:02:20,000 --> 00:02:24,000
+Well, if it's not, the developer rejoices, goes back to writing code because that's what
+
+51
+00:02:24,000 --> 00:02:25,000
+developers like to do.
+
+52
+00:02:25,000 --> 00:02:26,000
+They like to write code.
+
+53
+00:02:26,000 --> 00:02:31,000
+If it actually is time to release the documentation, they groan internally, they kick themselves
+
+54
+00:02:31,000 --> 00:02:33,000
+because now somebody has to write these bloody docs.
+
+55
+00:02:33,000 --> 00:02:35,000
+So, now we're doing that.
+
+56
+00:02:35,000 --> 00:02:38,000
+Someone could be the actual developer themselves.
+
+57
+00:02:38,000 --> 00:02:42,000
+It could be a technical writer if your company is lucky enough to have technical writers.
+
+58
+00:02:42,000 --> 00:02:43,000
+I have worked with some.
+
+59
+00:02:43,000 --> 00:02:44,000
+They're amazing.
+
+60
+00:02:44,000 --> 00:02:45,000
+But that wasn't my last job.
+
+61
+00:02:45,000 --> 00:02:47,000
+My current job does not have technical writers on staff.
+
+62
+00:02:47,000 --> 00:02:51,000
+It could even be a different developer, a new hire, or an intern.
+
+63
+00:02:51,000 --> 00:02:53,000
+Because I have seen common things before.
+
+64
+00:02:53,000 --> 00:02:54,000
+It's like, oh, you're the new guy.
+
+65
+00:02:54,000 --> 00:02:55,000
+Go write the docs.
+
+66
+00:02:55,000 --> 00:02:58,000
+Which is a terrible idea and we'll get to that later.
+
+67
+00:02:58,000 --> 00:03:00,000
+Issues with this approach.
+
+68
+00:03:00,000 --> 00:03:03,000
+The documentation in this approach is almost an afterthought.
+
+69
+00:03:03,000 --> 00:03:07,000
+You know, your code is great and you need to tell people that your code is great.
+
+70
+00:03:07,000 --> 00:03:10,000
+And if it's an afterthought, you're not really getting, you're not optimizing that.
+
+71
+00:03:10,000 --> 00:03:13,000
+There are long release cycles where things can be forgotten.
+
+72
+00:03:13,000 --> 00:03:16,000
+You know, we all try to do agile methodology, most of us.
+
+73
+00:03:16,000 --> 00:03:19,000
+And we, you know, two weeks sprints, iterative release, blah, blah, blah, blah, blah.
+
+74
+00:03:19,000 --> 00:03:22,000
+All that stuff that we say we do, but we don't actually do.
+
+75
+00:03:22,000 --> 00:03:28,000
+But I worked at, my first job was at a company where we shipped a physical hardware device every six to eight months.
+
+76
+00:03:28,000 --> 00:03:30,000
+There was no iterative deployment on that.
+
+77
+00:03:30,000 --> 00:03:34,000
+I didn't get up every two weeks at the end of my sprint and go, okay, let's ship a thousand more blade servers.
+
+78
+00:03:34,000 --> 00:03:36,000
+Didn't work that way.
+
+79
+00:03:36,000 --> 00:03:39,000
+So, I would get to the end of a development process eight months down the road.
+
+80
+00:03:39,000 --> 00:03:41,000
+And they come and ask me about something I wrote on day one.
+
+81
+00:03:41,000 --> 00:03:44,000
+And I'm like, oh, I don't remember how that works at all.
+
+82
+00:03:44,000 --> 00:03:45,000
+Let me go look at the code.
+
+83
+00:03:45,000 --> 00:03:48,000
+And then we're in this really vicious cycle.
+
+84
+00:03:48,000 --> 00:03:54,000
+The more layers of separation between the implementer of the code and the author, the more likely you are to get for an accurate docs.
+
+85
+00:03:54,000 --> 00:03:56,000
+Technical writers are great, but they didn't write the code.
+
+86
+00:03:56,000 --> 00:03:58,000
+Like, they don't know all of the nuances of it.
+
+87
+00:03:58,000 --> 00:04:04,000
+So, they're likely to get some mistakes on it, especially if you're not working with them to help them get the code, get the docs right.
+
+88
+00:04:04,000 --> 00:04:08,000
+And the main, one of the issues we approach with this is that the developer dislikes documenting.
+
+89
+00:04:08,000 --> 00:04:10,000
+And that's actually a really big problem.
+
+90
+00:04:10,000 --> 00:04:13,000
+Like, why is developers do we not like documentation?
+
+91
+00:04:13,000 --> 00:04:15,000
+Like, why don't we like it?
+
+92
+00:04:15,000 --> 00:04:17,000
+Developers enjoy writing code.
+
+93
+00:04:17,000 --> 00:04:19,000
+Developers enjoy talking about their code.
+
+94
+00:04:19,000 --> 00:04:24,000
+So, why don't we like writing about the things that we're talking to all of our buddies about?
+
+95
+00:04:24,000 --> 00:04:26,000
+It doesn't really make sense.
+
+96
+00:04:26,000 --> 00:04:30,000
+So, the real issue here isn't that developers don't like writing documentation.
+
+97
+00:04:30,000 --> 00:04:35,000
+The issue is, is what they dislike is the workflow that we have enforced upon them to write their documentation.
+
+98
+00:04:35,000 --> 00:04:41,000
+A developer has a very finite or very, you know, nuanced workflow that they like performing.
+
+99
+00:04:41,000 --> 00:04:47,000
+They like writing their code in VIM or VS code, committing it to Git, testing it on their laptop and all of that.
+
+100
+00:04:47,000 --> 00:04:52,000
+But every time we ask them to document something, we make them break this workflow.
+
+101
+00:04:52,000 --> 00:04:58,000
+We make them context switch out of their preferred environment to go use somebody's clunky UI,
+
+102
+00:04:58,000 --> 00:05:03,000
+some, you know, amazing what you see is what you get editor that actually is not what you see is what you get.
+
+103
+00:05:03,000 --> 00:05:10,000
+And then, or that also has a search feature that I would be better off asking DevU Random for a result than actually the search feature working.
+
+104
+00:05:10,000 --> 00:05:17,000
+So, how can we integrate our documentation process into a workflow that developers will enjoy?
+
+105
+00:05:17,000 --> 00:05:19,000
+What if we treat our docs like code?
+
+106
+00:05:19,000 --> 00:05:26,000
+You know, the Occam's razor in the room would be, if developers like writing code, then why don't we just make the docs code?
+
+107
+00:05:26,000 --> 00:05:32,000
+What if we have our docs living, instead of living externally to our code, they live right alongside it?
+
+108
+00:05:32,000 --> 00:05:40,000
+Whether this be in the same exact repository as the code or in the same, perhaps, GitHub organization as the code for maybe long form docs or different types of docs.
+
+109
+00:05:40,000 --> 00:05:47,000
+And what if we used a markup language or a markdown language that developers already know that they've been using forever
+
+110
+00:05:47,000 --> 00:05:52,000
+that is, you know, way better than what you see is what you get and doesn't add an extra level of complexity
+
+111
+00:05:52,000 --> 00:05:59,000
+so even like new technical writers who may have never used markdown before could actually use it because it's relatively simple to use.
+
+112
+00:06:00,000 --> 00:06:02,000
+So, let's treat the docs like code.
+
+113
+00:06:02,000 --> 00:06:05,000
+What do we mean when we say treat docs like code?
+
+114
+00:06:05,000 --> 00:06:13,000
+Docs source files are stored inside of the version control system, which means if you were using Git or Mercurial or anything, all of your docs live alongside it.
+
+115
+00:06:13,000 --> 00:06:17,000
+It's a Git clone from my docs, it's a Git clone from my source code.
+
+116
+00:06:17,000 --> 00:06:21,000
+We build the docs, the doc given artifacts automatically.
+
+117
+00:06:21,000 --> 00:06:27,000
+Documentation is just as much of deliverable as your wheel file is or as your executable or any of that things.
+
+118
+00:06:27,000 --> 00:06:31,000
+The docs are artifacts and they should be treated as such.
+
+119
+00:06:31,000 --> 00:06:34,000
+Ensure a trusted set of reviewers meticulously reviews the code.
+
+120
+00:06:34,000 --> 00:06:39,000
+We spend hours doing code reviews to make sure that we don't accidentally break our code base,
+
+121
+00:06:39,000 --> 00:06:43,000
+but we don't spend hours reviewing our docs to make sure that we don't hand off our code to somebody else
+
+122
+00:06:43,000 --> 00:06:47,000
+to make sure that they don't break their entire system because we didn't document it properly.
+
+123
+00:06:47,000 --> 00:06:49,000
+Why is that?
+
+124
+00:06:49,000 --> 00:06:54,000
+We also have to make sure that our docs are tested, both for accuracy and for functionality.
+
+125
+00:06:54,000 --> 00:07:00,000
+There is nothing I hate more in the world than going and doing an example from a documentation
+
+126
+00:07:00,000 --> 00:07:03,000
+and then trying to type it out and then it doesn't work because it's wrong.
+
+127
+00:07:03,000 --> 00:07:06,000
+The source code in the docs wasn't correct.
+
+128
+00:07:06,000 --> 00:07:08,000
+Accuracy for it, does it actually work?
+
+129
+00:07:08,000 --> 00:07:11,000
+And functionality, do all of my webpages render correctly?
+
+130
+00:07:11,000 --> 00:07:16,000
+Do all of my links, if I have hyperlinks in there, do they all resolve to an actual place?
+
+131
+00:07:16,000 --> 00:07:19,000
+We should be testing our docs for all of these.
+
+132
+00:07:19,000 --> 00:07:22,000
+We should be publishing our docs without much human intervention.
+
+133
+00:07:22,000 --> 00:07:26,000
+We already have CI-CD pipelines for build artifacts.
+
+134
+00:07:26,000 --> 00:07:30,000
+We should be using all of these to also publish our docs to our webpages, to our wikis,
+
+135
+00:07:30,000 --> 00:07:34,000
+or wherever you want to post your docs, we should be doing this also.
+
+136
+00:07:34,000 --> 00:07:36,000
+What do we gain from this?
+
+137
+00:07:36,000 --> 00:07:42,000
+It promotes collaboration, which is a great thing because not only are we writing our docs for our customers,
+
+138
+00:07:42,000 --> 00:07:47,000
+or we're writing our code in our docs for our customers, we are now writing them with our customers.
+
+139
+00:07:47,000 --> 00:07:51,000
+Maybe we're not the greatest at English or we don't have a degree in education
+
+140
+00:07:51,000 --> 00:07:54,000
+and know how proper things need to flow to make it where the docs are understandable,
+
+141
+00:07:54,000 --> 00:07:59,000
+but maybe one of our users does, and they want to submit a PR and fix the docs for us.
+
+142
+00:07:59,000 --> 00:08:01,000
+Hey, that's great, that's work I didn't have to do.
+
+143
+00:08:01,000 --> 00:08:05,000
+I love work that I don't have to do. I never do work I don't have to do.
+
+144
+00:08:05,000 --> 00:08:08,000
+You can ask my boss, I'm really good at it.
+
+145
+00:08:08,000 --> 00:08:13,000
+I think there was an old Linus Torvalds quote that intelligence is the ability to appear to be doing nothing,
+
+146
+00:08:13,000 --> 00:08:15,000
+but yet still getting everything done.
+
+147
+00:08:15,000 --> 00:08:20,000
+Also, documentation, as we saw from our keynote this morning,
+
+148
+00:08:20,000 --> 00:08:24,000
+is often a very first step for somebody to collaborate into an open source project.
+
+149
+00:08:24,000 --> 00:08:29,000
+If we have our docs out there, we're more likely to maybe start fostering more open source contributions
+
+150
+00:08:29,000 --> 00:08:32,000
+into our projects because we have our docs in there.
+
+151
+00:08:32,000 --> 00:08:35,000
+We can track documentation mistakes as bugs.
+
+152
+00:08:35,000 --> 00:08:40,000
+In my collegiate years, I spent a little bit of time playing around in the BSD lands,
+
+153
+00:08:40,000 --> 00:08:44,000
+and I actually have a defunct YouTube channel that is me doing nothing but BSD tutorials.
+
+154
+00:08:44,000 --> 00:08:46,000
+Don't go look for it, it's awful.
+
+155
+00:08:46,000 --> 00:08:51,000
+But the open BSD community treats every bug in their documentation
+
+156
+00:08:51,000 --> 00:08:55,000
+or the lack of documentation as nothing less than a critical or a P2 bug.
+
+157
+00:08:55,000 --> 00:08:57,000
+And that's how we should be treating incorrect docs.
+
+158
+00:08:57,000 --> 00:09:02,000
+We treat code, if my code loses me all that money that it did in one of our talks earlier,
+
+159
+00:09:02,000 --> 00:09:04,000
+that's a pretty big bug.
+
+160
+00:09:04,000 --> 00:09:09,000
+But if that was an on-off switch, and we improperly mislabeled the on-off switch in the docs,
+
+161
+00:09:09,000 --> 00:09:13,000
+and we cost everybody else to lose it, that's the same level of bug.
+
+162
+00:09:13,000 --> 00:09:15,000
+That should be treated with the same severity.
+
+163
+00:09:15,000 --> 00:09:17,000
+We include docs in our code reviews.
+
+164
+00:09:17,000 --> 00:09:20,000
+This is actually really nice because you write a new feature and you write the docs,
+
+165
+00:09:20,000 --> 00:09:23,000
+and when you're reviewing the code, you can review the docs,
+
+166
+00:09:23,000 --> 00:09:27,000
+and you now have more sets of eyes on the documentation.
+
+167
+00:09:27,000 --> 00:09:30,000
+It allows us to make our docs more beautiful.
+
+168
+00:09:30,000 --> 00:09:34,000
+We have all these wonderful static site generators like Sphinx and MK Docs
+
+169
+00:09:34,000 --> 00:09:37,000
+and all of these other things that can make wonderful documentation
+
+170
+00:09:37,000 --> 00:09:40,000
+where I know that most of y'all probably don't have art degrees,
+
+171
+00:09:40,000 --> 00:09:43,000
+and you don't like dealing with how things look on a page any more than I do,
+
+172
+00:09:43,000 --> 00:09:45,000
+so let somebody else do that.
+
+173
+00:09:45,000 --> 00:09:47,000
+We have tools that can do this for us.
+
+174
+00:09:47,000 --> 00:09:51,000
+It allows us to leverage our current workflows that we already have.
+
+175
+00:09:51,000 --> 00:09:56,000
+We have amazing workflows for building software, agile process, and all of this.
+
+176
+00:09:56,000 --> 00:10:00,000
+Now we can apply all of these same workflows to our docs,
+
+177
+00:10:00,000 --> 00:10:02,000
+and it empowers the developers to document.
+
+178
+00:10:02,000 --> 00:10:05,000
+If the documentation is closer to the source code,
+
+179
+00:10:05,000 --> 00:10:10,000
+I have found that the developer is like 10 times more likely to actually edit it,
+
+180
+00:10:10,000 --> 00:10:13,000
+and I have a case study for this that we did at HomeAway.
+
+181
+00:10:13,000 --> 00:10:16,000
+I guess a case study, and they were my guinea pigs,
+
+182
+00:10:16,000 --> 00:10:19,000
+it's kind of six in one hand, half a dozen in another.
+
+183
+00:10:19,000 --> 00:10:22,000
+There was a new team that was formed at HomeAway to build a brand new product.
+
+184
+00:10:22,000 --> 00:10:24,000
+It was inside of my organization.
+
+185
+00:10:24,000 --> 00:10:27,000
+We had a new GitHub org, new team members, and everything.
+
+186
+00:10:27,000 --> 00:10:30,000
+The first thing I added to that org because I was on this team
+
+187
+00:10:30,000 --> 00:10:35,000
+was a base documentation repo that allowed us to do all of our long-form docs,
+
+188
+00:10:35,000 --> 00:10:38,000
+all of our architecture decisions, all of our read-me's, all of our how-to's,
+
+189
+00:10:38,000 --> 00:10:42,000
+and getting started, all in this repository.
+
+190
+00:10:42,000 --> 00:10:45,000
+Throughout the entire time that this project was active,
+
+191
+00:10:45,000 --> 00:10:49,000
+these docs were the most up-to-date and well-maintained in the entire department.
+
+192
+00:10:49,000 --> 00:10:53,000
+They were giving retrospectives every two weeks at the end of our agile process,
+
+193
+00:10:53,000 --> 00:10:55,000
+and they had new docs every two weeks,
+
+194
+00:10:55,000 --> 00:10:58,000
+whereas another team that I was also working with at the time
+
+195
+00:10:58,000 --> 00:11:01,000
+updated their docs every six months, every quarter.
+
+196
+00:11:01,000 --> 00:11:04,000
+Basically, whenever the boss yelled about it because he couldn't give it to somebody else,
+
+197
+00:11:04,000 --> 00:11:06,000
+that's when the docs got updated.
+
+198
+00:11:06,000 --> 00:11:08,000
+By putting them closer to the developer,
+
+199
+00:11:08,000 --> 00:11:11,000
+I've seen it work where people will actually work on the docs more
+
+200
+00:11:11,000 --> 00:11:13,000
+because they're already in there.
+
+201
+00:11:13,000 --> 00:11:15,000
+They're already in their Git repository.
+
+202
+00:11:15,000 --> 00:11:17,000
+They're already in their source code and their code editors.
+
+203
+00:11:17,000 --> 00:11:19,000
+I use them personally.
+
+204
+00:11:19,000 --> 00:11:22,000
+It's not that difficult just to open up the file and change it real quick
+
+205
+00:11:22,000 --> 00:11:24,000
+and then commit it with your source.
+
+206
+00:11:24,000 --> 00:11:27,000
+How does this change the workflow that we currently saw earlier?
+
+207
+00:11:27,000 --> 00:11:30,000
+Now the developer writes code and docs.
+
+208
+00:11:30,000 --> 00:11:33,000
+The developer commits the code and the new docs to the repository.
+
+209
+00:11:33,000 --> 00:11:36,000
+The code reviews, code reviews and testing, and the docs reviews,
+
+210
+00:11:36,000 --> 00:11:39,000
+we get all of that same stuff, same process.
+
+211
+00:11:39,000 --> 00:11:42,000
+Is it time for a release? No? Ha-ha, hooray, I'm back to writing code.
+
+212
+00:11:42,000 --> 00:11:44,000
+If it's yes, the artifacts are published,
+
+213
+00:11:44,000 --> 00:11:47,000
+and the developer never has to go to that side of the screen.
+
+214
+00:11:47,000 --> 00:11:50,000
+It's that side because I can't do things in reverse.
+
+215
+00:11:50,000 --> 00:11:52,000
+They never go over there anymore.
+
+216
+00:11:52,000 --> 00:11:55,000
+We don't ever have to worry about taking them out of the process for writing code
+
+217
+00:11:55,000 --> 00:11:58,000
+because all of that process of publishing them and building them
+
+218
+00:11:58,000 --> 00:12:00,000
+and all of that has become automated for us.
+
+219
+00:12:00,000 --> 00:12:03,000
+So act two, a hero emerges.
+
+220
+00:12:03,000 --> 00:12:05,000
+Who can tell that I'm excited for Avengers?
+
+221
+00:12:05,000 --> 00:12:07,000
+Anybody? Yeah.
+
+222
+00:12:07,000 --> 00:12:09,000
+So CICD for documentation.
+
+223
+00:12:09,000 --> 00:12:12,000
+Quick definition for some people in the room.
+
+224
+00:12:12,000 --> 00:12:15,000
+Continuous integration means that code is continuously tested,
+
+225
+00:12:15,000 --> 00:12:18,000
+integrated with other code changes, and merged.
+
+226
+00:12:18,000 --> 00:12:21,000
+Continuous deployment means that code is continuously deployed
+
+227
+00:12:21,000 --> 00:12:24,000
+with each patch to the entire code mix.
+
+228
+00:12:24,000 --> 00:12:27,000
+This is very similar. You do the same thing with your docs.
+
+229
+00:12:27,000 --> 00:12:29,000
+Your docs would be continuously tested.
+
+230
+00:12:29,000 --> 00:12:31,000
+Your docs would also be continuously deployed.
+
+231
+00:12:31,000 --> 00:12:34,000
+What does this mean for docs, though? It's a little bit different.
+
+232
+00:12:34,000 --> 00:12:36,000
+It means that every time that we do a patch,
+
+233
+00:12:36,000 --> 00:12:39,000
+we are building a full version of our entire documentation.
+
+234
+00:12:39,000 --> 00:12:43,000
+So if you have a whole giant web page that hosts all of your API docs,
+
+235
+00:12:43,000 --> 00:12:48,000
+you would build this web page every time that you build the patch.
+
+236
+00:12:48,000 --> 00:12:51,000
+You are continually testing the content with each patch,
+
+237
+00:12:51,000 --> 00:12:54,000
+and there are some pretty interesting documentation testing tools
+
+238
+00:12:54,000 --> 00:12:56,000
+that you can do with this.
+
+239
+00:12:56,000 --> 00:12:58,000
+Or you also, if you have technical writers,
+
+240
+00:12:58,000 --> 00:13:00,000
+they will be able to review this and actually read it for you.
+
+241
+00:13:00,000 --> 00:13:03,000
+You are publishing automatically with every release.
+
+242
+00:13:03,000 --> 00:13:05,000
+You are versioning your docs.
+
+243
+00:13:05,000 --> 00:13:07,000
+This is probably the most important thing you have to do.
+
+244
+00:13:07,000 --> 00:13:12,000
+If I am using, you know, my library version 1.0 and my library version 2.0,
+
+245
+00:13:12,000 --> 00:13:15,000
+but the only docs that you publish were my library docs,
+
+246
+00:13:15,000 --> 00:13:17,000
+oh, I don't know which version I'm using.
+
+247
+00:13:17,000 --> 00:13:18,000
+I think that's my favorite part.
+
+248
+00:13:18,000 --> 00:13:19,000
+Oh, I read the docs.
+
+249
+00:13:19,000 --> 00:13:21,000
+It has the little version checker in the bottom.
+
+250
+00:13:21,000 --> 00:13:22,000
+That is the best part of it.
+
+251
+00:13:22,000 --> 00:13:24,000
+I mean, there's probably a lot of other amazing parts,
+
+252
+00:13:24,000 --> 00:13:25,000
+but I like that part.
+
+253
+00:13:25,000 --> 00:13:29,000
+So a quick introduction to just two different types of documentation
+
+254
+00:13:29,000 --> 00:13:32,000
+because I saw a talk similar to this at a conference once
+
+255
+00:13:32,000 --> 00:13:33,000
+and didn't know this.
+
+256
+00:13:33,000 --> 00:13:37,000
+There's two or three major forms of documentation you'll deal with.
+
+257
+00:13:37,000 --> 00:13:42,000
+Long-form documentation, which is user guides, getting started, FAQs,
+
+258
+00:13:42,000 --> 00:13:43,000
+all of those things.
+
+259
+00:13:43,000 --> 00:13:46,000
+These are the kind of docs that would live in a separate repository
+
+260
+00:13:46,000 --> 00:13:47,000
+inside of your organization.
+
+261
+00:13:47,000 --> 00:13:53,000
+Like these necessarily don't live in the same exact repo as your code base
+
+262
+00:13:53,000 --> 00:13:55,000
+because they really aren't tied to code.
+
+263
+00:13:55,000 --> 00:13:57,000
+This is really more of an overview of the product,
+
+264
+00:13:57,000 --> 00:14:00,000
+maybe an architecture decision, things like that.
+
+265
+00:14:00,000 --> 00:14:02,000
+Then we have the functional documentation,
+
+266
+00:14:02,000 --> 00:14:05,000
+which is the documentation that actually lives inside of your code base,
+
+267
+00:14:05,000 --> 00:14:06,000
+inside the same repo.
+
+268
+00:14:06,000 --> 00:14:10,000
+And these are RESTful APIs, SDKs, man pages, things like that.
+
+269
+00:14:10,000 --> 00:14:13,000
+Those are the code that you would see the PyDoc,
+
+270
+00:14:13,000 --> 00:14:16,000
+the inside of Python you would see your documentation like above it.
+
+271
+00:14:16,000 --> 00:14:19,000
+That's the kind of documentation this is talking about.
+
+272
+00:14:19,000 --> 00:14:23,000
+So we have some really amazing documentation tools that can help us with this.
+
+273
+00:14:23,000 --> 00:14:26,000
+There's three different types that I've kind of roughly classified.
+
+274
+00:14:26,000 --> 00:14:28,000
+There are static site generators.
+
+275
+00:14:28,000 --> 00:14:31,000
+These are the ones that are good for your long-form documentation,
+
+276
+00:14:31,000 --> 00:14:34,000
+your FAQs, your runbooks, all of those things.
+
+277
+00:14:34,000 --> 00:14:36,000
+Your source code-based documentation generators,
+
+278
+00:14:36,000 --> 00:14:39,000
+docs that live inside the code, PyDoc, JavaDoc,
+
+279
+00:14:39,000 --> 00:14:45,000
+the source code that basically annotations, code annotations for your documentation.
+
+280
+00:14:45,000 --> 00:14:48,000
+Some even generate clients for testing, like Swagger.
+
+281
+00:14:48,000 --> 00:14:51,000
+If you've ever used the REST API document editor, Swagger,
+
+282
+00:14:51,000 --> 00:14:54,000
+you can actually generate tests on your docs based on this.
+
+283
+00:14:54,000 --> 00:14:55,000
+It's really cool.
+
+284
+00:14:55,000 --> 00:14:58,000
+And then I put in system documentation generators,
+
+285
+00:14:58,000 --> 00:15:00,000
+because I found a really cool package called Ron,
+
+286
+00:15:00,000 --> 00:15:03,000
+which is a Markdown-based man page generator.
+
+287
+00:15:03,000 --> 00:15:05,000
+And I think the name is hilarious,
+
+288
+00:15:05,000 --> 00:15:10,000
+because the Markdown format is Roth, and it's Ron, and it's the opposite.
+
+289
+00:15:10,000 --> 00:15:13,000
+I think most of the people I was talking with last night,
+
+290
+00:15:13,000 --> 00:15:17,000
+every single name of every package in the computer science
+
+291
+00:15:17,000 --> 00:15:20,000
+is a developer laughing at his own inside joke.
+
+292
+00:15:20,000 --> 00:15:22,000
+So that's all that is.
+
+293
+00:15:22,000 --> 00:15:24,000
+I thought it was hilarious the first time I did it,
+
+294
+00:15:24,000 --> 00:15:25,000
+the first time I saw it,
+
+295
+00:15:25,000 --> 00:15:27,000
+and it gets less and less funny every time,
+
+296
+00:15:27,000 --> 00:15:29,000
+and that's exactly how that joke should go.
+
+297
+00:15:30,000 --> 00:15:33,000
+First tool I'm going to talk about real quick is MKDocs,
+
+298
+00:15:33,000 --> 00:15:36,000
+since this is the static site generator type of documentation.
+
+299
+00:15:36,000 --> 00:15:40,000
+These are Markdown-based documentation with a YAML-based config file,
+
+300
+00:15:40,000 --> 00:15:41,000
+relatively straightforward.
+
+301
+00:15:41,000 --> 00:15:44,000
+The time to hello world on this is probably about 30 seconds.
+
+302
+00:15:44,000 --> 00:15:48,000
+To get a working, running implementation of this, it is insanely simple.
+
+303
+00:15:48,000 --> 00:15:52,000
+We use MKDocs a lot at HomeAway for our long-form documentation,
+
+304
+00:15:52,000 --> 00:15:55,000
+because the developers at HomeAway really like Markdown,
+
+305
+00:15:55,000 --> 00:15:58,000
+and this all I do is write Markdown, and then it gets out of their way.
+
+306
+00:15:58,000 --> 00:16:00,000
+It is easy to configure.
+
+307
+00:16:00,000 --> 00:16:03,000
+There are many different extensions and many different themes that are supported.
+
+308
+00:16:03,000 --> 00:16:04,000
+It is Python-based,
+
+309
+00:16:04,000 --> 00:16:06,000
+so if you don't like any of those extensions or themes,
+
+310
+00:16:06,000 --> 00:16:08,000
+you can easily extend your own.
+
+311
+00:16:08,000 --> 00:16:10,000
+It just uses Jinja 2 and some templating files.
+
+312
+00:16:10,000 --> 00:16:12,000
+That's really all it does.
+
+313
+00:16:12,000 --> 00:16:15,000
+I think one of my favorite parts about MKDocs in UML,
+
+314
+00:16:15,000 --> 00:16:17,000
+and this is just a personal pet peeve of mine,
+
+315
+00:16:17,000 --> 00:16:22,000
+is that you can now support flowcharts and sequence diagrams
+
+316
+00:16:22,000 --> 00:16:24,000
+with the right extension in Markdown,
+
+317
+00:16:24,000 --> 00:16:27,000
+and it will actually render the flowchart and sequence diagram
+
+318
+00:16:27,000 --> 00:16:28,000
+inside of your documentation.
+
+319
+00:16:28,000 --> 00:16:31,000
+Because the amount of times that I go to an old page and I'm like,
+
+320
+00:16:31,000 --> 00:16:32,000
+okay, who made this diagram?
+
+321
+00:16:32,000 --> 00:16:34,000
+Was it in Glyphi or did we use Google Docs?
+
+322
+00:16:34,000 --> 00:16:36,000
+No, we used the other one, but who had it?
+
+323
+00:16:36,000 --> 00:16:38,000
+Well, that was the guy that was here three years ago,
+
+324
+00:16:38,000 --> 00:16:41,000
+but he quit, and now he heard sheep in Montana.
+
+325
+00:16:41,000 --> 00:16:43,000
+We're never getting that thing filed back,
+
+326
+00:16:43,000 --> 00:16:46,000
+so now I have to rebuild all of these diagrams.
+
+327
+00:16:46,000 --> 00:16:47,000
+I'm tired of it.
+
+328
+00:16:47,000 --> 00:16:50,000
+I spent an entire night one time rebuilding a diagram
+
+329
+00:16:50,000 --> 00:16:53,000
+for a meeting that we just happen to have tomorrow.
+
+330
+00:16:53,000 --> 00:16:55,000
+I'm like, now it's in the source code.
+
+331
+00:16:55,000 --> 00:16:56,000
+Everybody can edit it.
+
+332
+00:16:56,000 --> 00:16:58,000
+We never lose track of these diagrams again.
+
+333
+00:16:58,000 --> 00:17:00,000
+That was a personal pet peeve and rant of mine.
+
+334
+00:17:00,000 --> 00:17:02,000
+If I only get two or three rants in this talk,
+
+335
+00:17:02,000 --> 00:17:04,000
+it's going to be a good talk.
+
+336
+00:17:04,000 --> 00:17:06,000
+Documentation tools, Sphinx.
+
+337
+00:17:06,000 --> 00:17:08,000
+This one is another one of my personal favorites.
+
+338
+00:17:08,000 --> 00:17:10,000
+I find it slightly more difficult than MK Docs,
+
+339
+00:17:10,000 --> 00:17:14,000
+but that's because I think that Markdown and YAML
+
+340
+00:17:14,000 --> 00:17:16,000
+is really easy.
+
+341
+00:17:16,000 --> 00:17:18,000
+It's a restructured text-based tool
+
+342
+00:17:18,000 --> 00:17:20,000
+that does support Markdown.
+
+343
+00:17:20,000 --> 00:17:22,000
+It's the most common tool for creating
+
+344
+00:17:22,000 --> 00:17:26,000
+SDK documentation for encode documentation,
+
+345
+00:17:26,000 --> 00:17:27,000
+I forgot to put, in Python,
+
+346
+00:17:27,000 --> 00:17:29,000
+so this is the one that most of you have ever done,
+
+347
+00:17:29,000 --> 00:17:32,000
+a Python SDK or something, you very likely use Sphinx.
+
+348
+00:17:32,000 --> 00:17:34,000
+It can output to literally any form of media
+
+349
+00:17:35,000 --> 00:17:37,000
+that you ever ask it to ever, including LaTeX.
+
+350
+00:17:37,000 --> 00:17:39,000
+People are like, well, which one's harder, Sphinx or LaTeX?
+
+351
+00:17:39,000 --> 00:17:40,000
+Well, Sphinx writes LaTeX,
+
+352
+00:17:40,000 --> 00:17:42,000
+so it's obviously smarter than LaTeX.
+
+353
+00:17:42,000 --> 00:17:44,000
+And it might be Sinship.
+
+354
+00:17:44,000 --> 00:17:46,000
+I'm currently uncertain.
+
+355
+00:17:46,000 --> 00:17:48,000
+I'll get back to you and I'll let you know.
+
+356
+00:17:48,000 --> 00:17:50,000
+My favorite part of Sphinx is,
+
+357
+00:17:50,000 --> 00:17:52,000
+and this is the extension they have for doc testing,
+
+358
+00:17:52,000 --> 00:17:54,000
+which is where I can write the code
+
+359
+00:17:54,000 --> 00:17:58,000
+inside of my, or I can write source tests
+
+360
+00:17:58,000 --> 00:18:00,000
+inside of my source code documentation,
+
+361
+00:18:00,000 --> 00:18:03,000
+and I can actually run the tests on this documentation
+
+362
+00:18:03,000 --> 00:18:06,000
+to ensure that the code that I put in my documentation
+
+363
+00:18:06,000 --> 00:18:07,000
+accurately runs.
+
+364
+00:18:07,000 --> 00:18:09,000
+And if it doesn't, this build will fail
+
+365
+00:18:09,000 --> 00:18:11,000
+and it will say, hey, your code examples are wrong
+
+366
+00:18:11,000 --> 00:18:13,000
+and you're lying to your users.
+
+367
+00:18:13,000 --> 00:18:16,000
+And I love that because the amount of times that,
+
+368
+00:18:16,000 --> 00:18:18,000
+one, it's caught me on more occasion than one,
+
+369
+00:18:18,000 --> 00:18:20,000
+so I'm not as good at this as I think I am,
+
+370
+00:18:20,000 --> 00:18:22,000
+and it also catches my teammates,
+
+371
+00:18:22,000 --> 00:18:24,000
+and then they get angry at me and I just give up.
+
+372
+00:18:24,000 --> 00:18:26,000
+So it's hilarious.
+
+373
+00:18:26,000 --> 00:18:28,000
+Just a quick thing, because I have to plug her on
+
+374
+00:18:28,000 --> 00:18:30,000
+because it's such a hilarious tool.
+
+375
+00:18:30,000 --> 00:18:32,000
+Markdown-based man pages, I think, are awesome.
+
+376
+00:18:32,000 --> 00:18:35,000
+As a systems engineer, I enjoy and love man pages,
+
+377
+00:18:35,000 --> 00:18:37,000
+so I'm just going to go with that one.
+
+378
+00:18:37,000 --> 00:18:41,000
+So Act 3, the final battle, where we have our demo.
+
+379
+00:18:41,000 --> 00:18:43,000
+So here was the issue that I was trying to solve
+
+380
+00:18:43,000 --> 00:18:45,000
+with an open source project that I have started
+
+381
+00:18:45,000 --> 00:18:47,000
+called Unlock DDU.
+
+382
+00:18:47,000 --> 00:18:50,000
+I need to be able to create many open source texts,
+
+383
+00:18:50,000 --> 00:18:53,000
+all with a similar format that are production-ready
+
+384
+00:18:53,000 --> 00:18:54,000
+to go out of the box.
+
+385
+00:18:54,000 --> 00:18:57,000
+I don't really want to worry about building the texts.
+
+386
+00:18:57,000 --> 00:18:59,000
+I don't want to worry about what the format is
+
+387
+00:18:59,000 --> 00:19:00,000
+or how the page looks.
+
+388
+00:19:01,000 --> 00:19:02,000
+They should just appear.
+
+389
+00:19:02,000 --> 00:19:04,000
+I don't want to have to spend all my time setting up
+
+390
+00:19:04,000 --> 00:19:08,000
+this pipeline every single time.
+
+391
+00:19:08,000 --> 00:19:11,000
+I want a workflow that jump-starts DocWritters.
+
+392
+00:19:11,000 --> 00:19:13,000
+And the secret one that I don't think I put on the slide
+
+393
+00:19:13,000 --> 00:19:16,000
+is I've implemented this at every job I've ever worked at.
+
+394
+00:19:16,000 --> 00:19:17,000
+I'm tired of re-implementing it every time
+
+395
+00:19:17,000 --> 00:19:19,000
+because I implement it once and forget it,
+
+396
+00:19:19,000 --> 00:19:20,000
+and then three years down the line,
+
+397
+00:19:20,000 --> 00:19:21,000
+I have to implement it again.
+
+398
+00:19:21,000 --> 00:19:24,000
+So now I just open sourced it, and now we're just going to work.
+
+399
+00:19:24,000 --> 00:19:25,000
+Next time I go and get a new job,
+
+400
+00:19:25,000 --> 00:19:27,000
+we're going to have it ready to go.
+
+401
+00:19:27,000 --> 00:19:30,000
+So my solution, the author will generate docs.
+
+402
+00:19:30,000 --> 00:19:32,000
+The author writes docs.
+
+403
+00:19:32,000 --> 00:19:34,000
+The author will publish his docs,
+
+404
+00:19:34,000 --> 00:19:36,000
+and then they're automatically published to a hosted solution.
+
+405
+00:19:36,000 --> 00:19:39,000
+This is the workflow that I want the actual technical writer
+
+406
+00:19:39,000 --> 00:19:41,000
+or the author to use, or the software developer.
+
+407
+00:19:41,000 --> 00:19:44,000
+So the tools that I chose to use this are Cookie Cutter.
+
+408
+00:19:44,000 --> 00:19:45,000
+Cookie Cutter, if you don't know,
+
+409
+00:19:45,000 --> 00:19:48,000
+is a Python-based project generator.
+
+410
+00:19:48,000 --> 00:19:51,000
+It is more often than not used to generate Python projects,
+
+411
+00:19:51,000 --> 00:19:53,000
+but it actually can generate anything you ask it to
+
+412
+00:19:53,000 --> 00:19:55,000
+because that's what it does.
+
+413
+00:19:55,000 --> 00:19:57,000
+A text editor, whatever you want to use
+
+414
+00:19:57,000 --> 00:19:59,000
+to edit these actual source files.
+
+415
+00:19:59,000 --> 00:20:01,000
+You're going to do a git commit and push,
+
+416
+00:20:01,000 --> 00:20:04,000
+and then it's going to publish directly to the GitHub pages.
+
+417
+00:20:04,000 --> 00:20:07,000
+So now let's see if the recorded demo will play today.
+
+418
+00:20:07,000 --> 00:20:08,000
+It is.
+
+419
+00:20:08,000 --> 00:20:10,000
+So first thing we're going to do is we're going to generate
+
+420
+00:20:10,000 --> 00:20:12,000
+a docs pipeline with our Cookie Cutter.
+
+421
+00:20:12,000 --> 00:20:14,000
+So this is the source repository for the Cookie Cutter
+
+422
+00:20:14,000 --> 00:20:16,000
+that I have built.
+
+423
+00:20:16,000 --> 00:20:17,000
+Everybody is able to go get it,
+
+424
+00:20:17,000 --> 00:20:19,000
+and I'll build a link to it at the end of the slides.
+
+425
+00:20:19,000 --> 00:20:22,000
+So the first thing we do is we just run Cookie Cutter.
+
+426
+00:20:22,000 --> 00:20:23,000
+It asks me if I want to re-download it
+
+427
+00:20:23,000 --> 00:20:26,000
+because it took me like seven tries to get this demo
+
+428
+00:20:26,000 --> 00:20:29,000
+properly recorded where I didn't hate it.
+
+429
+00:20:29,000 --> 00:20:31,000
+I fill in a little bit of boilerplate information.
+
+430
+00:20:31,000 --> 00:20:35,000
+I fill in the name of it, the site description,
+
+431
+00:20:35,000 --> 00:20:38,000
+the repository I wanted to show up as in GitHub.
+
+432
+00:20:38,000 --> 00:20:40,000
+Apparently I decided to take time there.
+
+433
+00:20:40,000 --> 00:20:43,000
+The site author, the GitHub username.
+
+434
+00:20:43,000 --> 00:20:45,000
+This is to make the build badges work
+
+435
+00:20:45,000 --> 00:20:47,000
+and things inside of the code.
+
+436
+00:20:47,000 --> 00:20:49,000
+You can choose whatever license you want to license this under.
+
+437
+00:20:49,000 --> 00:20:51,000
+That was just me being bored and having
+
+438
+00:20:51,000 --> 00:20:53,000
+and enjoying open source licenses.
+
+439
+00:20:53,000 --> 00:20:56,000
+You select your documentation engine, GitHub pages,
+
+440
+00:20:56,000 --> 00:20:58,000
+and what CI you want to use.
+
+441
+00:20:58,000 --> 00:20:59,000
+So what did you get from this?
+
+442
+00:20:59,000 --> 00:21:01,000
+You get, automatically you get a repo built
+
+443
+00:21:01,000 --> 00:21:05,000
+inside of your directory, and you get a docs directory,
+
+444
+00:21:05,000 --> 00:21:07,000
+a PIP file that has all of your dependencies,
+
+445
+00:21:07,000 --> 00:21:10,000
+a license file, a Docker file, a make file, and a readme.
+
+446
+00:21:10,000 --> 00:21:12,000
+I use Docker and make for almost everything,
+
+447
+00:21:12,000 --> 00:21:15,000
+so if you don't end up having make on your system,
+
+448
+00:21:15,000 --> 00:21:17,000
+you can just use the raw Docker files.
+
+449
+00:21:17,000 --> 00:21:20,000
+The thing I missed was the real quick configuration file.
+
+450
+00:21:21,000 --> 00:21:24,000
+So this is just what the base docs look like.
+
+451
+00:21:24,000 --> 00:21:27,000
+It's just a PyTex demo boilerplate.
+
+452
+00:21:27,000 --> 00:21:30,000
+How would I use this locally?
+
+453
+00:21:30,000 --> 00:21:32,000
+I'm a slow typer sometimes.
+
+454
+00:21:32,000 --> 00:21:34,000
+So the first thing you have to do with this,
+
+455
+00:21:34,000 --> 00:21:36,000
+and I'm going to make sure I put this in the docs,
+
+456
+00:21:36,000 --> 00:21:39,000
+is you have to lock your PIP file, because as I was doing this,
+
+457
+00:21:39,000 --> 00:21:42,000
+there was a version of Ginger that was out of date,
+
+458
+00:21:42,000 --> 00:21:44,000
+and it caused a security error in GitHub, so I did it.
+
+459
+00:21:44,000 --> 00:21:46,000
+So now you have to generate your own PIP file.
+
+460
+00:21:46,000 --> 00:21:48,000
+And then I do a make build, and I have now built
+
+461
+00:21:48,000 --> 00:21:52,000
+the Docker container that I have to run all of this.
+
+462
+00:21:52,000 --> 00:21:54,000
+And then I do a make run,
+
+463
+00:21:54,000 --> 00:21:56,000
+and I can go and view it on localhost.
+
+464
+00:21:58,000 --> 00:22:00,000
+And my docs automatically appear,
+
+465
+00:22:00,000 --> 00:22:02,000
+and now I have them ready to go.
+
+466
+00:22:02,000 --> 00:22:04,000
+So if I want to edit this, I would just close out
+
+467
+00:22:04,000 --> 00:22:06,000
+of the MK docs of the running Docker file.
+
+468
+00:22:06,000 --> 00:22:08,000
+I would just open the docs again,
+
+469
+00:22:08,000 --> 00:22:10,000
+and I would add some more text to it.
+
+470
+00:22:12,000 --> 00:22:14,000
+I'm a slow typer.
+
+471
+00:22:15,000 --> 00:22:17,000
+Let me make run it again.
+
+472
+00:22:19,000 --> 00:22:21,000
+And we go over, and we refresh,
+
+473
+00:22:21,000 --> 00:22:24,000
+and now we have, you know, PyTex is awesome.
+
+474
+00:22:24,000 --> 00:22:26,000
+It's right there. It works pretty simply.
+
+475
+00:22:26,000 --> 00:22:28,000
+Other thing you can use, I use something called Biobu,
+
+476
+00:22:28,000 --> 00:22:30,000
+which is basically just a fancy wrapper around TMUX.
+
+477
+00:22:30,000 --> 00:22:33,000
+So I can actually leave this Docker file running
+
+478
+00:22:33,000 --> 00:22:35,000
+and constantly edit my docs in another screen,
+
+479
+00:22:35,000 --> 00:22:39,000
+and I'll get live updates on the other side as much as I want.
+
+480
+00:22:39,000 --> 00:22:41,000
+So I don't have to constantly close the image,
+
+481
+00:22:41,000 --> 00:22:43,000
+rerun, check my docs, and do all that.
+
+482
+00:22:43,000 --> 00:22:46,000
+So now I come over here, I've got my Docker file running.
+
+483
+00:22:46,000 --> 00:22:48,000
+I add woohoo with an exclamation mark.
+
+484
+00:22:48,000 --> 00:22:51,000
+I'm bad at markdown, so it went on the same line.
+
+485
+00:22:51,000 --> 00:22:53,000
+So now I'm going to go fix that.
+
+486
+00:22:53,000 --> 00:22:55,000
+And I cut that part out of the demo, apparently,
+
+487
+00:22:55,000 --> 00:22:57,000
+because I'm kind of good at editing.
+
+488
+00:22:57,000 --> 00:22:59,000
+Set up your Git repo and push.
+
+489
+00:22:59,000 --> 00:23:01,000
+Just a quick little thing on, you know,
+
+490
+00:23:01,000 --> 00:23:03,000
+make sure you give it the same name as you gave your project,
+
+491
+00:23:03,000 --> 00:23:06,000
+otherwise it's going to make Travis really unhappy with you.
+
+492
+00:23:06,000 --> 00:23:11,000
+So we've pushed it up, and now Travis has automatically detected our docs.
+
+493
+00:23:11,000 --> 00:23:16,000
+So we go to the build demo or the build badge icon that you get,
+
+494
+00:23:16,000 --> 00:23:19,000
+and you open it up, and Travis is waiting and thinking,
+
+495
+00:23:19,000 --> 00:23:22,000
+and now Travis has detected it, and my builds run really fast
+
+496
+00:23:22,000 --> 00:23:24,000
+because that's the power of editing,
+
+497
+00:23:24,000 --> 00:23:28,000
+instead of making you sit here for a minute and a half build.
+
+498
+00:23:28,000 --> 00:23:30,000
+Oh, no, my build failed. That's not good.
+
+499
+00:23:30,000 --> 00:23:32,000
+What happened there?
+
+500
+00:23:32,000 --> 00:23:36,000
+I failed to deploy. What? I don't know.
+
+501
+00:23:36,000 --> 00:23:38,000
+This is the thing that I trip over every time.
+
+502
+00:23:38,000 --> 00:23:41,000
+I always forget to put my GitHub token inside of Travis
+
+503
+00:23:41,000 --> 00:23:43,000
+so I can actually access this,
+
+504
+00:23:43,000 --> 00:23:45,000
+and I actually tripped over this three times
+
+505
+00:23:45,000 --> 00:23:47,000
+before I decided I wanted to put it in the demo.
+
+506
+00:23:47,000 --> 00:23:49,000
+So I was like, if I'm failing on it this many times,
+
+507
+00:23:49,000 --> 00:23:52,000
+maybe everybody else would enjoy watching me fail at it, too.
+
+508
+00:23:52,000 --> 00:23:55,000
+So I go to my personal access tokens, and I create a token.
+
+509
+00:23:55,000 --> 00:23:57,000
+For those of you that think you're going to grab this token,
+
+510
+00:23:57,000 --> 00:23:59,000
+it's already deleted.
+
+511
+00:23:59,000 --> 00:24:02,000
+So I worked for a security company. I know you.
+
+512
+00:24:02,000 --> 00:24:04,000
+Don't lie to me.
+
+513
+00:24:04,000 --> 00:24:06,000
+So then we just go in, and we add the GitHub token
+
+514
+00:24:06,000 --> 00:24:08,000
+as an environment variable in Travis.
+
+515
+00:24:08,000 --> 00:24:11,000
+It automatically says it won't display in the build log,
+
+516
+00:24:11,000 --> 00:24:13,000
+which is nice because the last thing you need
+
+517
+00:24:13,000 --> 00:24:15,000
+is leaking credentials in build logs.
+
+518
+00:24:15,000 --> 00:24:17,000
+Been there, done that.
+
+519
+00:24:17,000 --> 00:24:19,000
+We restart the build.
+
+520
+00:24:19,000 --> 00:24:23,000
+It goes really fast because, again, I'm an amazing editor.
+
+521
+00:24:23,000 --> 00:24:26,000
+Everybody's builds ran that fast. Everybody would love it.
+
+522
+00:24:26,000 --> 00:24:28,000
+And then you go back to your repo,
+
+523
+00:24:28,000 --> 00:24:32,000
+and now this is automatically published on my personal GitHub pages.
+
+524
+00:24:32,000 --> 00:24:34,000
+And let's just do it one more time for the fun of it,
+
+525
+00:24:34,000 --> 00:24:37,000
+because let's see that it actually just is completely continuous.
+
+526
+00:24:37,000 --> 00:24:41,000
+So I add another statement to it, which would be,
+
+527
+00:24:41,000 --> 00:24:43,000
+I don't remember what I put one more time.
+
+528
+00:24:43,000 --> 00:24:44,000
+Yeah, I don't remember.
+
+529
+00:24:44,000 --> 00:24:46,000
+I did this an hour, you know, a couple hours ago.
+
+530
+00:24:46,000 --> 00:24:48,000
+I still don't remember what I did.
+
+531
+00:24:48,000 --> 00:24:53,000
+We rebuild it. It goes choo-choo.
+
+532
+00:24:53,000 --> 00:24:56,000
+Refresh. It automatically works.
+
+533
+00:24:56,000 --> 00:24:58,000
+Sometimes GitHub pages is slow,
+
+534
+00:24:58,000 --> 00:25:00,000
+so now we have a fully automated process.
+
+535
+00:25:00,000 --> 00:25:03,000
+So I cut out the times me sitting there clicking refresh
+
+536
+00:25:03,000 --> 00:25:06,000
+for 20 seconds before it actually showed up.
+
+537
+00:25:06,000 --> 00:25:09,000
+Oh, apparently if I hit the play button, it starts over again.
+
+538
+00:25:09,000 --> 00:25:11,000
+Let's go next.
+
+539
+00:25:11,000 --> 00:25:13,000
+Can you try this yourself? Yeah.
+
+540
+00:25:13,000 --> 00:25:15,000
+The open source project that I created is called UnlockEDU.
+
+541
+00:25:15,000 --> 00:25:20,000
+It's an open source project dedicated to creating free and open educational resources,
+
+542
+00:25:20,000 --> 00:25:23,000
+such as textbooks, curriculums, worksheets, and stuff,
+
+543
+00:25:23,000 --> 00:25:27,000
+for use in public schools, because I'm a TEALS volunteer now.
+
+544
+00:25:27,000 --> 00:25:31,000
+I am finding out more and more that the availability of computer science curriculum
+
+545
+00:25:31,000 --> 00:25:34,000
+for schools that does not cost an arm and a leg for schools to purchase
+
+546
+00:25:34,000 --> 00:25:36,000
+is actually really low.
+
+547
+00:25:36,000 --> 00:25:38,000
+So this entire project is built around that.
+
+548
+00:25:38,000 --> 00:25:41,000
+All of the books that I have built inside of this are built on Markdown.
+
+549
+00:25:41,000 --> 00:25:46,000
+My brother and I are writing an AP Computer Science A Java book for this course
+
+550
+00:25:46,000 --> 00:25:47,000
+and a couple of other things.
+
+551
+00:25:47,000 --> 00:25:51,000
+The cookie cutter is part of it, so all of the systems code and stuff
+
+552
+00:25:51,000 --> 00:25:53,000
+that I'm going to be building for this project will be open source
+
+553
+00:25:53,000 --> 00:25:57,000
+along with the books themselves, so you'll have access to them.
+
+554
+00:25:57,000 --> 00:26:00,000
+And you can just, yeah, you can just visit it here in the documentation generator.
+
+555
+00:26:00,000 --> 00:26:03,000
+Also, I put some stickers out on the table for if you like that logo,
+
+556
+00:26:03,000 --> 00:26:04,000
+because I think it's a cool logo.
+
+557
+00:26:04,000 --> 00:26:06,000
+I've got a really cool graphic designer.
+
+558
+00:26:06,000 --> 00:26:09,000
+If they run out or if you want more, I have plenty.
+
+559
+00:26:09,000 --> 00:26:10,000
+I bought a lot.
+
+560
+00:26:10,000 --> 00:26:16,000
+So sources that I used for this, Docs Like Code is an amazing book.
+
+561
+00:26:16,000 --> 00:26:19,000
+If you are interested in this concept of actually being able to treat your docs like code
+
+562
+00:26:19,000 --> 00:26:24,000
+and get more examples inside of the book, this is a great resource to use.
+
+563
+00:26:24,000 --> 00:26:29,000
+I did footnote a couple of times because I just shamelessly stole from this book,
+
+564
+00:26:29,000 --> 00:26:30,000
+but I cited it so it's not stealing.
+
+565
+00:26:30,000 --> 00:26:33,000
+It's research.
+
+566
+00:26:33,000 --> 00:26:35,000
+So that's how you do it.
+
+567
+00:26:35,000 --> 00:26:36,000
+It's a great book.
+
+568
+00:26:36,000 --> 00:26:37,000
+I highly recommend it.
+
+569
+00:26:37,000 --> 00:26:39,000
+Final thoughts.
+
+570
+00:26:39,000 --> 00:26:41,000
+Every job that I've ever implemented this workflow at,
+
+571
+00:26:41,000 --> 00:26:45,000
+both the developer experience and the user docs have vastly improved.
+
+572
+00:26:45,000 --> 00:26:49,000
+It's been amazing how much better, in just a short amount of time,
+
+573
+00:26:49,000 --> 00:26:52,000
+the docs can get and the user experience can get.
+
+574
+00:26:52,000 --> 00:26:54,000
+Stop making docs as a punishment.
+
+575
+00:26:54,000 --> 00:26:57,000
+Don't dump docs on your intern, because that's how you get terrible docs.
+
+576
+00:26:57,000 --> 00:26:58,000
+They don't know what you did.
+
+577
+00:26:58,000 --> 00:27:00,000
+They don't know the architecture of the system,
+
+578
+00:27:00,000 --> 00:27:02,000
+but you want them to go out and write all these docs.
+
+579
+00:27:02,000 --> 00:27:06,000
+In reality, the person who writes the docs is the person who has to understand the software the most,
+
+580
+00:27:06,000 --> 00:27:11,000
+because you're trying to explain it to your users in a way that they can understand
+
+581
+00:27:11,000 --> 00:27:16,000
+and you're not trying to make them drink from the water hose or the fire hose, blow their face off.
+
+582
+00:27:16,000 --> 00:27:19,000
+So the third bullet is probably my favorite bullet.
+
+583
+00:27:19,000 --> 00:27:22,000
+If your docs suck, people will abandon your project.
+
+584
+00:27:22,000 --> 00:27:26,000
+I've seen a lot of open source products that had a lot of potential that died
+
+585
+00:27:26,000 --> 00:27:28,000
+because they didn't do proper docs.
+
+586
+00:27:28,000 --> 00:27:30,000
+Nobody knew how to use their code.
+
+587
+00:27:30,000 --> 00:27:33,000
+And in the age of readme engineering,
+
+588
+00:27:33,000 --> 00:27:37,000
+where if it takes me more than an entire readme page to actually figure out how your stuff works,
+
+589
+00:27:37,000 --> 00:27:42,000
+I'm not going to spend that much time going into it to figure out what you actually did.
+
+590
+00:27:42,000 --> 00:27:45,000
+Versioning docs is great. We should do a lot more of that.
+
+591
+00:27:45,000 --> 00:27:47,000
+We should do tons of that.
+
+592
+00:27:47,000 --> 00:27:50,000
+My slides are already available on my website,
+
+593
+00:27:50,000 --> 00:27:53,000
+so if you would like to go and find them, I'm really easy to find.
+
+594
+00:27:53,000 --> 00:27:57,000
+I'm the easiest person on earth to find on the internet, if you know my first and last name.
+
+595
+00:27:57,000 --> 00:28:01,000
+And luckily, they're both five letters apiece, so ten letters. It's like a phone number.
+
+596
+00:28:01,000 --> 00:28:05,000
+And that's my Twitter account. If you want to see me tweet cats and useless crap,
+
+597
+00:28:05,000 --> 00:28:09,000
+that's where I go to do it.
+
+598
+00:28:09,000 --> 00:28:10,000
+How much time do I have left?
+
+599
+00:28:10,000 --> 00:28:12,000
+I have time for questions. I will take questions.
+
+600
+00:28:12,000 --> 00:28:13,000
+You have about two minutes.
+
+601
+00:28:13,000 --> 00:28:17,000
+Fantastic. I normally talk way too fast, and that went great.
+
+602
+00:28:17,000 --> 00:28:21,000
+I am so happy with myself. I'm getting a cookie.
+
+603
+00:28:21,000 --> 00:28:23,000
+Any questions?
+
+604
+00:28:23,000 --> 00:28:25,000
+Wow, I had 28 minutes.
+
+605
+00:28:25,000 --> 00:28:28,000
+Man, everybody at my job said I wasn't going to hit it.
+
+606
+00:28:28,000 --> 00:28:30,000
+They said I was going to go over by ten minutes.
+
+607
+00:28:30,000 --> 00:28:31,000
+Yes?
+
+608
+00:28:31,000 --> 00:28:36,000
+My question is related to Python and the way Python defines public versus private,
+
+609
+00:28:36,000 --> 00:28:40,000
+or doesn't define the differentiation between public and private methods,
+
+610
+00:28:40,000 --> 00:28:43,000
+but you only really want to document the public methods in an API.
+
+611
+00:28:43,000 --> 00:28:45,000
+So how do you use this to differentiate?
+
+612
+00:28:45,000 --> 00:28:47,000
+So Sphinx has a built-in thing that you can have.
+
+613
+00:28:47,000 --> 00:28:49,000
+I think it's called undock methods, and you can say,
+
+614
+00:28:49,000 --> 00:28:52,000
+hey, I don't want to document these methods inside of there.
+
+615
+00:28:52,000 --> 00:28:54,000
+So when you're laying out your restructure text file,
+
+616
+00:28:54,000 --> 00:28:58,000
+you can say, hey, don't document these methods, or only document these methods.
+
+617
+00:28:58,000 --> 00:29:02,000
+You can either be inclusive or exclusive, and then that's the way you would do that.
+
+618
+00:29:02,000 --> 00:29:07,000
+Any other questions?
+
+619
+00:29:07,000 --> 00:29:10,000
+All right. I have no end to this, so I take a small bow.
+
+620
+00:29:10,000 --> 00:29:12,000
+Thank you.
+

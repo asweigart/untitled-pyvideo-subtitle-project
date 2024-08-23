@@ -1,0 +1,1440 @@
+1
+00:00:00,000 --> 00:00:22,640
+Hi, I'm Sanjay Sivanthi, and today I'm going to talk about running serverless web applications
+
+2
+00:00:22,640 --> 00:00:25,040
+in Python.
+
+3
+00:00:25,040 --> 00:00:30,280
+I got interested in this project a few months ago with the following question.
+
+4
+00:00:30,280 --> 00:00:36,480
+Is it possible to deploy a web app to the internet and never have to maintain it again?
+
+5
+00:00:36,480 --> 00:00:43,720
+I was working on a side project, and I knew about several ways to deploy web applications.
+
+6
+00:00:43,720 --> 00:00:50,520
+On the one hand, I could rent a VM and start a server myself on it, but in my experience,
+
+7
+00:00:50,520 --> 00:00:55,520
+those can go down sometimes, and I didn't want to have to maintain this.
+
+8
+00:00:55,520 --> 00:01:00,040
+On the other hand, I could run my own cluster, which would be reliable, but it seemed like
+
+9
+00:01:00,040 --> 00:01:01,960
+a lot of work.
+
+10
+00:01:01,960 --> 00:01:09,300
+So in searching for a better solution, that's how I got started thinking about serverless.
+
+11
+00:01:09,300 --> 00:01:15,520
+In this talk, I'm going to go over an introduction to serverless and specifically one offering
+
+12
+00:01:15,520 --> 00:01:18,280
+called AWS Lambda.
+
+13
+00:01:18,280 --> 00:01:23,400
+Much of the talk is going to be centered around building serverless web applications
+
+14
+00:01:23,400 --> 00:01:30,240
+with a Python library called Zappa, and my goal for this talk is to try to convince you
+
+15
+00:01:30,240 --> 00:01:37,600
+to use serverless, or at least give it a try if you haven't already.
+
+16
+00:01:37,600 --> 00:01:39,320
+Serverless means a lot of things.
+
+17
+00:01:39,320 --> 00:01:45,560
+It's really an umbrella marketing term, but what it means is that the cloud provider manages
+
+18
+00:01:45,720 --> 00:01:49,680
+the servers and the scaling on your behalf.
+
+19
+00:01:49,680 --> 00:01:55,760
+To be crystal clear, your code is still executing on a server somewhere, but the main difference
+
+20
+00:01:55,760 --> 00:02:02,680
+is that you are no longer responsible for the server's life cycle.
+
+21
+00:02:02,680 --> 00:02:08,920
+I want to focus on one serverless offering in particular called AWS Lambda.
+
+22
+00:02:08,920 --> 00:02:12,800
+Lambda is Amazon's serverless compute platform.
+
+23
+00:02:12,840 --> 00:02:18,480
+It supports several runtimes out of the box, including Python, but also others like Go
+
+24
+00:02:18,480 --> 00:02:21,120
+and Node.js.
+
+25
+00:02:21,120 --> 00:02:27,200
+In Lambda, you write what's called a function, and your Lambda function can connect to persistent
+
+26
+00:02:27,200 --> 00:02:34,680
+data stores, such as a database, an S3 bucket, or a shared file system.
+
+27
+00:02:34,680 --> 00:02:39,640
+One nice feature about Lambda is that you only pay for the compute time that you use,
+
+28
+00:02:39,760 --> 00:02:43,320
+down to the millisecond.
+
+29
+00:02:43,320 --> 00:02:47,640
+Lambda also has some basic limitations that are good to know about.
+
+30
+00:02:47,640 --> 00:02:52,920
+First of all, everything times out after 15 minutes maximum on Lambda.
+
+31
+00:02:52,920 --> 00:02:58,720
+So if you have a long-running workload and you don't know how to split it up, then Lambda
+
+32
+00:02:58,720 --> 00:03:02,480
+is probably not a good use case for you.
+
+33
+00:03:02,480 --> 00:03:06,760
+Also in Lambda, you have very limited access to a file system.
+
+34
+00:03:06,760 --> 00:03:13,000
+You only have access to a temp directory that's ephemeral, so I don't recommend using it for
+
+35
+00:03:13,000 --> 00:03:14,640
+persisting data.
+
+36
+00:03:14,640 --> 00:03:20,440
+However, as I said earlier, you can persist data by connecting to another persistent data
+
+37
+00:03:20,440 --> 00:03:22,320
+store.
+
+38
+00:03:22,320 --> 00:03:27,440
+And finally, managing subprocesses gets a little bit difficult with Lambda.
+
+39
+00:03:27,440 --> 00:03:33,240
+You're welcome to spawn multiple processes or subprocesses if you want to, but you're
+
+40
+00:03:33,280 --> 00:03:39,680
+not guaranteed that they'll finish executing unless your code waits for them to finish.
+
+41
+00:03:39,680 --> 00:03:46,000
+Basically, what happens is as soon as the main process exits, your environment might be
+
+42
+00:03:46,000 --> 00:03:46,920
+torn down.
+
+43
+00:03:46,920 --> 00:03:52,320
+So you need to build that into your code to wait for any subprocesses to finish executing
+
+44
+00:03:52,320 --> 00:03:54,960
+first.
+
+45
+00:03:54,960 --> 00:04:01,120
+I think the server list is potentially good for anybody who doesn't want to manage
+
+46
+00:04:01,200 --> 00:04:07,080
+infrastructure, but specifically, there's a couple really natural use cases that we're going to
+
+47
+00:04:07,080 --> 00:04:09,280
+focus on in this talk.
+
+48
+00:04:09,280 --> 00:04:16,240
+The first is when you have a workload that needs to scale up rapidly for short periods of time and
+
+49
+00:04:16,240 --> 00:04:18,920
+then sit idle for the rest of the day.
+
+50
+00:04:18,920 --> 00:04:24,080
+In this case, it doesn't make sense to pay for a server just to sit idle all day even though
+
+51
+00:04:24,080 --> 00:04:26,320
+you're paying for it.
+
+52
+00:04:26,360 --> 00:04:34,000
+Another natural use case is when you want to run a function every time an item like an HTTP
+
+53
+00:04:34,000 --> 00:04:36,720
+request enters a queue.
+
+54
+00:04:36,720 --> 00:04:44,400
+So with these two insights, now that we see that serverless platforms allow really rapid scaling
+
+55
+00:04:44,400 --> 00:04:52,800
+based on incoming events such as HTTP requests, I want to talk about running web applications on
+
+56
+00:04:52,800 --> 00:04:54,000
+serverless.
+
+57
+00:04:54,040 --> 00:05:00,760
+I feel that this topic is often neglected, and I think that serverless platforms provide us with
+
+58
+00:05:00,760 --> 00:05:05,840
+really powerful tooling for running web apps.
+
+59
+00:05:05,840 --> 00:05:11,000
+When I got started on this project, I thought it would be easy, but I ended up getting stuck with a
+
+60
+00:05:11,000 --> 00:05:17,880
+lot of the mundane things like how do you serve a front end or migrate a database or do things like
+
+61
+00:05:17,880 --> 00:05:21,120
+that when you don't have a server around.
+
+62
+00:05:21,160 --> 00:05:27,320
+In this talk, I'm going to share my experience of the problems I ran into and how I figured them
+
+63
+00:05:27,320 --> 00:05:28,360
+out.
+
+64
+00:05:28,360 --> 00:05:34,360
+While I can only talk about what I worked on, I do believe that this can be generalized to any
+
+65
+00:05:34,360 --> 00:05:39,280
+Python backend and perhaps even beyond that.
+
+66
+00:05:39,280 --> 00:05:45,760
+I want to first introduce a tool called Zappa, which is an incredibly useful Python library.
+
+67
+00:05:45,760 --> 00:05:52,360
+It's open source, and it makes it so easy to deploy Python applications to Lambda with just a
+
+68
+00:05:52,360 --> 00:05:54,320
+couple of commands.
+
+69
+00:05:54,320 --> 00:06:01,920
+Lambda expects a zip archive, basically a zip file that has all of your code and all of your
+
+70
+00:06:01,920 --> 00:06:03,440
+dependencies.
+
+71
+00:06:03,440 --> 00:06:10,160
+And Zappa creates this archive for you in addition to creating basically all of the AWS
+
+72
+00:06:10,160 --> 00:06:12,400
+infrastructure that you need.
+
+73
+00:06:12,440 --> 00:06:16,960
+All you need to get started is an AWS account.
+
+74
+00:06:16,960 --> 00:06:23,560
+I want to review just a couple features to illustrate why I think Zappa is so great.
+
+75
+00:06:23,560 --> 00:06:27,240
+The first one is how Zappa handles dependencies.
+
+76
+00:06:27,240 --> 00:06:35,560
+So I told you just previously that AWS Lambda expects a zip archive that includes your code and
+
+77
+00:06:35,560 --> 00:06:38,800
+the code of all of your dependencies.
+
+78
+00:06:38,800 --> 00:06:46,160
+So Zappa hooks into your virtual environment and automatically zips up all of the Python
+
+79
+00:06:46,160 --> 00:06:48,880
+dependencies that it identifies.
+
+80
+00:06:48,880 --> 00:06:54,000
+However, it has to do special handling for certain dependencies.
+
+81
+00:06:54,000 --> 00:06:55,040
+Let's think about this.
+
+82
+00:06:55,040 --> 00:07:03,440
+Many popular libraries such as NumPy, for example, include compiled C code for performance.
+
+83
+00:07:03,440 --> 00:07:08,320
+In fact, they might be mostly written in C with just a Python wrapper.
+
+84
+00:07:08,320 --> 00:07:13,840
+When you run pip install NumPy, you're going to get the wheels for NumPy.
+
+85
+00:07:13,840 --> 00:07:20,640
+And with those wheels come the compiled binaries for your current environment.
+
+86
+00:07:20,640 --> 00:07:22,680
+In my case, I have a Mac.
+
+87
+00:07:22,680 --> 00:07:27,040
+So I'm going to get the binaries that are compiled for Mac OS.
+
+88
+00:07:27,040 --> 00:07:32,160
+This is going to be problematic because Lambda runs in a Linux environment.
+
+89
+00:07:32,160 --> 00:07:38,120
+And these binaries are almost certainly not going to work on the Lambda runtime.
+
+90
+00:07:38,120 --> 00:07:43,720
+So it's clear that if Zappa just hooked into my virtual environment on my Mac and zipped up
+
+91
+00:07:43,720 --> 00:07:48,000
+everything it found, naively, that would not work.
+
+92
+00:07:48,000 --> 00:07:57,200
+To fix this, Zappa actually has a sister repository of very common Python libraries that use
+
+93
+00:07:57,200 --> 00:07:59,240
+compiled binaries.
+
+94
+00:07:59,240 --> 00:08:04,920
+And when it is zipping up the dependencies, if it sees that you're using one of these
+
+95
+00:08:04,920 --> 00:08:12,400
+libraries such as NumPy, it will intelligently swap out the binaries for ones that are compatible
+
+96
+00:08:12,400 --> 00:08:14,840
+with Lambda's runtime.
+
+97
+00:08:14,840 --> 00:08:19,880
+This is a huge feature that just takes a lot of headache off of the developer.
+
+98
+00:08:19,880 --> 00:08:23,960
+And I think that that deserves special attention.
+
+99
+00:08:23,960 --> 00:08:30,280
+Another great feature about Zappa is that it has a built-in solution for fixing cold starts.
+
+100
+00:08:30,320 --> 00:08:35,920
+So cold starts are one of the most common complaints about serverless functions.
+
+101
+00:08:35,920 --> 00:08:43,680
+The idea is that if you don't invoke your function for a while, then the container, the Lambda
+
+102
+00:08:43,680 --> 00:08:45,760
+container, will go cold.
+
+103
+00:08:45,760 --> 00:08:47,240
+It'll disappear.
+
+104
+00:08:47,240 --> 00:08:52,840
+And then the next time you try to invoke the function, you have to wait a few seconds for a new
+
+105
+00:08:52,840 --> 00:08:55,200
+container to be provisioned.
+
+106
+00:08:55,200 --> 00:09:02,120
+This might be OK for some use cases that aren't user-facing, but for a web application, it's
+
+107
+00:09:02,120 --> 00:09:07,720
+really not acceptable to keep the user waiting in the browser for several seconds while a new
+
+108
+00:09:07,720 --> 00:09:10,760
+Lambda container is provisioned.
+
+109
+00:09:10,760 --> 00:09:19,240
+So Zappa actually has a keep warm setting that periodically invokes the Lambda function every
+
+110
+00:09:19,240 --> 00:09:22,680
+few minutes in order to keep the container warm.
+
+111
+00:09:22,720 --> 00:09:28,760
+It's great to have this built in, and you don't really have to do anything to get it.
+
+112
+00:09:28,760 --> 00:09:33,640
+So now that we know just a little bit about Zappa, again, this is not exhaustive.
+
+113
+00:09:33,640 --> 00:09:36,160
+Let's jump into how to use it.
+
+114
+00:09:36,160 --> 00:09:40,680
+The most common use case is that you want to deploy your application code.
+
+115
+00:09:46,080 --> 00:09:48,360
+This requires just a couple steps.
+
+116
+00:09:48,360 --> 00:09:53,280
+First, you run pip install zappa in your virtual environment.
+
+117
+00:09:53,280 --> 00:09:56,320
+Once you do that, then you can run zappa init.
+
+118
+00:09:56,320 --> 00:10:03,680
+And this makes a zappa settings.json file for you, as shown below.
+
+119
+00:10:03,680 --> 00:10:08,520
+And finally, you run zappa deploy with this.
+
+120
+00:10:08,520 --> 00:10:15,280
+And once you have this JSON file around, when you run zappa deploy, within about a minute, your
+
+121
+00:10:15,280 --> 00:10:21,240
+backend code will be live on the Internet running on AWS Lambda.
+
+122
+00:10:21,240 --> 00:10:22,560
+So this is super fast.
+
+123
+00:10:22,560 --> 00:10:26,880
+And then let's get into more detail.
+
+124
+00:10:26,880 --> 00:10:32,960
+Another use case that I think is important is to keep the build small.
+
+125
+00:10:32,960 --> 00:10:42,360
+So in my case, I had a repository that has Python code as well as a React.js front end.
+
+126
+00:10:42,400 --> 00:10:49,240
+And I don't want any of that JS code or my node modules or anything like that to be clogging up
+
+127
+00:10:49,240 --> 00:10:53,280
+this Zappa build that gets sent to Lambda.
+
+128
+00:10:53,280 --> 00:11:01,640
+So you can use an exclude flag in the zappa settings.json to exclude certain paths that you
+
+129
+00:11:01,640 --> 00:11:05,360
+don't want in the build.
+
+130
+00:11:05,360 --> 00:11:13,440
+So with the previous two slides, by running zappa deploy, zappa init, and then zappa deploy,
+
+131
+00:11:13,440 --> 00:11:17,320
+we were able to get our backend running on the Internet.
+
+132
+00:11:17,320 --> 00:11:20,320
+But most backends don't exist in isolation.
+
+133
+00:11:20,320 --> 00:11:26,560
+For example, most web apps will need to talk to other services such as a database.
+
+134
+00:11:26,560 --> 00:11:31,080
+And they'll need to store secrets in order to do this.
+
+135
+00:11:31,120 --> 00:11:36,920
+For storing secrets, I think the easiest thing to do is to set them as secure environment
+
+136
+00:11:36,920 --> 00:11:41,560
+variables in the Lambda console, as shown in this picture.
+
+137
+00:11:41,560 --> 00:11:48,200
+So you can set, for example, your database connection string or your database password
+
+138
+00:11:48,200 --> 00:11:50,200
+here.
+
+139
+00:11:50,200 --> 00:11:56,640
+And then you can just read it into your environment as you normally would.
+
+140
+00:11:56,640 --> 00:12:01,320
+Another option if you have more secrets and you want to manage them programmatically
+
+141
+00:12:01,320 --> 00:12:07,720
+is that you can write the secrets to a file in S3 and have your function read them at
+
+142
+00:12:07,720 --> 00:12:10,280
+startup.
+
+143
+00:12:10,280 --> 00:12:17,280
+So at this point, we've learned how to deploy a backend to Lambda and also get it accessed
+
+144
+00:12:17,280 --> 00:12:18,280
+to a database.
+
+145
+00:12:18,280 --> 00:12:24,680
+So the next question is, how can we actually migrate the database?
+
+146
+00:12:24,720 --> 00:12:30,120
+When I initially did this, I thought about just spinning up an EC2 instance to run migrations
+
+147
+00:12:30,120 --> 00:12:31,120
+on.
+
+148
+00:12:31,120 --> 00:12:36,040
+But I think that defeats the whole purpose of not wanting to manage servers.
+
+149
+00:12:36,040 --> 00:12:42,680
+I found a command called zappa invoke that allows you to run any Python function from
+
+150
+00:12:42,680 --> 00:12:49,800
+your application on Lambda in the runtime with all of your dependencies loaded up.
+
+151
+00:12:49,920 --> 00:12:56,560
+So this is extremely useful because basically what we can do is run our migration function
+
+152
+00:12:56,560 --> 00:12:57,560
+on Lambda.
+
+153
+00:12:57,560 --> 00:13:01,560
+First, we need to get the right permissions to do that.
+
+154
+00:13:01,560 --> 00:13:09,120
+So we need to configure zappa so that it'll tell our Lambda function to run in the right
+
+155
+00:13:09,120 --> 00:13:11,440
+VPC with the right permissions.
+
+156
+00:13:11,440 --> 00:13:14,360
+Again, zappa has built-in support for this.
+
+157
+00:13:14,920 --> 00:13:21,440
+So you can add this VPC config block to your zappa settings.json.
+
+158
+00:13:21,440 --> 00:13:28,200
+And this tells it to run the Lambda function in this subnet that I've created and attach
+
+159
+00:13:28,200 --> 00:13:34,520
+this security group to it, which gives it access to talk to my database.
+
+160
+00:13:34,520 --> 00:13:41,480
+Once you've done that and redeployed, then you can do a zappa invoke and just give it
+
+161
+00:13:41,480 --> 00:13:43,920
+the name of your migration function.
+
+162
+00:13:43,920 --> 00:13:49,720
+In this case, actually, the function I'm showing is the one that creates the initial schema
+
+163
+00:13:49,720 --> 00:13:52,840
+and tables for me.
+
+164
+00:13:52,840 --> 00:13:59,400
+This is super useful, and I showed you how to use zappa invoke for migrating a database.
+
+165
+00:13:59,400 --> 00:14:07,240
+But if you have any other infrequent commands that you'd like to run and you don't know
+
+166
+00:14:07,240 --> 00:14:11,840
+what to do because you don't have a server around to run them, you can use zappa invoke
+
+167
+00:14:11,920 --> 00:14:19,600
+to run them in the environment where all the dependencies are loaded up.
+
+168
+00:14:19,600 --> 00:14:25,560
+The next part that I wanted to talk about was how to serve a frontend.
+
+169
+00:14:25,560 --> 00:14:28,240
+First I'll give a little bit of background.
+
+170
+00:14:28,240 --> 00:14:34,680
+Outside of Lambda, it's a very common practice for a frontend and backend to be served together
+
+171
+00:14:34,680 --> 00:14:37,320
+on the same server.
+
+172
+00:14:37,320 --> 00:14:41,560
+What typically is happening there is that you actually have two web servers.
+
+173
+00:14:41,560 --> 00:14:50,000
+You have what's called a reverse proxy web server such as nginx that sits in front and
+
+174
+00:14:50,000 --> 00:14:52,320
+is facing the internet.
+
+175
+00:14:52,320 --> 00:14:58,960
+This server is usually extremely fast and optimized at serving static files.
+
+176
+00:14:58,960 --> 00:15:05,480
+When you get requests for your static files, that server handles it automatically.
+
+177
+00:15:05,720 --> 00:15:12,920
+For any other requests, it's actually forwarding them to your Python WSGI web server, which
+
+178
+00:15:12,920 --> 00:15:23,560
+is relatively slower than something like nginx, but it'll handle all of your dynamic requests.
+
+179
+00:15:23,560 --> 00:15:31,560
+On Lambda, the issue is that we don't have as much control over the web server.
+
+180
+00:15:31,560 --> 00:15:37,360
+It's not impossible, but it's harder to give special treatment to static files.
+
+181
+00:15:37,360 --> 00:15:40,080
+That leaves us with two good options.
+
+182
+00:15:40,080 --> 00:15:46,680
+The first option is to try to serve the static assets directly through the Python code.
+
+183
+00:15:46,680 --> 00:15:51,000
+My concern originally was that this might be very slow.
+
+184
+00:15:51,000 --> 00:15:56,720
+Typically Python is not great for serving things like static assets, and you'd be better
+
+185
+00:15:56,720 --> 00:15:58,360
+off with another tool.
+
+186
+00:15:58,600 --> 00:16:04,280
+However, I have seen some interesting libraries, including one called White Noise, that try
+
+187
+00:16:04,280 --> 00:16:10,200
+to optimize your application to make it much faster for this use case.
+
+188
+00:16:10,200 --> 00:16:19,000
+Or the other option is to simply use an external service like Amazon S3 or CloudFront for serving
+
+189
+00:16:19,000 --> 00:16:21,600
+the static assets.
+
+190
+00:16:21,600 --> 00:16:27,200
+Either of these options should be completely fine, but I went with option two because it's
+
+191
+00:16:27,240 --> 00:16:31,560
+clean, it's easy, and it's very performant.
+
+192
+00:16:31,560 --> 00:16:37,360
+There are already lots of guides on the internet for how to serve static files through S3,
+
+193
+00:16:37,360 --> 00:16:41,800
+so I'm not going to repeat them here, but I will focus on a couple areas that I got
+
+194
+00:16:41,800 --> 00:16:44,360
+tripped up on.
+
+195
+00:16:44,360 --> 00:16:47,840
+The first one is about server-side rendering.
+
+196
+00:16:47,840 --> 00:16:54,960
+So server-side rendering is a common optimization that's used to make single-page applications
+
+197
+00:16:55,120 --> 00:17:00,360
+more SEO-friendly and faster for the initial page load.
+
+198
+00:17:00,360 --> 00:17:05,800
+Typically what's happening is that single-page applications send the client a JavaScript
+
+199
+00:17:05,800 --> 00:17:12,840
+bundle, and that bundle creates the HTML for the application on the client side.
+
+200
+00:17:12,840 --> 00:17:17,840
+The problem is that not all web crawlers can execute JavaScript code.
+
+201
+00:17:17,840 --> 00:17:24,080
+So if you have an application that's exclusively rendered on the client side, then when your
+
+202
+00:17:24,120 --> 00:17:30,400
+web crawler comes around and it tries to index your site, if it can't execute the JavaScript,
+
+203
+00:17:30,400 --> 00:17:37,400
+all it's going to see is a really bare bones index.html that just says load up app.js.
+
+204
+00:17:39,000 --> 00:17:45,160
+This means that, again, if your website is exclusively rendered on the client side, it'll
+
+205
+00:17:45,160 --> 00:17:52,160
+struggle with search engine optimization because the web crawlers just won't be able to index
+
+206
+00:17:53,160 --> 00:17:56,960
+all of the content for your website.
+
+207
+00:17:56,960 --> 00:18:03,960
+So people solve this in various ways, but a very common optimization is server-side
+
+208
+00:18:04,240 --> 00:18:11,240
+rendering, which means that we'll render some or all of the HTML on the backend and send
+
+209
+00:18:13,320 --> 00:18:14,680
+it to the client.
+
+210
+00:18:14,680 --> 00:18:21,680
+That means that when the web crawler comes around, it now sees a fully populated index.html
+
+211
+00:18:21,720 --> 00:18:24,800
+and there's a lot of content that can be indexed.
+
+212
+00:18:24,800 --> 00:18:31,800
+Now, as I said, we have to execute JavaScript code on the backend in order to render the
+
+213
+00:18:33,640 --> 00:18:36,320
+HTML for server-side rendering.
+
+214
+00:18:36,320 --> 00:18:43,320
+So this usually requires a Node.js backend that can execute JavaScript code.
+
+215
+00:18:44,480 --> 00:18:47,520
+However, it's not always the case.
+
+216
+00:18:47,520 --> 00:18:54,520
+It is possible, and I've seen an example of doing server-side rendering with a Python
+
+217
+00:18:54,880 --> 00:18:56,320
+backend.
+
+218
+00:18:56,320 --> 00:19:01,640
+It's a library called Python React, and how it works is that from the Python code, it
+
+219
+00:19:01,640 --> 00:19:06,240
+spawns React.js processes.
+
+220
+00:19:06,240 --> 00:19:11,240
+They're called render servers that will execute the JavaScript code and render HTML.
+
+221
+00:19:12,000 --> 00:19:19,000
+The issue is that I don't know if Lambda gives you enough control to set this up.
+
+222
+00:19:20,320 --> 00:19:25,680
+I told you before that you can definitely manage multiple processes and subprocesses
+
+223
+00:19:25,680 --> 00:19:29,320
+on Lambda, but it's a little bit more work.
+
+224
+00:19:29,320 --> 00:19:36,320
+So I would say proceed with caution here if you need server-side rendering and you also
+
+225
+00:19:36,680 --> 00:19:40,360
+want to use a Python backend with Zappa.
+
+226
+00:19:40,360 --> 00:19:45,240
+There might be a path forward, but I'm not sure.
+
+227
+00:19:45,240 --> 00:19:50,880
+The other area I got confused about initially was client-side routing.
+
+228
+00:19:50,880 --> 00:19:57,880
+So client-side routing is another common optimization that's used to prevent full page reloads as
+
+229
+00:19:57,880 --> 00:20:01,320
+the user navigates throughout the site.
+
+230
+00:20:01,320 --> 00:20:07,480
+When you're doing static web hosting in S3, client-side routing works as expected until
+
+231
+00:20:07,600 --> 00:20:13,640
+the user hits refresh or until they reload the page, and then it breaks if you're not
+
+232
+00:20:13,640 --> 00:20:14,640
+on the homepage.
+
+233
+00:20:14,640 --> 00:20:21,640
+The reason is, let's say you're on a page called foo.html and the user hits refresh,
+
+234
+00:20:22,840 --> 00:20:29,320
+the browser's going to go looking for an asset, a static asset called foo.html, which obviously
+
+235
+00:20:29,320 --> 00:20:31,800
+does not exist.
+
+236
+00:20:31,800 --> 00:20:34,800
+There are many ways to solve this problem.
+
+237
+00:20:34,800 --> 00:20:40,680
+So a quick Google search could do it, but the absolute most simplest one is to tweak
+
+238
+00:20:40,680 --> 00:20:47,680
+a setting in the S3 static web hosting configuration and set the error document to index.html.
+
+239
+00:20:50,140 --> 00:20:55,400
+This means that if it can't find the asset that it was looking for, it'll fall back to
+
+240
+00:20:55,400 --> 00:21:00,080
+fetching index.html again.
+
+241
+00:21:00,080 --> 00:21:07,080
+So at this point, we just did a very quick 20-minute overview of how to deploy a Python
+
+242
+00:21:08,880 --> 00:21:15,880
+backend on Lambda, connect it to a database, migrate that database, and serve a frontend
+
+243
+00:21:17,400 --> 00:21:21,000
+that is also connected to all of that code.
+
+244
+00:21:21,000 --> 00:21:27,480
+So we basically have a full stack web application running, and we never had to manage a single
+
+245
+00:21:27,480 --> 00:21:30,720
+server throughout that process.
+
+246
+00:21:30,720 --> 00:21:35,600
+I wanted to switch gears a little bit and talk about debugging.
+
+247
+00:21:35,600 --> 00:21:40,720
+Initially I was worried about the debugging experience with the serverless application,
+
+248
+00:21:40,720 --> 00:21:43,860
+but I actually found it to be very easy.
+
+249
+00:21:43,860 --> 00:21:50,240
+If you're using Zappa, your logs are automatically going to CloudWatch, or you can run Zappa
+
+250
+00:21:50,240 --> 00:21:53,280
+tail to tail the logs.
+
+251
+00:21:53,280 --> 00:21:59,400
+You can also configure an exception handler to send uncaught exceptions to Sentry or
+
+252
+00:21:59,400 --> 00:22:03,200
+whatever your error monitoring tool is.
+
+253
+00:22:03,200 --> 00:22:05,920
+So all of this was very easy to work with.
+
+254
+00:22:05,920 --> 00:22:11,320
+The only thing was I wanted to offer one word of caution about timeouts.
+
+255
+00:22:11,320 --> 00:22:18,320
+So I told you earlier that Lambda has a maximum timeout of 15 minutes for any function.
+
+256
+00:22:18,720 --> 00:22:25,720
+However, Zappa, for whatever reason, Zappa's default is to timeout if a function doesn't
+
+257
+00:22:26,000 --> 00:22:29,520
+return any output within 30 seconds.
+
+258
+00:22:29,520 --> 00:22:34,500
+The Zappa timeout messages are generic and easy to miss.
+
+259
+00:22:34,500 --> 00:22:40,360
+So if you start seeing weird behavior, it's possible that something timed out and you
+
+260
+00:22:40,360 --> 00:22:42,320
+didn't notice it.
+
+261
+00:22:42,320 --> 00:22:48,080
+For example, I saw a post on Stack Overflow about how someone's migration script takes
+
+262
+00:22:48,080 --> 00:22:51,920
+longer than 30 seconds to run.
+
+263
+00:22:51,920 --> 00:22:58,120
+They were running it using Zappa invoke, like I showed you, and Zappa timed it out.
+
+264
+00:22:58,120 --> 00:23:03,740
+And this was not apparent to that person until much later when they were seeing lots of unexpected
+
+265
+00:23:03,740 --> 00:23:07,680
+bugs and behavior.
+
+266
+00:23:07,680 --> 00:23:15,440
+I also wanted to talk just for a couple minutes about what Docker users should do with Zappa.
+
+267
+00:23:15,440 --> 00:23:20,840
+So I personally really like developing in Docker containers.
+
+268
+00:23:20,840 --> 00:23:25,800
+They're portable, and I have the assurance that my development environment is going to
+
+269
+00:23:25,800 --> 00:23:29,560
+be exactly the same as the production environment.
+
+270
+00:23:29,560 --> 00:23:32,920
+And this is a huge piece of mind for me.
+
+271
+00:23:32,920 --> 00:23:39,560
+Related to this, I was initially kind of bummed that it didn't look like I could use Docker
+
+272
+00:23:39,560 --> 00:23:45,400
+if I also wanted to use Zappa.
+
+273
+00:23:45,800 --> 00:23:50,960
+I have a couple gripes about Lambda and Zappa.
+
+274
+00:23:50,960 --> 00:23:59,240
+As I mentioned earlier, Zappa does this special handling of dependencies with compiled binaries.
+
+275
+00:23:59,240 --> 00:24:09,320
+It curates a sister repository of popular Python packages that use binaries, and it
+
+276
+00:24:09,320 --> 00:24:13,000
+does it basically by hand curating that list.
+
+277
+00:24:13,000 --> 00:24:20,800
+The problem is that you might eventually find yourself using a dependency that ships with
+
+278
+00:24:20,800 --> 00:24:25,360
+binaries, but that dependency didn't make Zappa's list.
+
+279
+00:24:25,360 --> 00:24:31,000
+And at that point, you're going to wish you had a better development environment, because
+
+280
+00:24:31,000 --> 00:24:36,480
+I don't think Zappa's solution will be sufficient.
+
+281
+00:24:36,480 --> 00:24:40,360
+So I recommend using the Zappa Docker image.
+
+282
+00:24:40,360 --> 00:24:46,320
+This is a Docker image that exactly replicates the Lambda runtime environment.
+
+283
+00:24:46,320 --> 00:24:51,960
+And if you use it as your base image and do everything else the same, I think you'll be
+
+284
+00:24:51,960 --> 00:24:57,720
+in good shape, and you'll never have this problem of ending up with binaries that are
+
+285
+00:24:57,720 --> 00:25:04,480
+compiled for the wrong architecture.
+
+286
+00:25:04,480 --> 00:25:08,120
+In conclusion, who should use Zappa?
+
+287
+00:25:08,120 --> 00:25:15,400
+I think Zappa is a fantastic tool for individuals or small teams that want to focus on application
+
+288
+00:25:15,400 --> 00:25:18,640
+code instead of managing infrastructure.
+
+289
+00:25:18,640 --> 00:25:26,120
+It is just a huge improvement in velocity to have a tool that manages all of the infrastructure
+
+290
+00:25:26,120 --> 00:25:32,200
+for you, manages horizontal scaling, and has a lot of features built in, especially in
+
+291
+00:25:32,680 --> 00:25:41,320
+stages of a project when you just want to focus on velocity on the actual application.
+
+292
+00:25:41,320 --> 00:25:48,880
+Also for me personally as an individual, for a side project, Zappa was a dream come true.
+
+293
+00:25:48,880 --> 00:25:56,080
+If nobody pings my web app for the next year, and then all of a sudden a year from now people
+
+294
+00:25:56,080 --> 00:26:02,560
+start using it, it should probably still be there, and I'll have paid almost nothing
+
+295
+00:26:02,560 --> 00:26:05,520
+for compute in the meantime.
+
+296
+00:26:05,520 --> 00:26:12,760
+I will admit that at scale, cost becomes a consideration, and doing something like managing
+
+297
+00:26:12,760 --> 00:26:17,520
+a cluster probably still makes sense.
+
+298
+00:26:17,520 --> 00:26:23,000
+I also wanted to briefly talk about what else is out there and what to look for in the server
+
+299
+00:26:23,000 --> 00:26:25,960
+list space going forward.
+
+300
+00:26:25,960 --> 00:26:29,840
+There's another open source Python library called Chalice.
+
+301
+00:26:29,840 --> 00:26:33,840
+This one's actually developed by Amazon Web Services.
+
+302
+00:26:33,840 --> 00:26:41,080
+The idea of Chalice is it's supposed to make it extremely easy to develop Python web apps
+
+303
+00:26:41,080 --> 00:26:42,360
+on Lambda.
+
+304
+00:26:42,360 --> 00:26:47,120
+However, I personally found Chalice difficult to use.
+
+305
+00:26:47,120 --> 00:26:53,900
+The issue is that unlike Zappa where you can take an existing Flask or Django application
+
+306
+00:26:54,260 --> 00:26:59,340
+and just run it on Zappa, with Chalice you actually have to change a lot of your code
+
+307
+00:26:59,340 --> 00:27:00,920
+to make it work.
+
+308
+00:27:00,920 --> 00:27:05,620
+This just created too high of a barrier to entry for me personally.
+
+309
+00:27:05,620 --> 00:27:08,700
+I didn't want to be locked in to using Lambda.
+
+310
+00:27:08,700 --> 00:27:14,900
+I wanted to have the option to run my Flask or Django application using a normal web server
+
+311
+00:27:14,900 --> 00:27:21,620
+or also try out Lambda, and I think that's something that Zappa got totally right.
+
+312
+00:27:21,620 --> 00:27:29,380
+The other two offerings from Google and Amazon respectively are serverless container first
+
+313
+00:27:29,380 --> 00:27:32,140
+offerings.
+
+314
+00:27:32,140 --> 00:27:35,700
+They're called Google Cloud Run and AWS Fargate.
+
+315
+00:27:35,700 --> 00:27:42,100
+Both of them make it very, very easy to run any arbitrary Docker container, which I think
+
+316
+00:27:42,100 --> 00:27:43,580
+is really powerful.
+
+317
+00:27:43,580 --> 00:27:47,180
+In my experience, these have been extremely easy to use.
+
+318
+00:27:47,180 --> 00:27:55,140
+I think that as containerized technologies get more and more popular, so will these offerings.
+
+319
+00:27:55,140 --> 00:27:59,180
+And finally, I've given this talk before, and I got some good questions, so I wanted
+
+320
+00:27:59,180 --> 00:28:03,800
+to close by answering those questions with the last couple of minutes.
+
+321
+00:28:03,800 --> 00:28:07,220
+The first question is, how is WSGI used with Zappa?
+
+322
+00:28:07,220 --> 00:28:12,940
+This is a good question, so I'm sure most of you have heard of WSGI.
+
+323
+00:28:12,940 --> 00:28:18,580
+It stands for Web Server Gateway Interface, and it's the interface that's used for Python
+
+324
+00:28:18,580 --> 00:28:23,180
+web applications to communicate with web servers.
+
+325
+00:28:23,180 --> 00:28:33,100
+Basically, the core thing that makes Zappa work is that it's a shim that converts Amazon
+
+326
+00:28:33,100 --> 00:28:37,260
+API gateway syntax into WSGI.
+
+327
+00:28:37,260 --> 00:28:45,220
+What that means is that when you get a new HTTP request coming in through Amazon API
+
+328
+00:28:45,220 --> 00:28:51,940
+gateway, Zappa is actually going to convert that gateway request into WSGI so that your
+
+329
+00:28:51,940 --> 00:28:59,820
+application can interpret it and then return WSGI back.
+
+330
+00:28:59,820 --> 00:29:02,300
+That's how WSGI is used here.
+
+331
+00:29:02,300 --> 00:29:08,420
+It's a bit of a hack, but it's quite neat, and Zappa makes it work very well.
+
+332
+00:29:08,420 --> 00:29:14,540
+Second question is, how does Keep Warm work, and does it become expensive if you're having
+
+333
+00:29:14,540 --> 00:29:16,820
+to keep a server warm?
+
+334
+00:29:16,820 --> 00:29:22,820
+So actually, what Keep Warm is doing is it's keeping your Lambda container warm.
+
+335
+00:29:22,820 --> 00:29:29,840
+That's the container that when you request a certain number of resources, you're allocated
+
+336
+00:29:29,840 --> 00:29:36,640
+a container that's isolated and kept separate from other people's applications.
+
+337
+00:29:36,640 --> 00:29:38,440
+Keep Warm works.
+
+338
+00:29:38,440 --> 00:29:40,600
+This is the Zappa Keep Warm setting.
+
+339
+00:29:40,600 --> 00:29:46,280
+It works via a scheduled CloudWatch event that pings your Lambda function every four
+
+340
+00:29:46,280 --> 00:29:47,520
+minutes.
+
+341
+00:29:47,520 --> 00:29:52,820
+But it's important to note that this doesn't mean you're paying for a server all the time.
+
+342
+00:29:52,820 --> 00:29:57,840
+With Lambda, you actually just pay for the number of milliseconds of compute time that
+
+343
+00:29:57,840 --> 00:29:59,260
+you use.
+
+344
+00:29:59,260 --> 00:30:05,020
+You don't pay for keeping a container up all the time.
+
+345
+00:30:05,020 --> 00:30:11,940
+By executing these ping functions every four minutes, these are extremely, extremely fast.
+
+346
+00:30:11,940 --> 00:30:18,940
+In my experience, add almost no noticeable cost to the bill, given that your compute
+
+347
+00:30:18,940 --> 00:30:26,820
+time is actually going to be dominated by your application, not by some ping function.
+
+348
+00:30:26,840 --> 00:30:29,940
+The final question is, is Zappa scalable?
+
+349
+00:30:29,940 --> 00:30:32,980
+And the answer is yes, it's extremely scalable.
+
+350
+00:30:32,980 --> 00:30:38,100
+That's one of the main ideas is that horizontal scaling is built in.
+
+351
+00:30:38,100 --> 00:30:46,240
+In theory, no request will ever time out because each request can get its own Lambda function.
+
+352
+00:30:46,240 --> 00:30:51,460
+You can keep running more and more Lambda functions side by side, and AWS takes care
+
+353
+00:30:51,460 --> 00:30:54,500
+of that horizontal scaling on your behalf.
+
+354
+00:30:54,500 --> 00:30:59,180
+So in theory, it can scale up almost infinitely.
+
+355
+00:30:59,180 --> 00:31:02,820
+So thank you so much for listening to my talk.
+
+356
+00:31:02,820 --> 00:31:08,620
+I hope you learned something, and I hope that I convinced you to give a serverless offering
+
+357
+00:31:08,620 --> 00:31:10,100
+a try.
+
+358
+00:31:10,100 --> 00:31:14,300
+And if you have any more questions, please feel free to follow me on Twitter, and I'm
+
+359
+00:31:14,300 --> 00:31:16,180
+happy to answer them there.
+
+360
+00:31:16,180 --> 00:31:16,420
+Thank you.
+

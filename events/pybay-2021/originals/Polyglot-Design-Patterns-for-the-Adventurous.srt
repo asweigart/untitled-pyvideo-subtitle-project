@@ -1,0 +1,1012 @@
+1
+00:00:00,000 --> 00:00:11,840
+I'm a Senior Product Manager for NGINX. I've been at NGINX for about six years. Before that,
+
+2
+00:00:11,840 --> 00:00:16,800
+I was a Site Reliability Engineer, so my background's in operations. But today, I'm going to be talking
+
+3
+00:00:16,800 --> 00:00:22,600
+to you about polyglot design patterns, specifically around NGINX Unit, which is a tool that we
+
+4
+00:00:22,600 --> 00:00:28,920
+have that's open source. So the agenda today is, first, I'm going to tell you a little
+
+5
+00:00:28,920 --> 00:00:32,280
+bit about NGINX if you don't know what NGINX is. By the way, raise your hand if you know
+
+6
+00:00:32,280 --> 00:00:37,360
+what NGINX is. Awesome. So cool. Everyone knows NGINX. I've been around for a while.
+
+7
+00:00:37,360 --> 00:00:42,600
+I'm going to talk a little bit about the polyglot approach and kind of some of the caveats to
+
+8
+00:00:42,600 --> 00:00:48,120
+that of why maybe your organization might want to adopt a polyglot and maybe reasons
+
+9
+00:00:48,120 --> 00:00:54,640
+why you might not. And then I'm going to talk about specifically how NGINX Unit helps actually
+
+10
+00:00:54,640 --> 00:00:58,200
+help your organization adopt a polyglot type of architecture. And then I'm going to give
+
+11
+00:00:58,200 --> 00:01:04,480
+you some examples of how you can actually deploy a Python application with NGINX Unit.
+
+12
+00:01:04,480 --> 00:01:09,440
+So if you guys know NGINX, you may have known the story of how NGINX came to be. It got
+
+13
+00:01:09,440 --> 00:01:15,120
+started by a man named Igor Sisuev here. He originally designed NGINX as an open source
+
+14
+00:01:15,120 --> 00:01:20,520
+tool to be used to sit in front of web applications that couldn't handle more than 10,000 concurrent
+
+15
+00:01:20,520 --> 00:01:25,920
+connections. So at the time, Apache would basically fall over if it received more than
+
+16
+00:01:25,920 --> 00:01:32,360
+those amount of connections. So he created NGINX OSS, which is the open source web server
+
+17
+00:01:32,360 --> 00:01:38,140
+reverse proxy load balancer content cache. It's slowly grown over the years into kind
+
+18
+00:01:38,140 --> 00:01:45,320
+of a multifaceted, I like to call it the Swiss army knife of the web. And it's gained immense
+
+19
+00:01:45,320 --> 00:01:53,800
+popularity in the community to be served as that tool, as a static web server. That also
+
+20
+00:01:53,800 --> 00:01:59,720
+goes to say that we also, he started managing the product and it get to a point where he
+
+21
+00:01:59,720 --> 00:02:03,320
+really couldn't manage it on his own time and work his full time job. So he decided
+
+22
+00:02:03,320 --> 00:02:08,720
+to start a company. And so he started NGINX incorporated here in San Francisco, back in
+
+23
+00:02:08,720 --> 00:02:13,920
+around 2014, 2015. And over the period of time that I've worked here, this is just kind
+
+24
+00:02:13,920 --> 00:02:17,400
+of a snapshot of all of the features and functionality that have been poured into the open source
+
+25
+00:02:17,400 --> 00:02:24,520
+version of NGINX. Things like HTTP2 support, stream support, being able to do TCP and UDP
+
+26
+00:02:24,520 --> 00:02:31,200
+type proxying and load balancing, multidatagram support, thread pooling, all these cool enhancements
+
+27
+00:02:31,200 --> 00:02:35,720
+from a Linux perspective as well. And then also they've built up NGINX Plus, which is
+
+28
+00:02:35,720 --> 00:02:39,200
+the commercial version of that. But I'm not here to talk to you about NGINX Plus. I'm
+
+29
+00:02:39,200 --> 00:02:44,120
+here to talk to you guys about NGINX unit and more specifically about why it's considered
+
+30
+00:02:44,120 --> 00:02:48,800
+a polyglot application server and how you guys might be able to use this tool in your
+
+31
+00:02:48,800 --> 00:02:56,800
+own ecosystem. So why actually have a polyglot approach? Well, I think most organizations
+
+32
+00:02:56,800 --> 00:03:01,700
+in this day and age adopt a polyglot approach, whether they like it or not. And this comes
+
+33
+00:03:01,700 --> 00:03:07,720
+from inherent knowledge of different languages that have been inherited from different engineering
+
+34
+00:03:07,720 --> 00:03:12,480
+groups. Different people have different reasons why they have actually adopted these different
+
+35
+00:03:12,480 --> 00:03:17,080
+languages. For some people, it's because they've worked in a position where they've
+
+36
+00:03:17,080 --> 00:03:21,440
+been in an operations type job, where they've had to manage different languages. Like for
+
+37
+00:03:21,440 --> 00:03:25,400
+me, I came from an SRE role where I had to know a little bit about everything, somewhat
+
+38
+00:03:25,400 --> 00:03:32,560
+of a generalist. But over the years, engineers grow and they start to kind of be more aimed
+
+39
+00:03:32,560 --> 00:03:38,400
+at a certain language. And this goes without saying that there's all sorts of different
+
+40
+00:03:38,400 --> 00:03:42,300
+and I would probably venture to say the companies you guys work for, there's different types
+
+41
+00:03:42,300 --> 00:03:47,620
+of languages being used in different parts of the business, right? NGINX specifically,
+
+42
+00:03:47,620 --> 00:03:52,300
+we love Python. We use Python for a lot of the tooling that we use in our infrastructure.
+
+43
+00:03:52,300 --> 00:03:57,140
+We use it for some of our products that are SaaS-based products, NGINX controller. We
+
+44
+00:03:57,140 --> 00:04:03,780
+also use Python for a lot of the long-based threading stuff that we have to do with our
+
+45
+00:04:03,780 --> 00:04:08,780
+customer intake and stuff like that. So we love Python and we know you guys, obviously,
+
+46
+00:04:08,780 --> 00:04:14,380
+over the years, you have reasons why you've adopted Python. You can see here that, according
+
+47
+00:04:14,380 --> 00:04:20,540
+to the TOB index, it's the most popular programming language. It's very simple, easy to learn.
+
+48
+00:04:20,540 --> 00:04:24,380
+I think I don't have to tell you guys that Python is a very awesome language, right?
+
+49
+00:04:24,380 --> 00:04:28,820
+But other languages have their caveats. A lot of these languages are older languages
+
+50
+00:04:28,820 --> 00:04:34,020
+and they have inherent reasons why they've been adopted over the years. Java is an older
+
+51
+00:04:34,020 --> 00:04:39,280
+language, easy to learn. It's been widely adopted over the years. It's probably one
+
+52
+00:04:39,280 --> 00:04:43,340
+of the more popular languages. Also JavaScript, PHP Go, you get the idea. There's different
+
+53
+00:04:43,340 --> 00:04:50,740
+reasons why organizations are adopting different languages. But having multiple languages,
+
+54
+00:04:50,740 --> 00:04:56,900
+I think, can be actually extremely valuable. It gives you access to a larger pool of developers
+
+55
+00:04:56,900 --> 00:05:02,540
+to hire. So if you're in a situation where you're trying to grow a business and you have
+
+56
+00:05:02,540 --> 00:05:07,620
+certain developers that are specialized in a certain language, that's going to inhibit
+
+57
+00:05:07,620 --> 00:05:12,460
+you if you're strict to one language, right? A lot of times it will also help organizations
+
+58
+00:05:12,460 --> 00:05:17,980
+get unstuck out of their ways if they're stuck in one particular language that they choose.
+
+59
+00:05:17,980 --> 00:05:22,260
+And it will help them develop with more agility in the long run, right? And they can also
+
+60
+00:05:22,260 --> 00:05:30,080
+find ways to do interesting things that maybe they are not able to do with existing languages.
+
+61
+00:05:30,080 --> 00:05:35,480
+But it also comes at a cost, right? If you start to take on more languages, that means
+
+62
+00:05:35,480 --> 00:05:41,000
+that you have more frameworks, right? And a lot of these frameworks can be non-customizable,
+
+63
+00:05:41,000 --> 00:05:47,240
+so you can sometimes be restrained at the life cycle of that framework. You can also
+
+64
+00:05:47,240 --> 00:05:53,600
+have encapsulation where certain teams have tribal knowledge of the code, but they don't
+
+65
+00:05:53,600 --> 00:05:58,080
+understand how the framework is actually working under the hood. They're building around the
+
+66
+00:05:58,080 --> 00:06:01,720
+framework and they're building features and functionality on top of that, and they don't
+
+67
+00:06:01,720 --> 00:06:06,600
+actually day-to-day interact with the source code for that framework. And there also is
+
+68
+00:06:06,600 --> 00:06:13,240
+a chance that that data or that code can also be unsecure in certain ways, too, because
+
+69
+00:06:13,240 --> 00:06:18,340
+it is somewhat out of view and it is somewhat out of maintenance. And then you also run
+
+70
+00:06:18,340 --> 00:06:24,320
+into the issue where there's a possible variation between different frameworks, right? So if
+
+71
+00:06:24,320 --> 00:06:28,760
+someone's running Python Flask and they're building a web application and then they're
+
+72
+00:06:28,760 --> 00:06:33,920
+also, you have another team that's building in Go and they're using the HTTP implementation
+
+73
+00:06:33,920 --> 00:06:38,840
+of the Go language, you might see different variations in the behavior between those web
+
+74
+00:06:38,840 --> 00:06:43,120
+applications as well. So there's all these kind of like caveats to adopting frameworks,
+
+75
+00:06:43,120 --> 00:06:47,520
+and I'm going to talk a little bit about how you might try to abstract some of that stuff
+
+76
+00:06:47,520 --> 00:06:53,720
+and actually build raw code in a polyglot approach. And you also run into the fact that
+
+77
+00:06:53,720 --> 00:06:58,000
+if you have more tooling, or I should say if you have more languages that you support,
+
+78
+00:06:58,000 --> 00:07:01,520
+of course you're going to have more tooling, right? You're going to have, we already have
+
+79
+00:07:01,520 --> 00:07:09,040
+a rich ecosystem of different tooling that's being used, right? We have the client-side
+
+80
+00:07:09,040 --> 00:07:13,680
+tools which are managed, you know, that are used by the user, you know, whatever browser
+
+81
+00:07:13,680 --> 00:07:17,360
+they're using. You have the edge-based stuff, which is stuff that's usually managed by like
+
+82
+00:07:17,360 --> 00:07:23,720
+an operations team or a DevOps team, things like NGINX, CloudFlare, F5, you have this
+
+83
+00:07:23,720 --> 00:07:28,600
+kind of like abstracted layer in this that maybe like if you're a developer or if you're
+
+84
+00:07:28,600 --> 00:07:34,080
+a DevOps, maybe you manage that, but at a very minimum. And then you have all these
+
+85
+00:07:34,080 --> 00:07:37,800
+other tools that you start to gather along the way. So you might use NGINX to serve your
+
+86
+00:07:37,800 --> 00:07:44,640
+application in PHP, FPM, but you might also use HAProxy to, you know, serve another application
+
+87
+00:07:44,680 --> 00:07:49,360
+that's written in, you know, some other language or Apache. And then on top of that, you also
+
+88
+00:07:49,360 --> 00:07:54,800
+have the application servers or the process managers or the runtime interfaces that you
+
+89
+00:07:54,800 --> 00:07:58,480
+have to deal with on different languages as well. So again, it gets more complex with
+
+90
+00:07:58,480 --> 00:08:03,560
+the polyglot approach. You start, you know, you have to have a Node.js server for Node,
+
+91
+00:08:03,560 --> 00:08:08,400
+you have to have a PHP, FPM server, et cetera, et cetera. And then on top of that, that's
+
+92
+00:08:08,440 --> 00:08:16,440
+where the application code sits, right? So what is NGINX Unit? So I talked a little bit
+
+93
+00:08:16,440 --> 00:08:20,400
+about NGINX Open Source at the beginning of that. I always like to make the contrast that
+
+94
+00:08:20,400 --> 00:08:24,520
+NGINX Open Source is kind of its own thing. It's been around for a very long time. It
+
+95
+00:08:24,520 --> 00:08:30,000
+was created in 2007. NGINX Unit is a new tool that has been developed by the same creator,
+
+96
+00:08:30,000 --> 00:08:35,800
+Igor Sisoev, to build on top of that. And his hope is actually that it will be the future
+
+97
+00:08:35,880 --> 00:08:42,880
+of NGINX and actually eventually replace NGINX for a couple of reasons. NGINX has been kind
+
+98
+00:08:44,560 --> 00:08:49,360
+of used as a static web server, being able to deploy in front of your application. It's
+
+99
+00:08:49,360 --> 00:08:54,240
+got file-based configuration. So you have an actual NGINX configuration file. You have
+
+100
+00:08:54,240 --> 00:09:00,240
+a process manager that can manage the NGINX process and you can use a binary tool to execute
+
+101
+00:09:00,240 --> 00:09:06,760
+that stuff. It supports HTTP, but it also supports other protocols like WebSockets,
+
+102
+00:09:06,760 --> 00:09:14,760
+HTTP2, soon HTTP3, GRPC. It also can do TCP and UDP based proxying and load balancing.
+
+103
+00:09:14,760 --> 00:09:21,960
+So it's kind of lived its life as a reverse proxy in a web server. Well, Igor created
+
+104
+00:09:21,960 --> 00:09:28,800
+NGINX Unit as a layer into the application space. So it is built on the same core functionality.
+
+105
+00:09:29,120 --> 00:09:34,360
+It does have reverse proxy functionality and it does have load balancing functionality,
+
+106
+00:09:34,360 --> 00:09:41,360
+but it's strictly right now a tool to be used to deliver an application over HTTP and also
+
+107
+00:09:41,360 --> 00:09:45,480
+– I don't have listed here – but also TLS. So it can actually handle TLS connections
+
+108
+00:09:45,480 --> 00:09:52,560
+as well. But on top of that, he's added a lot of features that allow you to configure.
+
+109
+00:09:52,560 --> 00:09:57,040
+First of all, API is the first based approach to configuration. So if you want to configure
+
+110
+00:09:57,280 --> 00:10:02,520
+NGINX Unit, there is no config file. It is a JSON structure. So you issue a command either
+
+111
+00:10:02,520 --> 00:10:09,760
+by HTTP call to update that configuration or you can do that over the Linux file system
+
+112
+00:10:09,760 --> 00:10:15,560
+as well. And it is, like I said before, it's API first based configuration and it allows
+
+113
+00:10:15,560 --> 00:10:21,480
+you to build applications in all of these languages in a polyglot approach. So Python,
+
+114
+00:10:21,480 --> 00:10:28,480
+Perl, Ruby, Node.js, Go, Java as well, and PHP. Whereas NGINX Open Source is really the
+
+115
+00:10:28,480 --> 00:10:34,120
+only application gateway tool we have is PHP. We can actually run PHP FPM and run PHP code
+
+116
+00:10:34,120 --> 00:10:39,000
+through there. So it's really trying to go more towards this new approach that applications
+
+117
+00:10:39,000 --> 00:10:48,000
+are driving innovation and compacting all of that tooling into one binary. So in a nutshell,
+
+118
+00:10:48,000 --> 00:10:54,960
+NGINX Unit basically runs your application code and it simplifies and redefines what
+
+119
+00:10:54,960 --> 00:11:00,840
+an application stack would look like. So if we look back at this diagram that we showed
+
+120
+00:11:00,840 --> 00:11:07,240
+before where we have different abstraction layers, we can see that the typical application,
+
+121
+00:11:07,240 --> 00:11:11,480
+if you're running multiple versions or multiple kinds of applications, you're going to have
+
+122
+00:11:11,480 --> 00:11:15,380
+a subset of tools. We know that. It's going to be complex if you're supporting more than
+
+123
+00:11:15,380 --> 00:11:22,160
+one language in an organization, right? So what NGINX Unit does is it compartmentalizes
+
+124
+00:11:22,160 --> 00:11:27,140
+all of those tooling that you would normally have to use for running your applications,
+
+125
+00:11:27,140 --> 00:11:32,260
+running your frameworks, running all that into a compact binary NGINX Unit. And then
+
+126
+00:11:32,260 --> 00:11:36,620
+your application code is sitting in a completely different space and you're able to build your
+
+127
+00:11:36,620 --> 00:11:42,900
+application behind that, right? So it has a full blown HTTP implementation and a full
+
+128
+00:11:42,900 --> 00:11:50,180
+blown TLS implementation. So you don't have to worry about HTTP level, you know, programing
+
+129
+00:11:50,180 --> 00:11:52,700
+that into your application. You don't have to worry about anything. You can just write
+
+130
+00:11:52,700 --> 00:11:57,540
+the application and you can let NGINX Unit handle all the connection handling and it
+
+131
+00:11:57,540 --> 00:12:02,700
+can also serve static files as well. So if you need to serve like HTML, JavaScript, stuff
+
+132
+00:12:02,700 --> 00:12:10,900
+like that, and it's all in a single configuration and network runtime. And again, being an API
+
+133
+00:12:10,900 --> 00:12:15,620
+and I'm going to get into how the API works, you can just issue one API call to configure
+
+134
+00:12:15,620 --> 00:12:23,740
+one or multiple applications sitting behind NGINX Unit. So if we look down in the nitty-gritty
+
+135
+00:12:23,740 --> 00:12:31,620
+of how Unit works, clients are communicating over the network, right, using HTTP to Unit.
+
+136
+00:12:31,620 --> 00:12:37,880
+Unit has a router service that allows you to essentially route traffic to different
+
+137
+00:12:38,240 --> 00:12:42,600
+versions of the application or by doing static file serving. So if you want to build your
+
+138
+00:12:42,600 --> 00:12:47,080
+application and you want to have some HTML or some JavaScript or CSS, you can serve that
+
+139
+00:12:47,080 --> 00:12:53,120
+through Unit and then you can have separate application runtime processes that can handle
+
+140
+00:12:53,120 --> 00:13:00,360
+different data or different types of operations. And these are completely isolated on the Linux
+
+141
+00:13:00,360 --> 00:13:07,400
+subsystem. So in other words, if the Go binary was running, it has no access to the Python
+
+142
+00:13:07,400 --> 00:13:11,980
+application and the internals of what's going on in the code. It's completely isolated from
+
+143
+00:13:11,980 --> 00:13:18,880
+a security perspective. So if we go an abstraction above that and we think, okay, we have the
+
+144
+00:13:18,880 --> 00:13:26,360
+client HTTP connection where the router process is handling URL-based routing. So it can also
+
+145
+00:13:26,360 --> 00:13:34,040
+do in other words like slash login could be a PHP application, slash, I don't know, authenticate
+
+146
+00:13:34,080 --> 00:13:41,520
+could be a Go language. So it has URL-based control and manipulation that you can do so
+
+147
+00:13:41,520 --> 00:13:46,200
+that it will automatically route to the version. So you could actually have a Docker container
+
+148
+00:13:46,200 --> 00:13:52,280
+running with NGINX Unit with all of those languages running as separate binaries and
+
+149
+00:13:52,280 --> 00:13:57,880
+NGINX will handle that with one configuration and one API call that you have to make. It
+
+150
+00:13:57,880 --> 00:14:06,320
+is a JSON REST API and it happens in real time and it handles gracefully as well. So if you make
+
+151
+00:14:06,320 --> 00:14:11,000
+a change to one particular application, all the other applications will not be affected. They'll
+
+152
+00:14:11,000 --> 00:14:16,640
+continue to operate. And as you make that API call, any existing connections that are handling
+
+153
+00:14:16,640 --> 00:14:23,560
+the existing application will be continued to be served. And then once those all trail off and
+
+154
+00:14:23,560 --> 00:14:27,160
+new connections come through, they'll hit the new version of the application. So this allows you to
+
+155
+00:14:27,160 --> 00:14:32,480
+do seamless upgrades without having to worry about any kind of downtime to the actual user.
+
+156
+00:14:32,480 --> 00:14:40,000
+And really, you know, a lot of people say like, oh, well, why another application server? Well,
+
+157
+00:14:40,000 --> 00:14:48,040
+the real goal of NGINX Unit was not only to give this ability for different languages or different
+
+158
+00:14:48,040 --> 00:14:54,480
+programmers to be able to build applications around NGINX Unit, but also to standardize on
+
+159
+00:14:55,120 --> 00:15:03,680
+the actual communication that's happening. So from a HTTP perspective, it's fair to say that
+
+160
+00:15:03,680 --> 00:15:08,760
+NGINX specifically is pretty good at HTTP, right? We've been doing it for a while. So the
+
+161
+00:15:08,760 --> 00:15:14,800
+implementation that we have put into NGINX and NGINX Unit are completely according to RFC,
+
+162
+00:15:14,800 --> 00:15:21,840
+so completely up to spec. It also aims to have these existing, you know, older languages that
+
+163
+00:15:21,840 --> 00:15:27,640
+can actually be modernized with a real-time configuration with that JSON REST API. So it
+
+164
+00:15:27,640 --> 00:15:32,600
+gives an ability so that the actual developer or the person who's actually delivering that
+
+165
+00:15:32,600 --> 00:15:38,040
+application to production can actually just manage a single REST API to make those changes.
+
+166
+00:15:38,040 --> 00:15:44,880
+And then on top of that, it can be end-to-end TLS. So you can issue an API call to update the
+
+167
+00:15:44,880 --> 00:15:51,320
+TLS information with the same API. So you can upload a certificate and create a TLS endpoint
+
+168
+00:15:51,320 --> 00:16:00,520
+over that API as well. So if we look even deeper at how that kind of works, we can see that there's
+
+169
+00:16:00,520 --> 00:16:06,280
+what's called a listener. So NGINX Unit has a listener that's listening over TCP or TLS,
+
+170
+00:16:06,280 --> 00:16:12,280
+and it's accepting connections over that, obviously over networking space, right? It has the ability
+
+171
+00:16:12,280 --> 00:16:19,960
+to pass those requests to routes, which can be layer 7, so HTTP layer 7 URIs, that can do
+
+172
+00:16:19,960 --> 00:16:25,360
+specific routing within that to different versions of application, or it can even go outside on the
+
+173
+00:16:25,360 --> 00:16:31,360
+top and pass to an upstream. So that's where NGINX can actually do load balancing and actually can
+
+174
+00:16:31,360 --> 00:16:36,280
+do outbound, NGINX Unit can do outbound proxying to even another service. So let's say you have
+
+175
+00:16:36,280 --> 00:16:40,440
+a service where you have someone that you're working with and you want to build an app and
+
+176
+00:16:40,440 --> 00:16:44,720
+you want to build it in Python and maybe you want to have a component of it that's in PHP for some
+
+177
+00:16:44,720 --> 00:16:49,000
+reason and you also have a component that also needs to reach out to another network, you can
+
+178
+00:16:49,000 --> 00:16:54,280
+actually have Unit make that outbound connection to that upstream as well. Then on top of that,
+
+179
+00:16:54,280 --> 00:16:59,280
+you can serve static files and then you can serve your applications using that as well.
+
+180
+00:16:59,280 --> 00:17:08,120
+So for developers what this means, again, is it's a simple JSON configuration, you can have one
+
+181
+00:17:08,120 --> 00:17:14,280
+basic configuration for your application that defines the place on disk where you're actually
+
+182
+00:17:14,280 --> 00:17:18,600
+serving the application, what kind of users you want, you can even define how many threads of the
+
+183
+00:17:18,600 --> 00:17:23,640
+application that you want to be created. So let's say you want to have 10 versions of your Python
+
+184
+00:17:23,640 --> 00:17:27,720
+application, that could be one API call and then later on you want to update that to 20 threads,
+
+185
+00:17:27,720 --> 00:17:33,160
+one API call will instantly scale that application to 20 threads. So it's a really cool way to be
+
+186
+00:17:33,160 --> 00:17:40,360
+dynamic and kind of have a dynamic tool for your application server. And it's the same, again,
+
+187
+00:17:40,360 --> 00:17:46,980
+for all the applications because it's only one single API call. It also allows you to run the
+
+188
+00:17:46,980 --> 00:17:53,340
+applications locally because it runs it inside of the actual Unit subsystem. So again, it's secure.
+
+189
+00:17:53,340 --> 00:17:58,340
+So we don't have to actually create a new process, we don't have to make a call to another
+
+190
+00:17:58,340 --> 00:18:03,300
+application or another service somewhere else, it's all handled internally in there as well.
+
+191
+00:18:03,300 --> 00:18:09,300
+And then again, it gives you a high performance production grade HTTP interface that you don't
+
+192
+00:18:09,300 --> 00:18:15,260
+really have to understand the depths of how HTTP is working, you can just be assured that the spec
+
+193
+00:18:15,340 --> 00:18:21,580
+is doing exactly what it needs to from an HTTP perspective. And then for, you know, if any of you
+
+194
+00:18:21,580 --> 00:18:28,860
+are in a DevOps or a security operations role, I think we all know that as time goes on, you find
+
+195
+00:18:28,860 --> 00:18:33,900
+yourself having to learn newer tools and be kind of more in that DevOps space. There's a lot of
+
+196
+00:18:33,900 --> 00:18:40,460
+things that can help with that as well. Again, we can do the TLS configuration, so you can have
+
+197
+00:18:40,540 --> 00:18:46,620
+NGINX Unit manage those TLS certificates, you can have it let you know, basically, if there's any
+
+198
+00:18:46,620 --> 00:18:51,420
+kind of certificate that's going to be out of date, it could be a single API call to figure out if
+
+199
+00:18:51,420 --> 00:18:57,980
+you need to update a certificate. And it really allows you to, again, the application isolation
+
+200
+00:18:57,980 --> 00:19:03,260
+is a very important thing for security as well, where the application is running individually in
+
+201
+00:19:03,260 --> 00:19:11,740
+those subsystems. So this is what the API looks like. Again, it is a very basic JSON object. It
+
+202
+00:19:11,740 --> 00:19:19,100
+listens over HTTP. And you can see here we have a listener set up on all of the available IPs
+
+203
+00:19:19,100 --> 00:19:24,700
+on that host machine, listening on 8081. And then we're passing all the traffic to an application
+
+204
+00:19:24,700 --> 00:19:28,780
+called MyBlog. And you can see here, probably not the best example, but I'm going to give some
+
+205
+00:19:28,780 --> 00:19:33,820
+examples of Python later. But here we have a PHP application where we can say, hey, we always want
+
+206
+00:19:33,820 --> 00:19:40,300
+to have two processes of this PHP app, but we also want to allow scaling up to 10. So if those
+
+207
+00:19:40,300 --> 00:19:44,540
+processes start to run out of memory or start to take up too much utilization, you can actually
+
+208
+00:19:44,540 --> 00:19:52,220
+scale them up automatically. You can have a particular location, a specific user that you
+
+209
+00:19:52,220 --> 00:19:56,860
+want to serve the application and an index file. And you can also do things like timeouts. And you
+
+210
+00:19:56,940 --> 00:20:01,340
+can also define environment variables. So that's really cool because if you need to update an
+
+211
+00:20:01,340 --> 00:20:06,380
+environment variable, you don't need to manage a file on disk. It can be just an API call. And
+
+212
+00:20:06,380 --> 00:20:12,380
+instantly that environment variable is updated. The API supports get, put, post, and delete. So
+
+213
+00:20:12,380 --> 00:20:18,780
+get is to obviously get the API. Put is to do an initial configuration. Post is to update that
+
+214
+00:20:18,780 --> 00:20:22,780
+configuration. And then delete is to remove it. So you can actually completely wipe out the
+
+215
+00:20:22,780 --> 00:20:29,420
+configuration with one single API command. You can also choose to do a Unix socket connection,
+
+216
+00:20:29,420 --> 00:20:34,460
+which is a little more secure. So it's not available over HTTP. And you can also do,
+
+217
+00:20:34,460 --> 00:20:37,740
+if you choose to, you could do it over HTTP over a specific IP import.
+
+218
+00:20:39,340 --> 00:20:46,380
+So let's take a look at the examples that I have here. So this is a very basic Python code here
+
+219
+00:20:46,380 --> 00:20:53,340
+that is basically just responding with a 200 OK. So HTTP 200 OK. It's also responding with a specific
+
+220
+00:20:53,340 --> 00:20:59,740
+header and a value that's saying that the response is JSON. And then we're building a data object.
+
+221
+00:20:59,740 --> 00:21:03,340
+And we're building and we're defining variables for each component of the data object. So we're
+
+222
+00:21:03,340 --> 00:21:09,260
+saying, here's the message. Hello from unit. This is the user agent. It's called nginx unit. And
+
+223
+00:21:09,260 --> 00:21:15,020
+then we're also looping through all of the headers here for the request. And we're basically checking
+
+224
+00:21:15,020 --> 00:21:20,140
+any of them have the match HTTP underscore, which is, as you guys have probably seen,
+
+225
+00:21:20,140 --> 00:21:23,900
+if you've developed in Python, that's what they look like. Those are the request headers.
+
+226
+00:21:23,900 --> 00:21:29,900
+Then we're actually encoding that. We're also doing a SHA of the request as well. And then
+
+227
+00:21:29,900 --> 00:21:35,340
+we're responding in a JSON object and then closing the connection. So it's a very simple
+
+228
+00:21:36,220 --> 00:21:40,300
+response. This is like a very example, hello world kind of application, right?
+
+229
+00:21:41,180 --> 00:21:45,980
+Well, for unit, how would you deploy this? Well, you probably have already created a virtual
+
+230
+00:21:45,980 --> 00:21:50,380
+environment of your application. You've gone in there. You've installed any requirements that
+
+231
+00:21:50,380 --> 00:21:56,140
+you have into that particular folder. And then you've deactivated and taken away from the virtual
+
+232
+00:21:56,140 --> 00:22:01,340
+environment. At that point, you have the application sitting on the disk. All you need to do is issue
+
+233
+00:22:01,340 --> 00:22:08,140
+one API command. So in here, I'm doing it over a UNIX socket. First, I'm starting unit. And I'm
+
+234
+00:22:08,140 --> 00:22:12,940
+telling it that I want to listen on a particular Linux socket. And then I just show you what the
+
+235
+00:22:12,940 --> 00:22:17,020
+log looks like here, because there is a log that you can see and get access to, to see what's
+
+236
+00:22:17,020 --> 00:22:21,820
+going on. And you can see that when I started unit, I started it and there was two modules
+
+237
+00:22:21,820 --> 00:22:26,780
+available. One was Python 2.7 and one was Python 3.9. And that's because you can actually run
+
+238
+00:22:26,780 --> 00:22:31,820
+multiple versions of Python in the binary as well. So you can have different versions of
+
+239
+00:22:31,820 --> 00:22:36,220
+your application depending on what version you're running. And we also loaded OpenSSL,
+
+240
+00:22:36,220 --> 00:22:42,060
+which is built into Nginx unit. And then at that point, it started Python and it started up,
+
+241
+00:22:42,060 --> 00:22:47,740
+but we didn't push the config yet. So here's what the config looks like. It's just a basic, again,
+
+242
+00:22:47,740 --> 00:22:53,820
+JSON object listening on port 80. And we're doing a proxy to a Python app. There's the path where it
+
+243
+00:22:53,820 --> 00:23:01,020
+is. There's the particular module that I want to use, which is WSGI. And then all I have to do is
+
+244
+00:23:01,020 --> 00:23:09,340
+do a curl put command, pass that config file over JSON, and then connect over the UNIX socket. And
+
+245
+00:23:09,340 --> 00:23:15,420
+then instantly I get a reconfiguration done. And then here I did a curl and we can see on local
+
+246
+00:23:15,420 --> 00:23:21,100
+host now my application, my Python application is running through unit using Python. And then
+
+247
+00:23:21,100 --> 00:23:25,020
+we can see that the JSON object that I built in the Python code is being displayed there.
+
+248
+00:23:25,580 --> 00:23:33,420
+So if you guys want to get started, it's really easy. There's documentations on unit.nginx.org
+
+249
+00:23:33,420 --> 00:23:38,380
+that go through the examples of how you would build with Python, also if you wanted to build
+
+250
+00:23:38,380 --> 00:23:43,020
+with Go, any of those other languages I mentioned. If you want to look at the source code, it is
+
+251
+00:23:43,020 --> 00:23:50,940
+available on GitHub and we use Mercurial. All of the main contributions go through Mercurial,
+
+252
+00:23:50,940 --> 00:23:56,940
+so that's going to be on hg.nginx.org. And you're welcome to do any kind of pull requests there as
+
+253
+00:23:56,940 --> 00:24:10,380
+well. And then there's a mirror of it on our GitHub as well, nginx unit. That's my talk.
+

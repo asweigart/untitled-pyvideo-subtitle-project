@@ -1,0 +1,1568 @@
+1
+00:00:00,000 --> 00:00:03,880
+I don't think any of these presenters ever talk about the fact that you're so nervous
+
+2
+00:00:03,880 --> 00:00:07,400
+when you get up here, even if you've done like a thousand times, it's like really nervous
+
+3
+00:00:07,400 --> 00:00:08,400
+to be here.
+
+4
+00:00:08,400 --> 00:00:09,400
+So, hi!
+
+5
+00:00:09,400 --> 00:00:13,700
+I'm Josh Schneider, if you all remember me, I presented here last year, this is my second
+
+6
+00:00:13,700 --> 00:00:14,700
+year here.
+
+7
+00:00:14,700 --> 00:00:19,760
+I am a test automation architect at Dell Technologies, standard disclaimer, I'm not speaking for
+
+8
+00:00:19,760 --> 00:00:22,520
+the company or anything here, this is all my own thoughts, although I think they think
+
+9
+00:00:22,520 --> 00:00:24,920
+the stuff I'm talking about is pretty cool.
+
+10
+00:00:24,920 --> 00:00:29,240
+I want to talk about decorators, because I love decorators.
+
+11
+00:00:29,240 --> 00:00:33,800
+This is one of my favorite parts of Python, and so I'm happy to get to share it with
+
+12
+00:00:33,800 --> 00:00:34,800
+you guys a little bit.
+
+13
+00:00:34,800 --> 00:00:37,720
+I'm going to start out by kind of explaining what a decorator is, and we're going to like
+
+14
+00:00:37,720 --> 00:00:42,000
+a level set, and then I'm going to show you some actual examples, we're going to actually
+
+15
+00:00:42,000 --> 00:00:46,320
+run some code in this session, and kind of get to play around with some things.
+
+16
+00:00:46,320 --> 00:00:49,520
+So first off, that's me, those are the two child processes I spawned, I'm trying to keep
+
+17
+00:00:49,520 --> 00:00:53,600
+them from terminating.
+
+18
+00:00:53,600 --> 00:00:56,820
+And if you were at the speaker get-together the other night, I will try not to knock over
+
+19
+00:00:56,820 --> 00:00:57,820
+anything tonight.
+
+20
+00:00:57,820 --> 00:01:02,780
+All right, so let's start by talking about a decorator, what is a decorator?
+
+21
+00:01:02,780 --> 00:01:07,740
+A decorator, in its simplest terms, is a function that takes a function and returns another
+
+22
+00:01:07,740 --> 00:01:11,460
+function in its place, and somewhere in that explanation there is a white van going over
+
+23
+00:01:11,460 --> 00:01:12,620
+a bridge in slow motion.
+
+24
+00:01:12,620 --> 00:01:17,740
+If you've seen the movie Inception, you get that joke, if you don't, sorry.
+
+25
+00:01:17,740 --> 00:01:21,460
+We're going to talk actually about two different ways of talking about decorators.
+
+26
+00:01:21,460 --> 00:01:23,460
+First we're going to talk about decorators itself, and then we're going to talk about
+
+27
+00:01:23,460 --> 00:01:24,460
+the decorator syntax.
+
+28
+00:01:24,940 --> 00:01:29,380
+But like I said, that definition, it's a function that takes a function and returns a function
+
+29
+00:01:29,380 --> 00:01:30,380
+in its place.
+
+30
+00:01:30,380 --> 00:01:35,660
+And this works because in Python, functions are first class objects, right?
+
+31
+00:01:35,660 --> 00:01:40,680
+A function is an object just like an integer or a string or a list or a set or a tuple
+
+32
+00:01:40,680 --> 00:01:43,860
+or a dictionary or my really cool class.
+
+33
+00:01:43,860 --> 00:01:48,020
+It can be passed as input to a function, it can be returned as output for a function.
+
+34
+00:01:48,020 --> 00:01:49,980
+And a decorator uses this.
+
+35
+00:01:49,980 --> 00:01:59,100
+What a decorator allows you to do is kind of wrap code in other code.
+
+36
+00:01:59,100 --> 00:02:01,780
+And there's a couple of different benefits and stuff that you can get out of that.
+
+37
+00:02:01,780 --> 00:02:05,720
+The anatomy of a decorator here, you can see just a really, really basic dumb example that
+
+38
+00:02:05,720 --> 00:02:07,220
+I have.
+
+39
+00:02:07,220 --> 00:02:09,620
+It's a decorator that takes a function.
+
+40
+00:02:09,620 --> 00:02:14,500
+Notice this doesn't actually do anything.
+
+41
+00:02:14,500 --> 00:02:16,260
+I can.
+
+42
+00:02:16,260 --> 00:02:18,500
+I got a request to zoom in.
+
+43
+00:02:18,620 --> 00:02:23,580
+And here, I'll even make the window bigger just so y'all can read all of this.
+
+44
+00:02:27,580 --> 00:02:29,220
+You're welcome.
+
+45
+00:02:29,220 --> 00:02:31,740
+This decorator doesn't really do anything.
+
+46
+00:02:31,740 --> 00:02:33,100
+It wraps the code in nothing.
+
+47
+00:02:33,100 --> 00:02:35,740
+But you see where those dot, dot, dot comments are?
+
+48
+00:02:35,740 --> 00:02:38,780
+Hey, this space reserved for your code.
+
+49
+00:02:38,780 --> 00:02:42,580
+It means you can do things like intercept inputs to the wrapped function.
+
+50
+00:02:42,580 --> 00:02:44,780
+You can intercept outputs.
+
+51
+00:02:44,780 --> 00:02:48,540
+You can take action before or after the wrapped function call.
+
+52
+00:02:48,540 --> 00:02:52,740
+You can do all kinds of really fun things in here, and I'm going to show you a few examples.
+
+53
+00:02:52,740 --> 00:02:57,500
+But this is, in the simplest terms, what a decorator looks like.
+
+54
+00:02:57,500 --> 00:03:01,180
+And yeah, we can go deeper.
+
+55
+00:03:01,180 --> 00:03:04,980
+Like a dream within a dream within a dream within a dream within a dream.
+
+56
+00:03:04,980 --> 00:03:08,100
+Yeah.
+
+57
+00:03:08,100 --> 00:03:10,500
+So let's talk about the decorator syntax.
+
+58
+00:03:10,500 --> 00:03:13,620
+That's this little at sign in front of a function name.
+
+59
+00:03:13,620 --> 00:03:18,180
+That is when we talk about the decorator syntax, that is the way that we can use a decorator.
+
+60
+00:03:18,180 --> 00:03:21,620
+That at symbol in that function name means whatever comes next, whether it's a class
+
+61
+00:03:21,620 --> 00:03:26,900
+or a function definition, this decorator is going to be passed that thing.
+
+62
+00:03:26,900 --> 00:03:30,580
+It's an easy way of saying, hey, I belong to this thing.
+
+63
+00:03:30,580 --> 00:03:31,820
+Right?
+
+64
+00:03:31,820 --> 00:03:38,140
+Adding this little at silence exceptions is the same as doing this line of code.
+
+65
+00:03:38,140 --> 00:03:43,780
+So you are calling silence exceptions and passing it my activity.
+
+66
+00:03:43,780 --> 00:03:46,980
+By the way, silence exceptions would probably not be a great decorator, and we'll talk about
+
+67
+00:03:46,980 --> 00:03:48,780
+why in a little while.
+
+68
+00:03:48,780 --> 00:03:51,340
+There are a bunch of decorators in the standard library.
+
+69
+00:03:51,340 --> 00:03:53,460
+You've probably played with a couple of these before.
+
+70
+00:03:53,460 --> 00:03:57,820
+Anybody here done a class and done an at property to do a property?
+
+71
+00:03:57,820 --> 00:03:59,620
+I'm sure everybody's dealt with that.
+
+72
+00:03:59,620 --> 00:04:03,000
+There are some other really cool ones, like the context manager decorator, which takes
+
+73
+00:04:03,000 --> 00:04:07,900
+any function with a single yield statement and turns it into a context manager.
+
+74
+00:04:07,900 --> 00:04:08,940
+There are some other really neat ones.
+
+75
+00:04:08,940 --> 00:04:11,700
+The data classes wrapper is one of my favorites.
+
+76
+00:04:11,700 --> 00:04:12,700
+That is awesome.
+
+77
+00:04:12,700 --> 00:04:15,460
+Saves you so much boilerplate writing.
+
+78
+00:04:15,460 --> 00:04:17,020
+And then there's some conventions.
+
+79
+00:04:17,020 --> 00:04:19,020
+I will let you guys read that later.
+
+80
+00:04:19,020 --> 00:04:20,820
+All of this information is on GitHub.
+
+81
+00:04:20,820 --> 00:04:24,100
+Andy, you talked about GitHub actions.
+
+82
+00:04:24,100 --> 00:04:27,620
+There's actually a GitHub actions workflow on this repo that automatically generates
+
+83
+00:04:27,620 --> 00:04:30,940
+the static site content, puts it in a zip, and releases it every time I push change in
+
+84
+00:04:30,940 --> 00:04:31,940
+domain.
+
+85
+00:04:31,940 --> 00:04:32,940
+Okay.
+
+86
+00:04:32,940 --> 00:04:36,420
+So, let's start talking about the types of decorators that we can play with.
+
+87
+00:04:36,420 --> 00:04:39,660
+The first is a class that I like to call observer decorators.
+
+88
+00:04:39,660 --> 00:04:45,420
+These are decorators that observe and report behavior, but don't try to change the behavior.
+
+89
+00:04:45,420 --> 00:04:47,380
+Right?
+
+90
+00:04:47,380 --> 00:04:50,800
+This allows you to sort of insert code before or after something.
+
+91
+00:04:50,800 --> 00:04:57,740
+This is really useful for things like debugging or performance measuring and things like that.
+
+92
+00:04:57,740 --> 00:05:02,200
+I'm going to use an example here, what I call the logging decorator.
+
+93
+00:05:02,200 --> 00:05:06,960
+This is just a really simple decorator to log to a Python standard logger.
+
+94
+00:05:06,960 --> 00:05:08,680
+Hey, this function got called.
+
+95
+00:05:08,680 --> 00:05:10,080
+Here are the inputs it was called with.
+
+96
+00:05:10,080 --> 00:05:11,760
+And hey, this function finished.
+
+97
+00:05:11,760 --> 00:05:14,520
+Or, ooh, this function got an exception.
+
+98
+00:05:14,520 --> 00:05:16,040
+Let's log that information there.
+
+99
+00:05:16,040 --> 00:05:21,360
+So, I'm actually going to switch to...
+
+100
+00:05:21,360 --> 00:05:26,040
+And is this readable or do I need to make this way bigger?
+
+101
+00:05:26,040 --> 00:05:29,080
+Bigger they all say, bigger.
+
+102
+00:05:29,080 --> 00:05:30,660
+Everything's bigger in Texas.
+
+103
+00:05:30,660 --> 00:05:32,820
+And we made the code bigger.
+
+104
+00:05:32,820 --> 00:05:34,820
+I promise, though, it doesn't make the code any better.
+
+105
+00:05:34,820 --> 00:05:36,760
+I did skip this example really quickly.
+
+106
+00:05:36,760 --> 00:05:40,060
+This is just a really bog standard decorator that I wrote.
+
+107
+00:05:40,060 --> 00:05:46,880
+And this is just to show you that if I run that, you will see when the decoration occurs
+
+108
+00:05:46,880 --> 00:05:50,940
+and you will see when the decorator's code is running.
+
+109
+00:05:50,940 --> 00:05:52,300
+This example is available in there.
+
+110
+00:05:52,300 --> 00:05:53,380
+You are welcome to...
+
+111
+00:05:53,380 --> 00:05:56,380
+I actually encourage you to fiddle around with it.
+
+112
+00:05:56,380 --> 00:05:59,740
+Add print statements, remove print statements, move things around.
+
+113
+00:05:59,740 --> 00:06:03,860
+Start with the code to understand the interaction model here.
+
+114
+00:06:03,860 --> 00:06:05,340
+So I told you about the logging decorator.
+
+115
+00:06:05,340 --> 00:06:09,640
+Let me get that out of the way.
+
+116
+00:06:09,640 --> 00:06:11,300
+This is my very simple decorator.
+
+117
+00:06:11,300 --> 00:06:16,140
+It takes a function and all it does is it logs to a Python standard logger here when
+
+118
+00:06:16,140 --> 00:06:22,340
+it's calling the function, when an error occurred, and when it's returning.
+
+119
+00:06:22,340 --> 00:06:23,340
+Here's where I'm using it.
+
+120
+00:06:23,340 --> 00:06:27,340
+I created this really lovely function called my test function.
+
+121
+00:06:27,340 --> 00:06:32,860
+It takes one parameter, isFail, and if isFail, it fail.
+
+122
+00:06:32,860 --> 00:06:37,020
+If not isFail, it just passes with no problems.
+
+123
+00:06:37,020 --> 00:06:39,380
+And then I'm going to call that function a couple of different times.
+
+124
+00:06:39,380 --> 00:06:42,460
+The first two times it shouldn't fail, the third one it should, right?
+
+125
+00:06:42,460 --> 00:06:43,460
+I'll read that.
+
+126
+00:06:43,460 --> 00:06:44,460
+It's pretty simple.
+
+127
+00:06:44,460 --> 00:06:48,680
+So here is the utility that that provides.
+
+128
+00:06:48,680 --> 00:06:52,860
+I didn't have to add to those functions any log calls.
+
+129
+00:06:52,860 --> 00:06:57,840
+Just by adding that one decorator, I get all of this logging for free.
+
+130
+00:06:57,840 --> 00:06:59,900
+It's all built into the decorator.
+
+131
+00:06:59,900 --> 00:07:03,940
+This is super portable for debugging logging and debugging output.
+
+132
+00:07:03,940 --> 00:07:05,620
+I've got a function that's misbehaving.
+
+133
+00:07:05,620 --> 00:07:08,140
+I don't want to put the log lines in there because I don't want them to live in there
+
+134
+00:07:08,140 --> 00:07:12,140
+maybe for security reasons because I don't want to log too much or something like that.
+
+135
+00:07:12,140 --> 00:07:16,540
+This one line of code is very portable to just stick at the top of my function and get
+
+136
+00:07:16,540 --> 00:07:20,500
+all that logging for free, right?
+
+137
+00:07:20,500 --> 00:07:23,900
+It would be very easy for me to add into this.
+
+138
+00:07:23,900 --> 00:07:29,900
+Do you guys want me to really try a live live demo?
+
+139
+00:07:29,900 --> 00:07:36,260
+Let's import time because we all need more time, right?
+
+140
+00:07:36,260 --> 00:07:47,900
+And up here, I'm going to, whoop, oh my goodness, it did that, really?
+
+141
+00:07:48,220 --> 00:07:56,780
+It's the curse of the live, I've angered the live demo gods.
+
+142
+00:07:56,780 --> 00:08:06,820
+Let me disconnect and reconnect and I've learned that that tends to bring things back.
+
+143
+00:08:06,820 --> 00:08:10,300
+Windows has detected that I'm doing things.
+
+144
+00:08:10,300 --> 00:08:15,300
+All right, everybody think in thoughts.
+
+145
+00:08:15,300 --> 00:08:16,300
+I've got it down here.
+
+146
+00:08:16,380 --> 00:08:19,380
+I just don't have it up there.
+
+147
+00:08:19,380 --> 00:08:24,380
+Ooh, maybe, maybe.
+
+148
+00:08:24,380 --> 00:08:26,580
+We are right with the live demo gods again.
+
+149
+00:08:26,580 --> 00:08:31,460
+All right, so in here, I'm going to do a started at.
+
+150
+00:08:31,460 --> 00:08:32,980
+We're going to initialize it to time.time.
+
+151
+00:08:32,980 --> 00:08:36,140
+That's just going to get us a timestamp of now and then down here, I'm going to add in
+
+152
+00:08:36,140 --> 00:08:39,540
+and this is really terrible because I'm going to repeat it twice.
+
+153
+00:08:39,540 --> 00:08:45,980
+Elapsed equals, you guys get to learn how much of a spaz I am when I type.
+
+154
+00:08:45,980 --> 00:08:53,300
+I'm going to add this line and I'm going to just for poops and giggles, add it down here.
+
+155
+00:08:53,300 --> 00:09:03,300
+And then I'm going to add and add my elapsed in here.
+
+156
+00:09:03,300 --> 00:09:06,900
+And likewise, I'm going to add it in here.
+
+157
+00:09:16,660 --> 00:09:20,660
+It's always fun when you type on a new keyboard that you're not used to.
+
+158
+00:09:20,660 --> 00:09:28,300
+Congratulations, I just added performance logging for free.
+
+159
+00:09:28,300 --> 00:09:33,660
+So this is a really useful pattern for trying to grab information, especially for misbehaving
+
+160
+00:09:33,660 --> 00:09:37,820
+objects or for things that you maybe you think that it's taking too long and so you want
+
+161
+00:09:37,820 --> 00:09:40,460
+to stick logging on there, but you don't want it to be there permanently.
+
+162
+00:09:40,460 --> 00:09:42,420
+It's a good easy thing to move around.
+
+163
+00:09:42,420 --> 00:09:44,940
+So we like the logging decorator.
+
+164
+00:09:44,940 --> 00:09:45,940
+Logging decorator is kind of fun.
+
+165
+00:09:45,940 --> 00:09:46,940
+Okay, but wait, there's more.
+
+166
+00:09:46,940 --> 00:09:49,820
+It's like a Ronco product.
+
+167
+00:09:49,820 --> 00:09:52,460
+It slices, it dices, it makes julienne fries three different ways.
+
+168
+00:09:52,460 --> 00:09:55,780
+Next, we're going to talk about parameterized decorator.
+
+169
+00:09:55,780 --> 00:09:58,060
+Remember that inception joke I made earlier?
+
+170
+00:09:58,060 --> 00:09:59,820
+What's a parameterized decorator?
+
+171
+00:09:59,820 --> 00:10:02,820
+It's a function that takes some parameters that returns a function that takes a function
+
+172
+00:10:02,820 --> 00:10:05,220
+returns another function in its place.
+
+173
+00:10:05,220 --> 00:10:08,100
+We went another level deeper in the dream there.
+
+174
+00:10:08,100 --> 00:10:12,020
+Parameterized decorators are useful when you want to pass parameters into that decorator
+
+175
+00:10:12,020 --> 00:10:15,540
+either to use or to indicate some really cool and interesting things.
+
+176
+00:10:15,540 --> 00:10:18,700
+I'm going to show you actually two examples here and they're actually written two different
+
+177
+00:10:18,700 --> 00:10:19,700
+ways.
+
+178
+00:10:19,700 --> 00:10:20,700
+Hint, one of them's a class.
+
+179
+00:10:20,700 --> 00:10:25,060
+So the first one I'm going to look at is one that we have called the locking decorator.
+
+180
+00:10:25,060 --> 00:10:28,620
+This is a decorator to indicate that this function needs exclusive access to a resource
+
+181
+00:10:28,620 --> 00:10:30,020
+and we're doing that using a lock.
+
+182
+00:10:30,020 --> 00:10:32,580
+Is everybody here familiar with a lock?
+
+183
+00:10:32,580 --> 00:10:35,900
+You're talking threading a lock?
+
+184
+00:10:35,900 --> 00:10:37,100
+Process acquires a lock.
+
+185
+00:10:37,100 --> 00:10:39,620
+No one else can acquire that lock until that lock is released.
+
+186
+00:10:39,620 --> 00:10:43,540
+It's a great way to make sure that one thing at a time operates on something.
+
+187
+00:10:43,540 --> 00:10:48,220
+This decorator is really cool because you tell it, it uses the lock and you pass it
+
+188
+00:10:48,220 --> 00:10:54,020
+the lock object and then the wrapped function automatically acquires the lock, runs the
+
+189
+00:10:54,020 --> 00:10:59,140
+function and then releases the lock when it's done even if it hit an exception.
+
+190
+00:10:59,140 --> 00:11:03,380
+This is a really easy portable way to stick at uses lock and give it the lock that it
+
+191
+00:11:03,380 --> 00:11:06,260
+needs to use and you're off to the races.
+
+192
+00:11:06,260 --> 00:11:09,580
+You don't have to add that with statement in every one of your functions.
+
+193
+00:11:09,580 --> 00:11:13,300
+You just move that decorator to where it needs it.
+
+194
+00:11:13,300 --> 00:11:16,660
+So I promised an example because I like to bring examples.
+
+195
+00:11:16,660 --> 00:11:21,940
+Here's an example of that locking decorator and type ins for the win by the way.
+
+196
+00:11:21,940 --> 00:11:25,620
+I wrote all these in from the beginning.
+
+197
+00:11:25,620 --> 00:11:26,820
+It's like we were seeing before.
+
+198
+00:11:26,820 --> 00:11:28,080
+It's going to acquire the lock.
+
+199
+00:11:28,080 --> 00:11:29,620
+It's going to call the function.
+
+200
+00:11:29,620 --> 00:11:33,660
+It's going to release that lock and again we could add performance information.
+
+201
+00:11:33,660 --> 00:11:35,940
+Here's how long it waited for the lock to acquire.
+
+202
+00:11:35,940 --> 00:11:37,500
+Here's how long it held the lock.
+
+203
+00:11:37,500 --> 00:11:39,740
+Here's how long the total elapsed time was.
+
+204
+00:11:39,740 --> 00:11:41,980
+The easy to add that stuff into here.
+
+205
+00:11:41,980 --> 00:11:43,580
+I'm going to establish two locks.
+
+206
+00:11:43,580 --> 00:11:49,900
+Let's say that this is a UI automation library because I live in Pandy's world too.
+
+207
+00:11:49,900 --> 00:11:52,780
+Let's say that we have a lock for the keyboard and a lock for the mouse.
+
+208
+00:11:52,780 --> 00:11:53,780
+Some things use the keyboard.
+
+209
+00:11:53,780 --> 00:11:54,780
+Some things use the mouse.
+
+210
+00:11:54,780 --> 00:11:57,940
+Some things use both and they're special.
+
+211
+00:11:57,940 --> 00:12:02,380
+I'm going to establish a keyboard lock and a mouse lock and then I'm going to decorate
+
+212
+00:12:02,380 --> 00:12:04,260
+a couple of functions with those.
+
+213
+00:12:04,260 --> 00:12:07,180
+So I'm going to say hey when I want to type a message I want to be the only one that's
+
+214
+00:12:07,180 --> 00:12:08,180
+using the keyboard.
+
+215
+00:12:08,180 --> 00:12:10,700
+Don't let anybody else use the keyboard until I'm done.
+
+216
+00:12:10,700 --> 00:12:12,180
+Same with this send keys.
+
+217
+00:12:12,180 --> 00:12:14,940
+I want to send keystrokes to the keyboard so make sure I'm the only one that's doing
+
+218
+00:12:14,940 --> 00:12:17,180
+it so we don't step all over each other's toes.
+
+219
+00:12:17,180 --> 00:12:18,420
+Same with mouse.
+
+220
+00:12:18,420 --> 00:12:22,440
+Notice that these two functions are tagged to the same lock.
+
+221
+00:12:22,440 --> 00:12:24,220
+This function is tagged to a different lock.
+
+222
+00:12:24,220 --> 00:12:25,220
+Right?
+
+223
+00:12:25,220 --> 00:12:29,980
+So it's really portable to say hey this uses that lock, this uses that lock.
+
+224
+00:12:29,980 --> 00:12:35,860
+I apologize for this code because in order to demonstrate what a lock does I have to
+
+225
+00:12:35,860 --> 00:12:40,780
+spawn a bunch of threads and threads are a little painful to work with.
+
+226
+00:12:40,780 --> 00:12:43,420
+But magic will happen when I hit this button.
+
+227
+00:12:43,420 --> 00:12:46,820
+You see a bunch of things that are all working in parallel right now.
+
+228
+00:12:46,820 --> 00:12:48,460
+So I've started off a bunch of threads.
+
+229
+00:12:48,460 --> 00:12:52,100
+They're all firing off three different copies of those functions.
+
+230
+00:12:52,100 --> 00:12:54,180
+Those functions aren't doing anything too interesting.
+
+231
+00:12:54,180 --> 00:13:01,700
+They're just pausing for a few seconds but enough that you can see that things are working.
+
+232
+00:13:01,740 --> 00:13:08,780
+I like this because it puts the information about exclusive access right there at the
+
+233
+00:13:08,780 --> 00:13:10,260
+top.
+
+234
+00:13:10,260 --> 00:13:11,640
+Right where it's easy to see.
+
+235
+00:13:11,640 --> 00:13:13,180
+It's not buried in the code.
+
+236
+00:13:13,180 --> 00:13:15,020
+It's not four lines inside.
+
+237
+00:13:15,020 --> 00:13:19,740
+It's right there at the top and it's really easy to move those around.
+
+238
+00:13:19,740 --> 00:13:20,740
+Is this kind of cool?
+
+239
+00:13:20,740 --> 00:13:21,740
+Yeah?
+
+240
+00:13:21,740 --> 00:13:22,740
+It's kind of cool?
+
+241
+00:13:22,740 --> 00:13:23,740
+All right.
+
+242
+00:13:23,740 --> 00:13:24,740
+All right.
+
+243
+00:13:24,740 --> 00:13:27,720
+So I promised you another example and this one's even more fun.
+
+244
+00:13:27,720 --> 00:13:30,020
+This is what I call the registration decorator.
+
+245
+00:13:30,020 --> 00:13:35,060
+This is a decorator but as a class, right?
+
+246
+00:13:35,060 --> 00:13:37,420
+So we are creating an instance of a class.
+
+247
+00:13:37,420 --> 00:13:41,600
+The instance of the class is the decorator and the magic that makes that work is this
+
+248
+00:13:41,600 --> 00:13:43,500
+Dundra call method.
+
+249
+00:13:43,500 --> 00:13:47,260
+So this is when I call that instance, when I put parentheses after that instance and
+
+250
+00:13:47,260 --> 00:13:52,720
+pass it parameters, it is going to execute on those as if it were a function.
+
+251
+00:13:52,720 --> 00:13:56,300
+So what I'm doing is I've got a category collection object here.
+
+252
+00:13:56,300 --> 00:13:57,820
+It is a variant of a list.
+
+253
+00:13:57,820 --> 00:13:59,720
+So I've subclassed the user list.
+
+254
+00:13:59,720 --> 00:14:02,040
+So I get all of the functionality that you get with a list, right?
+
+255
+00:14:02,040 --> 00:14:06,920
+You get append, you get clear, you get all of the indexing and all of that stuff for
+
+256
+00:14:06,920 --> 00:14:08,080
+free.
+
+257
+00:14:08,080 --> 00:14:12,520
+What I'm doing is when you take the instance of this object and you call it, it is a decorator.
+
+258
+00:14:12,520 --> 00:14:18,480
+It will register a function to this list and then that allows me to do this method.
+
+259
+00:14:18,480 --> 00:14:26,120
+This is a list of rules and I want to know which rules the input violates, right?
+
+260
+00:14:26,120 --> 00:14:31,360
+So go over to this fun example here.
+
+261
+00:14:31,360 --> 00:14:34,360
+Here's our category collection we were just looking at.
+
+262
+00:14:34,360 --> 00:14:36,760
+I'm going to do a set of grammar rules in here.
+
+263
+00:14:36,760 --> 00:14:41,160
+So I'm creating my decorator here, this grammar rules decorator.
+
+264
+00:14:41,160 --> 00:14:45,000
+And now I'm going to apply that to each of these different functions to indicate that
+
+265
+00:14:45,000 --> 00:14:48,360
+this is a rule, right?
+
+266
+00:14:48,360 --> 00:14:49,360
+Functions are pretty simple.
+
+267
+00:14:49,360 --> 00:14:56,040
+Starts with a capital letter, ends with punctuation, that the I is capitalized, right?
+
+268
+00:14:56,040 --> 00:14:57,040
+That the word I is capitalized.
+
+269
+00:14:57,040 --> 00:15:01,920
+We don't have I by itself as a lowercase letter because that would be terrible grammar.
+
+270
+00:15:01,920 --> 00:15:04,000
+Types of mistakes I make all the time.
+
+271
+00:15:04,000 --> 00:15:05,000
+But here's what's kind of cool.
+
+272
+00:15:05,000 --> 00:15:07,880
+I'm going to run that against a couple of different strings and I want to know which
+
+273
+00:15:07,880 --> 00:15:10,040
+rules I violate in each of those.
+
+274
+00:15:10,040 --> 00:15:14,120
+Maybe this is input text or something like that.
+
+275
+00:15:14,120 --> 00:15:19,120
+So when I run this, what that violates returns is a list of the names of the functions that
+
+276
+00:15:19,120 --> 00:15:23,100
+return false, the name of the rules that this violates.
+
+277
+00:15:23,100 --> 00:15:27,420
+So notice when I pass it, I am someone and I is not capitalized.
+
+278
+00:15:27,420 --> 00:15:33,580
+It violates, these starts with a capital letter and the I is capitalized, right?
+
+279
+00:15:33,580 --> 00:15:37,580
+The example of this that we have in our code base is we have stuff that captures network
+
+280
+00:15:37,580 --> 00:15:38,620
+packets.
+
+281
+00:15:38,620 --> 00:15:45,060
+We have a rule that all of our software can't use insecure protocols and must only use secure
+
+282
+00:15:45,060 --> 00:15:46,060
+protocols.
+
+283
+00:15:46,060 --> 00:15:49,580
+So I have a variant of this for all of the secure protocols and a variant of this for
+
+284
+00:15:49,620 --> 00:15:54,260
+all the insecure and then each of the different filter functions is just tagged to which category
+
+285
+00:15:54,260 --> 00:15:55,540
+it belongs in.
+
+286
+00:15:55,540 --> 00:15:58,340
+And the nice thing about decorators is you can chain decorators.
+
+287
+00:15:58,340 --> 00:16:04,460
+You can stack them on top of each other and apply multiple decorators to a single function.
+
+288
+00:16:04,460 --> 00:16:09,140
+And that's really neat because I can categorize all of these different functions in that and
+
+289
+00:16:09,140 --> 00:16:14,260
+then I can call one method off of that and determine which rules it violates.
+
+290
+00:16:14,260 --> 00:16:19,100
+Instead of calling each and every function on its own, I can just register them with
+
+291
+00:16:19,100 --> 00:16:21,900
+this and then call them at once with that.
+
+292
+00:16:21,900 --> 00:16:24,900
+Is this pretty cool?
+
+293
+00:16:24,900 --> 00:16:31,660
+All right, we are mercifully close to the end here.
+
+294
+00:16:31,660 --> 00:16:32,660
+Almost there.
+
+295
+00:16:32,660 --> 00:16:36,660
+The last one I'm going to talk about is the ones I think is the most dangerous and that's
+
+296
+00:16:36,660 --> 00:16:38,500
+mutating decorators.
+
+297
+00:16:38,500 --> 00:16:43,600
+That's decorators that either change input, change output or both.
+
+298
+00:16:43,600 --> 00:16:47,420
+These can be very useful but they have to be used very carefully.
+
+299
+00:16:47,420 --> 00:16:51,300
+So the example that I have here is what I call the defaulter decorator.
+
+300
+00:16:51,300 --> 00:16:55,420
+Let's say that you're processing payload from a website, right?
+
+301
+00:16:55,420 --> 00:16:58,740
+Like you get a big blob of JSON and you want to be able to extract information out of it
+
+302
+00:16:58,740 --> 00:17:03,460
+but you want to handle situations where maybe that information isn't present or it's malformed.
+
+303
+00:17:03,460 --> 00:17:05,460
+You know, you don't want to throw up exceptions.
+
+304
+00:17:05,460 --> 00:17:09,420
+You really want to make sure that you get a valid value.
+
+305
+00:17:09,420 --> 00:17:13,580
+So this is a decorator that takes parameters and this is written in what I call the pie
+
+306
+00:17:13,580 --> 00:17:15,660
+test style.
+
+307
+00:17:15,660 --> 00:17:21,380
+Josh was telling me earlier that there's another library that makes this pattern a lot easier
+
+308
+00:17:21,380 --> 00:17:26,620
+but the idea is this is a decorator that can be used with or without the parentheses.
+
+309
+00:17:26,620 --> 00:17:32,060
+You can use with the parentheses to pass parameters but you have to pass them as keyword arguments.
+
+310
+00:17:32,060 --> 00:17:39,140
+But what this does is I can decorate a function to say, check that the output is this type,
+
+311
+00:17:39,140 --> 00:17:42,980
+convert it to that type and if it fails to call or if it fails to convert, return to
+
+312
+00:17:42,980 --> 00:17:47,020
+me a default value instead, right?
+
+313
+00:17:47,020 --> 00:17:50,340
+So example here, I give it the function that I want to decorate.
+
+314
+00:17:50,340 --> 00:17:52,700
+I give it the type that I expect it to be.
+
+315
+00:17:52,700 --> 00:17:54,380
+It defaults to string.
+
+316
+00:17:54,380 --> 00:17:56,820
+I give it the exceptions that I expect it to catch.
+
+317
+00:17:56,820 --> 00:18:01,500
+Right now by default it catches all exceptions but you might want to be more specific.
+
+318
+00:18:01,500 --> 00:18:07,820
+And then a default value which in my case I give it none.
+
+319
+00:18:07,820 --> 00:18:12,020
+You can see really quickly it's not doing a lot of really complicated stuff.
+
+320
+00:18:12,060 --> 00:18:13,940
+It's calling the wrapped function.
+
+321
+00:18:13,940 --> 00:18:14,940
+It's getting the return.
+
+322
+00:18:14,940 --> 00:18:17,820
+It's trying to cast the return to the type that you expect.
+
+323
+00:18:17,820 --> 00:18:21,540
+It's catching exceptions in both of those cases and returning a default value.
+
+324
+00:18:21,540 --> 00:18:24,900
+Notice that it is logging and this is one thing that's very important in a decorator.
+
+325
+00:18:24,900 --> 00:18:30,540
+If you are handling exceptions, make sure that you log exceptions otherwise this becomes
+
+326
+00:18:30,540 --> 00:18:33,740
+really hard to debug.
+
+327
+00:18:33,740 --> 00:18:36,980
+So I can show an example what this looks like in practice.
+
+328
+00:18:36,980 --> 00:18:39,660
+This is my default decorator.
+
+329
+00:18:39,660 --> 00:18:42,580
+And what I've done is I've decorated a method down here.
+
+330
+00:18:42,580 --> 00:18:47,220
+Let's say it takes a payload and what it's going to do is it's going to extract the session
+
+331
+00:18:47,220 --> 00:18:48,740
+value that's in there.
+
+332
+00:18:48,740 --> 00:18:53,380
+And I expect that session value to be an integer and if that session value isn't there or there's
+
+333
+00:18:53,380 --> 00:18:56,460
+any problems just return one.
+
+334
+00:18:56,460 --> 00:18:59,900
+Like that's my sentinel value for something's gone wrong.
+
+335
+00:18:59,900 --> 00:19:05,860
+And I'm going to call that in a couple of different ways.
+
+336
+00:19:05,860 --> 00:19:13,540
+And you see in here when I passed it an integer five, it just returned the integer, right?
+
+337
+00:19:13,540 --> 00:19:16,100
+When I passed it a string five, it converted it to an integer.
+
+338
+00:19:16,100 --> 00:19:19,060
+So again, I'm always getting an integer as an output.
+
+339
+00:19:19,060 --> 00:19:26,180
+And when I gave it none, it caught that exception and gave me back my default value.
+
+340
+00:19:26,180 --> 00:19:31,340
+And when I got nothing in there, it gave me my default value, right?
+
+341
+00:19:31,340 --> 00:19:35,080
+This is really useful for ensuring that you get certain things.
+
+342
+00:19:35,080 --> 00:19:39,760
+Another way that I've used this type of thing is to check for a default override value.
+
+343
+00:19:39,760 --> 00:19:44,320
+Like maybe we're passing input to this script and we want to make sure that we force a value
+
+344
+00:19:44,320 --> 00:19:46,400
+to a particular thing.
+
+345
+00:19:46,400 --> 00:19:48,120
+Same thing could be done in here really easily.
+
+346
+00:19:48,120 --> 00:19:51,560
+You could check before the call to the function and if you have a default value just return
+
+347
+00:19:51,560 --> 00:19:57,200
+that and otherwise you run the function and get the value from there.
+
+348
+00:19:57,200 --> 00:20:01,440
+This is really useful, like I said, for ensuring you get the same type, for ensuring that you
+
+349
+00:20:01,440 --> 00:20:04,640
+always get a value, that you don't get an exception raised here.
+
+350
+00:20:04,640 --> 00:20:11,640
+Maybe this is running test automation code and you don't want it to just fail out without
+
+351
+00:20:11,640 --> 00:20:12,640
+checking everything out.
+
+352
+00:20:12,640 --> 00:20:13,640
+The screen.
+
+353
+00:20:13,640 --> 00:20:16,760
+The screen again?
+
+354
+00:20:16,760 --> 00:20:21,640
+I cannot win with this screen and I'm not even touching the laptop for the most part.
+
+355
+00:20:21,640 --> 00:20:23,480
+So let's talk about pros and cons and decorators.
+
+356
+00:20:23,480 --> 00:20:26,400
+Do you guys have any ideas of what kind of the pros and cons would be?
+
+357
+00:20:26,400 --> 00:20:28,680
+Like what are some good pros?
+
+358
+00:20:28,680 --> 00:20:31,200
+Just shout one out.
+
+359
+00:20:31,200 --> 00:20:32,200
+Don't repeat yourself.
+
+360
+00:20:32,320 --> 00:20:35,960
+That code's really portable and you don't have to put that boilerplate and everything.
+
+361
+00:20:35,960 --> 00:20:36,960
+I love that one.
+
+362
+00:20:36,960 --> 00:20:39,600
+That's my favorite reason for using them.
+
+363
+00:20:39,600 --> 00:20:40,840
+Anybody else have another pro?
+
+364
+00:20:40,840 --> 00:20:41,840
+Temporary.
+
+365
+00:20:41,840 --> 00:20:52,800
+Right, like temporary code.
+
+366
+00:20:52,800 --> 00:20:56,440
+You want this to be here now but maybe you don't want it to be in production or you don't
+
+367
+00:20:56,440 --> 00:21:00,800
+want to keep it there permanently but you need it say for debugging or whatever.
+
+368
+00:21:00,800 --> 00:21:01,800
+Yes.
+
+369
+00:21:02,640 --> 00:21:09,120
+I also think that decorators, when they're well written, can really aid in readability.
+
+370
+00:21:09,120 --> 00:21:11,720
+Think back to that uses lock thing.
+
+371
+00:21:11,720 --> 00:21:15,560
+It's really easy to see right there in the function definition, where you're looking
+
+372
+00:21:15,560 --> 00:21:19,920
+at the signature of that function right above that and it says, hey, it uses this lock.
+
+373
+00:21:19,920 --> 00:21:21,960
+That's your signal.
+
+374
+00:21:21,960 --> 00:21:24,800
+Think of the categorized decorator.
+
+375
+00:21:24,800 --> 00:21:29,480
+You're signaling that this function belongs to this category of functions.
+
+376
+00:21:29,480 --> 00:21:32,520
+It's really simple to read, easy to see.
+
+377
+00:21:32,520 --> 00:21:38,680
+Some cons, a little decorator can hide a lot of complex code.
+
+378
+00:21:38,680 --> 00:21:41,960
+It's one of those, the crumb doesn't look like the whole cookie but it could be the
+
+379
+00:21:41,960 --> 00:21:46,400
+whole cookie and that can be a good thing and a bad thing.
+
+380
+00:21:46,400 --> 00:21:50,640
+You can create a layer of indirection which makes debugging really, really hard.
+
+381
+00:21:50,640 --> 00:21:55,240
+What's being handled by the decorator versus what's being handled by the wrapped function
+
+382
+00:21:55,240 --> 00:22:00,680
+can become a problem if you don't carefully handle logging and things like that.
+
+383
+00:22:00,680 --> 00:22:04,440
+Then parameterized decorators, like I said, it's a function that takes parameters that
+
+384
+00:22:04,440 --> 00:22:06,680
+returns a function that takes a function that returns a function.
+
+385
+00:22:06,680 --> 00:22:10,360
+That's really complicated to maintain.
+
+386
+00:22:10,360 --> 00:22:17,440
+There's layers in there that you have to really understand what's being used where.
+
+387
+00:22:17,440 --> 00:22:19,720
+That's all I have.
+
+388
+00:22:19,720 --> 00:22:21,480
+I wanted to just give a quick shout out.
+
+389
+00:22:21,480 --> 00:22:23,480
+My team's with me, actually.
+
+390
+00:22:23,520 --> 00:22:25,760
+They actually helped me review all of this.
+
+391
+00:22:25,760 --> 00:22:30,200
+Every teacher is a student and they're the ones that teach me every day.
+
+392
+00:22:30,200 --> 00:22:31,320
+So thanks.
+

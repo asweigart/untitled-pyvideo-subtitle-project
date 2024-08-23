@@ -1,0 +1,1340 @@
+1
+00:00:00,000 --> 00:00:08,880
+Hey everybody, I'd like to thank the PyTexas organizers and also thank you for
+
+2
+00:00:08,880 --> 00:00:13,240
+coming to my talk after lunch. I know it's a little late, a little tired, let's
+
+3
+00:00:13,240 --> 00:00:18,400
+talk about some testing. So my name is Ali Sipji. I'm one of the organizers of the
+
+4
+00:00:18,400 --> 00:00:22,400
+Chicago Python users group and when I'm not doing that I'm writing backend code
+
+5
+00:00:22,400 --> 00:00:28,080
+for Numerator. It's a market intelligence company. So I love testing.
+
+6
+00:00:28,080 --> 00:00:35,040
+Writing tests gives me the satisfaction of a job well done. Tests help me confirm
+
+7
+00:00:35,040 --> 00:00:39,960
+that the change I made works exactly as expected. Tests also give me confidence
+
+8
+00:00:39,960 --> 00:00:45,760
+that my change didn't break existing functionality. It wasn't always this way.
+
+9
+00:00:45,760 --> 00:00:50,280
+I used to hack together spaghetti code around chunks of answers I found on
+
+10
+00:00:50,280 --> 00:00:54,320
+Stack Overflow. I didn't really care that I solved the problem, only that I
+
+11
+00:00:54,320 --> 00:00:59,240
+solved it enough to cross it off my to-do list. If I ever went back to the
+
+12
+00:00:59,240 --> 00:01:02,960
+project, I was afraid of making changes. I didn't want to upset that delicate
+
+13
+00:01:02,960 --> 00:01:09,200
+balance. Things worked. If I changed it, would they still work? Probably not. And
+
+14
+00:01:09,200 --> 00:01:13,280
+then I read Code Complete and this book changed the way I approached software
+
+15
+00:01:13,280 --> 00:01:17,720
+development. Steve McConnell made me realize doing things in a method,
+
+16
+00:01:17,720 --> 00:01:21,680
+methodical way is a lot more important than simply just solving the problem at
+
+17
+00:01:21,680 --> 00:01:27,080
+hand. I became deliberate about my approach and I started breaking problems
+
+18
+00:01:27,080 --> 00:01:30,920
+down into smaller and smaller chunks. After ensuring that each of these
+
+19
+00:01:30,920 --> 00:01:34,960
+smaller pieces worked as exactly as I intended it to, I can put these together
+
+20
+00:01:34,960 --> 00:01:40,520
+and create an entire system. And with tests, I can ensure that everything I did
+
+21
+00:01:40,520 --> 00:01:47,440
+worked exactly as I expected it to. So tests allow us to move fast because they
+
+22
+00:01:47,440 --> 00:01:50,800
+give us confidence in our code. Confidence that we're producing expected
+
+23
+00:01:50,800 --> 00:01:54,320
+results and confidence that we're able to modify our code base without
+
+24
+00:01:54,320 --> 00:02:01,720
+affecting existing functionality. In short, test-maker code more agile. I think
+
+25
+00:02:01,720 --> 00:02:05,280
+it's important to see testing in the context of a real application. So I got a
+
+26
+00:02:05,280 --> 00:02:11,440
+startup idea. It's called Word Count as a Service. So you send in a URL. It's
+
+27
+00:02:11,440 --> 00:02:15,240
+going to calculate some stuff and send you back language statistics. So right
+
+28
+00:02:15,240 --> 00:02:18,560
+now for MVP, we're only going to do one endpoint. It's going to be a top word
+
+29
+00:02:18,680 --> 00:02:22,440
+endpoint. And so you're going to send in a URL. It's going to return a response
+
+30
+00:02:22,440 --> 00:02:26,840
+with the most common word and the number of recurrences of that word. And so our
+
+31
+00:02:26,840 --> 00:02:30,440
+plan for world domination, we're going to build this MVP, get some funding. I'm
+
+32
+00:02:30,440 --> 00:02:37,440
+not too sure what. And then we got IPO. It's going to be great. So the
+
+33
+00:02:37,440 --> 00:02:41,720
+architecture of this application, it's a fast web app. It receives requests. It's
+
+34
+00:02:41,720 --> 00:02:44,720
+going to forward it to the, after processing, to the right business logic
+
+35
+00:02:44,720 --> 00:02:48,440
+module. That's where our secret sauce is. Once that's done, it's going to send
+
+36
+00:02:48,440 --> 00:02:52,200
+back results to the endpoint. Flask is going to save it to, or my web app is
+
+37
+00:02:52,200 --> 00:02:55,240
+going to save it to the database. And then it's going to return a response to
+
+38
+00:02:55,240 --> 00:03:00,720
+our client. So this is our secret sauce. I'm going to download this webpage using
+
+39
+00:03:00,720 --> 00:03:04,560
+this little known library called requests. I'm going to extract the text
+
+40
+00:03:04,560 --> 00:03:08,320
+using Beautiful Soup. And then the standard library's collections.counter is
+
+41
+00:03:08,320 --> 00:03:11,240
+going to help me count the words. And then I'm going to return the most common
+
+42
+00:03:11,240 --> 00:03:16,320
+word and the number of occurrences. So let's see that in code. And so here I'm
+
+43
+00:03:16,320 --> 00:03:20,800
+just going through some Flask configuration. I have my database model.
+
+44
+00:03:20,800 --> 00:03:25,480
+So I'm going to have the URL, the word, the number of occurrences. I have a helper
+
+45
+00:03:25,480 --> 00:03:29,360
+method to save to the database. We'll come back to that in a bit. These are my
+
+46
+00:03:29,360 --> 00:03:37,320
+Flask routes. So my webpage, sorry, my top word route, it parses a request, gets
+
+47
+00:03:37,320 --> 00:03:41,280
+our URL. It sends it off to our business logic module. So let's take a look at
+
+48
+00:03:41,280 --> 00:03:47,520
+that. So here we're going to download the webpage using requests, extract the text.
+
+49
+00:03:47,520 --> 00:03:50,600
+So I'm just going to be pulling all the things out of the paragraph tags. And I'm
+
+50
+00:03:50,600 --> 00:03:54,640
+going to flatten it out to get a list of words. And then I'm going to count the
+
+51
+00:03:54,640 --> 00:04:00,560
+words using the collections.counter. Going back, we're going to save to our
+
+52
+00:04:00,560 --> 00:04:07,120
+database. So here we just have, create an instance of a model, set the
+
+53
+00:04:07,120 --> 00:04:13,200
+attributes, add the record to the session, and then save it. And then we're going to
+
+54
+00:04:13,200 --> 00:04:19,080
+return back information to our user. Pretty standard web application.
+
+55
+00:04:29,400 --> 00:04:33,480
+So now let's talk about some testing fundamentals. So we all have a common
+
+56
+00:04:33,480 --> 00:04:38,720
+vocabulary going forward. So a system under test is a system that's currently
+
+57
+00:04:38,720 --> 00:04:42,880
+being tested. This could be a line of code, it could be a method, it could be
+
+58
+00:04:42,880 --> 00:04:47,320
+the entire program. And testing refers to the process of entering inputs into our
+
+59
+00:04:47,320 --> 00:04:51,080
+system under test, and then validating outputs against an acceptance criteria.
+
+60
+00:04:51,080 --> 00:04:56,280
+If our outputs are okay, our test passes. If our outputs are not okay, our test
+
+61
+00:04:56,280 --> 00:05:00,040
+fails. Hopefully we have enough contextual information to find out what
+
+62
+00:05:00,040 --> 00:05:05,440
+we should do to fix that test. So there are many different kinds of tests, but
+
+63
+00:05:05,440 --> 00:05:09,720
+they can be categorized into two broad categories. Black box testing and white
+
+64
+00:05:09,720 --> 00:05:15,560
+box testing. Black box testing refers to testing in which the tester cannot see
+
+65
+00:05:15,560 --> 00:05:20,400
+the inner workings of the system they're testing. And in contrast, white box
+
+66
+00:05:20,400 --> 00:05:24,320
+testing is a technique in which testers can see the inner workings of the system
+
+67
+00:05:24,320 --> 00:05:28,280
+being tested. As developers, we wrote the code so we could be doing white box
+
+68
+00:05:28,280 --> 00:05:32,040
+testing, but that's not to say there's not a need for black box testing. We
+
+69
+00:05:32,040 --> 00:05:37,720
+wrote the code, we wrote the test, we have those blind spots. So we can think of
+
+70
+00:05:37,720 --> 00:05:42,040
+all of our tests as a feedback loop that lets us know that our tests are working
+
+71
+00:05:42,040 --> 00:05:46,600
+and producing expected results. If our tests are passing, that's great, make your
+
+72
+00:05:46,600 --> 00:05:50,680
+commit, make a PR, go on to the next feature. If the test fails, we have to
+
+73
+00:05:50,680 --> 00:05:55,520
+figure out exactly what's going on. And the simplest form of testing is manual
+
+74
+00:05:55,520 --> 00:06:00,080
+testing. And this is something like refreshing a web page or doing something
+
+75
+00:06:00,080 --> 00:06:05,480
+in the REPL. And as the name implies, manual means you have to do something
+
+76
+00:06:05,480 --> 00:06:09,960
+yourself, like the developer has to do a specific kind of action. And this is not
+
+77
+00:06:09,960 --> 00:06:13,280
+really sustainable because if there's one universal truth in programming, it's
+
+78
+00:06:13,280 --> 00:06:18,560
+that developers are efficient. We need to make testing as easy and as barrier-free
+
+79
+00:06:18,560 --> 00:06:22,680
+as possible, otherwise developers won't write tests or they won't run their
+
+80
+00:06:22,680 --> 00:06:28,120
+tests. So this is why we should write up our tests as code and then we can
+
+81
+00:06:28,120 --> 00:06:32,960
+automate the process of running our tests. So what we'll do is we'll use software to
+
+82
+00:06:32,960 --> 00:06:37,080
+control our test execution and the comparison of the result with what we
+
+83
+00:06:37,080 --> 00:06:41,840
+expect the result to be. So some benefits of automated testing are you have a
+
+84
+00:06:41,840 --> 00:06:47,640
+faster feedback loop, we can reuse and rerun tests without too much effort.
+
+85
+00:06:47,640 --> 00:06:51,480
+Automation increases efficiency, our testers can actually do things like
+
+86
+00:06:51,480 --> 00:06:55,480
+exploratory testing, which they're actually paid to do. And finally, if we
+
+87
+00:06:55,480 --> 00:06:58,800
+have automated tests, we can incorporate them into our continuous integration
+
+88
+00:06:58,800 --> 00:07:03,680
+pipeline. And so what this means is that when you make a pull request to master,
+
+89
+00:07:03,680 --> 00:07:09,360
+it has to pass tests before people can merge it in. It's really annoying me. Can
+
+90
+00:07:09,360 --> 00:07:16,840
+you still hear me? Yeah? Very cool. So this leads us to the most famous diagram
+
+91
+00:07:16,840 --> 00:07:21,320
+in the testing world, the automated testing pyramid. So the pyramid presents
+
+92
+00:07:21,320 --> 00:07:25,120
+a way of thinking about different kinds of automated tests when we're creating a
+
+93
+00:07:25,120 --> 00:07:37,600
+balanced test suite. So the pyramid of... So the pyramid of... So what we want is we
+
+94
+00:07:37,600 --> 00:07:43,760
+want a lot of fast, small, and cheap unit tests and a fewer number of big, slow,
+
+95
+00:07:43,760 --> 00:07:47,400
+and expensive end-to-end tests. And so it's a really good rule of thumb to start
+
+96
+00:07:47,400 --> 00:07:50,240
+with. It's not really set in stone, but if you want to start with something,
+
+97
+00:07:50,240 --> 00:07:59,840
+this is a good place to go. Okay, cool. Thank you. So unit tests are the most
+
+98
+00:07:59,840 --> 00:08:04,400
+granular level of tests. And they allow us to confirm that individual units of
+
+99
+00:08:04,400 --> 00:08:09,680
+code are working exactly as we intend them to. A unit is a testable part of
+
+100
+00:08:09,680 --> 00:08:13,240
+your code. It doesn't really matter about the size, but generally it's something
+
+101
+00:08:13,240 --> 00:08:16,680
+that's like a public function that takes in some sort of parameters, does some
+
+102
+00:08:16,680 --> 00:08:22,200
+sort of calculation, and returns a result. This is the most granular form of
+
+103
+00:08:22,200 --> 00:08:25,920
+testing, and we should make sure that all of our unit tests are independent. This
+
+104
+00:08:25,920 --> 00:08:32,680
+way, when they fail, we know exactly what's going on. So going back to that
+
+105
+00:08:32,680 --> 00:08:37,400
+example, when we want to calculate, we want to find the top word, how do we test
+
+106
+00:08:37,400 --> 00:08:42,120
+this function? Well, we can create a list that we know the attributes of. So here I
+
+107
+00:08:42,120 --> 00:08:45,920
+create a list. I know foo appears three times. I want to pass foo through that
+
+108
+00:08:45,920 --> 00:08:49,720
+list, and then I'm going to compare the output to what I know the output should
+
+109
+00:08:49,720 --> 00:08:59,200
+be. So integration tests refers to combining multiple parts of the system
+
+110
+00:08:59,200 --> 00:09:04,200
+and testing them together as a group. It also refers to testing at the service
+
+111
+00:09:04,200 --> 00:09:10,360
+boundaries. If our application makes a call to, say, a database, a file
+
+112
+00:09:10,360 --> 00:09:14,560
+system, or an external API, that's the kind of integration test we need to
+
+113
+00:09:15,120 --> 00:09:19,960
+ensure that works. So if our program does anything of substance, anything
+
+114
+00:09:19,960 --> 00:09:23,280
+interesting, it's going to have a lot of interactive components that are interacting
+
+115
+00:09:23,280 --> 00:09:27,040
+with each other. So integration tests provide us confidence that those
+
+116
+00:09:27,040 --> 00:09:32,680
+integrations are working the way we want them to work. So here's a function to save
+
+117
+00:09:32,680 --> 00:09:37,240
+information to a database. How can we test this function? So the easiest way
+
+118
+00:09:37,240 --> 00:09:41,440
+is to create an object, pass it through our function, and then query their
+
+119
+00:09:41,440 --> 00:09:44,680
+database to make sure that object that was put in there is the object we expect
+
+120
+00:09:44,680 --> 00:09:58,720
+to be in there. Fairly standard stuff. So end-to-end tests are tests that we write
+
+121
+00:09:58,720 --> 00:10:02,560
+to make sure our application meets defined business requirements or
+
+122
+00:10:02,560 --> 00:10:06,720
+functional requirements. We usually run these through the UI so they're a little
+
+123
+00:10:06,720 --> 00:10:09,960
+slower, but we can also test the subcutaneous layer, which is the layer
+
+124
+00:10:10,000 --> 00:10:14,600
+just below the surface. And if our end-to-end test passed, that's great. It means our
+
+125
+00:10:14,600 --> 00:10:18,520
+program meets business requirements. If they fail, we really don't know why they
+
+126
+00:10:18,520 --> 00:10:22,680
+failed. And so we have no idea where to go, so we could probably need to look at
+
+127
+00:10:22,680 --> 00:10:27,760
+some of our unit tests or integration tests. So in our example, our interface is
+
+128
+00:10:27,760 --> 00:10:32,520
+a JSON REST API, and so a functional test would be creating a test client with flask,
+
+129
+00:10:32,520 --> 00:10:37,680
+hitting the endpoint, and then making sure that it's actually a 200. Did it
+
+130
+00:10:37,920 --> 00:10:44,280
+return an OK? There's one more form of testing that we should talk about called
+
+131
+00:10:44,280 --> 00:10:49,040
+regression testing. And we want to fix a bug. We want to ensure that when we fix
+
+132
+00:10:49,040 --> 00:10:54,760
+this bug, it never comes back into our program. And so good bug reports include
+
+133
+00:10:54,760 --> 00:10:59,400
+code that we can use to reproduce these errors. So let's take this code, make a
+
+134
+00:10:59,400 --> 00:11:05,600
+test case out of it, and then we have a failing test. Get this test to pass, and
+
+135
+00:11:05,840 --> 00:11:10,080
+instead of throwing the code away, let's keep that test away. Let's keep that test
+
+136
+00:11:10,080 --> 00:11:14,440
+in our test suite, document it with, say, an issue number. That way, any time we
+
+137
+00:11:14,440 --> 00:11:20,640
+run our CI, we can ensure that that functionality doesn't regress. So we've
+
+138
+00:11:20,640 --> 00:11:23,640
+been talking about this. Well, let's be explicit. What are some of the benefits
+
+139
+00:11:23,640 --> 00:11:27,640
+of testing? With tests, we can ensure that our program works exactly as we
+
+140
+00:11:27,640 --> 00:11:32,560
+expected it to. Tests also confirm that the changes we make didn't break existing
+
+141
+00:11:32,560 --> 00:11:38,280
+functionality. Tests help us identify bugs earlier in the software development
+
+142
+00:11:38,280 --> 00:11:44,640
+lifecycle. The earlier you find a bug, the faster you can fix it. And I think this
+
+143
+00:11:44,640 --> 00:11:48,960
+is a little bit controversial, but if you write tests, it forces you to
+
+144
+00:11:48,960 --> 00:11:52,240
+write better code. It shows that you've actually thought through the problem, and
+
+145
+00:11:52,240 --> 00:11:56,440
+at the very least, you've used your own API. If your API is clunky, you have
+
+146
+00:11:56,440 --> 00:12:01,780
+nobody to blame but yourself. So we can quantitatively measure our tests in a
+
+147
+00:12:01,780 --> 00:12:06,740
+few different ways. So the one way is a test ratio, and this is the number of
+
+148
+00:12:06,740 --> 00:12:11,540
+lines of test code over the number of lines of production code. A ratio over
+
+149
+00:12:11,540 --> 00:12:14,780
+one means we have more test code than production code. Does it really mean
+
+150
+00:12:14,780 --> 00:12:19,660
+anything? I'm not too sure, but it's a metric people use. I think test speed is
+
+151
+00:12:19,660 --> 00:12:23,340
+a little bit of a better metric. You want to have a test suite
+
+152
+00:12:23,340 --> 00:12:27,180
+that's run really fast. That way, when you're iterating on features, you can
+
+153
+00:12:27,180 --> 00:12:32,380
+keep running your tests to make sure that you're not breaking anything. Test
+
+154
+00:12:32,380 --> 00:12:36,340
+coverage measures how much of our production code is covered by our test
+
+155
+00:12:36,340 --> 00:12:39,860
+code. This could be a really interesting metric. We should come back to that
+
+156
+00:12:39,860 --> 00:12:44,800
+later. But just be aware that no matter what metric we're measuring, if people
+
+157
+00:12:44,800 --> 00:12:47,820
+know you're measuring it, they're gonna change their behavior and affect that
+
+158
+00:12:47,820 --> 00:12:55,180
+metric. For instance, 100% code coverage, is it great? Yeah, sure, but does it really
+
+159
+00:12:55,180 --> 00:12:59,700
+mean anything? Not really. So just to recap, test coverage measures the
+
+160
+00:12:59,700 --> 00:13:04,460
+percent of our codebase that's executed by our test suite. It tracks the lines of
+
+161
+00:13:04,460 --> 00:13:08,260
+code that were exercised, but it doesn't it doesn't really measure the quality of
+
+162
+00:13:08,260 --> 00:13:13,760
+our tests. It's really great to find untested code in our codebase, so if we
+
+163
+00:13:13,760 --> 00:13:17,660
+have untested code and we're actually using that code, we should write tests
+
+164
+00:13:17,660 --> 00:13:20,740
+around it. If we're not using that code, we should delete it. I don't know about
+
+165
+00:13:20,740 --> 00:13:29,220
+anybody else, but I like deleting code a lot more than I like writing code. And so
+
+166
+00:13:29,220 --> 00:13:34,020
+there's a lot of testing on coverage utilities in the Python ecosystem. The
+
+167
+00:13:34,020 --> 00:13:46,820
+most popular one is coverage.py. So here's a sample PyTest and coverage.py
+
+168
+00:13:46,820 --> 00:13:51,860
+report. So at the top you got some configuration for PyTest. Each of these
+
+169
+00:13:51,860 --> 00:13:56,220
+represents all the tests that are run. One dot represents a successful pass, and on
+
+170
+00:13:56,220 --> 00:13:59,620
+the bottom we have our coverage report. So here we have all the modules we're
+
+171
+00:13:59,620 --> 00:14:03,860
+testing, the number of lines of code in each of those modules, as well as the
+
+172
+00:14:03,860 --> 00:14:10,780
+lines of code that are not covered, along with the percentage. Coverage also produces
+
+173
+00:14:10,780 --> 00:14:14,020
+HTML reports, which are a little bit easier to read and they show you exactly
+
+174
+00:14:14,340 --> 00:14:19,940
+what's going on in your program. So how can we gain test coverage? Going back to
+
+175
+00:14:19,940 --> 00:14:24,140
+that end-to-end test we wrote, let's just take out our assert. Then we'll run our
+
+176
+00:14:24,140 --> 00:14:27,940
+test. We have the same test coverage, where it's just like that. So this is
+
+177
+00:14:27,940 --> 00:14:30,940
+something that you should watch out for. We really don't know how good these
+
+178
+00:14:30,940 --> 00:14:34,260
+tests are, so this is something we should do in code review. You should at least
+
+179
+00:14:34,260 --> 00:14:38,020
+make sure people are asserting something and not just running like empty tests.
+
+180
+00:14:38,020 --> 00:14:42,820
+Just a little note, coverage.py right now lets you know what lines of code are
+
+181
+00:14:42,820 --> 00:14:47,060
+being tested. Starting in version 5, you're going to find out what tests are
+
+182
+00:14:47,060 --> 00:14:51,580
+covering what lines of code. There's currently an alpha release out. Try it out,
+
+183
+00:14:51,580 --> 00:14:55,820
+make bug reports. I'm sure that would appreciate it.
+
+184
+00:15:03,140 --> 00:15:07,980
+So before we dive into test frameworks, we're gonna have to go over a few more
+
+185
+00:15:07,980 --> 00:15:13,740
+definitions. So when we want to run our test, we want to run it under a known
+
+186
+00:15:13,740 --> 00:15:17,460
+state so we can ensure repeatable results. This is where test fixtures come
+
+187
+00:15:17,460 --> 00:15:21,260
+in. Fixtures set up our test environment and then they return it to the original
+
+188
+00:15:21,260 --> 00:15:26,420
+state after the test is run. A test case, that's an individual unit of testing and
+
+189
+00:15:26,420 --> 00:15:30,740
+what we want to do is want to check specific input results in a specific
+
+190
+00:15:30,740 --> 00:15:37,660
+output. A test suite is a collection of test cases. We can use a test runner to
+
+191
+00:15:37,660 --> 00:15:41,980
+orchestrate the execution and reporting of tests to users and your test runner,
+
+192
+00:15:41,980 --> 00:15:44,540
+if the test fails, it's going to tell you why it failed. There's going to be a
+
+193
+00:15:44,540 --> 00:15:52,180
+stack face there. An invariant is a condition that's always true and so we
+
+194
+00:15:52,180 --> 00:15:56,500
+can use the assert built-in keyword in Python to add invariant to our code. So
+
+195
+00:15:56,500 --> 00:16:01,980
+here I have assert is instance. Is this list 1, 2, 3 a list that returns true so
+
+196
+00:16:01,980 --> 00:16:06,660
+nothing happens? And on the next one I have assert is this list a tuple? It's
+
+197
+00:16:06,660 --> 00:16:13,540
+not so it's false. It's actually going to raise an assertion error exception. The
+
+198
+00:16:13,540 --> 00:16:17,540
+test framework is the execution environment for automated tests. We use
+
+199
+00:16:17,540 --> 00:16:23,460
+our framework to hook into and drive our application under test. Our framework
+
+200
+00:16:23,460 --> 00:16:27,380
+also tells us how we should have to define our exceptions and the framework
+
+201
+00:16:27,380 --> 00:16:31,500
+usually has a runner which executes the test cases and reports the results to our
+
+202
+00:16:31,500 --> 00:16:41,940
+user. So there's two big testing frameworks in the Python ecosystem.
+
+203
+00:16:41,940 --> 00:16:46,500
+There's unit test and there's PyTest. So unit test is part of Python standard
+
+204
+00:16:46,500 --> 00:16:51,740
+library. It follows the standard X unit from small talk or Java style pattern
+
+205
+00:16:51,740 --> 00:16:54,900
+and since it's been around and used in many languages there's a lot of books a
+
+206
+00:16:54,900 --> 00:16:58,580
+lot of documentation about it but at the end of day you're writing Java kind of
+
+207
+00:16:58,580 --> 00:17:02,980
+like testing. A lot of boilerplate. PyTest on the other hand doesn't feel
+
+208
+00:17:02,980 --> 00:17:07,380
+like Java. The tests are really easy to read. They're really easy to write. It
+
+209
+00:17:07,380 --> 00:17:11,860
+also has a lot of great documentation. My favorite part of PyTest is the plugins
+
+210
+00:17:11,860 --> 00:17:15,780
+and PyTest runs unit test suites so there's really no reason not to use
+
+211
+00:17:15,780 --> 00:17:21,060
+PyTest. And so for all these reasons I love PyTest so let's explore why I love
+
+212
+00:17:21,060 --> 00:17:31,900
+it. So PyTest allows us to use the Python built-in assert keyword. There's no more
+
+213
+00:17:31,900 --> 00:17:35,940
+messing around with assert helpers and when an assert fails there's a lot of
+
+214
+00:17:35,940 --> 00:17:41,740
+detailed introspection about what failed. So here I'm comparing a list of 0 to 9
+
+215
+00:17:41,740 --> 00:17:47,180
+which is what range 10 does to a list from 0 to 8 and the number 10. And when
+
+216
+00:17:47,180 --> 00:17:51,980
+it fails it tells me at index 9 the number 9 does not equal the number 10. So
+
+217
+00:17:51,980 --> 00:17:54,940
+you don't have to go back to your code you can actually just see it in the
+
+218
+00:17:54,940 --> 00:18:02,540
+PyTest output. PyTest features a fixture model that's just very
+
+219
+00:18:02,540 --> 00:18:06,860
+helpful in running these kinds of fixture based tests. So fixtures are
+
+220
+00:18:06,860 --> 00:18:11,460
+functions that PyTest runs before your test and then it runs after your tests.
+
+221
+00:18:11,460 --> 00:18:16,260
+We can import fixtures into test functions by specifying them in as input
+
+222
+00:18:16,300 --> 00:18:21,060
+arguments for our tests. What PyTest does is it searches the current module and
+
+223
+00:18:21,060 --> 00:18:26,180
+it's going to go out to the plugins or the Coftest.py files. We can create
+
+224
+00:18:26,180 --> 00:18:30,900
+fixtures of other fixtures and this allows us to compose complex test
+
+225
+00:18:30,900 --> 00:18:37,900
+objects quite easily. So this is a fixture to create an item in the
+
+226
+00:18:37,900 --> 00:18:43,180
+database. So here I'm creating something adding to the session passing control
+
+227
+00:18:43,180 --> 00:18:47,620
+back to my test function and then when the test functions run I roll back that
+
+228
+00:18:47,620 --> 00:18:53,060
+transaction. And so I got my setup I yield with the generator and then I have
+
+229
+00:18:53,060 --> 00:18:58,780
+my teardown to set it back to the original state. We inject this test
+
+230
+00:18:58,780 --> 00:19:03,260
+function this fixture into our test function as a parameter. It's a little
+
+231
+00:19:03,260 --> 00:19:07,580
+bit of magic but PyTest is a little bit of magic but it's really easy so I sort
+
+232
+00:19:07,580 --> 00:19:12,700
+of prefer going with that magic versus something like unit test. But one of the
+
+233
+00:19:12,700 --> 00:19:16,620
+problems with fixtures is that they don't accept input arguments so we can
+
+234
+00:19:16,620 --> 00:19:19,580
+take advantage of Python language features to make fixtures a lot more
+
+235
+00:19:19,580 --> 00:19:23,940
+flexible. So here what we'll do is we'll create a wrapper function or a factory
+
+236
+00:19:23,940 --> 00:19:27,460
+function and just return the fixture that takes arguments that you want. I
+
+237
+00:19:27,460 --> 00:19:30,180
+actually wrote a blog post about this so there's a link if you want to read it
+
+238
+00:19:30,180 --> 00:19:40,060
+later on. So PyTest has markers that allow us to add metadata to our test
+
+239
+00:19:40,060 --> 00:19:44,740
+functions and we can run those specific markers with the minus M selection of
+
+240
+00:19:44,740 --> 00:19:49,260
+flag. And markers are really good to identify certain types of tests. Say
+
+241
+00:19:49,260 --> 00:19:52,700
+tests that are slow that you don't want to run all the time but maybe those are
+
+242
+00:19:52,700 --> 00:19:56,580
+the tests that you want to run all the time in your continuous integration
+
+243
+00:19:56,580 --> 00:20:06,920
+pipeline. The implementation of markers was revamped in Python 3.6. Before there
+
+244
+00:20:06,920 --> 00:20:09,980
+used to be a lot of errors so if you are experiencing errors I really suggest you
+
+245
+00:20:09,980 --> 00:20:17,780
+upgrade. There are a few built-in markers. There's a marker to skip tests,
+
+246
+00:20:17,780 --> 00:20:21,420
+there's a marker to skip test conditionally, and there's also a marker
+
+247
+00:20:21,420 --> 00:20:28,180
+to mark test that should always fail. So we want to test our functions across many
+
+248
+00:20:28,180 --> 00:20:32,660
+different kinds of outputs. We can easily write a loop but PyTest is only
+
+249
+00:20:32,660 --> 00:20:38,860
+going to treat that as one test function. But if we use the PyTest.mark.parameterize
+
+250
+00:20:38,860 --> 00:20:42,240
+decorator we can enable argument
+
+251
+00:20:42,240 --> 00:20:46,580
+parameterization. So here we have three specific tests but just be aware that
+
+252
+00:20:46,580 --> 00:20:49,700
+this is spelled a little differently. It doesn't have the E which might be the
+
+253
+00:20:49,700 --> 00:20:53,260
+British or Canadian way. Not too sure but it always catches me up so just be
+
+254
+00:20:53,260 --> 00:20:58,540
+careful of that. So yeah you see here we have those two tests that passed, the
+
+255
+00:20:58,540 --> 00:21:07,420
+test that failed because 54 doesn't equal 42. So my favorite part of PyTest
+
+256
+00:21:07,420 --> 00:21:12,580
+is the hook based plugin architecture and there's a hook for pretty much
+
+257
+00:21:12,580 --> 00:21:15,300
+anything so if you really want to customize PyTest you can read the
+
+258
+00:21:15,300 --> 00:21:22,860
+documentation and find out what you need to do. We can put all of our local
+
+259
+00:21:22,860 --> 00:21:27,380
+plugins in the toptest.py file inside of each of our packages or sub
+
+260
+00:21:27,380 --> 00:21:34,380
+packages. We can also go out and get a lot of third-party libraries. We can
+
+261
+00:21:34,380 --> 00:21:39,380
+invoke our test runner using the PyTest command at the command line and what
+
+262
+00:21:39,380 --> 00:21:41,980
+that's going to do it's going to go out and find all tests that are labeled
+
+263
+00:21:41,980 --> 00:21:47,900
+test underscore or underscore test.py. We also have ways to run individual
+
+264
+00:21:47,900 --> 00:21:54,020
+tests and I've included a link for best practices on test holder structure. PyTest
+
+265
+00:21:54,020 --> 00:21:56,680
+has a lot of command line options so I really recommend checking out the man
+
+266
+00:21:56,680 --> 00:22:02,220
+page or the help. And also be aware of all the different kinds of exit codes
+
+267
+00:22:02,260 --> 00:22:05,420
+just in case if your test fails you want to know why it failed so you can fix it
+
+268
+00:22:05,420 --> 00:22:13,660
+later. So now let's look at a lot of testing tools that can make our life a
+
+269
+00:22:13,660 --> 00:22:18,900
+little easier. Of course number one is PyTest. Some useful PyTest plugins
+
+270
+00:22:18,900 --> 00:22:23,500
+include code for code coverage. I like freeze gun for freezing date time during
+
+271
+00:22:23,500 --> 00:22:29,140
+the test. You can test Jupiter notebooks with IPython notebook extension. There's
+
+272
+00:22:29,140 --> 00:22:36,020
+also one for extest which allows you to run tests in parallel. So test doubles
+
+273
+00:22:36,020 --> 00:22:40,660
+are objects that allow you to replace our external dependencies with objects
+
+274
+00:22:40,660 --> 00:22:44,900
+that we create and that we define and that allows us to run our code through
+
+275
+00:22:44,900 --> 00:22:48,580
+specific kinds of scenarios. I'm not really going to go into too many details
+
+276
+00:22:48,580 --> 00:22:53,300
+about this but there's a list of a lot of great testing utilities. The most widely
+
+277
+00:22:53,300 --> 00:22:57,780
+used is unitest.mock but Mockito which is a port of the Java library
+
+278
+00:22:57,780 --> 00:23:03,940
+that's also pretty good too. But not everybody likes mocks. I don't like mocks
+
+279
+00:23:03,940 --> 00:23:07,420
+I don't know anybody else that likes mocks. So there are a few alternatives for test
+
+280
+00:23:07,420 --> 00:23:13,580
+doubles. Vcr.py records requests and responses as XAML cassettes and then we
+
+281
+00:23:13,580 --> 00:23:17,340
+can replay these cassettes for deterministic tests. This was actually
+
+282
+00:23:17,340 --> 00:23:21,460
+based off the Ruby VCR library. I have a blog post about it if you want to check
+
+283
+00:23:21,460 --> 00:23:27,500
+it out. You can also test using man in the middle proxy. This is a little bit
+
+284
+00:23:27,540 --> 00:23:32,140
+weird and it requires a lot of setup but there's some links if you want to like to
+
+285
+00:23:32,140 --> 00:23:37,900
+follow along. I saw a talk at EuroPython 2018 where this company spun up
+
+286
+00:23:37,900 --> 00:23:42,420
+test infrastructure for pretty much every single test using DockerPy. It's a
+
+287
+00:23:42,420 --> 00:23:44,900
+little bit too much for my use case but it might be something that you need to
+
+288
+00:23:44,900 --> 00:23:51,060
+do. We can use Selenium to do browser-based testing. So here we can
+
+289
+00:23:51,060 --> 00:23:54,220
+actually code up our interactions with the browser, add something to the cart,
+
+290
+00:23:54,540 --> 00:23:58,540
+check the cart out. In my opinion these tests are a little bit brittle, a little
+
+291
+00:23:58,540 --> 00:24:02,660
+bit slow but sometimes you have high value features that you really have no
+
+292
+00:24:02,660 --> 00:24:08,500
+choice but to test with Selenium. But if you go a layer below to the API level we
+
+293
+00:24:08,500 --> 00:24:12,620
+can use Postman to test all of our APIs. So what we do is we create a contract
+
+294
+00:24:12,620 --> 00:24:17,340
+between our front end and our back end that defines how our API should work.
+
+295
+00:24:17,340 --> 00:24:21,380
+It's really easy to get started with Postman but in my experience it's a
+
+296
+00:24:21,380 --> 00:24:25,500
+little hard to scale. There are tools made for those purposes. A tool like
+
+297
+00:24:25,500 --> 00:24:30,700
+Tavern. So Tavern allows you to specify YAML-based test specifications and then
+
+298
+00:24:30,700 --> 00:24:35,540
+you can run them using PyTest. Underneath the hood it uses request but it's also
+
+299
+00:24:35,540 --> 00:24:39,660
+got a plug-in architecture so if you want to hook in your web frameworks
+
+300
+00:24:39,660 --> 00:24:43,740
+testing library or your testing client you could easily do that. And if you do
+
+301
+00:24:43,740 --> 00:24:48,660
+that please make a pull request. It'd be an awesome feature to have. Some more
+
+302
+00:24:48,660 --> 00:24:53,620
+testing tools. DockerPy can be used to ensure your containers are built to your
+
+303
+00:24:53,620 --> 00:24:58,020
+exact specifications. I couldn't get Kano working but there is an article if
+
+304
+00:24:58,020 --> 00:25:02,420
+you want to give it a shot. Data science testing. If you have not read the
+
+305
+00:25:02,420 --> 00:25:05,700
+Pandas testing utilities I highly recommend doing so. There's a lot of
+
+306
+00:25:05,700 --> 00:25:10,580
+great assertion helper for data frames. UnGuard is built around those kinds of
+
+307
+00:25:10,580 --> 00:25:15,580
+utilities. It's a decorator based library for data science and great
+
+308
+00:25:15,580 --> 00:25:19,340
+expectations is built for more data pipeline type of testing. I think it's a
+
+309
+00:25:19,340 --> 00:25:26,900
+little bit gross but it might fit your use case. If you have a Postgres
+
+310
+00:25:26,900 --> 00:25:30,660
+database I recommend checking out PGTap. It's written in Perl but it's
+
+311
+00:25:30,660 --> 00:25:35,060
+actually really good. Just a little note about property-based testing. This is
+
+312
+00:25:35,060 --> 00:25:39,140
+when you check an object has the same property before and after an action so
+
+313
+00:25:39,140 --> 00:25:41,740
+this could be something like serialization deserialization and
+
+314
+00:25:41,740 --> 00:25:46,820
+hypothesis is the go-to one in Python. Mutation testing. That's actually really
+
+315
+00:25:46,820 --> 00:25:50,860
+cool. What that does is it goes through your program source code, the AST and it
+
+316
+00:25:50,860 --> 00:25:56,140
+modifies it. So say you have a conditional that's like if X is
+
+317
+00:25:56,140 --> 00:26:00,540
+greater than 5 it's gonna change it to be if X is less than 5 and if your test
+
+318
+00:26:00,540 --> 00:26:04,260
+still passed maybe you probably don't have the best test. And I also like the
+
+319
+00:26:04,260 --> 00:26:09,580
+name Cosmic Ray because it's like flipping bits. I don't really have a lot of time to
+
+320
+00:26:09,580 --> 00:26:14,540
+talk about this but there's a lot of ways to write robust tests. There's two
+
+321
+00:26:14,540 --> 00:26:18,220
+patterns to structure your test. There's the arrange act and assert pattern and
+
+322
+00:26:18,220 --> 00:26:21,420
+there's the given when then pattern. Pretty much the same just use different
+
+323
+00:26:21,420 --> 00:26:26,660
+words. When you write tests ensure they only try to test one thing. This way
+
+324
+00:26:26,660 --> 00:26:32,060
+anytime a test fails you know that exactly what's gonna go on. And just like
+
+325
+00:26:32,060 --> 00:26:35,500
+in everything else in programming you have to be pragmatic. Pragmatic in what
+
+326
+00:26:35,500 --> 00:26:39,220
+you're testing, how you're testing, and when you're testing. People talk about
+
+327
+00:26:39,220 --> 00:26:45,380
+test first, test last, who cares? Just test. And on the last link is about unit
+
+328
+00:26:45,380 --> 00:26:49,220
+of behavior. We talked a little bit about unit like what is the size of the unit?
+
+329
+00:26:49,220 --> 00:26:52,460
+It could be a public function, could it be a private function? I like the
+
+330
+00:26:52,460 --> 00:26:55,900
+definition of unit of behavior because it sort of defines what your program is
+
+331
+00:26:55,900 --> 00:27:01,020
+actually doing. I actually wrote up a pretty long blog post about testing.
+
+332
+00:27:01,020 --> 00:27:04,860
+Let me go on those real fast if you want to take that a look at that. Martin
+
+333
+00:27:05,060 --> 00:27:09,900
+has a great Wikipedia on testing. That's pretty much it for me. I'm not gonna be
+
+334
+00:27:09,900 --> 00:27:12,820
+taking questions now but I will be outside so yeah just come find me. Thank
+
+335
+00:27:12,820 --> 00:27:15,220
+you so much.
+

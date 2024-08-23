@@ -1,0 +1,1072 @@
+1
+00:00:00,000 --> 00:00:09,480
+So, hello, everyone. Thanks for joining my talk today. My name is Pandy Knight and I'm
+
+2
+00:00:09,480 --> 00:00:13,160
+the automation panda. I came all the way from North Carolina to be here in Austin today
+
+3
+00:00:13,160 --> 00:00:18,680
+and I'm super glad to be here at PyTexas. Fun story, you may know me as Pandy. My boy
+
+4
+00:00:18,680 --> 00:00:23,900
+Mason Eggers is the one who gave me that name. So, I am currently a developer advocate at
+
+5
+00:00:23,900 --> 00:00:28,120
+Apple tools where I help people get the most out of their test automation. Apple tools
+
+6
+00:00:28,120 --> 00:00:33,160
+provides automated visual testing tools. You can take snapshots of your website and mobile
+
+7
+00:00:33,160 --> 00:00:38,380
+apps over time and detect differences visually. If you want to give it a try, please register
+
+8
+00:00:38,380 --> 00:00:43,280
+an account for free and start running tests. I can help you get started. At Apple tools,
+
+9
+00:00:43,280 --> 00:00:48,000
+we also run test automation university, which provides free online courses for testing and
+
+10
+00:00:48,000 --> 00:00:53,040
+automation topics. I've personally developed four courses for TAU, three of which cover
+
+11
+00:00:53,040 --> 00:01:01,320
+Python testing. Definitely check it out. One of the toughest challenges in testing any
+
+12
+00:01:01,320 --> 00:01:06,780
+software product is handling the test data. Now, when I say test data, I'm referring to
+
+13
+00:01:06,780 --> 00:01:11,680
+multiple things. Test data includes both the actual data inside the product under test
+
+14
+00:01:11,680 --> 00:01:17,120
+as well as the data values used by test cases. As testers, we shouldn't underestimate the
+
+15
+00:01:17,120 --> 00:01:23,280
+work to handle test data properly. Good data is just as important as good tests and good
+
+16
+00:01:23,280 --> 00:01:28,760
+automation. In this talk, we will deep dive into the connection between product data and
+
+17
+00:01:28,760 --> 00:01:34,440
+test case data. We will learn how to pick the right strategies for handling both, including
+
+18
+00:01:34,440 --> 00:01:39,020
+how to avoid data collisions when testing. By the end, you'll know how to manage the
+
+19
+00:01:39,020 --> 00:01:43,800
+test data nightmare for your own test projects, whether you're testing a Django app, a Flask
+
+20
+00:01:43,800 --> 00:01:49,280
+app, some other Python project, or even something written in a completely different language.
+
+21
+00:01:49,280 --> 00:01:57,800
+So let's learn. Let's say we have an application for a bank to provide loans. The bank could
+
+22
+00:01:57,800 --> 00:02:03,200
+configure this application for many different types of loans, such as a home mortgage, a
+
+23
+00:02:03,200 --> 00:02:08,800
+car purchase, or even a student loan. All the information the bank needs to provide
+
+24
+00:02:08,800 --> 00:02:14,240
+loans must be stored as data in the system. Each loan product is different. It comes with
+
+25
+00:02:14,240 --> 00:02:19,920
+its own rate, maturity, and payment schedule. The bank must also store information about
+
+26
+00:02:19,920 --> 00:02:27,920
+borrowers, funding curves, profitability targets, all this stuff. It's fairly complicated.
+
+27
+00:02:27,920 --> 00:02:35,280
+Testing requires that all that data already be in the system as a prerequisite for testing.
+
+28
+00:02:35,280 --> 00:02:40,600
+We could write a simple test case to exercise the basic application behavior, like this
+
+29
+00:02:40,600 --> 00:02:48,800
+scenario. Create a new loan application. Given the Chrome browser is open and the page myloanapp.com
+
+30
+00:02:48,800 --> 00:02:55,120
+is loaded, when the user creates a new loan application for home mortgage and the user
+
+31
+00:02:55,120 --> 00:03:01,440
+enters all their personal information and the user submits the application, then the
+
+32
+00:03:01,480 --> 00:03:06,800
+page displays a success message with a reference number and the loan application is sent to
+
+33
+00:03:06,800 --> 00:03:14,120
+the bank. Now, bearing mind, a real loan application would probably need several pages of information,
+
+34
+00:03:14,120 --> 00:03:19,960
+but let's keep our example today simple. This test creates and submits a new home mortgage
+
+35
+00:03:19,960 --> 00:03:28,360
+loan application for the user. There are many test data points in this short scenario. Most
+
+36
+00:03:28,360 --> 00:03:35,560
+apparently, all the user's personal info, the type of loan. There's also the record
+
+37
+00:03:35,560 --> 00:03:43,400
+of the loan application sent to the bank and the reference number shown to the user. Furthermore,
+
+38
+00:03:43,400 --> 00:03:51,120
+that URL is configuration info and the browser type is a test input. Test data is everywhere
+
+39
+00:03:51,120 --> 00:03:58,800
+in this short, simple scenario. The data is inextricable from the test. Without specific
+
+40
+00:03:58,800 --> 00:04:09,480
+data, this test would be meaningless. Unfortunately, the term test data itself is ambiguous. We've
+
+41
+00:04:09,480 --> 00:04:15,160
+applied it to both the product data and the loan web app, as well as to various pieces
+
+42
+00:04:16,000 --> 00:04:25,000
+data that make even the most basic test work. Product data refers to real data living in
+
+43
+00:04:25,000 --> 00:04:30,200
+the software system. For the loan web app, product data includes all the bank's product
+
+44
+00:04:30,200 --> 00:04:37,400
+configurations and lending information. Test case data refers to data used to define test
+
+45
+00:04:37,400 --> 00:04:43,080
+cases. It may include values to enter into the product under test, inputs to control
+
+46
+00:04:43,080 --> 00:04:50,280
+how testing is performed, or records to retrieve the product. In the latter case, test case
+
+47
+00:04:50,280 --> 00:04:57,560
+data is a reflection of product data. The two types of test data are separate, but nevertheless
+
+48
+00:04:57,560 --> 00:05:05,720
+connected. Distinguishing these two types of test data is important to avoid confusion.
+
+49
+00:05:05,720 --> 00:05:11,000
+The dependency of test case data on product data can be brittle. For example, consider
+
+50
+00:05:11,000 --> 00:05:22,920
+our test case step to create a new loan application for a home mortgage. This step works as long
+
+51
+00:05:22,920 --> 00:05:28,600
+as the bank's web app is configured for home mortgages. However, the product data could
+
+52
+00:05:28,600 --> 00:05:34,440
+be changed at any time, just like product code. What if the specifics of a home mortgage
+
+53
+00:05:34,440 --> 00:05:40,040
+application changed? What if the loan is no longer called a home mortgage, but a personal
+
+54
+00:05:40,040 --> 00:05:47,240
+residential loan? That would make the test case break. Compounding breakages cause nightmares
+
+55
+00:05:47,240 --> 00:05:56,120
+for test management. So, how should we manage test data? For feature testing, test data is just as
+
+56
+00:05:56,120 --> 00:06:02,680
+important as test cases and test code. How do we handle both product data and test case data? Are
+
+57
+00:06:02,680 --> 00:06:15,480
+there strategies we can use to avoid brittle dependencies? In this talk, we will explore
+
+58
+00:06:15,480 --> 00:06:21,800
+multiple ways to handle both product data and test case data. Unfortunately, there are no universal
+
+59
+00:06:21,800 --> 00:06:26,760
+or perfect solutions to the test data problem, but you can avoid nightmares by picking strategies
+
+60
+00:06:26,760 --> 00:06:32,280
+that work well for your needs. Let's start with product data. As we stated previously,
+
+61
+00:06:32,280 --> 00:06:38,360
+product data is any live data in the product or system under test. In simplest terms, it's
+
+62
+00:06:38,360 --> 00:06:45,720
+everything in the database. Examples of product data include user accounts, administration settings,
+
+63
+00:06:46,520 --> 00:06:52,600
+product customizations, records created by the user, and any files uploaded by the user.
+
+64
+00:06:53,400 --> 00:06:59,000
+For our example loan application, product data would include user accounts, product settings,
+
+65
+00:06:59,000 --> 00:07:05,640
+loan applications, and behind-the-scenes bank data. Data must be present in the product as a
+
+66
+00:07:05,640 --> 00:07:11,640
+prerequisite for this kind of testing. There are two primary ways to get that data into your system.
+
+67
+00:07:12,760 --> 00:07:19,000
+On one hand, you can set up the product data before running tests. This would be a static data
+
+68
+00:07:19,560 --> 00:07:25,400
+creation method. For example, the loan web app could be set up with a set of preregistered users
+
+69
+00:07:25,400 --> 00:07:31,880
+and a collection of loan types. Test cases, whether they are manual or automated, can presume
+
+70
+00:07:31,880 --> 00:07:38,200
+that the static data already exists in the application and simply reference it. Static
+
+71
+00:07:38,200 --> 00:07:44,280
+data preparation is a great strategy for complicated data or data that is slow to create dynamically.
+
+72
+00:07:44,920 --> 00:07:49,480
+For example, user accounts may need email verification, so it might be easier for automated
+
+73
+00:07:49,480 --> 00:07:55,160
+tests to simply use a set of preregistered users. Tests will run faster if they can
+
+74
+00:07:55,160 --> 00:08:01,640
+simply reference existing data instead of creating new data each time. However, static data must be
+
+75
+00:08:01,640 --> 00:08:08,280
+maintained. Any changes to static data could impact tests too. Static data may also become
+
+76
+00:08:08,280 --> 00:08:13,000
+stale over time as data formats are updated or if data is time sensitive.
+
+77
+00:08:14,840 --> 00:08:21,800
+On the other hand, you can set up data during test execution. This would be dynamic data creation.
+
+78
+00:08:22,520 --> 00:08:26,920
+In the example loan test case, the loan application document is dynamically created.
+
+79
+00:08:26,920 --> 00:08:31,240
+This test does not reference any existing loan application. It creates a new one.
+
+80
+00:08:32,440 --> 00:08:36,440
+Dynamically created records avoid the brittleness of hard references of static data.
+
+81
+00:08:37,080 --> 00:08:41,560
+It can also be used exclusively by the current test case, protecting them from interruptions
+
+82
+00:08:41,560 --> 00:08:51,800
+of other test cases, especially when running in parallel. The main downside of dynamic data prep
+
+83
+00:08:51,800 --> 00:08:59,080
+is the execution time. It slows down your tests. Dynamically created data is essentially disposable
+
+84
+00:08:59,080 --> 00:09:07,240
+too. Eventually, you ought to clean it up. What strategy is best? Typically, testing requires
+
+85
+00:09:07,240 --> 00:09:13,240
+both strategies together. Data that is slow to set up or considered immutable or non-changing
+
+86
+00:09:14,040 --> 00:09:18,920
+should use static preparation, while data that is quick and easy to set up should use
+
+87
+00:09:18,920 --> 00:09:25,000
+dynamic data preparation. When I develop test solutions, I prefer to create as much data
+
+88
+00:09:25,000 --> 00:09:30,440
+as possible dynamically per test case to preserve test case independence.
+
+89
+00:09:31,400 --> 00:09:36,200
+When a test creates the data it needs dynamically, it will be the only test using that data so there
+
+90
+00:09:36,200 --> 00:09:43,240
+is a much lower risk of collisions. These two data prep strategies are a bit complicated when
+
+91
+00:09:43,240 --> 00:09:49,320
+implementing them. Dynamic prep depends directly upon the test case using it, but with static prep,
+
+92
+00:09:49,320 --> 00:09:54,280
+there are a few general strategies that are independent of the test cases. Let's look at
+
+93
+00:09:54,280 --> 00:10:08,360
+those. So, the simplest strategy is manual configuration. That's exactly what it sounds
+
+94
+00:10:08,360 --> 00:10:12,920
+like. Fingers on the keyboard. Testers log into the system and manually create whatever records
+
+95
+00:10:12,920 --> 00:10:18,760
+they need in the system. It could be creating users, putting configuration settings in place,
+
+96
+00:10:18,840 --> 00:10:27,240
+and saving records. Nice thing about this, anyone can do it. It's low tech. You don't need extra
+
+97
+00:10:27,240 --> 00:10:33,240
+tools or fancy automation. However, manual configuration is slow and it doesn't scale well
+
+98
+00:10:33,240 --> 00:10:38,280
+for large systems or large teams. Furthermore, manually configured systems can easily fall into
+
+99
+00:10:38,280 --> 00:10:43,080
+disrepair without any automated mechanisms for their maintenance. You're kind of stuck
+
+100
+00:10:43,080 --> 00:10:49,240
+doing it yourself. Better strategy might be automated configuration. Woohoo! Automation
+
+101
+00:10:49,240 --> 00:10:58,120
+panda, right? Yeah. Rather than manually setting everything up, automated tools can create the
+
+102
+00:10:58,120 --> 00:11:05,240
+desired data. This could be accomplished in many ways. You could reuse your UI interactions from
+
+103
+00:11:05,240 --> 00:11:10,440
+testing, you could call REST APIs, even possibly using tools like Puppet or Chef.
+
+104
+00:11:10,600 --> 00:11:16,440
+Automation could generate data deterministically or randomly. The main benefit of automation,
+
+105
+00:11:16,440 --> 00:11:23,880
+yes, automation, is the ability to create fresh data at any time. Automation can also clean data
+
+106
+00:11:23,880 --> 00:11:30,440
+like scrubbing private fields or updating time sensitive fields. Unfortunately, though, automated
+
+107
+00:11:30,440 --> 00:11:36,280
+configuration is not a free lunch. It requires extra skills and that code, just like your data,
+
+108
+00:11:36,360 --> 00:11:44,440
+must be maintained. If you want a shortcut, you could try to clone the database. Cloning databases
+
+109
+00:11:44,440 --> 00:11:49,880
+is easier than ever with cloud management tools. You can maintain one database in a golden state
+
+110
+00:11:50,600 --> 00:11:55,800
+and then create a copy before running each test. Once testing is complete, the copy could be
+
+111
+00:11:55,800 --> 00:12:03,080
+destroyed. Granular cleanup wouldn't be necessary. Database clones make it easy to copy all data at
+
+112
+00:12:03,080 --> 00:12:09,080
+once without worrying about any damage that rogue testing could do if it goes off the rails. But
+
+113
+00:12:10,440 --> 00:12:20,040
+databases can have a lot of data. A lot of data. So maybe cloning isn't always that practical. It
+
+114
+00:12:20,040 --> 00:12:27,480
+could take a very, very long time to dump however many terabyte database. Clones also need extra
+
+115
+00:12:27,480 --> 00:12:32,440
+refinement to scrub special fields and hook them up properly. Finally, if managing real data is too
+
+116
+00:12:32,440 --> 00:12:38,200
+much of a hassle, you could mock your endpoints. This will completely remove dependencies on
+
+117
+00:12:38,200 --> 00:12:44,520
+databases and even on live services. All data returned by the mocks would be deterministic as
+
+118
+00:12:44,520 --> 00:12:51,560
+well, yielding consistent results. However, mocks are not always a good solution. They often require
+
+119
+00:12:52,040 --> 00:12:57,960
+however, mocks are not always a good solution. They often require a lot of effort to set up,
+
+120
+00:12:57,960 --> 00:13:01,960
+and mock data can make tests overlook unpredicted real world variations.
+
+121
+00:13:02,680 --> 00:13:06,680
+Mocks also mean that tests will not truly be end-to-end in their coverage.
+
+122
+00:13:09,000 --> 00:13:13,480
+These strategies can also work together. They're not mutually exclusive. For example,
+
+123
+00:13:13,480 --> 00:13:17,880
+you could use automated scripts to configure product data in a golden database, and then you
+
+124
+00:13:17,880 --> 00:13:23,160
+could make clones of that database. In another example, let's say in a large test environment,
+
+125
+00:13:23,160 --> 00:13:26,520
+you could choose to mock some endpoints while using real data for others.
+
+126
+00:13:29,000 --> 00:13:33,240
+There are multiple factors that should be considered when deciding the best test strategies
+
+127
+00:13:33,240 --> 00:13:40,840
+for static data prep. How big is the data? If it's small, then manual configuration is probably
+
+128
+00:13:40,840 --> 00:13:45,480
+no big deal. But if it's large, you might want to be looking at some automated solutions.
+
+129
+00:13:45,480 --> 00:13:50,520
+How fresh does the data need to be? Again, this goes back to that manual versus automated trade
+
+130
+00:13:50,520 --> 00:13:55,560
+off. If it needs to be, if it is time sensitive and needs to be fresh, you're probably going to
+
+131
+00:13:55,560 --> 00:14:02,120
+need automation to keep it up to date. How difficult will it be to try advanced tricks
+
+132
+00:14:02,120 --> 00:14:08,920
+like mocking or cloning databases? This may be especially difficult for old legacy systems.
+
+133
+00:14:09,320 --> 00:14:15,800
+Is there any bureaucracy in the way of automated solutions? Hey, I mean, it happens. Nothing is a
+
+134
+00:14:15,800 --> 00:14:21,800
+free lunch. Not every organization has an efficient or even healthy culture. Bureaucracy can stonewall
+
+135
+00:14:21,800 --> 00:14:28,360
+advanced solutions that need extra support. Do folks have the skills required for automation,
+
+136
+00:14:28,360 --> 00:14:33,800
+database administration, or mocks? Skill level may be a barrier at first, but it's not always
+
+137
+00:14:33,800 --> 00:14:45,000
+a problem. If you need help with that, again, test automation university.
+
+138
+00:14:47,000 --> 00:14:51,720
+And finally, what about the cost? Each data prep strategy has a cost.
+
+139
+00:14:51,720 --> 00:14:55,400
+Teams should do a cost benefit analysis when deciding what strategy to take.
+
+140
+00:14:55,480 --> 00:15:02,760
+So, that's product data. What about test case data, that other half? Let's look at that next.
+
+141
+00:15:04,200 --> 00:15:09,960
+Test case data is inherently part of test cases. Let's revisit our example test case from earlier.
+
+142
+00:15:10,600 --> 00:15:15,800
+As we saw before, there are multiple bits of test data throughout the steps of this short scenario.
+
+143
+00:15:16,360 --> 00:15:19,000
+They represent different types of test case data.
+
+144
+00:15:19,240 --> 00:15:22,040
+They represent different types of test case data.
+
+145
+00:15:24,280 --> 00:15:27,400
+First, let's look at that first step, given the Chrome browser is open.
+
+146
+00:15:28,040 --> 00:15:33,000
+The Chrome browser is test data because it specifies what type of browser in which to load our
+
+147
+00:15:33,000 --> 00:15:41,320
+application under test. This is what we call a test control input. It directs how tests will be run
+
+148
+00:15:41,320 --> 00:15:46,760
+rather than specifying any sort of feature behavior. Theoretically, this test should run
+
+149
+00:15:46,760 --> 00:15:55,400
+the same on any browser, but these steps dictate that the test should run in Chrome.
+
+150
+00:15:56,840 --> 00:16:02,600
+As a best practice, test control inputs should not be hard-coded into your test automation.
+
+151
+00:16:03,720 --> 00:16:10,440
+Don't do that, please. Instead, they should be passed into automation as inputs.
+
+152
+00:16:10,440 --> 00:16:15,160
+That way, tests can easily be retargeted. There are a few ways to do this.
+
+153
+00:16:15,400 --> 00:16:20,920
+The simplest way would be to create a flat file with input values. I recommend using a format like
+
+154
+00:16:20,920 --> 00:16:26,440
+JSON or YAML because they're easy to write, easy to read, and easy for programming languages to
+
+155
+00:16:26,440 --> 00:16:33,400
+parse. In fact, in Python, JSON is part of the standard library. It can also have line-by-line
+
+156
+00:16:33,400 --> 00:16:39,400
+diffs. Test automation code can read the file before any tests start, and it can inject these
+
+157
+00:16:39,400 --> 00:16:43,160
+input values as appropriate using something like, let's say, a PyTest fixture.
+
+158
+00:16:43,160 --> 00:16:48,040
+For example, using this JSON file, automation could read the browser, construct a Selenium
+
+159
+00:16:48,040 --> 00:16:55,800
+WebDriver object, or if you're using Playwright, pick that browser, and inject that into each
+
+160
+00:16:55,800 --> 00:17:00,840
+test. The path for the input file would need to be hard-coded into your automation code,
+
+161
+00:17:00,840 --> 00:17:05,640
+but it could be as simple as a standard file name in your current directory, like inputs.json.
+
+162
+00:17:07,160 --> 00:17:10,120
+Another way to handle inputs is using environment variables.
+
+163
+00:17:10,120 --> 00:17:15,240
+Testers could set variables from a system shell or profile, and automation could read those
+
+164
+00:17:15,240 --> 00:17:20,840
+variables by name. This can be very useful for integrations with continuous integration servers
+
+165
+00:17:20,840 --> 00:17:26,360
+like Jenkins or even Docker containers. However, it can be a little more dangerous because anyone
+
+166
+00:17:26,360 --> 00:17:30,680
+could change the variable values. Again, automation can read these variables in and
+
+167
+00:17:30,680 --> 00:17:36,760
+handle them as appropriate. So let's remove that hard-coded step for browser type from our test
+
+168
+00:17:36,760 --> 00:17:43,000
+scenario. That can be handled as an automation-level concern.
+
+169
+00:17:45,800 --> 00:17:51,320
+Next, let's look at a second type of test case data. Notice how this URL is hard-coded,
+
+170
+00:17:51,320 --> 00:17:58,280
+myloanapp.com. Typically, development teams host multiple instances of products under development,
+
+171
+00:17:58,280 --> 00:18:02,920
+like a developer environment or a staging environment or a test environment.
+
+172
+00:18:03,800 --> 00:18:07,560
+Hard-coding configuration information like this limits where tests can run,
+
+173
+00:18:07,560 --> 00:18:13,880
+just in the same way that browser dictation did. Any information about a product's configuration
+
+174
+00:18:13,880 --> 00:18:21,240
+is called configuration metadata. This includes things like URLs, usernames,
+
+175
+00:18:21,240 --> 00:18:27,480
+passwords, and possibly other descriptors. There's a few ways to handle config metadata.
+
+176
+00:18:28,120 --> 00:18:33,080
+You can use flat files or environment variables like for test control inputs. However,
+
+177
+00:18:33,080 --> 00:18:37,960
+I personally recommend using flat files and also recommend separating test control inputs from
+
+178
+00:18:37,960 --> 00:18:45,080
+configuration metadata. Create an input to refer to a target configuration and then store multiple
+
+179
+00:18:45,080 --> 00:18:52,200
+configurations and config metadata files. That way, testers can change just a few simple inputs
+
+180
+00:18:52,200 --> 00:18:58,440
+to target any configuration, and they won't need to change multiple configuration fields regularly.
+
+181
+00:18:59,800 --> 00:19:05,320
+If you want to be fancy, you could create a web service or something to provide config metadata,
+
+182
+00:19:05,320 --> 00:19:08,840
+which could be especially helpful for keeping secrets like passwords safe,
+
+183
+00:19:10,200 --> 00:19:14,200
+but creating such an endpoint may be overkill for your needs.
+
+184
+00:19:15,880 --> 00:19:20,600
+Either way, the test case step can be rewritten to refer more generically to the web application
+
+185
+00:19:20,600 --> 00:19:25,880
+rather than a URL. Automation can select the target environment using inputs and config metadata.
+
+186
+00:19:29,240 --> 00:19:35,720
+The remaining pieces of test case data all fall into a category called test case values. These
+
+187
+00:19:35,720 --> 00:19:40,760
+values pertain directly to the behavior exercised by the test, not to any configuration factor.
+
+188
+00:19:41,480 --> 00:19:47,160
+Even in this classification, there are subtypes. First type of test case data is what we call a
+
+189
+00:19:47,160 --> 00:19:52,280
+literal value. These are values that are hard-coded into the test. In this example,
+
+190
+00:19:52,280 --> 00:19:57,720
+the table of personal information contains literal values. Literals are simple to use,
+
+191
+00:19:57,720 --> 00:20:03,800
+and they provide specification by example. Literals should also be independent of any statically
+
+192
+00:20:03,800 --> 00:20:09,560
+created product data. They should be values that can be safely originated by the test case.
+
+193
+00:20:11,000 --> 00:20:15,720
+The literals in this info table will be entered as input values into our web application forms.
+
+194
+00:20:16,360 --> 00:20:19,720
+Theoretically, these could be any values. Shouldn't matter.
+
+195
+00:20:22,120 --> 00:20:27,480
+The second type of test case values are what we call output references. These are values that
+
+196
+00:20:27,480 --> 00:20:32,600
+are retrieved from the product under test. Typically, they are the outputs generated by
+
+197
+00:20:32,600 --> 00:20:38,360
+exercising product behaviors. In this test example, the reference number can be scraped
+
+198
+00:20:38,360 --> 00:20:43,640
+from a success page and verified for correct formats. The loan application can be retrieved
+
+199
+00:20:43,640 --> 00:20:49,560
+from the web app's backend to verify that it was created successfully. These values cannot be
+
+200
+00:20:49,560 --> 00:20:57,880
+literals because they originate from the product. Tests must refer to them by reference and retrieve
+
+201
+00:20:57,880 --> 00:21:05,000
+their values from the product. As a side note, this test dynamically creates the loan application.
+
+202
+00:21:05,640 --> 00:21:10,760
+Right here is an example of that dynamic product data preparation that we covered earlier.
+
+203
+00:21:11,720 --> 00:21:17,720
+The third and final kind of test case value is the trickiest. The input reference. At first,
+
+204
+00:21:17,720 --> 00:21:23,000
+these may look like literals. However, input references are values that directly refer to
+
+205
+00:21:23,000 --> 00:21:31,400
+product data. While personal info like your name and address can be created dynamically by the
+
+206
+00:21:31,880 --> 00:21:42,120
+test case, the name of the loan type refers to the loan configuration in the web app.
+
+207
+00:21:42,920 --> 00:21:50,120
+Thus, this test has an input dependency. It must specify the type of loan and that type of loan
+
+208
+00:21:50,120 --> 00:21:55,320
+must already exist in your product data. The simplest way to write this test is to simply
+
+209
+00:21:55,320 --> 00:22:00,920
+hard code the reference. That's what we did here. The name home mortgage is some sort of identifier
+
+210
+00:22:00,920 --> 00:22:06,440
+or pointer that refers to the name of the loan type in your web app. Automation can use that
+
+211
+00:22:06,440 --> 00:22:12,360
+name when selecting the loan type from a button or drop down. Hard code of references make it easy
+
+212
+00:22:12,360 --> 00:22:18,040
+to write tests, but they require statically prepped data to exist in your system already.
+
+213
+00:22:19,000 --> 00:22:22,600
+References also become hard to maintain when the product data changes
+
+214
+00:22:23,560 --> 00:22:27,640
+or when the same test must run against different configurations with different names.
+
+215
+00:22:29,480 --> 00:22:33,800
+One way to avoid the pain of static data is to dynamically create these records or configurations.
+
+216
+00:22:34,680 --> 00:22:40,360
+If the test calls the backend to create a new loan product named home mortgage for each test run,
+
+217
+00:22:40,360 --> 00:22:47,800
+then static pre prep isn't needed. However, we already know the pain points of dynamic prep can
+
+218
+00:22:47,960 --> 00:22:53,800
+be slow. In this case, let's say dynamically creating a whole new loan type in your application
+
+219
+00:22:53,800 --> 00:22:59,880
+is just too much work. A more robust solution could be what we would call data discovery.
+
+220
+00:22:59,880 --> 00:23:03,400
+Let's say the target web app is already configured with multiple acceptable loan types.
+
+221
+00:23:04,040 --> 00:23:09,880
+Instead of hard coding the name of the desired loan type, this test could describe the loan type
+
+222
+00:23:09,880 --> 00:23:17,720
+and then use automation to search the web app's configuration for the desired criteria. For example,
+
+223
+00:23:18,280 --> 00:23:22,680
+different regions of the bank have different names for this type of loan. The discovery
+
+224
+00:23:22,680 --> 00:23:27,880
+mechanism could look into the config for a satisfactory home mortgage-like loan and return
+
+225
+00:23:27,880 --> 00:23:34,440
+that as the name or pointer for your current bank region. Discovery enables tests to search
+
+226
+00:23:34,440 --> 00:23:40,680
+existing product data for required records instead of hard coding those records. Discovery
+
+227
+00:23:40,680 --> 00:23:46,520
+makes tests more resilient to change in product data. It's great when testing multiple environments
+
+228
+00:23:46,520 --> 00:23:52,920
+with ever so slightly different configuration values. However, it does require extra coding,
+
+229
+00:23:52,920 --> 00:24:02,200
+and again, this may be overkill for your needs. That's a lot of information about test data.
+
+230
+00:24:02,200 --> 00:24:10,840
+Is everybody with me? Cool. Awesome. In summary, test control inputs direct how tests will be run,
+
+231
+00:24:10,840 --> 00:24:16,840
+not what behavior is covered. They should be supplied via flat files or environment variables.
+
+232
+00:24:18,040 --> 00:24:22,360
+Configuration metadata describe product configuration for the target environment.
+
+233
+00:24:22,360 --> 00:24:25,400
+They should be supplied via config files or some sort of service API.
+
+234
+00:24:27,000 --> 00:24:31,720
+Test case values direct behavior covered by the test. They may be literals,
+
+235
+00:24:31,720 --> 00:24:36,360
+output references, or input references. Input references may be hard coded or discovered.
+
+236
+00:24:36,360 --> 00:24:40,520
+At this point, you're thinking, okay, we got five minutes left in this talk, right? We've covered a
+
+237
+00:24:40,520 --> 00:24:45,080
+lot. Geez, that's a ton of information, but that's it, right? We're done. We can move on to Q&A and
+
+238
+00:24:45,080 --> 00:24:52,840
+take a break. Well, frightfully, nightmare's not over yet. There's one more problem to address.
+
+239
+00:24:53,480 --> 00:24:59,960
+Collisions. Collisions. Collisions can happen whenever multiple actors operate on a shared
+
+240
+00:24:59,960 --> 00:25:05,000
+resource. What does that mean in layman's terms? This thing has it, and this thing also wants it.
+
+241
+00:25:05,000 --> 00:25:11,960
+That's a collision. For example, they could happen when multiple testers simultaneously access the
+
+242
+00:25:11,960 --> 00:25:17,800
+system, or especially when your tests run in parallel. You've got to take additional considerations
+
+243
+00:25:17,800 --> 00:25:25,880
+to avoid collisions. First and foremost, isolate your test environment as much as possible. Please
+
+244
+00:25:26,600 --> 00:25:31,640
+isolate your test environments. Prevent external actors from interrupting your tests. If you have
+
+245
+00:25:32,360 --> 00:25:39,000
+a shared test environment, block other folks from accessing the system when tests are running. You
+
+246
+00:25:39,000 --> 00:25:43,960
+might need to schedule tests during off hours, like overnight. You may also want to set up multiple
+
+247
+00:25:43,960 --> 00:25:49,160
+test environments. If the product under test is containerized or if your database is cloneable,
+
+248
+00:25:49,160 --> 00:25:53,480
+you're in luck because then you can easily dynamically create fresh environments on the
+
+249
+00:25:53,480 --> 00:26:01,400
+fly for each test run. That would guarantee perfect isolation. Secondly, treat any shared data as
+
+250
+00:26:01,400 --> 00:26:07,080
+immutable, meaning unchanging, meaning you don't go in and twiddle with it. Sometimes shared product
+
+251
+00:26:07,080 --> 00:26:13,720
+data is unavoidable. I've lived this myself. If tests run in parallel against one test environment,
+
+252
+00:26:13,720 --> 00:26:19,800
+then you're at risk of sharing that product data. Or if an application has multiple components,
+
+253
+00:26:19,800 --> 00:26:25,960
+certain components may be difficult to isolate for testing. Whenever data must be shared,
+
+254
+00:26:25,960 --> 00:26:31,880
+treat that data as constant, as immutable. Any changes to shared data could break tests.
+
+255
+00:26:31,880 --> 00:26:38,040
+For example, one test might require a car loan or the other test deletes it. Oops, don't let that
+
+256
+00:26:38,040 --> 00:26:44,040
+happen to you. Third and finally, use dynamic data preparation as much as possible.
+
+257
+00:26:44,840 --> 00:26:50,840
+Tests can't collide on data they don't share. Keep statically prepared product data to a minimum.
+
+258
+00:26:51,800 --> 00:26:56,200
+Statically created data is more likely to become shared data and shared data is more likely to
+
+259
+00:26:56,200 --> 00:27:04,280
+cause collisions. So boom, we made it. We covered a lot of good stuff in this half hour. So let's
+
+260
+00:27:04,280 --> 00:27:10,760
+quickly recap what we learned. There's two primary data types for test data, product data and test
+
+261
+00:27:10,760 --> 00:27:18,440
+case data. Product data can be prepared statically or dynamically. Test case data either control how
+
+262
+00:27:18,520 --> 00:27:24,600
+tests run or reflect product data. Handle references and share data carefully.
+
+263
+00:27:26,120 --> 00:27:30,920
+And overall, the main point I want you to walk away with today, choose the best strategy to defeat
+
+264
+00:27:30,920 --> 00:27:36,680
+your nightmares. Every product is different. Every team is different. Take the strategies I shared
+
+265
+00:27:36,680 --> 00:27:43,000
+in this talk as suggestions to help you do what you got to do. So thank you all very much for
+
+266
+00:27:43,000 --> 00:27:47,320
+listening to my talk today. Again, I'm Pandi Knight and I'm the Automation Panda. Be sure to hit me
+
+267
+00:27:47,320 --> 00:27:50,920
+up on Twitter. If you want to get some Panda stickers after this talk, please let me know. I
+
+268
+00:27:50,920 --> 00:27:55,080
+got a ton of them. Have fun with Pi Texas. It's good to be here.
+

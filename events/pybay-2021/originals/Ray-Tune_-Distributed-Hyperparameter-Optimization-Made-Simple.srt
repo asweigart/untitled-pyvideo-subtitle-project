@@ -1,0 +1,1176 @@
+1
+00:00:00,000 --> 00:00:10,460
+My name is Xiaowei, I work on AnyScale machine learning team.
+
+2
+00:00:10,460 --> 00:00:19,240
+Today the topic of my talk is Raytune Distributed Hyperparameter Optimization Made Simple.
+
+3
+00:00:19,240 --> 00:00:24,980
+So actually I just recently joined AnyScale as a software engineer for two months.
+
+4
+00:00:24,980 --> 00:00:32,100
+So I'm super pumped today to present some of the best work done by my team and my coworkers.
+
+5
+00:00:32,100 --> 00:00:37,780
+At the same time I'm also a little nervous as Ray and Raytune is such a vast and big
+
+6
+00:00:37,780 --> 00:00:42,500
+topic to talk about and there are so many things to learn but hopefully I can bring
+
+7
+00:00:42,500 --> 00:00:49,420
+something new and fresh to the field and you can finish the talk with some knowledge about
+
+8
+00:00:49,420 --> 00:00:58,180
+the framework and library that you can incorporate into your system and make your workflow easier.
+
+9
+00:00:58,180 --> 00:01:01,180
+Okay this is the agenda for today.
+
+10
+00:01:01,180 --> 00:01:06,780
+First we're gonna go through some background on Ray and Raytune as well as some challenges
+
+11
+00:01:06,780 --> 00:01:11,380
+in hyperparameter optimization also known as HPO.
+
+12
+00:01:11,380 --> 00:01:17,140
+Next we're gonna go through some cutting edge HPO algorithms offered by Raytune and we're
+
+13
+00:01:17,140 --> 00:01:21,860
+also gonna go through how Raytune does distributed HPO.
+
+14
+00:01:21,860 --> 00:01:27,380
+And next we're gonna look at how Raytune fits nicely into the whole machine learning ecosystem
+
+15
+00:01:27,380 --> 00:01:30,940
+by looking at a TuneSKLearn example.
+
+16
+00:01:30,940 --> 00:01:36,940
+We're also gonna show some Python code as well as a short demo to showcase the concept
+
+17
+00:01:36,940 --> 00:01:40,820
+so stay tuned.
+
+18
+00:01:40,820 --> 00:01:42,740
+Okay so what is Ray?
+
+19
+00:01:42,740 --> 00:01:47,340
+This is a question I have been pondering over and over again through my interview process
+
+20
+00:01:47,340 --> 00:01:49,880
+and my onboarding process.
+
+21
+00:01:49,880 --> 00:01:55,740
+So simply put Ray is a simple and universal framework for distributed computing.
+
+22
+00:01:55,740 --> 00:02:02,460
+It's first developed at Berkeley Rice Lab and it's open sourced, it's mostly Python
+
+23
+00:02:02,460 --> 00:02:07,300
+and AnyScale is the company that's sitting behind Ray looking at how to commercialize
+
+24
+00:02:07,300 --> 00:02:09,300
+it.
+
+25
+00:02:09,300 --> 00:02:13,060
+Over the years Ray has really come a long way.
+
+26
+00:02:13,060 --> 00:02:20,460
+In fact there are over 500 users and contributors from a huge number of companies.
+
+27
+00:02:20,460 --> 00:02:29,820
+For example Ant Group is deploying over 200k cores over Ray for applications like recommendation
+
+28
+00:02:29,820 --> 00:02:33,660
+system fraud detection and online learning.
+
+29
+00:02:33,660 --> 00:02:39,060
+On the other hand Amazon is using Ray to improve their data processing throughput to
+
+30
+00:02:39,060 --> 00:02:46,380
+over 1 petabyte per hour while decreasing their cost by 90%.
+
+31
+00:02:46,380 --> 00:02:51,580
+Ray can be run anywhere from public cloud to on-premise cloud to Kubernetes as well
+
+32
+00:02:51,580 --> 00:02:53,620
+as just your laptop.
+
+33
+00:02:53,620 --> 00:02:59,580
+It provides a generic and low-level distributed programming APIs so that distributed applications
+
+34
+00:02:59,580 --> 00:03:02,100
+can be built on top of it.
+
+35
+00:03:02,100 --> 00:03:07,660
+So I think Drew's also mentioned this so let's maybe look at some code examples.
+
+36
+00:03:07,660 --> 00:03:14,420
+So as programmers we are familiar with functions and classes and Ray in the distributed world
+
+37
+00:03:14,420 --> 00:03:18,300
+maps it to tasks and actors.
+
+38
+00:03:18,300 --> 00:03:24,420
+Let's say I have defined my function which is a normal function that can run locally.
+
+39
+00:03:24,420 --> 00:03:31,700
+By simply applying a radar remote decorator on top of this function we can translate it
+
+40
+00:03:31,700 --> 00:03:34,980
+into a Ray task.
+
+41
+00:03:34,980 --> 00:03:40,340
+And by invoking this function by my function dot remote this will immediately return a
+
+42
+00:03:40,340 --> 00:03:46,000
+object reference also known as a future and then it will create a task that will be executed
+
+43
+00:03:46,000 --> 00:03:48,300
+on the worker process.
+
+44
+00:03:48,300 --> 00:03:55,080
+The result can later be retrieved using radar gap over this object reference.
+
+45
+00:03:55,080 --> 00:04:01,600
+So one can easily see that this kind of API can make parallel programming a lot easier.
+
+46
+00:04:01,600 --> 00:04:05,960
+So let's look at a slow function that may take some time to execute.
+
+47
+00:04:05,960 --> 00:04:12,020
+We can still decorate it with radar remote to translate it into a task.
+
+48
+00:04:12,020 --> 00:04:17,960
+And one can easily launch a group of these slow functions to execute in parallel and
+
+49
+00:04:17,960 --> 00:04:25,440
+one can easily wait for the result using radar gap and feeding in a list of futures.
+
+50
+00:04:26,380 --> 00:04:35,120
+Okay, so given this kind of distributed programming APIs let's look at how does it supply all
+
+51
+00:04:35,120 --> 00:04:41,340
+kinds of distributed applications on top of Ray.
+
+52
+00:04:41,340 --> 00:04:46,580
+One thing I noticed that is really unique about Ray is Ray can build an end-to-end distributed
+
+53
+00:04:46,580 --> 00:04:47,580
+platform.
+
+54
+00:04:47,580 --> 00:04:54,280
+For example, in the context of machine learning we can build featurization, hyperparameter
+
+55
+00:04:54,280 --> 00:04:59,380
+tuning, training and model serving all on Ray.
+
+56
+00:04:59,380 --> 00:05:07,280
+So to really boost the adoption of Ray ecosystem, the Ray team actually writes a few first-party
+
+57
+00:05:07,280 --> 00:05:10,280
+native Ray libraries on top of Ray.
+
+58
+00:05:10,280 --> 00:05:17,500
+For example, the topic of today which is RayTune is one such library that specializes in hyperparameter
+
+59
+00:05:17,500 --> 00:05:22,720
+tuning and RaySGD is another library that specializes in distributed training so on
+
+60
+00:05:22,720 --> 00:05:23,900
+and so forth.
+
+61
+00:05:23,900 --> 00:05:31,340
+So one observation I had about Ray is sometimes the success of one such library can really
+
+62
+00:05:31,340 --> 00:05:38,960
+drive our users and customers to bring other components of their systems onto Ray as well.
+
+63
+00:05:38,960 --> 00:05:43,000
+So the Ray ecosystem can be really sticky.
+
+64
+00:05:43,000 --> 00:05:48,880
+Okay, so having talked about Ray, so what is RayTune?
+
+65
+00:05:48,940 --> 00:05:55,340
+RayTune is the hyperparameter optimization library that sits on top of Ray that leverages
+
+66
+00:05:55,340 --> 00:06:00,540
+all these distributed programming APIs supplied by Ray.
+
+67
+00:06:00,540 --> 00:06:06,660
+So here I want to show a benchmark done by the Uber team that is showcasing how they
+
+68
+00:06:06,660 --> 00:06:11,780
+compare Ray against their current production tuning system.
+
+69
+00:06:11,780 --> 00:06:19,680
+And the result shows that RayTune brings a 2x efficiency improvement in terms of machine hours.
+
+70
+00:06:19,680 --> 00:06:25,280
+So one may start to wonder, how is that efficiency gain possible?
+
+71
+00:06:25,280 --> 00:06:31,400
+RayTune achieves that by providing efficient cutting edge HPO algorithms as well as distributing
+
+72
+00:06:31,400 --> 00:06:36,080
+and coordinating parallel trials in a fault-tolerant and elastic manner.
+
+73
+00:06:36,080 --> 00:06:40,940
+So these two are the two fundamental pillars of RayTune that we're going to deep dive later
+
+74
+00:06:40,940 --> 00:06:43,380
+in the talk.
+
+75
+00:06:43,380 --> 00:06:50,100
+And all in all, RayTune can save your time and cost every step of hyperparameter optimization.
+
+76
+00:06:50,100 --> 00:06:54,060
+So let's maybe first set some terminology straight.
+
+77
+00:06:54,060 --> 00:06:59,080
+So hyperparameters are defined in the context of model parameters.
+
+78
+00:06:59,080 --> 00:07:03,660
+So as you may know, model parameters are learned during training while hyperparameters are
+
+79
+00:07:03,660 --> 00:07:05,460
+set before training.
+
+80
+00:07:05,460 --> 00:07:10,780
+So some examples of hyperparameters include model type and architecture.
+
+81
+00:07:10,780 --> 00:07:16,500
+For example, in this case of convolutional neural network, so the number of layers and
+
+82
+00:07:16,500 --> 00:07:20,740
+the structure of each layer are all hyperparameters.
+
+83
+00:07:20,740 --> 00:07:25,380
+Basically every number you see in this picture is a hyperparameter.
+
+84
+00:07:25,380 --> 00:07:29,940
+Hyperparameter also include learning and training related parameters like learning rate and
+
+85
+00:07:29,940 --> 00:07:33,780
+batch size are the two most important ones.
+
+86
+00:07:33,780 --> 00:07:37,680
+It also includes pipeline configurations as well.
+
+87
+00:07:37,680 --> 00:07:42,960
+For example, in this case, we may have extra boost classifier, which can easily have six
+
+88
+00:07:42,960 --> 00:07:45,400
+to ten hyperparameters to tune.
+
+89
+00:07:45,400 --> 00:07:51,700
+But when we put it in the whole machine learning pipeline, we can easily have another few hyperparameters
+
+90
+00:07:51,700 --> 00:07:58,900
+from the configurations of imputer, for example, categorical encoder, under and over sampler.
+
+91
+00:07:58,900 --> 00:08:03,420
+So we can easily have maybe 15 hyperparameters to tune.
+
+92
+00:08:03,440 --> 00:08:08,720
+So this leads to what are the current challenges in hyperparameter optimization.
+
+93
+00:08:08,720 --> 00:08:12,600
+So of course, it's time consuming because as we have shown, there are a large number
+
+94
+00:08:12,600 --> 00:08:15,520
+of combinations to try out.
+
+95
+00:08:15,520 --> 00:08:21,880
+And this is a black box optimization in the sense that the evaluation of each combination,
+
+96
+00:08:21,880 --> 00:08:27,960
+also known as trial, involves model training, which can take days and weeks.
+
+97
+00:08:27,960 --> 00:08:35,920
+And of course, resources are expensive, especially when you consider GPUs and TPUs.
+
+98
+00:08:35,920 --> 00:08:38,940
+So this is where RayTune come into the picture.
+
+99
+00:08:38,940 --> 00:08:46,900
+So RayTune has offered efficient algorithms that can enable running trials in parallel.
+
+100
+00:08:46,900 --> 00:08:51,720
+It also offers effective orchestration of distributed trials.
+
+101
+00:08:51,720 --> 00:08:58,160
+So basically, minimal change is involved to change a tuning job from running on a single
+
+102
+00:08:58,160 --> 00:09:04,480
+process on the laptop to running on a multi-node, multi-GPU cluster.
+
+103
+00:09:04,480 --> 00:09:10,000
+And all of these are offered to our user with very easy-to-use APIs.
+
+104
+00:09:10,000 --> 00:09:16,720
+Okay, so next we're going to go over some HPO algorithms, hyperparameter algorithms
+
+105
+00:09:16,720 --> 00:09:18,340
+offered by RayTune.
+
+106
+00:09:18,340 --> 00:09:22,940
+So this will include some of the classical ones, like exhaustive search, but also include
+
+107
+00:09:22,940 --> 00:09:26,980
+some of the more advanced ones, like advanced scheduling.
+
+108
+00:09:26,980 --> 00:09:34,340
+So please bear with me if this section can be a little algorithmic heavy, but if there's
+
+109
+00:09:34,340 --> 00:09:40,380
+one message I want to convey, during this section is RayTune has over 15 algorithms
+
+110
+00:09:40,380 --> 00:09:47,420
+natively provided or integrated in the library, and one can easily swap out different algorithms
+
+111
+00:09:47,500 --> 00:09:49,780
+with very minimal code change.
+
+112
+00:09:49,780 --> 00:09:52,540
+Okay, so let's start.
+
+113
+00:09:52,540 --> 00:09:55,700
+So the first category I want to talk about is exhaustive search.
+
+114
+00:09:55,700 --> 00:10:00,820
+I think this is probably most familiar one for most people.
+
+115
+00:10:00,820 --> 00:10:04,700
+So there are two kinds of searching algorithm here.
+
+116
+00:10:04,700 --> 00:10:07,980
+One is grid search, and the other is random search.
+
+117
+00:10:07,980 --> 00:10:10,000
+So let's first look at grid search.
+
+118
+00:10:10,000 --> 00:10:15,340
+So in grid search, which is the left picture here, so for grid search, in this case we
+
+119
+00:10:15,340 --> 00:10:22,140
+have two hyperparameters, and for each hyperparameter, we have three discrete values to choose from.
+
+120
+00:10:22,140 --> 00:10:28,160
+So altogether, we have nine combinations or nine trials to try out.
+
+121
+00:10:28,160 --> 00:10:35,900
+So here there's a curve showing the objective function, which can be also like loss function
+
+122
+00:10:35,900 --> 00:10:37,200
+in this case.
+
+123
+00:10:37,200 --> 00:10:43,380
+So the optimum trial should be the trial that has the lowest score here, which is about
+
+124
+00:10:43,380 --> 00:10:44,460
+this point.
+
+125
+00:10:44,460 --> 00:10:52,660
+So as you can see that by defining this discrete search space, we can easily miss out the optimal
+
+126
+00:10:52,660 --> 00:10:56,060
+point, which is less favorable.
+
+127
+00:10:56,060 --> 00:11:03,020
+We also spend a lot of computing cycles to try out trials along this direction, which
+
+128
+00:11:03,020 --> 00:11:05,780
+is unimportant.
+
+129
+00:11:05,780 --> 00:11:13,000
+So random search is very similar to grid search, except that for random search, each hyperparameter
+
+130
+00:11:13,160 --> 00:11:19,040
+can have a distribution to randomly choose values from.
+
+131
+00:11:19,040 --> 00:11:27,060
+So I think both of these algorithms are easy to implement, and they can be easily parallelizable,
+
+132
+00:11:27,060 --> 00:11:32,400
+but the problem with them is they are not very efficient, especially when search space
+
+133
+00:11:32,400 --> 00:11:40,900
+is huge and we have a lot of hyperparameters to tune, as we have seen in previous slides.
+
+134
+00:11:40,900 --> 00:11:46,940
+So given that exhaustive search is not that efficient, there comes the Bayesian optimization.
+
+135
+00:11:46,940 --> 00:11:50,980
+So Bayesian optimization is based on this very simple intuition.
+
+136
+00:11:50,980 --> 00:11:56,980
+That is, what if we can use the results from previous combinations or previous trials to
+
+137
+00:11:56,980 --> 00:12:03,620
+decide what is the next trial to try so that we can maximize the probability to find a
+
+138
+00:12:03,620 --> 00:12:07,400
+trial that can outperform all the previous ones?
+
+139
+00:12:07,400 --> 00:12:12,880
+So to be consistent, I still use a two-dimensional search space here.
+
+140
+00:12:12,880 --> 00:12:17,280
+So you can see the contour plot here shows the objective function.
+
+141
+00:12:17,280 --> 00:12:23,720
+The blue area corresponds to a smaller loss function than the red area.
+
+142
+00:12:23,720 --> 00:12:30,620
+So you can see instead of uniformly or randomly distribute trials in this search space, actually
+
+143
+00:12:30,620 --> 00:12:36,640
+the trials are more concentrated towards the blue area, which is the more optimal area.
+
+144
+00:12:36,640 --> 00:12:45,440
+This is more preferred behavior so that we can find the best trial in less time or resources.
+
+145
+00:12:45,440 --> 00:12:50,280
+Of course, there is a problem with Bayesian optimization as well because, as you can see,
+
+146
+00:12:50,280 --> 00:12:55,680
+it's inherently sequential in the sense that you really need to use the results from previous
+
+147
+00:12:55,680 --> 00:13:00,040
+trials so that to decide what is the next one to try.
+
+148
+00:13:00,040 --> 00:13:04,680
+There are several popular libraries in this for Bayesian optimization, including Hyperopt
+
+149
+00:13:04,720 --> 00:13:09,400
+and Optuna, both of which are integrated into RayTune.
+
+150
+00:13:09,400 --> 00:13:16,800
+Okay, so we know the problem with Bayesian optimization is it's inherently sequential,
+
+151
+00:13:16,800 --> 00:13:23,040
+but modern and more advanced hyperparameter optimization algorithms are mostly focusing
+
+152
+00:13:23,040 --> 00:13:24,800
+on parallel computing.
+
+153
+00:13:24,800 --> 00:13:29,440
+So this is where advanced scheduling is coming into picture.
+
+154
+00:13:29,440 --> 00:13:34,880
+So one type in the advanced scheduling category is called early stopping.
+
+155
+00:13:34,880 --> 00:13:38,280
+So early stopping works like this.
+
+156
+00:13:38,280 --> 00:13:43,600
+So we first find out a lot of parallel trials during the initial exploration phase.
+
+157
+00:13:43,600 --> 00:13:49,880
+And then in the middle, we use intermediate results to prune underperforming trials and
+
+158
+00:13:49,880 --> 00:13:52,520
+save time and computing resources.
+
+159
+00:13:52,520 --> 00:13:57,280
+Here is a simple illustration of this concept.
+
+160
+00:13:57,280 --> 00:14:03,600
+So this figure shows how different trials progress over time.
+
+161
+00:14:03,600 --> 00:14:06,080
+So the x-axis is the training time.
+
+162
+00:14:06,080 --> 00:14:12,920
+The y-axis is the validation metric, which basically measures how good each trial performs
+
+163
+00:14:12,920 --> 00:14:13,920
+by far.
+
+164
+00:14:13,920 --> 00:14:17,940
+So a different color represents different trials.
+
+165
+00:14:17,940 --> 00:14:24,400
+So as you can see, at first, we launched a lot of trials, but at some intermediate point,
+
+166
+00:14:24,400 --> 00:14:29,920
+we checked their results, and we stopped the underperforming ones, and we only allowed
+
+167
+00:14:29,920 --> 00:14:32,920
+the top performing ones to proceed.
+
+168
+00:14:32,920 --> 00:14:37,640
+In this way, we can save the resources and reallocate the resources to more promising
+
+169
+00:14:37,640 --> 00:14:44,120
+trials or to search the search space more.
+
+170
+00:14:44,120 --> 00:14:49,320
+So in this category, there are also some famous algorithms, including median stopping, ASHA,
+
+171
+00:14:50,320 --> 00:14:54,880
+all of which are part of Retune as well.
+
+172
+00:14:54,880 --> 00:15:01,000
+Another good news is this type of early stopping can be combined with spatialization, so we
+
+173
+00:15:01,000 --> 00:15:04,800
+sort of get the best from both worlds.
+
+174
+00:15:04,800 --> 00:15:09,400
+Another one I want to quickly mention is called population-based training.
+
+175
+00:15:09,400 --> 00:15:14,720
+This is an evolutionary algorithm, mostly used in deep learning.
+
+176
+00:15:14,720 --> 00:15:17,720
+So the idea is similar to early stopping.
+
+177
+00:15:17,720 --> 00:15:24,760
+So it also starts to evaluate a population in parallel, and every trial also has a performance
+
+178
+00:15:24,760 --> 00:15:26,920
+or score associated with them.
+
+179
+00:15:26,920 --> 00:15:32,680
+And in the middle, we'll start to compare how trials perform, and we'll terminate lowest
+
+180
+00:15:32,680 --> 00:15:37,640
+performers, and we'll copy over weights of the better performers over and mutate the
+
+181
+00:15:37,640 --> 00:15:41,120
+weights a little bit and proceed with our training.
+
+182
+00:15:41,120 --> 00:15:47,360
+Okay, hopefully I haven't lost you in all these algorithmic details yet.
+
+183
+00:15:47,360 --> 00:15:50,200
+So let's reveal what we have talked so far.
+
+184
+00:15:50,200 --> 00:15:55,680
+So there are various HPO algorithms with a trend of going parallel, and more advanced
+
+185
+00:15:55,680 --> 00:15:59,400
+HPO algorithms are often hard to implement.
+
+186
+00:15:59,400 --> 00:16:02,520
+And this is even more true in a distributed setting.
+
+187
+00:16:02,520 --> 00:16:08,400
+Okay, the good news is Retune implements and integrates with all the algorithms that we
+
+188
+00:16:08,400 --> 00:16:14,600
+have so far talked about, and it allows users to swap out different algorithms really, really
+
+189
+00:16:14,600 --> 00:16:15,600
+easily.
+
+190
+00:16:15,720 --> 00:16:18,360
+Why do we spend time to go over these algorithms?
+
+191
+00:16:18,360 --> 00:16:23,680
+I think one point I really want to make is we want to understand what are some of the
+
+192
+00:16:23,680 --> 00:16:28,920
+architecture requirements imposed by these algorithms, and what kind of system we need
+
+193
+00:16:28,920 --> 00:16:35,360
+to build in order to support all these algorithms so that we can support efficient HPO.
+
+194
+00:16:35,360 --> 00:16:43,120
+So one thing we notice is all these algorithms require granular control over when to start,
+
+195
+00:16:43,120 --> 00:16:49,040
+when to pause, early stop, restore, or even mutate a trial at specific iterations with
+
+196
+00:16:49,040 --> 00:16:51,640
+very little overhead.
+
+197
+00:16:51,640 --> 00:16:58,860
+It also requires a master worker sort of architecture that centralizes decision-making process.
+
+198
+00:16:58,860 --> 00:17:05,240
+And of course, as with any distributed system, we want elasticity and fault tolerance.
+
+199
+00:17:05,240 --> 00:17:09,800
+So Retune is such a system for distributed HPO.
+
+200
+00:17:09,800 --> 00:17:13,800
+So let's maybe put it into the context with some code example.
+
+201
+00:17:13,800 --> 00:17:20,220
+So let's say we define a training function that takes in some kind of hyperparameter
+
+202
+00:17:20,220 --> 00:17:21,820
+configuration here.
+
+203
+00:17:21,820 --> 00:17:26,640
+We also define a model which is a convolutional neural network in this case.
+
+204
+00:17:26,640 --> 00:17:33,040
+We run through a range of epochs, and at the end of each epoch, we will calculate the current
+
+205
+00:17:33,040 --> 00:17:38,720
+loss of the trial, and we will report that through the Tune.report API.
+
+206
+00:17:38,720 --> 00:17:43,600
+So this training function is everything Retune needs to know about how to carry a single
+
+207
+00:17:43,600 --> 00:17:44,600
+trial.
+
+208
+00:17:44,600 --> 00:17:50,480
+And then we further call Tune.run with this training function, and we define a hyperparameter
+
+209
+00:17:50,480 --> 00:17:56,140
+search space, which in this case is just very simple alpha parameter, which is a uniform
+
+210
+00:17:56,140 --> 00:17:57,960
+distribution here.
+
+211
+00:17:57,960 --> 00:18:03,880
+And we want to run 100 trials, and for the scheduler, we choose ASHA, which you may still
+
+212
+00:18:04,360 --> 00:18:09,200
+remember is a type of early stopping scheduling mechanism.
+
+213
+00:18:09,200 --> 00:18:14,960
+And for the search algorithm, we choose Optuna, which is a kind of Bayesian optimization.
+
+214
+00:18:14,960 --> 00:18:17,620
+So how does this map into the architecture?
+
+215
+00:18:17,620 --> 00:18:24,680
+So let's say we have a head node, and it runs a driver process that orchestrates the Tune.run,
+
+216
+00:18:24,680 --> 00:18:29,900
+and the orchestrator also has the HPO algorithm running.
+
+217
+00:18:29,900 --> 00:18:36,980
+So based on the result from the HPO algorithm, as well as the available resources in the
+
+218
+00:18:36,980 --> 00:18:43,660
+cluster, the orchestrator may decide how many trials to launch.
+
+219
+00:18:43,660 --> 00:18:49,580
+You may still recall from the RAID section, we talk about remote actors.
+
+220
+00:18:49,580 --> 00:18:56,180
+So each trial is launched into a remote actor and runs there.
+
+221
+00:18:56,180 --> 00:19:02,340
+And at the end of each epoch, you may still remember we report metrics back to the orchestrator.
+
+222
+00:19:02,340 --> 00:19:07,500
+And the orchestrator, based on all the reported metrics, will decide what are the trials to
+
+223
+00:19:07,500 --> 00:19:13,120
+continue to run and what are the trials to early stop or do something else.
+
+224
+00:19:13,120 --> 00:19:18,040
+So for example, we already stopped this trial.
+
+225
+00:19:18,040 --> 00:19:23,360
+And then the resources are freed up, and then it can be repurposed to explore some new trials.
+
+226
+00:19:23,360 --> 00:19:30,860
+So in this case, the orchestrator decides to place a new trial on top of this actor.
+
+227
+00:19:30,860 --> 00:19:36,500
+Just as in any other distributed system, the nodes may go down, the process may crash,
+
+228
+00:19:36,500 --> 00:19:40,900
+so we need a mechanism to persist intermediate states.
+
+229
+00:19:40,900 --> 00:19:44,020
+So we call this process checkpointing process.
+
+230
+00:19:44,020 --> 00:19:50,060
+So the intermediate states of trials are automatically checkpointed by some configuration to cloud
+
+231
+00:19:50,060 --> 00:19:52,380
+storage.
+
+232
+00:19:52,380 --> 00:19:57,200
+So let's say a worker process goes down.
+
+233
+00:19:57,200 --> 00:20:02,940
+And orchestrator will then place a new, so a new actor will come up fresh, and then the
+
+234
+00:20:02,940 --> 00:20:09,440
+orchestrator will then push, put the, crash the trial on top of this actor with the loaded
+
+235
+00:20:09,440 --> 00:20:12,760
+checkpoint from remote cloud storage.
+
+236
+00:20:12,760 --> 00:20:17,680
+Okay, let's reveal what we have talked about so far.
+
+237
+00:20:17,680 --> 00:20:23,240
+So what makes RayTune so special is it provides efficient HPO algorithms, and it distributes
+
+238
+00:20:23,240 --> 00:20:28,000
+and coordinates parallel trials in a fault-tolerant and elastic manner.
+
+239
+00:20:28,000 --> 00:20:33,520
+And also, it's deeply integrated with the whole machine learning ecosystem.
+
+240
+00:20:33,520 --> 00:20:35,920
+So how many of you have used Scikit-learn?
+
+241
+00:20:35,920 --> 00:20:38,880
+Yes, I've seen so many hands.
+
+242
+00:20:38,880 --> 00:20:43,320
+I also love Scikit-learn for its simple and easy to use APIs.
+
+243
+00:20:43,320 --> 00:20:46,360
+So what if I'm a Scikit-learn user?
+
+244
+00:20:46,360 --> 00:20:52,800
+I use Scikit-learn for HPO, but I also want to potentially leverage RayTune for hyperparameter
+
+245
+00:20:52,800 --> 00:20:59,840
+optimization for its advanced algorithms as well as distributed offering.
+
+246
+00:20:59,840 --> 00:21:03,680
+So the good news is TuneSk-learn is built exactly for that.
+
+247
+00:21:03,680 --> 00:21:05,960
+It's a Scikit-learn wrapper for RayTune.
+
+248
+00:21:05,960 --> 00:21:10,480
+It's a drop-in replacement for Scikit-learn model selection module.
+
+249
+00:21:10,480 --> 00:21:16,300
+It provides a familiar and simple to use API for advanced and distributed HPO.
+
+250
+00:21:16,300 --> 00:21:19,580
+So we can check out the link here.
+
+251
+00:21:19,580 --> 00:21:23,100
+So let me quickly show what do I mean by drop-in replacement.
+
+252
+00:21:23,100 --> 00:21:27,460
+So this is a Scikit-learn code snippet.
+
+253
+00:21:27,460 --> 00:21:30,980
+So notice here the N jobs is minus 1.
+
+254
+00:21:30,980 --> 00:21:35,940
+This just means we can use all the cores on this single machine.
+
+255
+00:21:35,940 --> 00:21:42,820
+And by drop-in replacement, we can just change two lines of code to change it to use RayTuneSk-learn,
+
+256
+00:21:42,820 --> 00:21:46,620
+which is using RayTune underneath.
+
+257
+00:21:46,620 --> 00:21:51,460
+And N jobs equals to minus 1 here, it means we can use all the resources throughout the
+
+258
+00:21:51,460 --> 00:21:53,260
+entire cluster.
+
+259
+00:21:53,260 --> 00:21:56,660
+So we are not limited to a single machine anymore.
+
+260
+00:21:56,660 --> 00:22:04,740
+Okay, so lastly, I want to quickly showcase a demo that further illustrates our concept
+
+261
+00:22:04,740 --> 00:22:08,060
+of this drop-in replacement.
+
+262
+00:22:08,060 --> 00:22:10,540
+So this is a driver safety prediction.
+
+263
+00:22:10,580 --> 00:22:16,420
+This problem and data set is adapted from a Kaggle problem.
+
+264
+00:22:16,420 --> 00:22:21,140
+Before the demo, I already started a cluster through the RayCluster launcher.
+
+265
+00:22:21,140 --> 00:22:25,700
+So altogether, I have five nodes and each node has eight CPUs.
+
+266
+00:22:25,700 --> 00:22:30,740
+For simplicity, I use Jupyter Notebook that runs on a head node.
+
+267
+00:22:30,740 --> 00:22:39,380
+Okay, let's look at this demo.
+
+268
+00:22:39,380 --> 00:22:43,260
+So let's first look at the data set size.
+
+269
+00:22:43,260 --> 00:22:44,980
+It's a pretty big data set.
+
+270
+00:22:44,980 --> 00:22:46,620
+It's a realistic problem.
+
+271
+00:22:46,620 --> 00:22:53,060
+And then we define some extra boost classifier.
+
+272
+00:22:53,060 --> 00:22:59,580
+By calling RadarInit, we can attach to the already running RayCluster.
+
+273
+00:22:59,580 --> 00:23:05,980
+It's a little slow.
+
+274
+00:23:06,700 --> 00:23:12,300
+So we can then inspect the RayCluster resources, especially the CPU number here.
+
+275
+00:23:12,300 --> 00:23:16,180
+So like we said, we have five nodes and each node has eight CPUs.
+
+276
+00:23:16,180 --> 00:23:19,020
+Altogether, we have 40 CPUs.
+
+277
+00:23:19,020 --> 00:23:24,500
+And then let's first write some code to run a hyperparameter optimization using the native
+
+278
+00:23:24,500 --> 00:23:28,180
+scikit-learn API.
+
+279
+00:23:28,180 --> 00:23:30,140
+And this is how it looks like.
+
+280
+00:23:30,140 --> 00:23:33,260
+And for the sake of time, I just stop it.
+
+281
+00:23:33,260 --> 00:23:38,620
+And then let's look at how do we do a drop-in replacement to change it to use RayTune, which
+
+282
+00:23:38,620 --> 00:23:40,620
+is quite straightforward.
+
+283
+00:23:50,620 --> 00:23:54,620
+Yeah, the network is a little slow.
+
+284
+00:24:04,140 --> 00:24:11,660
+Sorry, the network is very slow here.
+
+285
+00:24:11,660 --> 00:24:15,020
+And here we launch a TuneSearch CV.
+
+286
+00:24:15,020 --> 00:24:19,020
+And we have a progress bar to show the progress here.
+
+287
+00:24:34,220 --> 00:24:36,220
+Sorry.
+
+288
+00:24:36,220 --> 00:24:38,860
+And I just want to quickly show the final result.
+
+289
+00:24:38,860 --> 00:24:44,660
+So final result we can see from the search CV, the experimental analysis object.
+
+290
+00:24:44,660 --> 00:24:50,100
+So in this case, we can show how the cross-validation score changes over time because it improves
+
+291
+00:24:50,100 --> 00:24:55,660
+over time because we discover and finish new trials that has better performance.
+
+292
+00:24:55,660 --> 00:25:00,660
+So this concludes my demo.
+
+293
+00:25:00,660 --> 00:25:01,660
+Thank you.
+
+294
+00:25:01,660 --> 00:25:04,060
+Thank you very much.
+

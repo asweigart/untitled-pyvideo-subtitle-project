@@ -1,0 +1,256 @@
+1
+00:00:00,000 --> 00:00:11,500
+In this slide, you see a command where I'm assigning a shift to myself.
+
+2
+00:00:11,500 --> 00:00:14,800
+This is built using Python's click CLI.
+
+3
+00:00:14,800 --> 00:00:21,100
+The nice thing about CLI, it's fast and easy to develop compared to a web application.
+
+4
+00:00:21,100 --> 00:00:25,700
+But the challenging part is it's hard to distribute and update.
+
+5
+00:00:25,700 --> 00:00:31,500
+Our operations team is mostly non-technical, which means installing a Python environment,
+
+6
+00:00:31,500 --> 00:00:37,300
+installing the dependencies, and keeping the command line application up to date is a pain
+
+7
+00:00:37,300 --> 00:00:39,020
+and it's a no-go.
+
+8
+00:00:39,020 --> 00:00:46,220
+So what used to happen before was our operations team used developers as a proxy to run these
+
+9
+00:00:46,220 --> 00:00:51,640
+commands and we realized that this wasn't a scalable process.
+
+10
+00:00:51,640 --> 00:00:54,220
+So we had to come up with a better solution.
+
+11
+00:00:54,220 --> 00:00:58,920
+What we did was transform all of our CLI into a chatbot.
+
+12
+00:00:58,920 --> 00:01:04,940
+We had a wealth of commands and everything had to work through this chatbot.
+
+13
+00:01:04,940 --> 00:01:10,200
+The way things work is operation team executes the command in Slack and gets the response
+
+14
+00:01:10,200 --> 00:01:12,200
+back in Slack.
+
+15
+00:01:12,200 --> 00:01:17,480
+We removed the developers out of this equation so it makes developers happy and more productive.
+
+16
+00:01:17,480 --> 00:01:22,140
+It came with a few additional things like authentication because it comes through Slack,
+
+17
+00:01:22,800 --> 00:01:28,340
+authorization because we can control who can execute what command in which channel, and
+
+18
+00:01:28,340 --> 00:01:31,660
+we also have audit log in because of Slack.
+
+19
+00:01:31,660 --> 00:01:37,820
+Whenever someone executes a command, it records when exactly that command was run and in which
+
+20
+00:01:37,820 --> 00:01:38,820
+channel.
+
+21
+00:01:38,820 --> 00:01:43,740
+And all this was one-time integration, like we didn't have to spend a lot of effort in
+
+22
+00:01:43,740 --> 00:01:46,040
+migrating any of our commands.
+
+23
+00:01:46,940 --> 00:01:52,520
+And we continue, even today, we continue to build applications without having to worry
+
+24
+00:01:52,520 --> 00:01:55,100
+about how things are wired.
+
+25
+00:01:55,100 --> 00:01:59,140
+So this is what it looks like in Slack.
+
+26
+00:01:59,140 --> 00:02:01,580
+You're running the same command again.
+
+27
+00:02:01,580 --> 00:02:06,240
+It says shift has already been assigned because I already previously did it.
+
+28
+00:02:06,240 --> 00:02:09,940
+But the entire execution happens in Slack.
+
+29
+00:02:09,940 --> 00:02:14,660
+Robot callout is a special keyword that we use to identify that it's a command because
+
+30
+00:02:14,660 --> 00:02:19,680
+we use the Slack channel for collaboration as well.
+
+31
+00:02:19,680 --> 00:02:23,920
+So here's what you need to build such an application, a CLI framework.
+
+32
+00:02:23,920 --> 00:02:29,440
+We use Click, a chat application like Slack, but it can be anything else like Microsoft
+
+33
+00:02:29,440 --> 00:02:34,620
+Teams or Discard, and then you need a web application.
+
+34
+00:02:34,620 --> 00:02:36,920
+So here's how things work.
+
+35
+00:02:36,920 --> 00:02:43,000
+Whenever a user enters a message in Slack, we have configured a webhook that fires from
+
+36
+00:02:43,000 --> 00:02:45,740
+Slack and calls a web application.
+
+37
+00:02:45,740 --> 00:02:51,580
+The web application receives user channel and the message that was executed.
+
+38
+00:02:51,580 --> 00:02:55,420
+The Flask application does some filtering.
+
+39
+00:02:55,420 --> 00:03:01,400
+We check if the user is authorized to run the command in a particular channel, and then
+
+40
+00:03:01,400 --> 00:03:02,920
+we execute the command.
+
+41
+00:03:02,920 --> 00:03:04,540
+We do other kinds of filtering here.
+
+42
+00:03:04,540 --> 00:03:08,100
+Remember, I mentioned we use robot as the prefix.
+
+43
+00:03:08,100 --> 00:03:11,920
+If it's other things, we ignore those as noncommands.
+
+44
+00:03:11,920 --> 00:03:19,300
+And once we have executed the command, we send the response back to Slack.
+
+45
+00:03:19,300 --> 00:03:22,280
+So here's how a process is handled.
+
+46
+00:03:22,280 --> 00:03:30,120
+This is a handler in our web application which receives Slack channel, user ID, and the command.
+
+47
+00:03:30,120 --> 00:03:36,040
+The first thing that we do is check if the user can run this particular command in the
+
+48
+00:03:36,040 --> 00:03:37,760
+given channel.
+
+49
+00:03:37,760 --> 00:03:40,960
+That's our authorization.
+
+50
+00:03:41,000 --> 00:03:42,000
+Here's the secret sauce.
+
+51
+00:03:42,000 --> 00:03:46,120
+This is CLI runner, which is part of Clicks testing framework.
+
+52
+00:03:46,120 --> 00:03:50,400
+I wish they hadn't put it in a testing framework because it has a lot of potential.
+
+53
+00:03:50,400 --> 00:03:55,120
+CLI runner lets us programmatically run commands.
+
+54
+00:03:55,120 --> 00:03:59,480
+So in this case, we are running the commands in a web application.
+
+55
+00:03:59,480 --> 00:04:00,480
+Then we use shellex.
+
+56
+00:04:00,480 --> 00:04:06,160
+It's basically to split the commands in a format that is acceptable by CLI runner.
+
+57
+00:04:06,320 --> 00:04:13,080
+Then we invoke the runner to get the exit code of the application of this command and
+
+58
+00:04:13,080 --> 00:04:15,520
+also the output, which is posted back in Slack.
+
+59
+00:04:15,520 --> 00:04:18,760
+Now, wasn't that simple?
+
+60
+00:04:18,760 --> 00:04:23,440
+If you have any questions about how this integration works, I'm more than happy to answer.
+
+61
+00:04:23,440 --> 00:04:26,840
+Here's my Slack handle and a small plug.
+
+62
+00:04:26,840 --> 00:04:28,320
+We're a Python shop.
+
+63
+00:04:28,320 --> 00:04:29,800
+We're hiring.
+
+64
+00:04:29,800 --> 00:04:31,080
+Here's the link if you're interested.
+

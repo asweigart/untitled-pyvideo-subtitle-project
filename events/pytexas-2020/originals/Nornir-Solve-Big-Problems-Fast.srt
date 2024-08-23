@@ -1,0 +1,1476 @@
+1
+00:00:00,000 --> 00:00:18,520
+Hi everybody, my name is Brett Likens.
+
+2
+00:00:18,520 --> 00:00:20,600
+I'm a managing consultant at Network to Code.
+
+3
+00:00:20,600 --> 00:00:25,200
+We're a consultant firm that focuses on bringing automation and DevOps principles into network
+
+4
+00:00:25,200 --> 00:00:29,960
+operations to help enterprises transform the way they operate their network.
+
+5
+00:00:29,960 --> 00:00:32,000
+Today, I appreciate you taking the time to be with us.
+
+6
+00:00:32,000 --> 00:00:35,920
+We're going to talk about a Python project called Nornir.
+
+7
+00:00:35,920 --> 00:00:37,720
+So what is Nornir?
+
+8
+00:00:37,720 --> 00:00:39,880
+We're going to cover a little bit of that.
+
+9
+00:00:39,880 --> 00:00:44,560
+What would you compare Nornir to in the marketplace, compare it contrasted to some other alternative
+
+10
+00:00:44,560 --> 00:00:49,880
+tools, dive into some of the internals and the concepts of how you use Nornir, and then
+
+11
+00:00:49,880 --> 00:00:53,360
+talk a little bit about some example use cases.
+
+12
+00:00:53,360 --> 00:00:56,880
+So first, what is Nornir?
+
+13
+00:00:56,880 --> 00:01:03,320
+So Nornir is a Python automation framework, allows you to take an inventory of hosts and
+
+14
+00:01:03,320 --> 00:01:04,920
+do tasks on those hosts.
+
+15
+00:01:04,920 --> 00:01:09,260
+So hosts on the network, you know, servers, routers and switches, things like that.
+
+16
+00:01:09,260 --> 00:01:13,240
+It's extremely extensible and plug-in based, and it's agentless.
+
+17
+00:01:13,240 --> 00:01:15,440
+There's no agent you have to install on the box.
+
+18
+00:01:15,440 --> 00:01:20,600
+You're running it all from whatever source machine you wish to execute tasks on the remote
+
+19
+00:01:20,600 --> 00:01:22,460
+hosts.
+
+20
+00:01:22,460 --> 00:01:26,980
+It's a fairly recent project, started in December of 2017.
+
+21
+00:01:26,980 --> 00:01:30,580
+Current release just came out is Nornir 3.0, and we'll talk a little bit about some changes
+
+22
+00:01:30,580 --> 00:01:34,140
+that happened between 3 and 2, because there's still documentation out in the community and
+
+23
+00:01:34,140 --> 00:01:37,740
+things like that is still referencing Nornir 2, and we'll talk a little bit about that.
+
+24
+00:01:37,740 --> 00:01:42,340
+Go up to 668 stars, go give it a star, and if you want to contribute, we're always looking
+
+25
+00:01:42,340 --> 00:01:45,360
+for more help there, so definitely check it out.
+
+26
+00:01:45,360 --> 00:01:49,980
+So one of the things that comes up all the time here is what about Ansible?
+
+27
+00:01:49,980 --> 00:01:53,060
+Is Ansible a Python-based automation tool?
+
+28
+00:01:53,060 --> 00:01:56,900
+And it is, but Nornir is Ansible, Nornir ain't Ansible.
+
+29
+00:01:56,900 --> 00:02:02,180
+So the key differentiator for me is that there's no domain-specific language when you're using
+
+30
+00:02:02,180 --> 00:02:03,180
+Nornir.
+
+31
+00:02:03,180 --> 00:02:06,540
+You're not required to keep your logic in YAML files or anything like that.
+
+32
+00:02:06,540 --> 00:02:10,500
+It's all Python, so whatever the logic you want to write into your program, you're writing
+
+33
+00:02:10,500 --> 00:02:11,500
+it in Python.
+
+34
+00:02:11,500 --> 00:02:16,540
+You have access to your debuggers, your IDEs, everything like that to work on it as Python,
+
+35
+00:02:16,540 --> 00:02:21,580
+which is really powerful to me when you start talking about actually doing something at
+
+36
+00:02:21,580 --> 00:02:26,420
+scale with a lot of different operating systems, different complicated tasks and workflows.
+
+37
+00:02:26,420 --> 00:02:30,780
+Having control of that in Python in a programming language is extremely powerful.
+
+38
+00:02:30,780 --> 00:02:34,780
+So it's not to say that Ansible, you should never use Ansible or anything like that.
+
+39
+00:02:34,780 --> 00:02:39,860
+Ansible has a place, and one of the key differentiators for Ansible is that it's a much lower barrier
+
+40
+00:02:39,860 --> 00:02:44,340
+to entry if you don't have the Python skills, or say you're in an organization where there's
+
+41
+00:02:44,340 --> 00:02:46,780
+already usage of Ansible.
+
+42
+00:02:46,780 --> 00:02:51,900
+Your server team is operating with Ansible, it's easy to do it for other projects as well.
+
+43
+00:02:51,900 --> 00:03:01,540
+In addition, Ansible has a project called Tower, or AWX, where it allows you to orchestrate
+
+44
+00:03:01,540 --> 00:03:05,300
+these playbooks that Ansible wants to run against your devices, and Nornir doesn't have something
+
+45
+00:03:05,300 --> 00:03:06,300
+like that.
+
+46
+00:03:06,300 --> 00:03:10,460
+You kind of have to build your own execution engine, and so Ansible has that sort of lower
+
+47
+00:03:10,460 --> 00:03:13,700
+barrier to entry because it's batteries included in that way.
+
+48
+00:03:13,700 --> 00:03:20,740
+Now, also, there's a plethora of automation frameworks and tools on the market today.
+
+49
+00:03:20,740 --> 00:03:25,860
+Where Nornir stands out is it's initially built to focus on network devices, routers,
+
+50
+00:03:25,860 --> 00:03:30,580
+switches, firewalls, load balancers, et cetera, and so the founders of that project came out
+
+51
+00:03:30,580 --> 00:03:35,220
+of the network automation community online, and it sort of sought to fill out some of
+
+52
+00:03:35,220 --> 00:03:38,260
+the gaps that you see in existing tools.
+
+53
+00:03:38,260 --> 00:03:42,300
+Ansible recently has gotten better, but for a long time had very lackluster network device
+
+54
+00:03:42,300 --> 00:03:47,700
+support, and solved and other tools like that required you to either install an agent
+
+55
+00:03:47,700 --> 00:03:51,180
+on the device, which doesn't work for many network operating systems, or have a proxy
+
+56
+00:03:51,180 --> 00:03:56,380
+agent or things like that, and so there was turtles to get through with some of those
+
+57
+00:03:56,380 --> 00:03:59,160
+other tools.
+
+58
+00:03:59,160 --> 00:04:04,500
+With Nornir, you have that native Python tooling framework, you can easily extend it with plug-ins,
+
+59
+00:04:04,500 --> 00:04:07,920
+and it's first class support for network devices.
+
+60
+00:04:07,920 --> 00:04:12,060
+It's not as large of a community as something like Ansible, but it's definitely growing.
+
+61
+00:04:12,500 --> 00:04:16,940
+There's a large number of us invested in it, and it's less batteries included out the box.
+
+62
+00:04:16,940 --> 00:04:21,100
+You do have to have some Python knowledge, because it is a Python automation framework.
+
+63
+00:04:21,100 --> 00:04:23,540
+So why would you want to go over some of those cons?
+
+64
+00:04:23,540 --> 00:04:25,060
+What are the things you would want to get out of it?
+
+65
+00:04:25,060 --> 00:04:29,780
+Well, one of the key benefits is it's extremely easy to integrate with existing Python frameworks.
+
+66
+00:04:29,780 --> 00:04:34,200
+So if you have some sort of web-based Flask app already, and you want to have it go touch
+
+67
+00:04:34,200 --> 00:04:37,340
+a network device, and pull some commands back, you can do that.
+
+68
+00:04:37,340 --> 00:04:43,820
+You can integrate right into Flask, use Nornir to do the task on the device, and return results.
+
+69
+00:04:43,820 --> 00:04:47,260
+One of the common things I've seen lately is with a tool called Netbox, which is an
+
+70
+00:04:47,260 --> 00:04:51,100
+open source DCIM tool for keeping track of your network infrastructure and your servers
+
+71
+00:04:51,100 --> 00:04:55,900
+and things like that, and your DCs, it integrates to the plug-in architecture on that platform,
+
+72
+00:04:55,900 --> 00:04:59,700
+and you can use Nornir as a plug-in to go out and retrieve information about the devices
+
+73
+00:04:59,700 --> 00:05:03,260
+that are kept in Netbox as a source of truth.
+
+74
+00:05:03,260 --> 00:05:09,580
+So when I get to this point, a lot of people go, speed, yay, speed isn't necessarily everything.
+
+75
+00:05:09,580 --> 00:05:13,260
+For example, if you're doing backups of all your network devices, it doesn't matter how
+
+76
+00:05:13,260 --> 00:05:17,100
+fast that occurs sometimes, as long as maybe it occurs within 24 hours, because you just
+
+77
+00:05:17,100 --> 00:05:18,700
+need daily diffs.
+
+78
+00:05:18,700 --> 00:05:21,740
+So it can take four hours to run the backups of all your devices.
+
+79
+00:05:21,740 --> 00:05:22,740
+That doesn't matter.
+
+80
+00:05:22,740 --> 00:05:26,860
+For something, speed is more important than others, and Nornir is extremely fast compared
+
+81
+00:05:26,860 --> 00:05:28,440
+to Ansible.
+
+82
+00:05:28,440 --> 00:05:32,420
+And so put a link in here, and it'll be in the slides when we provide those out, but
+
+83
+00:05:32,500 --> 00:05:36,780
+essentially, there's a massive speed increase, orders of magnitude faster than Ansible, for
+
+84
+00:05:36,780 --> 00:05:39,660
+similar network device connection tasks.
+
+85
+00:05:39,660 --> 00:05:43,220
+So what makes it like this?
+
+86
+00:05:43,220 --> 00:05:44,220
+How do you do this?
+
+87
+00:05:44,220 --> 00:05:45,580
+Let's dive into it.
+
+88
+00:05:45,580 --> 00:05:49,820
+So one of the key things to call out first, and I mentioned a little bit earlier, is Nornir
+
+89
+00:05:49,820 --> 00:05:53,100
+3.0 was recently released, and so some of the documentation and things like that might
+
+90
+00:05:53,100 --> 00:05:54,100
+still be getting updated.
+
+91
+00:05:54,100 --> 00:05:59,660
+It happened just a few weeks back, but the key differentiator to notice is plug-ins are
+
+92
+00:05:59,660 --> 00:06:04,220
+no longer included in the package of Nornir, which is beneficial because you no longer
+
+93
+00:06:04,220 --> 00:06:08,420
+are installing this massive set of plug-ins, for you maybe only want one of them.
+
+94
+00:06:08,420 --> 00:06:12,820
+So you can directly install, you know, pip install Nornir, and then whatever plug-in
+
+95
+00:06:12,820 --> 00:06:16,740
+you are trying to use, you know, the Netmeco plug-in, the general utilities, and there's
+
+96
+00:06:16,740 --> 00:06:21,020
+a listing online of all the community available plug-ins that you can choose from to install
+
+97
+00:06:21,020 --> 00:06:24,500
+or make your own, and we'll cover that a little bit further on.
+
+98
+00:06:24,500 --> 00:06:28,660
+So if you are on to, if you have been using Nornir before, or if you've come on to an
+
+99
+00:06:28,700 --> 00:06:32,500
+example that somebody put online, you know, a couple months ago, and it's written for
+
+100
+00:06:32,500 --> 00:06:36,460
+two, there's some official documentation to tell you how to get from two to three, as
+
+101
+00:06:36,460 --> 00:06:42,460
+well as Kirk Byers, one of the maintainers of the project, put out a sort of operational
+
+102
+00:06:42,460 --> 00:06:46,100
+guide to, if you're using two, here are some places you'll need to go change things in
+
+103
+00:06:46,100 --> 00:06:48,800
+your existing code to make it work with three.
+
+104
+00:06:48,800 --> 00:06:52,700
+It's not a complicated migration, mainly it's because the plug-ins are external.
+
+105
+00:06:52,700 --> 00:06:56,180
+There's some namespacing changes, and you'll just need to modify those in your code, but
+
+106
+00:06:56,180 --> 00:06:58,020
+nothing extreme.
+
+107
+00:06:58,020 --> 00:07:00,700
+So the good stuff.
+
+108
+00:07:00,700 --> 00:07:06,220
+It's an inventory with hosts, groups, and a default setting.
+
+109
+00:07:06,220 --> 00:07:11,440
+No matter what your plug-in or where your inventory lives, it's built out of those components,
+
+110
+00:07:11,440 --> 00:07:15,620
+and there are tasks which are the things you want to do to your inventory.
+
+111
+00:07:15,620 --> 00:07:19,620
+So you have your inventory of hosts and the tasks you want to do to them.
+
+112
+00:07:19,620 --> 00:07:22,940
+Tasks are really just Python functions, and there's some extra wrappers around it that
+
+113
+00:07:22,940 --> 00:07:27,540
+Nornir provides to give you the thread handling and things like that that are built into the
+
+114
+00:07:27,540 --> 00:07:29,940
+way these tasks are executed.
+
+115
+00:07:29,940 --> 00:07:30,940
+And then runners.
+
+116
+00:07:30,940 --> 00:07:35,820
+So you have inventory of the hosts that you want to do things to, tasks, the things you
+
+117
+00:07:35,820 --> 00:07:39,180
+want to do to them, and runners kind of puts that together.
+
+118
+00:07:39,180 --> 00:07:41,180
+Runners actually do the task on the host.
+
+119
+00:07:41,180 --> 00:07:43,220
+Now there's a couple built in right out of the box.
+
+120
+00:07:43,220 --> 00:07:47,460
+You can run it serially through the hosts in your inventory, or you can use threads.
+
+121
+00:07:47,460 --> 00:07:51,820
+And so because a lot of these tasks are network IO bound, where you're going out and you're
+
+122
+00:07:51,820 --> 00:07:55,900
+waiting on a response, things like that, threads work really well for that and do scale fairly
+
+123
+00:07:55,900 --> 00:07:56,900
+well.
+
+124
+00:07:56,980 --> 00:08:01,860
+If you choose to do something else, you want to try to do some async plugins for it or
+
+125
+00:08:01,860 --> 00:08:05,260
+spawn processes, whatever, you can actually create your own runner.
+
+126
+00:08:05,260 --> 00:08:07,220
+These are just the ones that are provided out of the box.
+
+127
+00:08:07,220 --> 00:08:11,100
+It'll be serially execution or threaded.
+
+128
+00:08:11,100 --> 00:08:16,500
+Now when we talk about the inventory, you have a plugin to tell you what kind of inventory.
+
+129
+00:08:16,500 --> 00:08:18,980
+Most common one you see for testing things like that, and we'll talk about it a little
+
+130
+00:08:18,980 --> 00:08:20,300
+bit, is a YAML based inventory.
+
+131
+00:08:20,300 --> 00:08:22,300
+It used to be called simple inventory.
+
+132
+00:08:22,300 --> 00:08:25,620
+You'll still see that referenced in the documentation, things like that.
+
+133
+00:08:25,620 --> 00:08:26,620
+Ansible inventories.
+
+134
+00:08:26,620 --> 00:08:28,980
+If you're testing Ansible inventory, you can use that with this tool.
+
+135
+00:08:28,980 --> 00:08:33,220
+Or if you're using something like Netbox as a DCIM that has all of your infrastructure
+
+136
+00:08:33,220 --> 00:08:37,380
+in it, you can use that as an inventory source as well.
+
+137
+00:08:37,380 --> 00:08:38,380
+Write your own.
+
+138
+00:08:38,380 --> 00:08:40,340
+So you're not using one of these other things.
+
+139
+00:08:40,340 --> 00:08:43,100
+You're using a custom homegrown CMDB, whatever.
+
+140
+00:08:43,100 --> 00:08:46,700
+You can write a plugin to read that inventory and use it with Norton here.
+
+141
+00:08:46,700 --> 00:08:51,100
+Some of the documentation is still a little bit lagging because the 3.0 release just came
+
+142
+00:08:51,100 --> 00:08:55,980
+out, but the API for generating custom inventory plugins is the same, so I linked a little
+
+143
+00:08:55,980 --> 00:08:59,100
+bit older documentation there.
+
+144
+00:08:59,100 --> 00:09:02,860
+So YAML inventory is really what you see for testing things out.
+
+145
+00:09:02,860 --> 00:09:04,220
+I'm going to use in this example.
+
+146
+00:09:04,220 --> 00:09:08,660
+And if you have less than, say, 5,000 hosts, go for it.
+
+147
+00:09:08,660 --> 00:09:10,100
+It doesn't really cause you any problems.
+
+148
+00:09:10,100 --> 00:09:12,620
+If you have an existing other source of truth, you want to integrate with it.
+
+149
+00:09:12,620 --> 00:09:14,260
+But if you're just testing this out, use it.
+
+150
+00:09:14,260 --> 00:09:21,220
+It's just a hosts.yaml and groups.yaml files that contain attributes about your inventory.
+
+151
+00:09:21,220 --> 00:09:22,220
+Example hosts one here.
+
+152
+00:09:22,220 --> 00:09:25,700
+You have a host name, the password, what group it's a member of.
+
+153
+00:09:25,700 --> 00:09:29,220
+Any arbitrary data you wish to hang off of it there.
+
+154
+00:09:29,220 --> 00:09:31,260
+The group file, much the same.
+
+155
+00:09:31,260 --> 00:09:36,180
+The group name, any attributes about the devices that are members of that group, and in addition,
+
+156
+00:09:36,180 --> 00:09:41,660
+any other arbitrary data you wish to maintain about that, a device location, what's the
+
+157
+00:09:41,660 --> 00:09:46,260
+vendor, things like that, other things that you care about that device.
+
+158
+00:09:46,260 --> 00:09:52,300
+So when we get into it now, tasks are, again, the Python functions you're going to execute
+
+159
+00:09:52,380 --> 00:09:53,780
+against each host.
+
+160
+00:09:53,780 --> 00:09:55,980
+Pardon me, sorry.
+
+161
+00:09:55,980 --> 00:09:58,980
+And so examples, tasks can be really simple.
+
+162
+00:09:58,980 --> 00:10:03,420
+In this case, I'm just going to, for each host, print out that I'm doing stuff to that
+
+163
+00:10:03,420 --> 00:10:04,420
+host.
+
+164
+00:10:04,420 --> 00:10:05,420
+I'm doing stuff to the host.
+
+165
+00:10:05,420 --> 00:10:07,500
+So it's a very simple task.
+
+166
+00:10:07,500 --> 00:10:11,700
+The only thing that makes a Python function into a Nornier task is it accepts, as the
+
+167
+00:10:11,700 --> 00:10:16,780
+first argument, a Nornier task object.
+
+168
+00:10:16,780 --> 00:10:18,220
+You can put tasks inside of each other.
+
+169
+00:10:18,220 --> 00:10:19,220
+You can have subtasks.
+
+170
+00:10:19,700 --> 00:10:23,060
+Usually I don't recommend that from the start, because get processing results can get a little
+
+171
+00:10:23,060 --> 00:10:26,860
+bit complicated when they're nested, but you can certainly do that.
+
+172
+00:10:26,860 --> 00:10:30,460
+You are more than welcome to use any of the broadly available community plugins.
+
+173
+00:10:30,460 --> 00:10:35,220
+There's a link here again to Nornier.tech for the plugins page that lists out the community
+
+174
+00:10:35,220 --> 00:10:36,820
+available tasks and plugins.
+
+175
+00:10:36,820 --> 00:10:40,940
+There's a lot out there, example, text file manipulation, local file operations, things
+
+176
+00:10:40,940 --> 00:10:43,500
+like that.
+
+177
+00:10:43,500 --> 00:10:46,460
+For example, one of the common ones, again, because I'm talking just a lot on the network
+
+178
+00:10:46,460 --> 00:10:48,580
+devices, is using the netmico plugin.
+
+179
+00:10:48,580 --> 00:10:53,140
+Nornier-netmico, you want to use that one, pip install, Nornier-netmico, and you have
+
+180
+00:10:53,140 --> 00:10:56,620
+access to these where you can send a command to a network device or send config.
+
+181
+00:10:56,620 --> 00:11:01,260
+Same for napalm, another common network automation tool.
+
+182
+00:11:01,260 --> 00:11:05,860
+Install its plugin, Nornier-napalm, and you can use the napalm get task to do things to
+
+183
+00:11:05,860 --> 00:11:08,460
+your devices.
+
+184
+00:11:08,460 --> 00:11:11,500
+You have your inventory, you have your tasks, what do you do?
+
+185
+00:11:11,500 --> 00:11:14,660
+You need to initialize the Nornier object.
+
+186
+00:11:14,660 --> 00:11:19,900
+So when you create your initial script, your initial program, you're going to bring in
+
+187
+00:11:19,900 --> 00:11:26,100
+the initNornier function, which is essentially plumbs up the connection of your inventory,
+
+188
+00:11:26,100 --> 00:11:31,060
+how you want to run tasks on it, all that good stuff, and allows you to filter it as
+
+189
+00:11:31,060 --> 00:11:34,700
+well, which we'll cover in just a moment.
+
+190
+00:11:34,700 --> 00:11:38,740
+For the configuration of it, when you're doing the initialization, you can either provide
+
+191
+00:11:38,740 --> 00:11:43,660
+a YAML file of the configuration or pass it as parameters to initNornier.
+
+192
+00:11:43,660 --> 00:11:47,260
+It's a six and one half dozen of another kinds of things you would care about telling
+
+193
+00:11:47,260 --> 00:11:48,260
+it about.
+
+194
+00:11:48,260 --> 00:11:51,340
+You obviously need to tell it how to get to your inventory, what kind of plugin you're
+
+195
+00:11:51,340 --> 00:11:52,340
+using.
+
+196
+00:11:52,340 --> 00:11:54,540
+Do you want to be threaded or a serial?
+
+197
+00:11:54,540 --> 00:11:55,860
+How are you going to do these things?
+
+198
+00:11:55,860 --> 00:12:00,180
+You plumb that up in the initialization here, either in your config file or arguments.
+
+199
+00:12:00,180 --> 00:12:02,900
+So here's an example configuration file.
+
+200
+00:12:02,900 --> 00:12:07,120
+You can see there's, you define your runner, tell what kind of logging you want to do,
+
+201
+00:12:07,120 --> 00:12:12,000
+what inventory plugin is, where do you get it, all that good stuff.
+
+202
+00:12:12,000 --> 00:12:17,680
+You also, then once you have that configuration file, you tell initNornier where that file
+
+203
+00:12:17,680 --> 00:12:18,680
+is.
+
+204
+00:12:18,680 --> 00:12:19,800
+It reads all the options from there.
+
+205
+00:12:19,800 --> 00:12:25,160
+You can do both, tell it where the config file is, but I want to override the number
+
+206
+00:12:25,160 --> 00:12:26,160
+of workers.
+
+207
+00:12:26,160 --> 00:12:27,160
+I don't want a hundred workers.
+
+208
+00:12:27,160 --> 00:12:28,160
+I want 10.
+
+209
+00:12:28,160 --> 00:12:32,320
+You can override that at runtime just by telling it the arguments.
+
+210
+00:12:32,320 --> 00:12:37,640
+So once you have your instantiated inventory, so I've created a Nornier object as shown
+
+211
+00:12:38,200 --> 00:12:41,400
+So we have my Nornier instantiated.
+
+212
+00:12:41,400 --> 00:12:43,760
+I can filter the inventory hosts.
+
+213
+00:12:43,760 --> 00:12:47,160
+I don't want to run every single task on every single host all the time.
+
+214
+00:12:47,160 --> 00:12:51,360
+Say I only want to do something to my Cisco devices that are not co-located in some other
+
+215
+00:12:51,360 --> 00:12:52,360
+data center.
+
+216
+00:12:52,360 --> 00:12:56,760
+I can filter on these arbitrary data values that I have listed in my inventory.
+
+217
+00:12:56,760 --> 00:13:01,920
+And so I tell it, I only want the vendor where it equals Cisco and is colo to false.
+
+218
+00:13:01,920 --> 00:13:05,680
+And so these are arbitrary data values that I can put on those hosts to use for these
+
+219
+00:13:05,680 --> 00:13:08,640
+filtering.
+
+220
+00:13:08,640 --> 00:13:13,080
+In addition now, you can also pass a function in rather than just filtering on the attributes
+
+221
+00:13:13,080 --> 00:13:14,080
+directly.
+
+222
+00:13:14,080 --> 00:13:17,360
+You can get some more advanced logic in here and just have a function that returns true.
+
+223
+00:13:17,360 --> 00:13:22,920
+If every host that you pass through it, it meets some criteria, you return true for that.
+
+224
+00:13:22,920 --> 00:13:30,360
+So essentially allows you to do more complex filtering than just attributes.
+
+225
+00:13:30,360 --> 00:13:33,800
+But you can also do that with they have F object filtering, which if you're familiar
+
+226
+00:13:33,800 --> 00:13:37,880
+with Django, it's very similar to the way it's used in that as well.
+
+227
+00:13:37,880 --> 00:13:41,040
+I'm not going to cover that here because it could be its own entire thing, but the docs
+
+228
+00:13:41,040 --> 00:13:44,760
+have really good examples on that and I definitely recommend checking that out for anything we
+
+229
+00:13:44,760 --> 00:13:45,760
+go over today.
+
+230
+00:13:45,760 --> 00:13:47,880
+I know I'm moving a little quickly.
+
+231
+00:13:47,880 --> 00:13:52,160
+If you have questions, I'm answering live during the video and you are welcome to reach
+
+232
+00:13:52,160 --> 00:13:54,960
+out to me on Twitter or anything like that.
+
+233
+00:13:54,960 --> 00:13:56,560
+And the nor near docs are also very good.
+
+234
+00:13:56,560 --> 00:13:59,180
+Just want to make sure I call that out.
+
+235
+00:13:59,180 --> 00:14:01,320
+So we have our tasks.
+
+236
+00:14:01,320 --> 00:14:03,760
+We want to execute the tasks on the host.
+
+237
+00:14:03,760 --> 00:14:04,760
+What do we do?
+
+238
+00:14:04,760 --> 00:14:06,400
+Well, we defined our runner in the initialization.
+
+239
+00:14:06,400 --> 00:14:09,160
+So nor near knows how it's going to do these things.
+
+240
+00:14:09,160 --> 00:14:14,200
+We just call dot run on our instantiated nor near object and tell it what task to run.
+
+241
+00:14:14,200 --> 00:14:17,720
+So we have instantiated a nor near object with an inventory.
+
+242
+00:14:17,720 --> 00:14:20,960
+We've told that nor near object how to run the tasks.
+
+243
+00:14:20,960 --> 00:14:25,600
+Now dot run tells it what tasks to run and you can again list them dot run this task
+
+244
+00:14:25,600 --> 00:14:30,240
+dot run task B dot run task C or you can nest them inside of one parent task.
+
+245
+00:14:30,400 --> 00:14:33,480
+And again, it just depends on how you want to generate your code.
+
+246
+00:14:33,480 --> 00:14:38,880
+But when it's done with dot run, it gives you back a results object, which is basically
+
+247
+00:14:38,880 --> 00:14:44,040
+a dict with some special attributes like success and fail, change, true, false, things like
+
+248
+00:14:44,040 --> 00:14:46,280
+that.
+
+249
+00:14:46,280 --> 00:14:48,800
+Here's an example, kind of ties all this together.
+
+250
+00:14:48,800 --> 00:14:55,520
+So if I look at from nor near import in it nor near, so I've got my instantiator, I can
+
+251
+00:14:55,520 --> 00:14:57,320
+in it with the config file.
+
+252
+00:14:57,320 --> 00:15:03,120
+I define a simple task of doing stuff to this host and then I do dot run of that task and
+
+253
+00:15:03,120 --> 00:15:07,880
+it's going to do it on my inventory and print out doing stuff, the labhost dot test, which
+
+254
+00:15:07,880 --> 00:15:12,080
+was the host name of the host in my inventory.
+
+255
+00:15:12,080 --> 00:15:16,440
+Really simple to get going, but very powerful in the way that it's built modularly and you
+
+256
+00:15:16,440 --> 00:15:19,880
+can extend each one of these components.
+
+257
+00:15:19,880 --> 00:15:25,800
+So in the end, you have an inventory of hosts where there are as host data or group data
+
+258
+00:15:25,920 --> 00:15:29,600
+and you have a default group as well that kind of you can apply attributes to everything
+
+259
+00:15:29,600 --> 00:15:33,800
+in your inventory unless it's overridden at the higher level like group or host.
+
+260
+00:15:33,800 --> 00:15:37,840
+You have tasks that you want to do to or on those hosts.
+
+261
+00:15:37,840 --> 00:15:41,720
+And again, linked up a couple of times, there's a community listing of all kinds of available
+
+262
+00:15:41,720 --> 00:15:47,080
+tasks and plugins already, or if one of those don't suit your need, it's easy to make one
+
+263
+00:15:47,080 --> 00:15:48,080
+yourself.
+
+264
+00:15:48,080 --> 00:15:52,400
+Then you have a runner to put the rubber to the road and actually run the task on the
+
+265
+00:15:52,400 --> 00:15:54,720
+host.
+
+266
+00:15:54,720 --> 00:15:58,560
+You need to create a configuration file to tell it what you want to do exactly, how to
+
+267
+00:15:58,560 --> 00:16:01,680
+find the inventory, how many threads to use if you're using the threaded runner, things
+
+268
+00:16:01,680 --> 00:16:03,680
+like that, how to log.
+
+269
+00:16:03,680 --> 00:16:06,840
+And then you instantiate your Nornir and do dot run.
+
+270
+00:16:06,840 --> 00:16:11,000
+So that's it for our internals, then we'll talk a couple of use cases really quickly
+
+271
+00:16:11,000 --> 00:16:13,400
+and then we'll wrap up.
+
+272
+00:16:13,400 --> 00:16:16,720
+So where would you go to your toolbox and pull this out?
+
+273
+00:16:16,720 --> 00:16:17,720
+So here's an example scenario.
+
+274
+00:16:17,720 --> 00:16:23,000
+You have a large company, Company X. It's by Company Y. Now Company X, really good at
+
+275
+00:16:23,000 --> 00:16:24,000
+network automation.
+
+276
+00:16:24,000 --> 00:16:25,000
+They have bread and butter.
+
+277
+00:16:25,000 --> 00:16:26,600
+They have tens of thousands of devices out there.
+
+278
+00:16:26,600 --> 00:16:30,960
+They have flask based APIs, they have different web services serving out information about
+
+279
+00:16:30,960 --> 00:16:34,800
+those devices, reporting changes, all kinds of things.
+
+280
+00:16:34,800 --> 00:16:37,160
+Company Y, not as much.
+
+281
+00:16:37,160 --> 00:16:41,760
+Now the problems that you have is the existing tooling at Company X, while it's good, is
+
+282
+00:16:41,760 --> 00:16:44,160
+not at all compatible with the Company Y.
+
+283
+00:16:44,160 --> 00:16:45,760
+Many different reasons that can be.
+
+284
+00:16:45,760 --> 00:16:49,920
+A lot of times it's different authentication, different inventory systems, so there's work
+
+285
+00:16:49,920 --> 00:16:51,920
+involved to marry those two things up.
+
+286
+00:16:52,080 --> 00:16:56,840
+However, in a lot of cases in these kind of scenarios, your existing security auditors
+
+287
+00:16:56,840 --> 00:17:02,520
+and compliance auditors and leadership from Company X wants the same kind of reports and
+
+288
+00:17:02,520 --> 00:17:07,320
+experience and the customer experience you're providing from Company Y.
+
+289
+00:17:07,320 --> 00:17:11,000
+And in a lot of cases you have to do these things quickly and without going out and purchasing
+
+290
+00:17:11,000 --> 00:17:12,240
+additional resources.
+
+291
+00:17:12,240 --> 00:17:19,200
+So Nornir in this instance was able to use to create a simple YAML inventory of the devices
+
+292
+00:17:19,200 --> 00:17:25,800
+out of the customer YCMDB, use the existing Python applications and flask APIs that were
+
+293
+00:17:25,800 --> 00:17:31,560
+existing in Company X, just add a new view that uses Nornir to go talk to these other
+
+294
+00:17:31,560 --> 00:17:37,960
+devices and was able to get it out the door in just about a week because it's this Python
+
+295
+00:17:37,960 --> 00:17:42,000
+framework you can snap into these existing tool sets if you have them available, which
+
+296
+00:17:42,000 --> 00:17:44,120
+is very powerful.
+
+297
+00:17:44,120 --> 00:17:51,200
+Now another common example we'll see is we have a tool like Netbox, which is a Django
+
+298
+00:17:51,200 --> 00:17:57,160
+based DCIM tool, which is DCIM is Data Center Inventory Management, and it's all your network
+
+299
+00:17:57,160 --> 00:17:59,040
+devices are in that tool.
+
+300
+00:17:59,040 --> 00:18:03,040
+Well in this case Company D, they had Netbox installed and they said, what next?
+
+301
+00:18:03,040 --> 00:18:04,360
+What do I do with this now that I got this?
+
+302
+00:18:04,360 --> 00:18:09,240
+I've got the information in there, we're using it manually, how can we get some things moving
+
+303
+00:18:09,240 --> 00:18:11,200
+now, automate it.
+
+304
+00:18:11,200 --> 00:18:18,360
+And so one of the things they wanted to do quickly for testing was point a tool at Netbox,
+
+305
+00:18:18,360 --> 00:18:20,320
+use it as the inventory source and go out to the network.
+
+306
+00:18:20,320 --> 00:18:24,860
+However, there's a six week lead time on them getting additional VMs or load balancer infrastructure
+
+307
+00:18:24,860 --> 00:18:27,200
+and they weren't really a Python skilled shop yet.
+
+308
+00:18:27,200 --> 00:18:30,320
+They were trying to upscale, get those skills.
+
+309
+00:18:30,320 --> 00:18:34,920
+So what they did was they used the existing Netbox VM and associated infrastructure and
+
+310
+00:18:34,920 --> 00:18:41,120
+they deployed on that Django app a plugin to actually use Nornir, uses Django RQ to
+
+311
+00:18:41,120 --> 00:18:43,840
+queue up jobs and go out and run those tasks.
+
+312
+00:18:43,840 --> 00:18:48,520
+And so because they were able to build on that existing framework and integrate Nornir
+
+313
+00:18:48,520 --> 00:18:53,080
+directly into it, rather than saying calling out to some totally additional tool, needing
+
+314
+00:18:53,080 --> 00:18:56,000
+to learn Ansible as well, they already were learning Python, so they just kept learning
+
+315
+00:18:56,000 --> 00:19:00,520
+Python and it really simplified their deployment and they got from their POC out to production
+
+316
+00:19:00,520 --> 00:19:02,160
+in around a month.
+
+317
+00:19:02,520 --> 00:19:07,240
+Very powerful if you really have some of those tools available to you or you're already trying
+
+318
+00:19:07,240 --> 00:19:11,120
+to gain that Python knowledge, Nornir is very helpful there.
+
+319
+00:19:11,120 --> 00:19:15,320
+So all that said, how do you get your hands on this now?
+
+320
+00:19:15,320 --> 00:19:16,320
+I've piqued your interest.
+
+321
+00:19:16,320 --> 00:19:17,320
+What do you want to do?
+
+322
+00:19:17,320 --> 00:19:18,320
+It's on GitHub.
+
+323
+00:19:18,320 --> 00:19:23,720
+You can go out there, take a look if you want to give it a star, tribute, whatever.
+
+324
+00:19:23,720 --> 00:19:26,480
+Pimp install Nornir is all you have to do to get the base install.
+
+325
+00:19:26,480 --> 00:19:31,600
+Now again, as a 3.0, you'll need to install some additional plugins, which I link here,
+
+326
+00:19:31,600 --> 00:19:34,880
+the specific available community plugins that are registered.
+
+327
+00:19:34,880 --> 00:19:37,880
+If you write your own and it's something that you think other people would use, you're more
+
+328
+00:19:37,880 --> 00:19:41,480
+than welcome to contribute it to the community listing there as well so that everybody can
+
+329
+00:19:41,480 --> 00:19:42,480
+take advantage of that.
+
+330
+00:19:42,480 --> 00:19:46,520
+That's one of the great things about the way this project's been building.
+
+331
+00:19:46,520 --> 00:19:47,680
+You want to learn more?
+
+332
+00:19:47,680 --> 00:19:49,520
+The docs again, really great.
+
+333
+00:19:49,520 --> 00:19:54,480
+Go to Nornir.ReadTheDocsIO or just Google Nornir docs, it's like the first result there.
+
+334
+00:19:54,480 --> 00:19:58,760
+So we at Network to Code sponsor Community Slack Instance and there's a Nornir channel
+
+335
+00:19:58,760 --> 00:19:59,960
+on there that's very active.
+
+336
+00:19:59,960 --> 00:20:03,120
+The community developers work out of there.
+
+337
+00:20:03,120 --> 00:20:04,120
+Lots of good question and answer.
+
+338
+00:20:04,120 --> 00:20:08,720
+However, if you want some good, a lot of times you come into Slack, Slack's a little ephemeral,
+
+339
+00:20:08,720 --> 00:20:10,800
+people have a hard time with search back, things like that.
+
+340
+00:20:10,800 --> 00:20:15,160
+We recommend the discourse page, Nornir.Discourse.Group for some of that persistent.
+
+341
+00:20:15,160 --> 00:20:18,320
+A lot of the common questions that you may think of running into, people who are asked
+
+342
+00:20:18,320 --> 00:20:22,760
+and answered on discourse, definitely recommend checking that out.
+
+343
+00:20:22,760 --> 00:20:28,160
+In summary, when we talk about Nornir, it's a Python automation framework.
+
+344
+00:20:28,160 --> 00:20:31,560
+It's really easy to integrate with other tools and frameworks.
+
+345
+00:20:31,560 --> 00:20:35,960
+It's very fast in the way it's structured and it's easily extensible.
+
+346
+00:20:35,960 --> 00:20:39,640
+It's built around this plug-in modular framework where you can adjust your runners, adjust
+
+347
+00:20:39,640 --> 00:20:41,760
+your inventory, adjust your tasks.
+
+348
+00:20:41,760 --> 00:20:45,520
+It's all very extensible, yet a lot of the complexity is abstracted way behind the scenes
+
+349
+00:20:45,520 --> 00:20:50,240
+by things like the task object and returning a standard results object, things like that.
+
+350
+00:20:50,240 --> 00:20:53,960
+It treats network devices as first class citizens, where in a lot of automation frameworks and
+
+351
+00:20:53,960 --> 00:20:55,560
+tools that's not the case.
+
+352
+00:20:55,960 --> 00:20:59,560
+There are native plug-ins in the community already for many network oriented tasks, pushing
+
+353
+00:20:59,560 --> 00:21:03,360
+a command, pulling a config, things like that.
+
+354
+00:21:03,360 --> 00:21:05,080
+There's a very active community.
+
+355
+00:21:05,080 --> 00:21:06,080
+It's growing.
+
+356
+00:21:06,080 --> 00:21:09,920
+I definitely recommend, again, put that plug-in there to check it out, but definitely growing.
+
+357
+00:21:09,920 --> 00:21:12,840
+It seems like there's always somebody solving a problem with it.
+
+358
+00:21:12,840 --> 00:21:16,040
+There's a new tool or a new plug-in almost weekly.
+
+359
+00:21:16,040 --> 00:21:21,360
+Again, I thank you for taking the time to check out our video here.
+
+360
+00:21:21,360 --> 00:21:22,960
+Enjoy the rest of your sessions here at PyTexas.
+
+361
+00:21:22,960 --> 00:21:24,280
+Again, my name is Brett Likens.
+
+362
+00:21:24,280 --> 00:21:28,800
+I'm a managing consultant at Network to Code, and you can reach out to me on Twitter at
+
+363
+00:21:28,800 --> 00:21:34,920
+likensb, I'm on GitHub, likensbd, or come to the networktocode.slack.com instance and
+
+364
+00:21:34,920 --> 00:21:35,920
+check it out.
+
+365
+00:21:35,920 --> 00:21:36,920
+I'll be there.
+
+366
+00:21:36,920 --> 00:21:37,920
+All right.
+
+367
+00:21:37,920 --> 00:21:38,920
+Thank you all very much.
+
+368
+00:21:38,920 --> 00:21:39,920
+I hope you have a good day.
+
+369
+00:21:39,920 --> 00:21:39,940
+Thank you.
+

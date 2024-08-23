@@ -1,0 +1,1340 @@
+1
+00:00:00,000 --> 00:00:20,160
+Hi, PyTexas party people.
+
+2
+00:00:20,160 --> 00:00:27,300
+I'm here to share with you automating the boring expensive bits running Python in Lambda.
+
+3
+00:00:27,300 --> 00:00:33,380
+My name is Ryan Hillard, and I am a systems developer at the US Small Business Administration,
+
+4
+00:00:33,380 --> 00:00:36,340
+and I am also a baby Python.
+
+5
+00:00:36,340 --> 00:00:40,540
+By that, I mean the program I'm about to share with you today is actually my first Python
+
+6
+00:00:40,540 --> 00:00:46,820
+program ever to run in a production environment.
+
+7
+00:00:46,820 --> 00:00:51,300
+The talk today is actually about compliance and automating compliance, and I know when
+
+8
+00:00:51,300 --> 00:00:54,580
+I bring this up, the word kind of falls apart like this.
+
+9
+00:00:54,580 --> 00:00:59,500
+I imagine that most people feel like the E, their head hits the table and they don't
+
+10
+00:00:59,500 --> 00:01:01,980
+want to think too hard about compliance.
+
+11
+00:01:01,980 --> 00:01:08,340
+But I promise this talk is going to be fun and interesting, so stick with me.
+
+12
+00:01:08,340 --> 00:01:13,940
+To start from the beginning, there is a law called the Federal Information Security Management
+
+13
+00:01:13,940 --> 00:01:16,180
+Act, or FISMA.
+
+14
+00:01:16,180 --> 00:01:20,020
+That law does a lot of things for the federal government, but one of the things it does
+
+15
+00:01:20,020 --> 00:01:28,580
+is mandate that the heads of agencies or CIOs need to track their information systems
+
+16
+00:01:28,580 --> 00:01:35,780
+by creating an inventory or a kind of list of digital assets that exist.
+
+17
+00:01:35,780 --> 00:01:43,180
+Now, that law was originally written in 2002, and as you might imagine, back then an inventory
+
+18
+00:01:43,180 --> 00:01:46,420
+looked a little bit differently than it does today.
+
+19
+00:01:46,420 --> 00:01:53,540
+I like to think that there was a wooden abacus back then, and different parts of it represented
+
+20
+00:01:53,540 --> 00:02:06,580
+maybe networks, servers living in those networks, and maybe even storage or disks on those servers.
+
+21
+00:02:06,580 --> 00:02:14,300
+All of that actually got collated and collected in Excel, of course, where we tracked it manually.
+
+22
+00:02:14,300 --> 00:02:15,740
+That was fine, actually.
+
+23
+00:02:15,740 --> 00:02:20,860
+That actually worked back in 2002, and it worked well.
+
+24
+00:02:20,860 --> 00:02:26,700
+The reason it worked is because we thought of our digital assets as pets.
+
+25
+00:02:26,700 --> 00:02:32,500
+Like this pack of dogs, which are defined by the leashes here, I like to think of this
+
+26
+00:02:32,500 --> 00:02:40,740
+as a network, and each one of these leashes might be an open port.
+
+27
+00:02:40,740 --> 00:02:46,780
+Out of that network, each dog, we can think of as being like a server.
+
+28
+00:02:46,780 --> 00:02:51,780
+Here's Bella, here's Charlie, and then of course, here's adorable Daisy.
+
+29
+00:02:51,780 --> 00:02:58,300
+The reason why we used to at least think of these as pets is because if Daisy, for example,
+
+30
+00:02:58,300 --> 00:03:01,820
+got sick, then we would take care of Daisy.
+
+31
+00:03:01,820 --> 00:03:07,780
+She was a pet, and Daisy would live in the same IP space, and she would consume the same
+
+32
+00:03:07,820 --> 00:03:14,940
+resources, and we would make sure she was well taken care of.
+
+33
+00:03:14,940 --> 00:03:23,180
+Like I said, that worked for a long time until the cloud came along.
+
+34
+00:03:23,180 --> 00:03:27,520
+You've heard this story before, the cloud has changed everything, but one of the things
+
+35
+00:03:27,520 --> 00:03:33,320
+that it changed fundamentally was how we think about digital infrastructure.
+
+36
+00:03:33,320 --> 00:03:37,960
+We stopped thinking about it like pets, and we started thinking about servers more like
+
+37
+00:03:37,960 --> 00:03:40,680
+cattle.
+
+38
+00:03:40,680 --> 00:03:44,880
+Imagine you have a field full of cattle, and they're defined by a network, they're living
+
+39
+00:03:44,880 --> 00:03:50,520
+in a pasture, which is a network, and each one represents a different server, the different
+
+40
+00:03:50,520 --> 00:03:55,200
+IP address.
+
+41
+00:03:55,200 --> 00:04:02,280
+In the cloud, when one of these gets sick, like the second web server here, we don't
+
+42
+00:04:02,280 --> 00:04:03,840
+treat it like it was Daisy.
+
+43
+00:04:03,840 --> 00:04:07,780
+We don't log into it and try and revive it.
+
+44
+00:04:07,780 --> 00:04:11,600
+Let's say it ran out of memory or something.
+
+45
+00:04:11,600 --> 00:04:15,920
+We find a new one, a new VM, and we kill that old one.
+
+46
+00:04:15,920 --> 00:04:23,640
+We send it off to be Hamburg, and one of the things that's problematic about that is that
+
+47
+00:04:23,640 --> 00:04:29,120
+new server that we just brought in, we're going to filter it back in, and it's going
+
+48
+00:04:29,120 --> 00:04:31,200
+to consume the same IP space.
+
+49
+00:04:31,840 --> 00:04:37,720
+That's a problem because if you were used to counting these things with an abacus, then
+
+50
+00:04:37,720 --> 00:04:44,280
+you now have one bead that looks like two beads, and it's very confusing.
+
+51
+00:04:44,280 --> 00:04:49,720
+The second problem is in the cloud, we have this concept of autoscaling groups.
+
+52
+00:04:49,720 --> 00:04:55,280
+Going back to our cows, if we've got our regular load on the system happening, and then all
+
+53
+00:04:55,280 --> 00:05:00,560
+of a sudden we get just a rush of traffic, we have an autoscaling group that says, okay,
+
+54
+00:05:00,560 --> 00:05:02,040
+call in more cows.
+
+55
+00:05:02,040 --> 00:05:04,020
+We need to deal with this traffic.
+
+56
+00:05:04,020 --> 00:05:07,360
+Let's get more servers in the mix.
+
+57
+00:05:07,360 --> 00:05:14,800
+Since that happens automatically, that's another big problem for system inventories because
+
+58
+00:05:14,800 --> 00:05:19,600
+all of a sudden the system has grown in a dimension that the inventory didn't account
+
+59
+00:05:19,600 --> 00:05:21,800
+for before.
+
+60
+00:05:21,800 --> 00:05:26,440
+Imagine also that afterwards that system can shrink.
+
+61
+00:05:26,440 --> 00:05:28,880
+It's truly elastic.
+
+62
+00:05:28,880 --> 00:05:34,520
+Maybe it's even a dev environment, and good development environments, at least in the
+
+63
+00:05:34,520 --> 00:05:40,240
+cloud world, should get shut down on the weekends and evenings, so maybe there's an empty network
+
+64
+00:05:40,240 --> 00:05:41,240
+there.
+
+65
+00:05:41,240 --> 00:05:45,400
+In this case, the inventory you have doesn't actually represent real life, and that's a
+
+66
+00:05:45,400 --> 00:05:47,560
+big problem.
+
+67
+00:05:47,560 --> 00:05:50,400
+Then finally, there's a size problem.
+
+68
+00:05:50,400 --> 00:05:53,560
+When we're running in a cloud environment, of course, we've got the network, here's our
+
+69
+00:05:53,560 --> 00:05:55,760
+pasture, but look at this.
+
+70
+00:05:55,760 --> 00:06:03,160
+There are a lot of other networks out there, and we can send cattle out, spin up servers
+
+71
+00:06:03,160 --> 00:06:09,840
+in all of these different places willy-nilly as we want to.
+
+72
+00:06:09,840 --> 00:06:14,200
+To sum, there are three problems with that old way of tracking system inventories.
+
+73
+00:06:14,200 --> 00:06:17,880
+We're dealing at a larger scale right now.
+
+74
+00:06:17,880 --> 00:06:19,880
+There's a fundamentally different paradigm.
+
+75
+00:06:19,880 --> 00:06:24,360
+When one server goes bad, we destroy it and replace it with a fresh one.
+
+76
+00:06:24,360 --> 00:06:27,200
+We don't worry about fixing it.
+
+77
+00:06:27,200 --> 00:06:29,760
+Then it's actually a fluid system.
+
+78
+00:06:29,760 --> 00:06:35,600
+It grows and it shrinks, and so that inventory has to be able to account for those things
+
+79
+00:06:35,600 --> 00:06:40,880
+in better time than it used to.
+
+80
+00:06:40,880 --> 00:06:46,680
+My friend Darren Wigfield, he is an information system security officer, or one of the folks
+
+81
+00:06:46,680 --> 00:06:50,400
+that's in charge of making sure these inventories are correct.
+
+82
+00:06:50,400 --> 00:06:54,160
+He and I collaborated on this project, and I'd be remiss if I didn't acknowledge his
+
+83
+00:06:54,160 --> 00:06:56,080
+incredible efforts.
+
+84
+00:06:56,080 --> 00:07:00,600
+He also said I could absolutely call him a bean counter, so he's also the bean counter
+
+85
+00:07:00,600 --> 00:07:05,040
+in this world.
+
+86
+00:07:05,040 --> 00:07:09,840
+Darren is the business side of it, and I'm the development side of it.
+
+87
+00:07:09,840 --> 00:07:14,080
+But bringing it together, I'm going to tell you about how we offered the organization
+
+88
+00:07:14,080 --> 00:07:17,440
+a lot of value.
+
+89
+00:07:17,440 --> 00:07:21,440
+Darren and I sat down, and in order to assess whether or not this project was worth doing,
+
+90
+00:07:21,440 --> 00:07:25,640
+we did some kind of back of the napkin math here, and we figured out that it would take
+
+91
+00:07:25,640 --> 00:07:33,440
+about 12 hours, we thought, to solve the problem, and we thought that information security officers
+
+92
+00:07:33,440 --> 00:07:39,880
+were spending about an hour a week generating a weekly inventory, if they even did that.
+
+93
+00:07:39,880 --> 00:07:44,400
+In three months, 12 hours, we would make up the difference, assuming there was just one
+
+94
+00:07:44,400 --> 00:07:46,320
+of these.
+
+95
+00:07:46,320 --> 00:07:49,440
+We're going to do the project, basically.
+
+96
+00:07:49,440 --> 00:07:51,240
+We selected a tool.
+
+97
+00:07:51,240 --> 00:07:54,640
+Now let's talk a little bit about why.
+
+98
+00:07:54,640 --> 00:07:56,680
+Why AWS Lambda?
+
+99
+00:07:56,680 --> 00:08:03,440
+Well, for us, we didn't want to add a piece of automation that incurred more maintenance,
+
+100
+00:08:03,440 --> 00:08:06,360
+so we don't have to worry about a server here.
+
+101
+00:08:06,360 --> 00:08:07,980
+That was a huge plus.
+
+102
+00:08:07,980 --> 00:08:13,120
+Lambda is a function as a service offering, meaning it's a tiny little runtime that somebody
+
+103
+00:08:13,120 --> 00:08:14,780
+else maintains for you.
+
+104
+00:08:14,780 --> 00:08:17,560
+You just give it code, and it runs that code.
+
+105
+00:08:17,560 --> 00:08:19,520
+Pretty cool.
+
+106
+00:08:19,520 --> 00:08:20,520
+There's nothing to really patch.
+
+107
+00:08:21,080 --> 00:08:28,160
+We have a big patching problem in large enterprises, and that's reflected by all the data leaks
+
+108
+00:08:28,160 --> 00:08:31,620
+and all of the issues that you see in the news.
+
+109
+00:08:31,620 --> 00:08:37,840
+We didn't want to add to our patching problem by having another server we have to maintain.
+
+110
+00:08:37,840 --> 00:08:40,520
+Once again, I just want to say there's no runtime maintenance.
+
+111
+00:08:40,520 --> 00:08:41,600
+That's really great.
+
+112
+00:08:41,600 --> 00:08:45,880
+That's the huge appeal of Lambda to me.
+
+113
+00:08:45,880 --> 00:08:50,440
+Of course, a bonus is that it's extremely affordable.
+
+114
+00:08:50,600 --> 00:08:55,920
+I just want to pause here and refer to Dan McKinley, who has this great quote.
+
+115
+00:08:55,920 --> 00:09:01,400
+How would we solve the problem at hand without adding anything new?
+
+116
+00:09:01,400 --> 00:09:07,240
+Newness, sprawling technology is not without expense.
+
+117
+00:09:07,240 --> 00:09:09,920
+I think Dan's really onto something here.
+
+118
+00:09:09,920 --> 00:09:13,760
+The cherry on top for Lambda for us is we already have access to it.
+
+119
+00:09:13,760 --> 00:09:15,960
+It's a part of our infrastructure.
+
+120
+00:09:15,960 --> 00:09:21,520
+Because we're running everything in AWS, Lambda is there waiting for us.
+
+121
+00:09:21,520 --> 00:09:26,580
+The final little thing I wanted to mention is Lambda is so small and efficient that running
+
+122
+00:09:26,580 --> 00:09:30,600
+a single one is very energy efficient, and that's good for the Earth, and that's good
+
+123
+00:09:30,600 --> 00:09:33,600
+for us.
+
+124
+00:09:33,600 --> 00:09:34,600
+All right.
+
+125
+00:09:34,600 --> 00:09:35,600
+Why Python?
+
+126
+00:09:35,600 --> 00:09:40,720
+I probably don't have to convince PyTexus on this, but I'm going to try anyways.
+
+127
+00:09:40,720 --> 00:09:47,160
+We really were interested in Python because of the imperative coding style that it conferred.
+
+128
+00:09:47,160 --> 00:09:52,200
+Also, Stack Overflow Survey, I can't go wrong with this.
+
+129
+00:09:52,200 --> 00:10:00,120
+Python is always in the second or third most loved language.
+
+130
+00:10:00,120 --> 00:10:07,560
+Taking a step back again to some external wisdom here from Mr. Kinsella, Python was
+
+131
+00:10:08,040 --> 00:10:14,200
+interesting to us because we didn't have to worry about a bunch of dependencies.
+
+132
+00:10:14,200 --> 00:10:22,520
+The appeal of having a robust standard library running in this little remote runtime was
+
+133
+00:10:22,520 --> 00:10:27,320
+huge because we don't have to think about breaking independency or patching independency
+
+134
+00:10:27,320 --> 00:10:29,880
+or anything like that.
+
+135
+00:10:29,880 --> 00:10:35,600
+Of course, everyone knows Python is hugely popular, but I didn't realize this until I
+
+136
+00:10:35,720 --> 00:10:43,440
+went and checked the Stack Overflow Survey for 2020, and it almost doubles its lead over
+
+137
+00:10:43,440 --> 00:10:50,280
+JavaScript and Go as being the most wanted technology by professional developers.
+
+138
+00:10:50,280 --> 00:10:53,560
+That's really cool, and I think it says that Python is just going to keep growing and growing
+
+139
+00:10:53,560 --> 00:10:55,120
+and growing.
+
+140
+00:10:55,120 --> 00:10:57,760
+All right.
+
+141
+00:10:57,760 --> 00:11:01,120
+Let's talk a little bit about the architecture of our solution.
+
+142
+00:11:01,120 --> 00:11:05,360
+I wanted to lay out the whole picture before we get into the nitty gritty.
+
+143
+00:11:05,360 --> 00:11:09,520
+CloudWatch is an AWS service that allows you to define events.
+
+144
+00:11:09,520 --> 00:11:12,400
+In this case, we're defining a time-based event.
+
+145
+00:11:12,400 --> 00:11:19,720
+By that, we mean we want something to happen every so often, so every week, let's say.
+
+146
+00:11:19,720 --> 00:11:23,000
+That thing we want to happen is we want our lambda to run.
+
+147
+00:11:23,000 --> 00:11:30,000
+Our lambda is written in all Python, and the Python code is saying, hey, go out, scan these
+
+148
+00:11:30,000 --> 00:11:33,840
+cloud assets, put together an inventory for me.
+
+149
+00:11:33,840 --> 00:11:41,280
+Do what that abacus used to be done manually by someone, put it in the CSV, so put it in
+
+150
+00:11:41,280 --> 00:11:48,040
+the format that I'm used to, and then go save it in object storage, so save it in S3.
+
+151
+00:11:48,040 --> 00:11:52,600
+This part's important because we want some element of permanence to it.
+
+152
+00:11:52,600 --> 00:11:54,320
+This is our high-level architecture.
+
+153
+00:11:54,320 --> 00:11:57,040
+We're going to step through each of the steps now.
+
+154
+00:11:57,040 --> 00:12:00,200
+All right.
+
+155
+00:12:00,200 --> 00:12:05,920
+Going to step number one, one of the things that's important to understand about AWS is
+
+156
+00:12:05,920 --> 00:12:12,960
+that when you want to access resources in a different account, we have our systems defined
+
+157
+00:12:12,960 --> 00:12:18,800
+in different accounts, you have to assume cross-account access.
+
+158
+00:12:18,800 --> 00:12:26,280
+Basically what that means is you have an agreement with a foreign entity that you're both allowed
+
+159
+00:12:26,280 --> 00:12:29,080
+to talk to each other.
+
+160
+00:12:29,080 --> 00:12:37,020
+What's happening here is we are using Boto 3, which is the AWS SDK for Python, and we're
+
+161
+00:12:37,020 --> 00:12:44,440
+using that to create a resource, and we're calling the STS service or the security token
+
+162
+00:12:44,440 --> 00:12:45,440
+service.
+
+163
+00:12:45,440 --> 00:12:53,200
+We're saying, hey, allow us to assume a role in the second account, account B, and we're
+
+164
+00:12:53,800 --> 00:13:00,280
+the role of CA-scanner, which just stands for cross-account scanner.
+
+165
+00:13:00,280 --> 00:13:05,100
+It's going to return to us some credentials, some temporary credentials, so we can actually
+
+166
+00:13:05,100 --> 00:13:08,500
+do our work.
+
+167
+00:13:08,500 --> 00:13:11,720
+This is what we just described in architectural format.
+
+168
+00:13:11,720 --> 00:13:15,240
+We're calling out with our Lambda to STS.
+
+169
+00:13:15,240 --> 00:13:20,440
+That security service is allowing us to assume a role, and the account and the security service
+
+170
+00:13:20,560 --> 00:13:26,000
+are returning to us credentials so we can actually do work.
+
+171
+00:13:26,000 --> 00:13:34,800
+I just want to pause here and explain some things I discovered about Boto 3, the SDK.
+
+172
+00:13:34,800 --> 00:13:37,160
+Clients versus resources.
+
+173
+00:13:37,160 --> 00:13:42,080
+Clients are low-level interfaces, meaning you're really close to the actual AWS service
+
+174
+00:13:42,080 --> 00:13:44,360
+API.
+
+175
+00:13:44,360 --> 00:13:47,280
+Whereas resources, resources are really nice.
+
+176
+00:13:47,280 --> 00:13:53,760
+They're object-oriented interfaces, meaning they come with easy ways to deal with it.
+
+177
+00:13:53,760 --> 00:13:58,480
+What I found through this process is that I would be excited when I would discover that
+
+178
+00:13:58,480 --> 00:14:04,340
+a service had a resource to offer through the SDK, and then I would mentally prepare
+
+179
+00:14:04,340 --> 00:14:08,760
+myself if I was stuck dealing with a low-level client.
+
+180
+00:14:08,760 --> 00:14:13,600
+I'll show you a couple examples of that as we go through the code.
+
+181
+00:14:13,600 --> 00:14:18,520
+Now that we've got those credentials, we're basically going to create either a resource
+
+182
+00:14:18,520 --> 00:14:23,320
+or a client for each different service that we want to go through and scan.
+
+183
+00:14:23,320 --> 00:14:29,080
+Here, and we'll go through these individually, but we're basically looking at different services
+
+184
+00:14:29,080 --> 00:14:35,240
+like EC2, the Elastic Compute Cloud, which is virtual machines, or RDS, which is the
+
+185
+00:14:35,240 --> 00:14:41,560
+relational database service, so that's for databases for storage, or things like Elastic
+
+186
+00:14:41,560 --> 00:14:44,280
+Cache, API Gateway.
+
+187
+00:14:44,280 --> 00:14:48,880
+You probably know what those two do.
+
+188
+00:14:48,880 --> 00:14:53,840
+After that, let's look at one specific example.
+
+189
+00:14:53,840 --> 00:14:57,520
+One of the ways that we quantify our inventories is in devices.
+
+190
+00:14:57,520 --> 00:15:04,280
+We define a new array, and that array, because this is a resource, we're actually going to
+
+191
+00:15:04,280 --> 00:15:11,520
+be able to iterate through it using ec2.instances.all, which is just super easy and nice.
+
+192
+00:15:12,480 --> 00:15:13,480
+Preferable.
+
+193
+00:15:13,480 --> 00:15:19,520
+One of the things I immediately found out upon doing this project, almost in the first
+
+194
+00:15:19,520 --> 00:15:25,720
+hour, is that we actually had an old server running on one of the accounts I was testing
+
+195
+00:15:25,720 --> 00:15:33,040
+against that had an image that was so old, it was in the wrong format, and this API call
+
+196
+00:15:33,040 --> 00:15:36,240
+would choke and fail.
+
+197
+00:15:36,240 --> 00:15:41,400
+From our number one, this little automation project showed some value because we didn't
+
+198
+00:15:41,400 --> 00:15:46,400
+realize we had that old server and we needed to go kill it.
+
+199
+00:15:46,400 --> 00:15:51,360
+After writing a guard clause here to make sure that this API call didn't fail, we move
+
+200
+00:15:51,360 --> 00:15:57,360
+on to pulling out the tag names and also the environment details.
+
+201
+00:15:57,360 --> 00:16:01,720
+Then from here, because this is a resource, this is really nice.
+
+202
+00:16:02,200 --> 00:16:07,640
+We have access to all of these things where you can go in and just map from kind of human
+
+203
+00:16:07,640 --> 00:16:13,840
+readable column, like host name or private IP or baseline image, and we can pull that
+
+204
+00:16:13,840 --> 00:16:21,320
+off of the API itself.
+
+205
+00:16:21,320 --> 00:16:22,740
+Let's look at the next one.
+
+206
+00:16:22,740 --> 00:16:27,900
+This is another device, a load balancer, but this is using a client.
+
+207
+00:16:28,080 --> 00:16:33,380
+You can see here that I'm having to do a little bit more work to actually pull the information
+
+208
+00:16:33,380 --> 00:16:34,380
+I want out.
+
+209
+00:16:34,380 --> 00:16:41,840
+I'm having to understand from this lower level client exactly what's going on in the data.
+
+210
+00:16:41,840 --> 00:16:46,960
+This is just something to be aware of.
+
+211
+00:16:46,960 --> 00:16:48,840
+Those were our two device examples.
+
+212
+00:16:48,840 --> 00:16:52,740
+The other way we think about systems are in interfaces.
+
+213
+00:16:53,580 --> 00:16:57,780
+A VPC is a virtual private cloud or a network.
+
+214
+00:16:57,780 --> 00:17:02,380
+What's nice about this and what's interesting about this is as I dug into this, I started
+
+215
+00:17:02,380 --> 00:17:08,380
+to learn a little bit more about how AWS actually works.
+
+216
+00:17:08,380 --> 00:17:14,740
+By that, I mean VPCs are actually just kind of a subcomponent of the EC2 service.
+
+217
+00:17:14,740 --> 00:17:19,100
+You can see here I'm still benefiting from using that EC2 resource.
+
+218
+00:17:19,460 --> 00:17:24,580
+I can still use it kind of dot all and iterate over that with a for loop.
+
+219
+00:17:24,580 --> 00:17:27,180
+This is another easy one.
+
+220
+00:17:27,180 --> 00:17:33,380
+It's not like dealing with a client, but it's very telling that VPCs are part of the EC2
+
+221
+00:17:33,380 --> 00:17:34,380
+service.
+
+222
+00:17:34,380 --> 00:17:40,540
+It allows us to trace back some of AWS's DNA to figure out that EC2 is one of the core
+
+223
+00:17:40,540 --> 00:17:43,100
+services and one of the first ones.
+
+224
+00:17:43,100 --> 00:17:49,020
+You can't run much without a network, so VPCs are a starting point.
+
+225
+00:17:49,940 --> 00:17:54,700
+Then, of course, I just want to call out that there are a lot of fields here that are left
+
+226
+00:17:54,700 --> 00:17:57,940
+at NA.
+
+227
+00:17:57,940 --> 00:18:00,140
+Those are future opportunities for improvement.
+
+228
+00:18:00,140 --> 00:18:02,500
+We hope to do a lot with those.
+
+229
+00:18:02,500 --> 00:18:07,340
+All right, so moving on to a different interface.
+
+230
+00:18:07,340 --> 00:18:08,420
+This is RDS.
+
+231
+00:18:08,420 --> 00:18:11,780
+This is a managed database service.
+
+232
+00:18:11,780 --> 00:18:15,840
+Looking at this, you can see that I left a little note here.
+
+233
+00:18:15,840 --> 00:18:22,440
+This isn't super useful right now because one of the difficulties that we had before
+
+234
+00:18:22,440 --> 00:18:32,880
+when we were using the old abacus method was certain data fields didn't really map over.
+
+235
+00:18:32,880 --> 00:18:37,560
+For example, in this case, we didn't have a discrete name like Daisy for our database.
+
+236
+00:18:37,560 --> 00:18:43,760
+Instead, we were using a database identifier, and that's what actually made it unique.
+
+237
+00:18:43,760 --> 00:18:46,820
+We had to figure out how that worked.
+
+238
+00:18:46,820 --> 00:18:51,380
+The other thing I did here is I started to have a conversation with Darren, the security
+
+239
+00:18:51,380 --> 00:18:53,600
+officer I was working with on this project.
+
+240
+00:18:53,600 --> 00:19:01,000
+I started to notice data points that I thought the security team might be interested in,
+
+241
+00:19:01,000 --> 00:19:06,220
+like is it encrypted or what's the backup period?
+
+242
+00:19:06,220 --> 00:19:10,100
+We actually ended up adding more fields to the inventory process than we had originally
+
+243
+00:19:10,100 --> 00:19:12,800
+planned so that we can improve our security.
+
+244
+00:19:12,840 --> 00:19:14,120
+I think that's really cool.
+
+245
+00:19:16,880 --> 00:19:19,200
+That's step number two.
+
+246
+00:19:19,200 --> 00:19:25,240
+If step number one was assuming that identity, step number two is actually scanning the resources
+
+247
+00:19:25,240 --> 00:19:29,800
+and iterating through them and putting them into a human readable format.
+
+248
+00:19:29,800 --> 00:19:33,200
+Let's talk about step number three.
+
+249
+00:19:33,200 --> 00:19:37,120
+Once we've got all the data, now we can bring it all together.
+
+250
+00:19:37,120 --> 00:19:43,720
+We're going to actually just use a very simple function here to write out a dictionary in
+
+251
+00:19:43,720 --> 00:19:50,080
+CSV format, specifying the columns, and then we're going to do something interesting.
+
+252
+00:19:50,080 --> 00:19:55,240
+We're going to store it in local file storage for a second.
+
+253
+00:19:55,240 --> 00:20:00,520
+One of the nice things about Lambda is you have access to a file system, but it's ephemeral.
+
+254
+00:20:00,520 --> 00:20:05,440
+Once the Lambda is done executing, it's going to go away, which is fine because we're composing
+
+255
+00:20:05,440 --> 00:20:08,360
+a CSV, but we want it to live on.
+
+256
+00:20:08,360 --> 00:20:15,640
+In this case, we're actually outputting it to the simple storage service or S3, which is
+
+257
+00:20:15,640 --> 00:20:22,880
+object storage at a certain ID with a certain Unix timestamp attached to it.
+
+258
+00:20:25,320 --> 00:20:30,480
+Now, one of the final things that I would be remiss if I didn't share with you is remember,
+
+259
+00:20:30,520 --> 00:20:35,480
+Lambda is a function as a service offering, meaning it's expecting something to return.
+
+260
+00:20:35,480 --> 00:20:36,920
+It's a function.
+
+261
+00:20:36,920 --> 00:20:42,440
+Even though this thing is all done, it's done all of its work, if you don't return some status
+
+262
+00:20:42,440 --> 00:20:48,600
+code saying you did work and you're successful, your Lambda will be mad at you.
+
+263
+00:20:48,600 --> 00:20:51,880
+In this case, we're just saying, hey, dump this to the logs.
+
+264
+00:20:51,880 --> 00:20:55,400
+Let them know that we were successful.
+
+265
+00:20:55,400 --> 00:21:00,720
+That's number three, taking the data that we combed and turning it into something that
+
+266
+00:21:00,720 --> 00:21:05,480
+we can use forevermore.
+
+267
+00:21:05,480 --> 00:21:11,320
+Let's bring it all together and actually automate it by making it happen on a certain schedule.
+
+268
+00:21:11,320 --> 00:21:13,160
+This is a picture of the Lambda console.
+
+269
+00:21:13,160 --> 00:21:19,040
+On the left side, there's the CloudWatch event trigger I was talking about.
+
+270
+00:21:19,040 --> 00:21:23,240
+If you were to click that add trigger button, it would give you an interface where you can
+
+271
+00:21:23,240 --> 00:21:25,280
+define a cron job.
+
+272
+00:21:25,280 --> 00:21:32,120
+You can go in and say, hey, I want this thing to run on certain days of the week at a certain
+
+273
+00:21:32,120 --> 00:21:33,120
+time.
+
+274
+00:21:33,120 --> 00:21:38,320
+In this case, it's Wednesday at 9 a.m. Eastern for us.
+
+275
+00:21:38,320 --> 00:21:41,160
+You can also feed it an account number.
+
+276
+00:21:41,160 --> 00:21:47,040
+At the very beginning of our function, we were pulling an account out of the event object.
+
+277
+00:21:47,040 --> 00:21:51,680
+That's because we want to know which system we're going to scan.
+
+278
+00:21:51,680 --> 00:21:56,020
+This is where you would enter those details in your trigger.
+
+279
+00:21:56,020 --> 00:22:00,080
+As you can see, we had nine initial ones set up.
+
+280
+00:22:00,080 --> 00:22:07,140
+Those were all set to run and scan different systems and bring back inventories.
+
+281
+00:22:07,140 --> 00:22:08,520
+This is the final step.
+
+282
+00:22:08,520 --> 00:22:14,680
+This is taking that CloudWatch event, hooking it up to the Lambda, which was step number
+
+283
+00:22:14,680 --> 00:22:15,680
+one.
+
+284
+00:22:15,680 --> 00:22:21,080
+We did backwards, forwards, and making the whole system work.
+
+285
+00:22:21,080 --> 00:22:23,920
+Here's the actual output.
+
+286
+00:22:23,920 --> 00:22:25,960
+The output looks like this.
+
+287
+00:22:25,960 --> 00:22:31,240
+It's a series of files in CSV format where we capture the artifacts, the devices, and
+
+288
+00:22:31,240 --> 00:22:32,600
+the interfaces.
+
+289
+00:22:32,600 --> 00:22:36,000
+We get a weekly one.
+
+290
+00:22:36,000 --> 00:22:41,720
+If we were to open devices and interfaces, you can see that we're getting human readable
+
+291
+00:22:41,720 --> 00:22:49,040
+information in a very easy to consume and predictable way.
+
+292
+00:22:49,040 --> 00:22:52,520
+We're getting the same thing every week.
+
+293
+00:22:52,520 --> 00:22:57,300
+By doing that, we're getting to see how systems change over time.
+
+294
+00:22:57,300 --> 00:23:02,600
+The feedback we've gotten is very positive.
+
+295
+00:23:02,600 --> 00:23:05,920
+We're pretty excited about the results of this.
+
+296
+00:23:05,920 --> 00:23:15,880
+By the numbers, very small program, 626 lines of code, only four kilobytes, but it's doing
+
+297
+00:23:15,880 --> 00:23:17,880
+a lot of work.
+
+298
+00:23:17,880 --> 00:23:25,360
+In terms of cost savings, at one hour per system per week, we use a blended rate of
+
+299
+00:23:25,360 --> 00:23:30,360
+about $80 per hour per worker.
+
+300
+00:23:30,360 --> 00:23:36,160
+At 21 current accounts in AWS, each one needs to be inventoried.
+
+301
+00:23:36,160 --> 00:23:45,000
+We're talking about $1,700 a week in terms of savings and about $90,000 per year, which
+
+302
+00:23:45,000 --> 00:23:47,080
+is pretty amazing.
+
+303
+00:23:47,640 --> 00:23:55,160
+I feel bad if I didn't stop here and acknowledge something, which is that CFOs and budget people
+
+304
+00:23:55,160 --> 00:23:59,080
+don't actually think that this is real cost savings.
+
+305
+00:23:59,080 --> 00:24:03,480
+That's because that person's still employed.
+
+306
+00:24:03,480 --> 00:24:06,640
+We're still paying them $80 an hour.
+
+307
+00:24:06,640 --> 00:24:13,480
+While someone with an accountant might be suspicious of me calling this cost savings,
+
+308
+00:24:13,560 --> 00:24:18,400
+I actually think the benefits are bigger than cost savings because what you're regaining
+
+309
+00:24:18,400 --> 00:24:22,120
+is actually the opportunity to do something else.
+
+310
+00:24:22,120 --> 00:24:28,160
+Those people don't have to think about compliance like this anymore, like we did at the beginning
+
+311
+00:24:28,160 --> 00:24:32,360
+with the Eve flat on the table.
+
+312
+00:24:32,360 --> 00:24:35,560
+That guy instead feels more like this.
+
+313
+00:24:35,560 --> 00:24:43,400
+He's super happy, and he's super happy because automation means happiness.
+
+314
+00:24:43,400 --> 00:24:47,920
+He no longer has to do mundane menial tasks like count digital assets.
+
+315
+00:24:47,920 --> 00:24:52,840
+Instead, he can focus his energy elsewhere.
+
+316
+00:24:52,840 --> 00:24:57,920
+In conclusion, Python running in Lambda, I think it's the ultimate cloud cron job runner.
+
+317
+00:24:57,920 --> 00:25:04,360
+I've only written a couple of these so far, but I'm really amped about it, and I've had
+
+318
+00:25:04,360 --> 00:25:06,360
+great results so far.
+
+319
+00:25:06,360 --> 00:25:12,960
+I want to share with you some future improvements we plan on making some of the output easier
+
+320
+00:25:13,040 --> 00:25:19,160
+to read, enhancing it, and then we're also going to expand this script to additional
+
+321
+00:25:19,160 --> 00:25:21,440
+AWS services.
+
+322
+00:25:21,440 --> 00:25:27,280
+All of this code is going to be open source by the time you see this video, and you can
+
+323
+00:25:27,280 --> 00:25:34,000
+find it at our organization, which is slash US SBA on GitHub.
+
+324
+00:25:34,000 --> 00:25:36,920
+I have a call to action for you all.
+
+325
+00:25:36,920 --> 00:25:41,960
+Find a problem, do some napkin math to see if it's worth automating.
+
+326
+00:25:41,960 --> 00:25:43,840
+Select a tool.
+
+327
+00:25:43,840 --> 00:25:45,560
+Just go do it.
+
+328
+00:25:45,560 --> 00:25:50,520
+I'll leave you with a quote from a good friend of mine, Mr. John King, which is, what's the
+
+329
+00:25:50,520 --> 00:25:53,320
+actual lifetime of the decision you're making?
+
+330
+00:25:53,320 --> 00:25:56,640
+Are you sitting there, and are you over analyzing what's going on?
+
+331
+00:25:56,640 --> 00:26:02,440
+Are you thinking for four hours about a piece of work that's only going to take you two?
+
+332
+00:26:02,440 --> 00:26:03,440
+Just go do it.
+
+333
+00:26:03,440 --> 00:26:05,880
+Go automate the thing.
+
+334
+00:26:05,880 --> 00:26:06,880
+Thank you so much.
+
+335
+00:26:06,880 --> 00:26:08,320
+I hope you have a great PyTexas.
+

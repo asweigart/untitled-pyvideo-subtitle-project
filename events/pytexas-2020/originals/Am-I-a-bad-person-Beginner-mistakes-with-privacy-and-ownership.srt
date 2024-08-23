@@ -1,0 +1,1660 @@
+1
+00:00:00,000 --> 00:00:23,000
+Hey everyone, I'm going to talk about my journey creating a relatively simple flash gap and
+
+2
+00:00:23,000 --> 00:00:27,640
+the things I learned about privacy and ownership along the way.
+
+3
+00:00:27,640 --> 00:00:29,820
+But first a little bit about me.
+
+4
+00:00:29,820 --> 00:00:34,380
+My name is Abby Carey and I'm a developer advocate at Google Cloud.
+
+5
+00:00:34,380 --> 00:00:38,140
+I like really good fan fiction and really good food.
+
+6
+00:00:38,140 --> 00:00:42,140
+So first, we're going to take a look at what's going on in the world.
+
+7
+00:00:42,140 --> 00:00:46,580
+What were some huge data breaches and what laws were created to give users more power
+
+8
+00:00:46,580 --> 00:00:48,140
+over their data?
+
+9
+00:00:48,140 --> 00:00:52,400
+Second, we're going to look at a flash web app I made.
+
+10
+00:00:52,400 --> 00:00:58,620
+It's not pretty, it's not very compliant, and I may have done some frowned upon things
+
+11
+00:00:58,620 --> 00:01:01,940
+around ownership while making it.
+
+12
+00:01:01,940 --> 00:01:08,500
+And finally, we're going to take a look at how I fixed up my app, made some small changes,
+
+13
+00:01:08,500 --> 00:01:12,300
+and got it on the path to compliance.
+
+14
+00:01:12,300 --> 00:01:15,820
+And I'll also reflect on better ways to handle ownership.
+
+15
+00:01:15,820 --> 00:01:19,660
+I just want to give a heads up, I am not a legal or privacy security expert.
+
+16
+00:01:19,660 --> 00:01:24,500
+I'm just showing how I improved certain aspects of a simple app to make it more aligned with
+
+17
+00:01:24,500 --> 00:01:25,780
+new laws.
+
+18
+00:01:25,780 --> 00:01:31,740
+This talk is more about making a little things aware to beginners that they can easily look
+
+19
+00:01:31,740 --> 00:01:32,740
+over.
+
+20
+00:01:32,740 --> 00:01:38,380
+Let's take a look at some huge data leaks in recent news and what regulations have been
+
+21
+00:01:38,380 --> 00:01:41,740
+put in place to protect our data.
+
+22
+00:01:41,740 --> 00:01:49,460
+If you do a quick search for PII breach, chances are you're going to see a lot of hits.
+
+23
+00:01:49,460 --> 00:01:53,360
+But let's talk about a couple of the big ones.
+
+24
+00:01:53,360 --> 00:01:56,360
+So first, there's Coffee Meets Bagel.
+
+25
+00:01:56,360 --> 00:02:03,720
+That happened in 2018-19, and 6 million usernames and email addresses were breached.
+
+26
+00:02:03,720 --> 00:02:08,400
+And unfortunately, that happened on Valentine's Day, a little ironic for a dating app.
+
+27
+00:02:08,400 --> 00:02:14,560
+Georgia Tech had 1.3 million users' data breached in 2019.
+
+28
+00:02:14,560 --> 00:02:19,800
+Info was stolen about current and former faculty, students, and staff, and even applicants.
+
+29
+00:02:20,040 --> 00:02:25,040
+The database held names, addresses, social security numbers, and birthdays of all these
+
+30
+00:02:25,040 --> 00:02:27,040
+people.
+
+31
+00:02:27,040 --> 00:02:33,360
+That was their second data breach of the year, too, so not very good luck.
+
+32
+00:02:33,360 --> 00:02:41,160
+And one of the biggest ones, Marriott International, 500 million users' data leaked in 2018, and
+
+33
+00:02:41,160 --> 00:02:45,700
+5.2 in 2020.
+
+34
+00:02:45,700 --> 00:02:51,420
+So all the guest information that was leaked included names, email addresses, phone numbers,
+
+35
+00:02:51,420 --> 00:02:57,540
+loyalty account numbers, and account balances, company names, and even airline loyalty programs.
+
+36
+00:02:57,540 --> 00:03:00,780
+And that's not even the whole list of everything that's leaked.
+
+37
+00:03:00,780 --> 00:03:04,860
+With all these huge leaks in the news, you're probably wondering if you've been a part of
+
+38
+00:03:04,860 --> 00:03:05,860
+one.
+
+39
+00:03:05,860 --> 00:03:10,100
+And actually, you can check it out, this link here, HaveIBeenPwned.com.
+
+40
+00:03:10,500 --> 00:03:18,940
+I put my email address in there a little bit ago, and I found out that two web services
+
+41
+00:03:18,940 --> 00:03:21,180
+had been breached that I use.
+
+42
+00:03:21,180 --> 00:03:25,180
+One was an interior design website, and the other was a popular fan fiction site that
+
+43
+00:03:25,180 --> 00:03:27,180
+I've actually visited maybe twice.
+
+44
+00:03:27,180 --> 00:03:36,020
+I'm actually kind of surprised that number wasn't higher, but maybe that's a good thing.
+
+45
+00:03:36,020 --> 00:03:40,260
+There have been two high-profile regulations that have come out in the past few years.
+
+46
+00:03:40,260 --> 00:03:45,460
+The two that I'm going to be focusing on are GDPR and CCPA.
+
+47
+00:03:45,460 --> 00:03:49,820
+GDPR stands for General Data Protection Regulation.
+
+48
+00:03:49,820 --> 00:03:53,780
+In the 80s, computing was starting to be used to process personal data.
+
+49
+00:03:53,780 --> 00:03:57,440
+So in 1984, the European Council held a convention.
+
+50
+00:03:57,440 --> 00:04:01,680
+This set out guidelines for EU members on what is wrong and what is right.
+
+51
+00:04:01,680 --> 00:04:07,240
+From this, the UK created the Data Protection Act of 1984.
+
+52
+00:04:07,240 --> 00:04:11,520
+After the 80s, usage of computers and their availability grew a ton.
+
+53
+00:04:11,520 --> 00:04:17,000
+The EU got together for another convention in 1995 and made the Data Protection Directive.
+
+54
+00:04:17,000 --> 00:04:21,440
+This set a higher standard around the protection of individuals with regards to the processing
+
+55
+00:04:21,440 --> 00:04:25,400
+of personal data and on the movement of the data.
+
+56
+00:04:25,400 --> 00:04:32,120
+Then the UK enacted the Data Protection Act of 1998.
+
+57
+00:04:32,120 --> 00:04:33,120
+Then comes 2012.
+
+58
+00:04:33,120 --> 00:04:35,960
+The internet is bigger than ever.
+
+59
+00:04:35,960 --> 00:04:37,360
+Social media is booming.
+
+60
+00:04:37,360 --> 00:04:43,120
+The European Commission proposes a comprehensive reform of the EU's 1995 data protection rules
+
+61
+00:04:43,120 --> 00:04:47,640
+to strengthen online privacy rights and boost Europe's digital economy.
+
+62
+00:04:47,640 --> 00:04:53,160
+They pretty much wanted to make it fit for the digital age.
+
+63
+00:04:53,200 --> 00:04:58,240
+This right here is the start of GDPR.
+
+64
+00:04:58,240 --> 00:05:02,240
+It's a four-year journey getting the approval of votes and coming to an agreement on the
+
+65
+00:05:02,240 --> 00:05:04,120
+GDPR's approach.
+
+66
+00:05:04,120 --> 00:05:07,640
+In May 24, 2016, GDPR is go.
+
+67
+00:05:07,640 --> 00:05:11,000
+It replaces the Data Protection Directive from 1995.
+
+68
+00:05:11,000 --> 00:05:12,320
+But commission isn't heartless.
+
+69
+00:05:12,320 --> 00:05:15,320
+They give everyone two years to meet their regulations.
+
+70
+00:05:15,320 --> 00:05:19,600
+It's now up to the companies to take all the steps necessary to ensure compliance with
+
+71
+00:05:19,680 --> 00:05:24,000
+this new 260-page data protection law.
+
+72
+00:05:24,000 --> 00:05:30,640
+And finally, in 2018, get compliant or get a fine.
+
+73
+00:05:30,640 --> 00:05:32,200
+So what is GDPR?
+
+74
+00:05:32,200 --> 00:05:38,840
+Like I said, it's a 260-page data protection law containing 99 articles and 173 recitals.
+
+75
+00:05:38,840 --> 00:05:40,880
+But who does it affect?
+
+76
+00:05:40,880 --> 00:05:45,720
+Companies who have websites that process EU citizen data.
+
+77
+00:05:45,720 --> 00:05:49,240
+And you can't really control where people are coming from to your website.
+
+78
+00:05:49,240 --> 00:05:51,480
+So it's basically a global thing.
+
+79
+00:05:51,480 --> 00:05:54,040
+Big companies can't escape these regulations either.
+
+80
+00:05:54,040 --> 00:06:00,960
+British Airways, Marriott International Hotels, and Google have all been handed some big fines.
+
+81
+00:06:00,960 --> 00:06:02,640
+But what is it protecting?
+
+82
+00:06:02,640 --> 00:06:06,040
+It's protecting your personal information.
+
+83
+00:06:06,040 --> 00:06:09,360
+Individuals have the right to access their personal data.
+
+84
+00:06:09,360 --> 00:06:14,840
+When requested, companies need to let users know what is being collected and, when requested,
+
+85
+00:06:14,840 --> 00:06:17,440
+also how it's being used.
+
+86
+00:06:17,440 --> 00:06:21,880
+The right to ratification means the user must be able to request that inaccurate information
+
+87
+00:06:21,880 --> 00:06:23,560
+about them be updated.
+
+88
+00:06:23,560 --> 00:06:27,320
+On the other hand, the right to erasure means that the user must be able to delete their
+
+89
+00:06:27,320 --> 00:06:30,600
+data when requested.
+
+90
+00:06:30,600 --> 00:06:32,880
+The restraint to restrict processing.
+
+91
+00:06:32,880 --> 00:06:37,320
+A user can request that their data stop being processed, but the company can still store
+
+92
+00:06:37,320 --> 00:06:38,520
+it.
+
+93
+00:06:38,520 --> 00:06:40,240
+The right to data portability.
+
+94
+00:06:40,240 --> 00:06:46,320
+This means individuals who request companies transfer their personal data to another company.
+
+95
+00:06:46,480 --> 00:06:47,720
+The right to object.
+
+96
+00:06:47,720 --> 00:06:52,200
+This means the user can object to how specific types of data are being processed.
+
+97
+00:06:52,200 --> 00:06:56,680
+A type of process would include marketing.
+
+98
+00:06:56,680 --> 00:07:03,120
+The CCPA is a law designed to protect data privacy rights of citizens living in California.
+
+99
+00:07:03,120 --> 00:07:07,400
+It forces companies to provide more information to consumers about what's being done with
+
+100
+00:07:07,400 --> 00:07:12,160
+their data and gives them more control over the sharing of their data.
+
+101
+00:07:12,160 --> 00:07:14,480
+It's protecting user data.
+
+102
+00:07:14,480 --> 00:07:20,640
+Most consumers don't realize that their personal information is being shared or sold to others.
+
+103
+00:07:20,640 --> 00:07:25,520
+This makes sure they're given the chance to opt out of having their information used in
+
+104
+00:07:25,520 --> 00:07:28,480
+a way that they disapprove of.
+
+105
+00:07:28,480 --> 00:07:32,240
+Now let's take a look at some rights the CCPA grants.
+
+106
+00:07:32,240 --> 00:07:34,720
+They might sound a little familiar.
+
+107
+00:07:34,720 --> 00:07:40,640
+First, users have a right to request that business disclose the specific pieces of information
+
+108
+00:07:40,640 --> 00:07:42,720
+collected about them.
+
+109
+00:07:42,720 --> 00:07:47,680
+Though many online businesses already disclose the general sources and purposes of their
+
+110
+00:07:47,680 --> 00:07:53,440
+data collection through their privacy policies, you need to inform users specifically about
+
+111
+00:07:53,440 --> 00:07:57,680
+what types of information is being collected about them.
+
+112
+00:07:57,680 --> 00:07:59,920
+Access and portability.
+
+113
+00:07:59,920 --> 00:08:04,520
+Companies have to give users copies of their data if they request it.
+
+114
+00:08:04,520 --> 00:08:06,240
+The right to opt out.
+
+115
+00:08:06,240 --> 00:08:11,320
+Users now have to opt in in order to have their information be sold.
+
+116
+00:08:11,320 --> 00:08:12,800
+And the right to delete.
+
+117
+00:08:12,800 --> 00:08:19,280
+A user can request that their information be deleted from a company's database.
+
+118
+00:08:19,280 --> 00:08:22,400
+All right, so now we're on to the good stuff.
+
+119
+00:08:22,400 --> 00:08:27,600
+Let's talk about my super awesome, not horrible at all, flask app I made.
+
+120
+00:08:27,600 --> 00:08:32,120
+And maybe you'll be able to see some issues with it.
+
+121
+00:08:32,120 --> 00:08:35,640
+I'm not sure, but we'll see.
+
+122
+00:08:35,640 --> 00:08:37,760
+Here is my PokeView app.
+
+123
+00:08:37,760 --> 00:08:40,880
+And I'm going to show it off to you guys.
+
+124
+00:08:40,960 --> 00:08:41,960
+It's pretty cool.
+
+125
+00:08:41,960 --> 00:08:44,800
+So we got the option to sign in or sign up.
+
+126
+00:08:44,800 --> 00:08:49,520
+So I'm going to go ahead and create a new account.
+
+127
+00:08:49,520 --> 00:08:54,880
+For username, I'll make it PyTexas.
+
+128
+00:08:54,880 --> 00:09:01,640
+The email can be test at gmail.com.
+
+129
+00:09:01,640 --> 00:09:05,160
+And then the password, one, two, three, four, five, six, seven, eight.
+
+130
+00:09:05,160 --> 00:09:07,200
+Yeah, super secure.
+
+131
+00:09:07,200 --> 00:09:09,280
+So let's go ahead and sign up.
+
+132
+00:09:09,280 --> 00:09:12,760
+Okay, account created.
+
+133
+00:09:12,760 --> 00:09:16,480
+So let's go ahead and try and get in there.
+
+134
+00:09:16,480 --> 00:09:21,800
+PyTexas and then one, two, three, four, five, six, seven, eight.
+
+135
+00:09:21,800 --> 00:09:22,800
+Sign in.
+
+136
+00:09:22,800 --> 00:09:28,680
+Okay, so that was our account creation and sign in flow.
+
+137
+00:09:28,680 --> 00:09:34,080
+And then once you're in, it looks like PyTexas has no Pokemon caught so far.
+
+138
+00:09:34,080 --> 00:09:37,520
+So we just got like a Pokedex here.
+
+139
+00:09:37,520 --> 00:09:45,280
+And then I can like click on Pokemon, pop it open, and that's it.
+
+140
+00:09:45,280 --> 00:09:47,280
+Then I can sign out.
+
+141
+00:09:47,280 --> 00:09:51,760
+Yeah, so that's that app.
+
+142
+00:09:51,760 --> 00:09:56,040
+Now let's take a closer look and give you a little more context on what's going on with
+
+143
+00:09:56,040 --> 00:09:57,800
+my app here.
+
+144
+00:09:57,800 --> 00:10:01,200
+For my first Python web app, I decided to create a simple Pokedex.
+
+145
+00:10:01,520 --> 00:10:08,480
+It includes the following features, user account creation and persistent sign in, a Pokedex
+
+146
+00:10:08,480 --> 00:10:15,200
+for each user, the ability for users to toggle and store the catch status of Pokemon, and
+
+147
+00:10:15,200 --> 00:10:18,880
+automatic scaling with App Engine once it's deployed.
+
+148
+00:10:18,880 --> 00:10:23,360
+All my Pokemon images are URLs that are scripted from some Pokemon database site.
+
+149
+00:10:23,360 --> 00:10:25,280
+I just embedded them in image tags.
+
+150
+00:10:25,280 --> 00:10:29,760
+I didn't want to like right click and grab the URL for each of these Pokemon.
+
+151
+00:10:29,760 --> 00:10:33,600
+So I created a Python script to just scrape them all.
+
+152
+00:10:33,600 --> 00:10:40,880
+Once I got their URLs, I had my app embed them in my templates, tables, image tags.
+
+153
+00:10:40,880 --> 00:10:43,920
+Here's a behind the scenes look at my database.
+
+154
+00:10:43,920 --> 00:10:45,880
+It uses three tables.
+
+155
+00:10:45,880 --> 00:10:50,080
+The first table holds all the Pokemon my app supports.
+
+156
+00:10:50,080 --> 00:10:53,160
+For now, it's just the original 151.
+
+157
+00:10:53,200 --> 00:11:00,680
+The second table holds all my user's info, emails, passwords, things like that.
+
+158
+00:11:00,680 --> 00:11:03,680
+The third table is how I give everyone a profile.
+
+159
+00:11:03,680 --> 00:11:07,240
+It stores every user Pokemon pair.
+
+160
+00:11:07,240 --> 00:11:10,920
+For example, two users can both catch Pikachu.
+
+161
+00:11:10,920 --> 00:11:16,520
+These two catches will be separate rows in the database table.
+
+162
+00:11:16,520 --> 00:11:20,280
+When it comes to signing up, I have a pretty straightforward form.
+
+163
+00:11:20,280 --> 00:11:26,000
+Once each of those users signs up, they get added to my super secure database.
+
+164
+00:11:26,000 --> 00:11:30,640
+Here's a quick look at my user database table.
+
+165
+00:11:30,640 --> 00:11:34,360
+I'm in there and it looks like someone else signed up too.
+
+166
+00:11:34,360 --> 00:11:40,320
+Oh, and it looks like they are very creative with their passwords, just like me.
+
+167
+00:11:40,320 --> 00:11:41,320
+Good to know.
+
+168
+00:11:41,320 --> 00:11:44,800
+Now it's time to see some fixes I made.
+
+169
+00:11:44,800 --> 00:11:51,880
+How am I going to go from being an accidentally, unknowingly bad person to being a good person?
+
+170
+00:11:51,880 --> 00:11:56,520
+So to recap, here's what I messed up.
+
+171
+00:11:56,520 --> 00:12:00,800
+There's probably a bunch of other little things, but these were the big ones.
+
+172
+00:12:00,800 --> 00:12:03,120
+We're going to take a look at my database.
+
+173
+00:12:03,120 --> 00:12:06,640
+Something didn't look quite right there.
+
+174
+00:12:06,640 --> 00:12:12,200
+We're also going to look at how the logging experience can be improved.
+
+175
+00:12:12,200 --> 00:12:13,440
+There's also cookies.
+
+176
+00:12:13,440 --> 00:12:15,800
+GDPR is crazy about cookies.
+
+177
+00:12:15,800 --> 00:12:20,360
+You've probably seen a million of these cookie pop-ups all over the place, but my website
+
+178
+00:12:20,360 --> 00:12:21,360
+doesn't have one.
+
+179
+00:12:21,360 --> 00:12:24,800
+My site also didn't have any legal notices.
+
+180
+00:12:24,800 --> 00:12:27,200
+I think most websites have those too.
+
+181
+00:12:27,200 --> 00:12:32,760
+Finally, we'll take a look at some ownership mistakes that I made regarding scraping and
+
+182
+00:12:32,760 --> 00:12:35,560
+things like that.
+
+183
+00:12:35,560 --> 00:12:40,120
+But before we dive into all that, I want to show you all my new app.
+
+184
+00:12:40,120 --> 00:12:46,000
+New and revamped and with better graphics and functionality.
+
+185
+00:12:46,000 --> 00:12:53,040
+So upon opening it, I'm greeted with this banner at the bottom of the screen alerting
+
+186
+00:12:53,040 --> 00:12:56,760
+me about cookies and telling me to check out the privacy policy.
+
+187
+00:12:56,760 --> 00:13:04,960
+So if I go check it out, okay, it looks like there's good stuff here.
+
+188
+00:13:04,960 --> 00:13:07,640
+And then I'm just going to click okay.
+
+189
+00:13:08,600 --> 00:13:10,400
+Let's go back to that.
+
+190
+00:13:10,400 --> 00:13:16,600
+All right, so instead of that sign in sign up flow, now I have this big button sign in
+
+191
+00:13:16,600 --> 00:13:18,400
+with Google button.
+
+192
+00:13:18,400 --> 00:13:20,200
+So I'm going to click that.
+
+193
+00:13:20,200 --> 00:13:24,400
+And now I can select one of my Google profiles.
+
+194
+00:13:24,400 --> 00:13:32,480
+I'm going to go with this one here and I'm in.
+
+195
+00:13:32,480 --> 00:13:37,600
+I didn't have to put in my password for my Google Cam because I'm already signed in.
+
+196
+00:13:37,600 --> 00:13:40,000
+So that's cool.
+
+197
+00:13:40,000 --> 00:13:46,520
+And now I have over here looks like I have a profile.
+
+198
+00:13:46,520 --> 00:13:54,240
+Yep, and I have a profile picture and a big ID and looks like an updatable name field.
+
+199
+00:13:54,240 --> 00:14:00,800
+I'm going to go ahead and change my name to Abby C. Update profile.
+
+200
+00:14:00,800 --> 00:14:03,280
+Let's go check the Pokedex.
+
+201
+00:14:03,280 --> 00:14:07,720
+Looks like Abby C. is updated.
+
+202
+00:14:07,720 --> 00:14:13,760
+All right, sign out, delete my account that's new.
+
+203
+00:14:13,760 --> 00:14:20,120
+And there's a notice down here about how I can get my data.
+
+204
+00:14:20,120 --> 00:14:24,920
+Cool, so delete.
+
+205
+00:14:24,920 --> 00:14:26,640
+Cool.
+
+206
+00:14:26,640 --> 00:14:29,280
+Well, that's my app.
+
+207
+00:14:29,360 --> 00:14:34,640
+Let's take a closer look at the changes that were made and the issues that were fixed in
+
+208
+00:14:34,640 --> 00:14:39,160
+the process.
+
+209
+00:14:39,160 --> 00:14:42,840
+If you're going to store user passwords, you got to hash them.
+
+210
+00:14:42,840 --> 00:14:48,520
+A hacker would have a field day if they got into my database with all those non-encrypted
+
+211
+00:14:48,520 --> 00:14:51,160
+passwords in there and just be this is too easy.
+
+212
+00:14:51,160 --> 00:14:53,880
+It's actually super easy to do though.
+
+213
+00:14:53,880 --> 00:14:59,880
+And overall, my database has taken a step in the right direction.
+
+214
+00:14:59,880 --> 00:15:05,320
+I use the workser.security library to get password hashing.
+
+215
+00:15:05,320 --> 00:15:10,720
+All I needed to do was update my sign up and sign in routes.
+
+216
+00:15:10,720 --> 00:15:17,480
+If we take a closer look at my sign up form, I use the generate password has hash function
+
+217
+00:15:17,480 --> 00:15:23,760
+to take the password field of the user, hash it with SHA256, and then store it in my database
+
+218
+00:15:23,760 --> 00:15:27,160
+as user table.
+
+219
+00:15:27,160 --> 00:15:29,480
+And now let's take a look at my sign in route.
+
+220
+00:15:29,480 --> 00:15:35,720
+When a user signs in, all I need to do is use check password hash to hash the password
+
+221
+00:15:35,720 --> 00:15:43,360
+the user just entered and compare it against the hash password that's currently in my database.
+
+222
+00:15:43,360 --> 00:15:46,200
+So hashing a password is a good first step.
+
+223
+00:15:46,200 --> 00:15:51,700
+Encrypting is important to being GDPR compliant, but what if I took things even further?
+
+224
+00:15:51,700 --> 00:15:56,820
+The safest database is the one that doesn't have anything worth hacking into.
+
+225
+00:15:56,820 --> 00:16:02,860
+I decided to completely remove all references to email addresses and passwords from my database.
+
+226
+00:16:02,860 --> 00:16:04,220
+But how did I do that?
+
+227
+00:16:04,220 --> 00:16:07,260
+Well, I implemented OAuth sign in.
+
+228
+00:16:07,260 --> 00:16:12,700
+You know those login with Google or Facebook buttons like this one?
+
+229
+00:16:12,700 --> 00:16:18,260
+You click on that button and then you select your Google account to sign in with.
+
+230
+00:16:18,260 --> 00:16:21,300
+So what's OAuth doing behind the scenes?
+
+231
+00:16:21,300 --> 00:16:25,140
+An OAuth client within an app requests an access token.
+
+232
+00:16:25,140 --> 00:16:30,260
+The OAuth server then verifies the client, gets the user's consent, which was where
+
+233
+00:16:30,260 --> 00:16:34,980
+I picked my profile in the last slide, and returns an access token.
+
+234
+00:16:34,980 --> 00:16:39,660
+The app can then request resources from the server like a user's info.
+
+235
+00:16:39,660 --> 00:16:44,660
+After the resource server checks that my token is valid with the OAuth server, it then returns
+
+236
+00:16:44,660 --> 00:16:47,380
+the resources my app requested.
+
+237
+00:16:47,380 --> 00:16:50,780
+OAuth is an open standard for authorization.
+
+238
+00:16:50,780 --> 00:16:55,340
+It's used as a way for users to grant websites and apps access to their information stored
+
+239
+00:16:55,340 --> 00:16:57,260
+at other websites.
+
+240
+00:16:57,260 --> 00:17:01,780
+This means that with OAuth, I can log in with my accounts that I already have with existing
+
+241
+00:17:01,780 --> 00:17:06,300
+big companies like Amazon, Twitter, and Facebook.
+
+242
+00:17:06,300 --> 00:17:08,540
+I don't need to create an account.
+
+243
+00:17:08,540 --> 00:17:12,500
+I'm just going to use the one that already exists.
+
+244
+00:17:12,500 --> 00:17:16,380
+Instead of sending a username and password to the server with each request, the user
+
+245
+00:17:16,380 --> 00:17:20,420
+instead sends an API key ID in secret.
+
+246
+00:17:20,420 --> 00:17:23,620
+Sending a site that prompts you to enter your username and password directly into a
+
+247
+00:17:23,620 --> 00:17:29,940
+form is bad practice and is known to be an empty pattern.
+
+248
+00:17:29,940 --> 00:17:32,140
+Here's what it looks like when implemented.
+
+249
+00:17:32,140 --> 00:17:37,180
+What's awesome is that I was able to build on my existing Flask login code to get OAuth
+
+250
+00:17:37,180 --> 00:17:38,180
+added.
+
+251
+00:17:38,180 --> 00:17:40,140
+I use a library called Authlib.
+
+252
+00:17:40,140 --> 00:17:44,020
+It supports a bunch of different clients, including Flask.
+
+253
+00:17:44,020 --> 00:17:47,580
+It uses OpenID Connect to get a user's info.
+
+254
+00:17:47,580 --> 00:17:52,620
+I only implemented sign-in with Google, but it's really easy to configure others like
+
+255
+00:17:52,620 --> 00:17:55,460
+GitHub and Twitter.
+
+256
+00:17:55,460 --> 00:18:00,740
+From my homepage template, I used my big login with Google button to kick off the sign-in
+
+257
+00:18:00,740 --> 00:18:02,020
+process.
+
+258
+00:18:02,020 --> 00:18:09,380
+I create a Google OAuth client and then redirect them to a Google authorization route.
+
+259
+00:18:09,380 --> 00:18:15,140
+To authorize, I create a Google client, authorize the user's access token, request the user's
+
+260
+00:18:15,140 --> 00:18:20,260
+info, and then finally store that info for my session.
+
+261
+00:18:20,260 --> 00:18:25,820
+Now I've gone from storing usernames, passwords, and emails to just a Google ID and user's
+
+262
+00:18:25,820 --> 00:18:26,820
+name.
+
+263
+00:18:26,820 --> 00:18:28,660
+I didn't even have to store the name though.
+
+264
+00:18:28,660 --> 00:18:30,980
+In fact, I probably shouldn't store the name.
+
+265
+00:18:30,980 --> 00:18:36,580
+I can remove that because with OAuth, info like name and email can be accessed directly
+
+266
+00:18:36,580 --> 00:18:39,180
+once a session has been established.
+
+267
+00:18:39,180 --> 00:18:42,820
+As you saw in my code snippet in the last slide, I don't need to store it.
+
+268
+00:18:42,820 --> 00:18:48,380
+I can just get it by requesting user's info from my Google OAuth client.
+
+269
+00:18:48,380 --> 00:18:53,780
+So I do need to store the ID though, so I can keep track of what Pokemon they've caught.
+
+270
+00:18:53,780 --> 00:18:58,820
+This is okay though, because this ID is already obfuscated by Google.
+
+271
+00:18:58,820 --> 00:19:02,200
+Cookies can store a lot of personally identifiable information.
+
+272
+00:19:02,200 --> 00:19:07,180
+Because of this, they can identify you without your consent and are therefore considered
+
+273
+00:19:07,180 --> 00:19:08,620
+personal data.
+
+274
+00:19:08,620 --> 00:19:11,780
+This means GDPR cares about it a lot.
+
+275
+00:19:11,780 --> 00:19:15,900
+Cookies can use them to gain insights into a user's online activity.
+
+276
+00:19:15,900 --> 00:19:21,220
+For example, marketing cookies track your online activity to help advertisers deliver
+
+277
+00:19:21,220 --> 00:19:25,420
+a better ads experience to you.
+
+278
+00:19:25,420 --> 00:19:31,060
+These cookies can share that information with other organizations or advertisers.
+
+279
+00:19:31,060 --> 00:19:34,860
+A less violating use of cookies is for statistical reasons.
+
+280
+00:19:34,860 --> 00:19:40,100
+Like Google Analytics, the information these cookies store is anonymized, but GDPR still
+
+281
+00:19:40,100 --> 00:19:41,720
+cares about them.
+
+282
+00:19:41,720 --> 00:19:45,300
+My app uses a session cookie to know who's logged in.
+
+283
+00:19:45,300 --> 00:19:52,300
+This is generated by my OAuth package I just talked about, Authlib and FlaskLogin.
+
+284
+00:19:52,300 --> 00:19:58,460
+This type of cookie has been classified by GDPR as a strictly necessary cookie.
+
+285
+00:19:58,460 --> 00:20:02,660
+Strictly necessary cookies are cookies that must be present for the website to provide
+
+286
+00:20:02,660 --> 00:20:03,660
+its basic functions.
+
+287
+00:20:03,660 --> 00:20:08,940
+They are essential for accessing features of a website and could include signing in,
+
+288
+00:20:08,940 --> 00:20:12,020
+adding items to a cart, or e-billing.
+
+289
+00:20:12,020 --> 00:20:16,340
+While I don't have to get a user's consent before using these cookies, GDPR does say
+
+290
+00:20:16,340 --> 00:20:21,740
+I should explain to the user what a cookie is and why my app uses them.
+
+291
+00:20:21,740 --> 00:20:28,140
+I also keep my privacy policy links sticking to the bottom of each page for easy reference.
+
+292
+00:20:28,140 --> 00:20:32,340
+With my app, I've gone the implied consent route, which is allowed.
+
+293
+00:20:32,340 --> 00:20:37,660
+This means I give the user a one-time heads up when they first visit my site, and then
+
+294
+00:20:37,660 --> 00:20:38,660
+that's it.
+
+295
+00:20:38,660 --> 00:20:45,020
+I use a site to generate a privacy policy, and then I link it in the footer.
+
+296
+00:20:45,020 --> 00:20:47,820
+And here's what that one-time pop-up looks like.
+
+297
+00:20:47,820 --> 00:20:50,540
+I went the simple route, as you can see.
+
+298
+00:20:50,540 --> 00:20:52,420
+It's not too beautiful.
+
+299
+00:20:52,420 --> 00:20:55,860
+It was a pain trying to figure out how to do this with Flask.
+
+300
+00:20:55,860 --> 00:20:59,140
+After a lot of research, though, I found a snippet that did the trick.
+
+301
+00:20:59,140 --> 00:21:03,180
+If a user clicks the link, they're taken to my privacy policy.
+
+302
+00:21:03,180 --> 00:21:06,220
+There are a bunch of generators out there to make a policy like this.
+
+303
+00:21:06,740 --> 00:21:11,740
+If you don't have a legal team to make you a policy, one of these might fit your needs.
+
+304
+00:21:11,740 --> 00:21:16,380
+You can also take a look at other privacy policies on other websites for inspiration.
+
+305
+00:21:16,380 --> 00:21:23,900
+To add this banner, all I did was add this cookie banner check to my base template file.
+
+306
+00:21:23,900 --> 00:21:29,380
+If a user has pressed OK on my cookie banner in the past, they'll show it.
+
+307
+00:21:29,380 --> 00:21:34,540
+Once they press OK, though, I execute code to first set a cookie called cookie consent
+
+308
+00:21:34,540 --> 00:21:37,140
+to true and hide the banner.
+
+309
+00:21:37,140 --> 00:21:40,020
+But what about this cookie check?
+
+310
+00:21:40,020 --> 00:21:44,660
+This bit of Flask code injects a new variable into the context of my template.
+
+311
+00:21:44,660 --> 00:21:49,220
+It returns a dictionary that can then be used by all templates in my app.
+
+312
+00:21:49,220 --> 00:21:54,620
+For this cookie check, I see if the user has pressed OK on my cookie banner in the past
+
+313
+00:21:54,620 --> 00:21:58,220
+with request.cookies.get.
+
+314
+00:21:58,220 --> 00:22:05,940
+Cookies check is then equal to true if the cookie consent key is set to true.
+
+315
+00:22:05,940 --> 00:22:11,540
+The cookie check value is then used to show or not show the banner.
+
+316
+00:22:11,540 --> 00:22:16,940
+After pushing OK, if I later take a look at the cookies of my application in the browser,
+
+317
+00:22:16,940 --> 00:22:22,540
+I can see my cookie consent cookie is there and set to true.
+
+318
+00:22:22,540 --> 00:22:28,020
+My initial apps login experience stored email addresses and passwords in my database.
+
+319
+00:22:28,220 --> 00:22:33,380
+As a part of these new regulations, I needed to implement some way for a user to update
+
+320
+00:22:33,380 --> 00:22:39,860
+their info in my database and also delete it if they no longer want to be in there.
+
+321
+00:22:39,860 --> 00:22:44,860
+My old design had no way for a user to view the information I stored about them, so I
+
+322
+00:22:44,860 --> 00:22:51,740
+fixed that by giving everyone a profile view as seen here.
+
+323
+00:22:51,740 --> 00:22:56,940
+From here, I made updating their info easy with a form.
+
+324
+00:22:56,940 --> 00:23:02,580
+I needed the ID to stay the same though because that's what I use for login tracking.
+
+325
+00:23:02,580 --> 00:23:08,180
+I also added a delete my account button to completely remove them from my database, satisfying
+
+326
+00:23:08,180 --> 00:23:14,660
+the write to erasure clause.
+
+327
+00:23:14,660 --> 00:23:20,380
+To cover the write-up portability, I took the easy way out and decided to add a sentence
+
+328
+00:23:20,380 --> 00:23:23,500
+at the bottom of the profile page.
+
+329
+00:23:23,500 --> 00:23:26,820
+I gave them a way to contact me to get their data.
+
+330
+00:23:26,820 --> 00:23:31,460
+I could have added a tool to my site to create a downloadable file for them to get their
+
+331
+00:23:31,460 --> 00:23:38,500
+info, but this covers the bases for now.
+
+332
+00:23:38,500 --> 00:23:43,740
+And finally, it's time to take a look at some ownership issues I encountered.
+
+333
+00:23:43,740 --> 00:23:49,140
+I mentioned earlier that to get all the images in my app, I decided to scrape their URLs
+
+334
+00:23:49,140 --> 00:23:51,180
+and embed them in image tags.
+
+335
+00:23:51,180 --> 00:23:53,140
+It was a great idea.
+
+336
+00:23:53,900 --> 00:23:59,980
+Scraping, which sounds pretty fishy, actually does not violate the CFAA, Computer Fraud
+
+337
+00:23:59,980 --> 00:24:00,980
+and Abuse Act.
+
+338
+00:24:00,980 --> 00:24:03,780
+It's definitely a gray area though.
+
+339
+00:24:03,780 --> 00:24:09,500
+In 2019, LinkedIn tried to cease and desist a company that scrapes LinkedIn profiles.
+
+340
+00:24:09,500 --> 00:24:14,580
+LinkedIn lost because the court determined the CFAA does not apply to information available
+
+341
+00:24:14,580 --> 00:24:16,460
+to the general public.
+
+342
+00:24:16,460 --> 00:24:22,140
+If I can access a site without having to log in or anything, it's fair game to scrape.
+
+343
+00:24:22,140 --> 00:24:26,260
+This can still thwart web scrapers with things like captions though.
+
+344
+00:24:26,260 --> 00:24:31,460
+I think LinkedIn recently changed things, so you have to actually log in to view someone's
+
+345
+00:24:31,460 --> 00:24:32,460
+profile now.
+
+346
+00:24:32,460 --> 00:24:35,540
+That would stop a scraper.
+
+347
+00:24:35,540 --> 00:24:39,100
+Websites usually have a robots.txt file.
+
+348
+00:24:39,100 --> 00:24:44,180
+This file tells search engine crawlers which pages or files the crawlers can or can't request
+
+349
+00:24:44,180 --> 00:24:45,460
+from your site.
+
+350
+00:24:45,460 --> 00:24:51,620
+This is used to mainly avoid overloading sites with requests and taking them down in the
+
+351
+00:24:52,620 --> 00:24:58,380
+Here's an example of the robots.txt file from PokemonDB.net.
+
+352
+00:24:58,380 --> 00:25:03,900
+It decides telling scrapers which pages or files you can or can't request from your site.
+
+353
+00:25:03,900 --> 00:25:07,460
+This one also specifies a crawl delay, which I didn't see.
+
+354
+00:25:07,460 --> 00:25:09,900
+These restrictions are just suggestions though.
+
+355
+00:25:09,900 --> 00:25:15,460
+To be a good netizen, you need to respect and follow the robots.txt file.
+
+356
+00:25:15,460 --> 00:25:20,580
+Most of the publishers allow programs to crawl their websites to some extent.
+
+357
+00:25:20,620 --> 00:25:25,540
+So to sum up scraping, read the robots.txt file, don't scrape from disallowed sites,
+
+358
+00:25:25,540 --> 00:25:28,660
+and make sure you add a crawl delay if specified, which I didn't.
+
+359
+00:25:28,660 --> 00:25:31,540
+All you got to do is add a sleep in there.
+
+360
+00:25:31,540 --> 00:25:37,020
+Turns out scraping all those URLs and embedding them in my site wasn't something a good person
+
+361
+00:25:37,020 --> 00:25:38,020
+would do.
+
+362
+00:25:38,020 --> 00:25:44,100
+I found this out when all my images suddenly turned into something like this.
+
+363
+00:25:44,100 --> 00:25:49,020
+Howlinking is when you embed a resource on your site that's hosted on someone else's
+
+364
+00:25:49,020 --> 00:25:50,020
+site.
+
+365
+00:25:50,180 --> 00:25:54,940
+This is bad because I'm eating up someone else's bandwidth every time I serve the images
+
+366
+00:25:54,940 --> 00:25:56,620
+on my site.
+
+367
+00:25:56,620 --> 00:26:02,180
+So instead of potentially hogging all that bandwidth, I did a one-time scrape and downloaded
+
+368
+00:26:02,180 --> 00:26:05,740
+all the images and stored them in my database.
+
+369
+00:26:05,740 --> 00:26:10,780
+Now I'm being a good person at the small price of probably less than like a dollar a month
+
+370
+00:26:10,780 --> 00:26:14,700
+in cloud storage fees.
+
+371
+00:26:14,700 --> 00:26:20,060
+So I'm using a lot of Pokemon images in my little app here.
+
+372
+00:26:20,060 --> 00:26:25,340
+The website that I got all my images from, PokemonDB.com, actually uses the Fair Use
+
+373
+00:26:25,340 --> 00:26:26,340
+Doctrine.
+
+374
+00:26:26,340 --> 00:26:30,940
+The Fair Use Doctrine permits limited use of copyright material without having to first
+
+375
+00:26:30,940 --> 00:26:34,900
+acquire permission from the copyright holder.
+
+376
+00:26:34,900 --> 00:26:40,700
+Things can get pretty complicated pretty fast with the Fair Use Doctrine though.
+
+377
+00:26:40,700 --> 00:26:44,980
+So what does it take for your use to be considered fair use?
+
+378
+00:26:44,980 --> 00:26:51,540
+How you use this copyright material matters, including whether such use is of a commercial
+
+379
+00:26:51,540 --> 00:26:55,660
+nature or for nonprofit educational blog post purposes.
+
+380
+00:26:55,660 --> 00:27:00,660
+To be determined to fair use, four principles are looked at.
+
+381
+00:27:00,660 --> 00:27:05,260
+So you think you have a good intent and positively made these four distinctions?
+
+382
+00:27:05,260 --> 00:27:10,300
+Well, now how do you get your hands on that piece of paper that says your use is fair?
+
+383
+00:27:10,300 --> 00:27:13,700
+Well, you don't.
+
+384
+00:27:13,700 --> 00:27:18,780
+The only way you can determine if your use is classified as fair use is if you're taken
+
+385
+00:27:18,780 --> 00:27:21,100
+to federal court.
+
+386
+00:27:21,100 --> 00:27:26,420
+A judge uses the following principles to judge whether or not your use is fair.
+
+387
+00:27:26,420 --> 00:27:30,820
+These are just guidelines though, and a judge has a lot of freedom to make the fair use
+
+388
+00:27:30,820 --> 00:27:32,660
+determination.
+
+389
+00:27:32,660 --> 00:27:38,740
+This makes it hard to predict the outcome of a court case if you do get taken to court.
+
+390
+00:27:38,740 --> 00:27:44,220
+As an example of something going wrong here, fan-created games have been taken down with
+
+391
+00:27:44,220 --> 00:27:49,500
+cease and desist in the past that were previously under the Fair Use Doctrine.
+
+392
+00:27:49,500 --> 00:27:52,620
+Let's take a look at that fourth clause there.
+
+393
+00:27:52,620 --> 00:27:57,260
+One particular fan-made Pokemon game was super popular.
+
+394
+00:27:57,260 --> 00:28:03,940
+When it got too popular, the company that owns the IP, Nintendo, sent a cease and desist,
+
+395
+00:28:03,940 --> 00:28:10,380
+even though the game was free because it was taking up market share.
+
+396
+00:28:10,380 --> 00:28:13,260
+My little dinky app is just a database with some pictures.
+
+397
+00:28:13,260 --> 00:28:16,740
+It's basically a verse version of PokemonDB.com.
+
+398
+00:28:16,740 --> 00:28:19,060
+I'm not generating any cash with ads.
+
+399
+00:28:19,060 --> 00:28:22,900
+I'm not a threat to the Pokemon market.
+
+400
+00:28:22,900 --> 00:28:27,220
+So the moral of the story about fair use, your safest bet is to ask for permission from
+
+401
+00:28:27,220 --> 00:28:28,860
+the copyright holder.
+
+402
+00:28:28,860 --> 00:28:32,620
+Without their permission, you're running the risk of getting into some legal trouble
+
+403
+00:28:32,620 --> 00:28:35,180
+or suit.
+
+404
+00:28:35,180 --> 00:28:41,020
+In the end, a judge says your use isn't fair, then you're out of luck.
+
+405
+00:28:41,020 --> 00:28:45,420
+So yeah, these are the first big steps I took towards getting my little app aligned with
+
+406
+00:28:45,420 --> 00:28:46,420
+GDPR.
+
+407
+00:28:46,420 --> 00:28:50,740
+While creating this app, there were definitely some mistakes on my part that could have been
+
+408
+00:28:50,740 --> 00:28:57,580
+avoided by having user information as one of my top priorities.
+
+409
+00:28:57,580 --> 00:29:04,440
+It's really easy to forget or just not know how to make your website compliant with laws
+
+410
+00:29:04,440 --> 00:29:06,380
+that are constantly changing.
+
+411
+00:29:06,380 --> 00:29:10,860
+It's also pretty darn difficult to make a website airtight to hacks.
+
+412
+00:29:10,860 --> 00:29:18,000
+Overall, the purpose of the regulations are to make you make conscious decisions when
+
+413
+00:29:18,000 --> 00:29:24,220
+processing personal data imposes best practices in a legal way.
+
+414
+00:29:24,220 --> 00:29:29,180
+What we can do, though, is keep up to date on the latest PII news and try to stay as
+
+415
+00:29:29,180 --> 00:29:32,180
+far away from storing personal information as possible.
+

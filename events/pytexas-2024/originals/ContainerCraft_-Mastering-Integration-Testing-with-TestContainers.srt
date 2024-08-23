@@ -1,0 +1,1200 @@
+1
+00:00:00,000 --> 00:00:06,080
+Yeah, good morning, everyone.
+
+2
+00:00:06,080 --> 00:00:09,840
+I'm Sameer Shukla, technology enthusiast.
+
+3
+00:00:09,840 --> 00:00:13,840
+I like to learn and talk about new tools and technologies.
+
+4
+00:00:13,840 --> 00:00:20,720
+And today I'll be sharing my experience that I had when dealing with integration testing
+
+5
+00:00:20,720 --> 00:00:26,640
+in my application and how I end up using test containers.
+
+6
+00:00:26,640 --> 00:00:34,280
+So in any cloud-native microservices architecture, as we can see that there are several downstream
+
+7
+00:00:34,280 --> 00:00:41,360
+dependencies and the architecture can be polyglotic, where the architecture have more than one
+
+8
+00:00:41,360 --> 00:00:43,380
+database in the system.
+
+9
+00:00:43,380 --> 00:00:47,600
+We have to support RDBMS or as well as NoSQL.
+
+10
+00:00:47,600 --> 00:00:51,600
+This kind of architecture provides a couple of problems for the developers.
+
+11
+00:00:52,560 --> 00:00:57,120
+Two main, one of them are running this infrastructure on the local.
+
+12
+00:00:57,120 --> 00:01:01,920
+And the second one is writing the efficient integration test cases.
+
+13
+00:01:01,920 --> 00:01:07,120
+The first problem of running the infrastructure on local can still be solved when we use Docker
+
+14
+00:01:07,120 --> 00:01:08,400
+compose.
+
+15
+00:01:08,400 --> 00:01:10,480
+That problem can still be solvable.
+
+16
+00:01:10,480 --> 00:01:14,480
+But when we write integration test cases, with this kind of architecture, it is a little
+
+17
+00:01:14,480 --> 00:01:19,040
+bit difficult to achieve that.
+
+18
+00:01:19,480 --> 00:01:21,480
+So why integration test cases are important?
+
+19
+00:01:21,480 --> 00:01:28,400
+When we write JUnits in our application, those are written basically just to test the business
+
+20
+00:01:28,400 --> 00:01:33,320
+logic and we are unable to test the external dependencies in the system.
+
+21
+00:01:33,320 --> 00:01:39,380
+So if we have to test, say, in our application we have Kafka or Redis, what we do generally
+
+22
+00:01:39,380 --> 00:01:43,480
+is we mock the entire pipeline and we will test the business logic.
+
+23
+00:01:43,480 --> 00:01:47,920
+But we mock the dependencies of Kafka and Cassandra.
+
+24
+00:01:48,800 --> 00:01:53,800
+The issue that comes with that kind of JUnit is that we are not very confident in the test
+
+25
+00:01:53,800 --> 00:01:55,800
+cases that we have written.
+
+26
+00:01:55,800 --> 00:02:02,840
+Because consider a scenario that we have to publish the event to a Kafka only once the
+
+27
+00:02:02,840 --> 00:02:05,040
+database call is successful.
+
+28
+00:02:05,040 --> 00:02:10,120
+These kind of scenarios we are unable to test only with the help of JUnits.
+
+29
+00:02:10,120 --> 00:02:17,080
+So to handle such situations, we have to write integration test cases in our application.
+
+30
+00:02:17,240 --> 00:02:22,760
+The common problems that we deal with writing integration test cases, especially the architecture
+
+31
+00:02:22,760 --> 00:02:28,000
+that I have shared, is setting up the dependencies.
+
+32
+00:02:28,000 --> 00:02:33,800
+It's difficult to spin up the entire infrastructure on your local machine because we have several
+
+33
+00:02:33,800 --> 00:02:38,200
+downstream dependencies and as I mentioned, the architecture can be polyglotic.
+
+34
+00:02:38,320 --> 00:02:47,160
+So if the setup is difficult, that can force us to think about an alternative.
+
+35
+00:02:47,160 --> 00:02:52,000
+That alternative is to point our application to the real infrastructure.
+
+36
+00:02:52,000 --> 00:02:57,800
+When we point our application to the real infrastructure, it can have a couple of problems
+
+37
+00:02:57,800 --> 00:02:59,720
+there as well.
+
+38
+00:02:59,720 --> 00:03:04,240
+The problem that I have faced in my experience is that we used to have a CI environment.
+
+39
+00:03:04,280 --> 00:03:09,120
+That CI environment is used by almost every team in the company.
+
+40
+00:03:09,120 --> 00:03:11,360
+So the test cases are fragile.
+
+41
+00:03:11,360 --> 00:03:15,040
+Someone can come and delete the table or the brokers were down.
+
+42
+00:03:15,040 --> 00:03:18,680
+So more often than not, our test cases were quite freaky.
+
+43
+00:03:18,680 --> 00:03:24,520
+So we were unable to, our CI CD pipelines were failed most of the time.
+
+44
+00:03:24,520 --> 00:03:29,360
+This problem can force developers to think about another alternative.
+
+45
+00:03:29,480 --> 00:03:34,600
+That alternative would be to use in-memory databases or use some embedded tools like
+
+46
+00:03:34,600 --> 00:03:38,720
+Embedded Kafka or Embedded Cassandra if we are using.
+
+47
+00:03:38,720 --> 00:03:48,360
+The problem that comes with in-memory databases or these embedded or simulated tools is that
+
+48
+00:03:48,360 --> 00:03:50,560
+we may miss certain features.
+
+49
+00:03:50,560 --> 00:03:55,480
+For example, if we are using a specific function of any database, that can be missing when
+
+50
+00:03:55,600 --> 00:04:01,160
+we are using in-memory databases or any specific feature of a message broker, they might be
+
+51
+00:04:01,160 --> 00:04:06,600
+missing if we are using those embedded tools.
+
+52
+00:04:06,600 --> 00:04:12,120
+If suppose we are unable to solve these problems, the other two problems that we still face
+
+53
+00:04:12,120 --> 00:04:14,240
+is the data management.
+
+54
+00:04:14,240 --> 00:04:18,920
+Because when we used to run the integration test cases parallelly, we need a proper set
+
+55
+00:04:18,920 --> 00:04:21,040
+of data.
+
+56
+00:04:21,600 --> 00:04:27,240
+We still have to manage the data, the consistent data in the environment.
+
+57
+00:04:27,240 --> 00:04:29,600
+And another problem is the resource management.
+
+58
+00:04:29,600 --> 00:04:36,240
+We have to ensure that the infrastructure is up and we are also responsible for bringing
+
+59
+00:04:36,240 --> 00:04:37,880
+down that infrastructure.
+
+60
+00:04:37,880 --> 00:04:44,280
+To achieve that, we have to write the code that we still have to maintain.
+
+61
+00:04:44,280 --> 00:04:47,920
+That's where the test containers come into the picture.
+
+62
+00:04:47,920 --> 00:04:54,000
+So it's a testing framework, a library, that helps us in writing the test cases with the
+
+63
+00:04:54,000 --> 00:04:55,680
+real dependencies.
+
+64
+00:04:55,680 --> 00:05:01,760
+And these dependencies are available to us in the temporary Docker containers.
+
+65
+00:05:01,760 --> 00:05:05,240
+Test containers provide an easy-to-use API.
+
+66
+00:05:05,240 --> 00:05:11,240
+That API helps us in basically bringing up the temporary Docker containers, bringing
+
+67
+00:05:11,240 --> 00:05:16,320
+them down, and helps us in communicating with those real dependencies.
+
+68
+00:05:16,320 --> 00:05:21,400
+So we don't have to rely on segregating our test cases.
+
+69
+00:05:21,400 --> 00:05:24,240
+That we have to write JUnits or integration test cases.
+
+70
+00:05:24,240 --> 00:05:28,480
+Any test case that we will write will talk to these real dependencies, whether it's JUnit
+
+71
+00:05:28,480 --> 00:05:31,120
+or integration test cases.
+
+72
+00:05:31,120 --> 00:05:36,840
+The biggest advantage of using test containers is that we don't have to deal with bringing
+
+73
+00:05:36,840 --> 00:05:39,040
+up the containers or bringing them down.
+
+74
+00:05:39,040 --> 00:05:44,000
+All these throw-away instances are managed by the test containers itself.
+
+75
+00:05:44,600 --> 00:05:50,840
+It helps us in achieving the realistic testing, as I mentioned, the problem with the JUnits.
+
+76
+00:05:50,840 --> 00:05:55,080
+Environment remains consistent.
+
+77
+00:05:55,080 --> 00:05:58,480
+The biggest advantage is the easier setup.
+
+78
+00:05:58,480 --> 00:06:06,880
+So if you see this code, test containers API provides certain, you know, it has, it supports
+
+79
+00:06:06,880 --> 00:06:09,240
+almost every software that is available.
+
+80
+00:06:09,880 --> 00:06:14,800
+If you are using Postgres in our application, it has Postgres containers, Redis containers,
+
+81
+00:06:14,800 --> 00:06:15,800
+Kafka containers.
+
+82
+00:06:15,800 --> 00:06:19,520
+All we have to do is we just have to use them.
+
+83
+00:06:19,520 --> 00:06:25,120
+Spinning up the Docker containers will be taken care by test containers itself.
+
+84
+00:06:25,120 --> 00:06:26,680
+And the version problem.
+
+85
+00:06:26,680 --> 00:06:28,320
+This is the most important problem.
+
+86
+00:06:28,320 --> 00:06:35,800
+So as I mentioned, if we are using any in-memory database or simulated systems, we may miss
+
+87
+00:06:35,800 --> 00:06:37,160
+certain important features.
+
+88
+00:06:37,320 --> 00:06:42,920
+With test containers, the biggest advantage is if we are using a specific version of Postgres
+
+89
+00:06:42,920 --> 00:06:46,960
+in production, we can use the same version with our test containers.
+
+90
+00:06:46,960 --> 00:06:52,320
+We don't have to, I mean, the version remains the same for whatever tools we are using in
+
+91
+00:06:52,320 --> 00:06:54,000
+our microservices architecture.
+
+92
+00:06:54,000 --> 00:06:56,760
+This is the biggest advantage, in my opinion.
+
+93
+00:06:56,760 --> 00:07:04,440
+Because sometimes when you write JUnits, although it may say that everything is correct, but
+
+94
+00:07:04,440 --> 00:07:07,040
+we have to still test the dependencies.
+
+95
+00:07:10,160 --> 00:07:16,000
+So if you see this diagram, what it says is that there is a service, which I am calling
+
+96
+00:07:16,000 --> 00:07:17,480
+it as my service.
+
+97
+00:07:17,480 --> 00:07:23,320
+Test containers is an API which is responsible for spinning up these three test containers,
+
+98
+00:07:23,320 --> 00:07:24,320
+as I mentioned.
+
+99
+00:07:24,320 --> 00:07:26,360
+Like for Kafka, it has Kafka container.
+
+100
+00:07:26,360 --> 00:07:27,840
+For Redis, it has Redis container.
+
+101
+00:07:32,320 --> 00:07:33,520
+Now benefits.
+
+102
+00:07:33,520 --> 00:07:37,160
+Some of the benefits I have already told, but I would like to talk about three most
+
+103
+00:07:37,160 --> 00:07:38,800
+important benefits over here.
+
+104
+00:07:38,800 --> 00:07:40,320
+The dynamic configuration.
+
+105
+00:07:40,320 --> 00:07:48,400
+When we write Docker Compose, we have to somehow specify on what port a certain system will
+
+106
+00:07:48,400 --> 00:07:52,640
+work on or what kind of machine we are using.
+
+107
+00:07:52,640 --> 00:07:56,840
+Test containers takes care of the dynamic configuration on its own.
+
+108
+00:07:56,840 --> 00:07:59,040
+It dynamically allocates the IP.
+
+109
+00:07:59,040 --> 00:08:02,000
+It dynamically allocates the port as well.
+
+110
+00:08:02,000 --> 00:08:04,200
+So we don't have to deal with all of them.
+
+111
+00:08:04,200 --> 00:08:10,600
+All we do is just spin up the API and containers will be given to us.
+
+112
+00:08:10,600 --> 00:08:14,000
+Test containers, like the test cases, which we will write using test containers, can be
+
+113
+00:08:14,000 --> 00:08:16,720
+the part of CI-CD pipelines as well.
+
+114
+00:08:16,720 --> 00:08:21,480
+On local, we can have a Docker daemon, but if we are running a CI-CD, it can connect
+
+115
+00:08:21,480 --> 00:08:25,800
+to the Docker, which is running on the remote host as well.
+
+116
+00:08:25,800 --> 00:08:29,200
+So we don't have to configure anything manually.
+
+117
+00:08:29,200 --> 00:08:36,600
+The API provides certain functions to connect to the, like I will show you with the code.
+
+118
+00:08:36,600 --> 00:08:44,400
+So if you see here, the connection URL or host API, these kind of functions will make
+
+119
+00:08:44,400 --> 00:08:49,160
+sure that our test cases remain consistent in every environment, whether it is local
+
+120
+00:08:49,160 --> 00:08:53,660
+or the part of the CI-CD.
+
+121
+00:08:53,660 --> 00:08:56,080
+And support for various technologies.
+
+122
+00:08:56,080 --> 00:09:01,040
+So if you see the page over here, test containers have support for almost every component.
+
+123
+00:09:01,040 --> 00:09:06,240
+If we talk about database, it has support of Postgres, MySQL, Oracle, NoSQL, if we talk
+
+124
+00:09:06,240 --> 00:09:09,460
+about it, it has support for MongoDB, Cassandra.
+
+125
+00:09:09,460 --> 00:09:17,880
+So it is supporting almost every software that is available.
+
+126
+00:09:17,880 --> 00:09:24,840
+And support for these three advantages will help developers in reduced development time.
+
+127
+00:09:24,920 --> 00:09:27,860
+All we have to do is we don't have to segregate the test cases.
+
+128
+00:09:27,860 --> 00:09:32,520
+What we can do is we can simply write our test cases and test the entire pipeline without
+
+129
+00:09:32,520 --> 00:09:38,880
+mocking any external dependencies.
+
+130
+00:09:38,880 --> 00:09:41,320
+And the test containers workflow.
+
+131
+00:09:41,320 --> 00:09:43,720
+It is a simple three-step process.
+
+132
+00:09:43,720 --> 00:09:46,880
+First, we have to start the containers.
+
+133
+00:09:46,880 --> 00:09:50,820
+Second, run the test, clean up the containers.
+
+134
+00:09:50,820 --> 00:09:57,820
+After starting the containers, test container API provides certain functions like start.
+
+135
+00:09:57,820 --> 00:10:01,620
+For cleaning up the containers, it has functions like stop.
+
+136
+00:10:01,620 --> 00:10:04,980
+All we have to do is we just have to focus on our test cases.
+
+137
+00:10:04,980 --> 00:10:08,380
+And just provide the configuration at the time of startup.
+
+138
+00:10:08,380 --> 00:10:14,660
+So those throwaway instances will be start on our machine, and we can simply point our
+
+139
+00:10:14,660 --> 00:10:16,720
+test cases to those instances.
+
+140
+00:10:16,720 --> 00:10:18,340
+So it's a very simple setup.
+
+141
+00:10:18,660 --> 00:10:21,820
+There is not many complex things are going on behind the scenes.
+
+142
+00:10:21,820 --> 00:10:26,300
+All we have to do is whatever configuration we have done for our application to talk to
+
+143
+00:10:26,300 --> 00:10:31,720
+database, we simply have to point that or we can inject dynamically that configuration
+
+144
+00:10:31,720 --> 00:10:37,420
+for pointing our application to the test containers rather than having any complex mechanism for that.
+
+145
+00:10:40,580 --> 00:10:46,700
+So for this demo, for today's demo, I mean, I have created a very simple API using fast
+
+146
+00:10:46,700 --> 00:10:48,660
+API, it's a RESTful service.
+
+147
+00:10:48,660 --> 00:10:53,820
+It has three operations, post, get, and delete.
+
+148
+00:10:53,820 --> 00:10:56,340
+I'm calling it as a user service.
+
+149
+00:10:56,340 --> 00:11:01,260
+The first operation, which is post, what it will do is when we create a user, the user
+
+150
+00:11:01,260 --> 00:11:03,700
+will be created in the database.
+
+151
+00:11:03,700 --> 00:11:09,540
+And similarly, at the same time, the same information will be stored in the Redis cache.
+
+152
+00:11:09,540 --> 00:11:14,780
+When we get, when we try to get the user, first it will see whether the user exists
+
+153
+00:11:14,780 --> 00:11:16,820
+in the Redis cache or not.
+
+154
+00:11:16,820 --> 00:11:19,460
+If it exists over there, it returns the user.
+
+155
+00:11:19,460 --> 00:11:25,020
+Otherwise, it will go to the database and fetch the same information.
+
+156
+00:11:25,020 --> 00:11:35,900
+The intent here is to showcase how we can use multiple test containers within our application.
+
+157
+00:11:35,900 --> 00:11:39,420
+So this is a simple API that I have created.
+
+158
+00:11:40,380 --> 00:11:42,860
+I'll just try to create a user here.
+
+159
+00:11:50,940 --> 00:11:52,620
+So we can see the user has been created.
+
+160
+00:12:01,460 --> 00:12:02,420
+The user is retrieved.
+
+161
+00:12:07,940 --> 00:12:08,460
+And it's gone.
+
+162
+00:12:10,420 --> 00:12:16,780
+So these three operations, we are going to test using our integration, which is written
+
+163
+00:12:16,780 --> 00:12:19,420
+using test containers.
+
+164
+00:12:19,420 --> 00:12:24,900
+So as I mentioned, it's a three-step process, starting up the containers, executing the
+
+165
+00:12:24,900 --> 00:12:30,340
+tests, and removing those instances.
+
+166
+00:12:30,340 --> 00:12:35,340
+Test containers API has support for every component, as I mentioned.
+
+167
+00:12:35,340 --> 00:12:37,060
+So we are going to import them.
+
+168
+00:12:37,140 --> 00:12:41,380
+I'm using some specific versions of those libraries, like Postgres, Redis.
+
+169
+00:12:41,380 --> 00:12:45,500
+We can specify whatever version we are using in production.
+
+170
+00:12:45,500 --> 00:12:47,380
+We are going to start the containers.
+
+171
+00:12:47,380 --> 00:12:53,220
+And through this block of code, I'm trying to explain how we can point our application
+
+172
+00:12:53,220 --> 00:12:54,260
+to the test containers.
+
+173
+00:12:57,300 --> 00:13:00,700
+And these are the simple integration test cases.
+
+174
+00:13:00,700 --> 00:13:03,380
+So these three test cases were successful.
+
+175
+00:13:03,380 --> 00:13:09,060
+But I would also like to showcase how these containers are created for us.
+
+176
+00:13:09,060 --> 00:13:19,380
+If I go over here, we can see that there are no Docker containers running as of now.
+
+177
+00:13:20,380 --> 00:13:28,820
+I will just pause the test for a few seconds, just to showcase that test containers is creating
+
+178
+00:13:28,820 --> 00:13:31,660
+those throwaway instances for us.
+
+179
+00:13:31,660 --> 00:13:37,900
+So you can see here, we have two containers running, the Redis and the Postgres.
+
+180
+00:13:37,900 --> 00:13:44,140
+Once the execution of those containers is complete, we are going to start the test.
+
+181
+00:13:44,140 --> 00:13:48,340
+So we have two containers running, the Redis and the Postgres.
+
+182
+00:13:48,340 --> 00:13:54,220
+Once the execution of these tests are over, as we can see it is completed, these instances
+
+183
+00:13:54,220 --> 00:13:56,860
+are removed for us.
+
+184
+00:13:56,860 --> 00:14:01,260
+So that's how, in a nutshell, the test container works.
+
+185
+00:14:01,260 --> 00:14:07,180
+And if you see here, in these functions, I have written a very basic test case.
+
+186
+00:14:07,180 --> 00:14:09,380
+I have not tried to mock the application.
+
+187
+00:14:09,380 --> 00:14:11,380
+I have not tried to mock anything over there.
+
+188
+00:14:11,380 --> 00:14:16,220
+I'm simply calling the services that I have written, or the functions that I have written,
+
+189
+00:14:16,220 --> 00:14:20,820
+to talk to the database or talk to the Redis over there.
+
+190
+00:14:25,500 --> 00:14:30,820
+The last piece is, as I mentioned, that test containers have support for almost every container,
+
+191
+00:14:30,820 --> 00:14:32,860
+every tool that is available.
+
+192
+00:14:32,860 --> 00:14:34,300
+We can utilize them.
+
+193
+00:14:34,300 --> 00:14:38,700
+And some of them which are missing over there, like Snowflake or any other component, that
+
+194
+00:14:38,700 --> 00:14:41,300
+we can always request to the test container folks.
+
+195
+00:14:41,300 --> 00:14:43,980
+And they can provide us with a certain solution.
+
+196
+00:14:43,980 --> 00:14:47,260
+One of them is using the generic container option.
+
+197
+00:14:47,260 --> 00:14:54,100
+If we don't have any component available upfront, test container has support for generic container.
+
+198
+00:14:54,100 --> 00:14:59,460
+What it does is, it will allow us to inject the dependencies into the generic container.
+
+199
+00:14:59,460 --> 00:15:01,340
+That support is pretty much alive.
+
+200
+00:15:01,340 --> 00:15:04,220
+You can talk to them, and they are very responsive.
+
+201
+00:15:04,220 --> 00:15:08,660
+So that's all for today.
+
+202
+00:15:08,660 --> 00:15:11,340
+If you have any questions, please let me know.
+
+203
+00:15:11,340 --> 00:15:12,340
+Okay.
+
+204
+00:15:12,340 --> 00:15:18,020
+So some of the questions that we have out here in Slido.
+
+205
+00:15:18,020 --> 00:15:21,780
+Can you please reiterate why test containers are better than Docker Compose with regular
+
+206
+00:15:21,780 --> 00:15:23,260
+integration testing?
+
+207
+00:15:23,260 --> 00:15:24,260
+Yes.
+
+208
+00:15:24,260 --> 00:15:29,060
+Because of the dynamic configuration, when we create Docker Compose, we have to make
+
+209
+00:15:29,060 --> 00:15:31,860
+sure that there are no port conflicts.
+
+210
+00:15:31,860 --> 00:15:38,180
+And we also have to ensure that the test that we are running on local should be the part
+
+211
+00:15:38,180 --> 00:15:39,860
+of the CI CD as well.
+
+212
+00:15:39,860 --> 00:15:44,300
+So to avoid all those conflicts, we should always use test containers rather than Docker
+
+213
+00:15:44,300 --> 00:15:45,300
+Compose.
+
+214
+00:15:45,300 --> 00:15:46,300
+Right.
+
+215
+00:15:46,300 --> 00:15:47,300
+Get right up on that mic, by the way.
+
+216
+00:15:47,300 --> 00:15:49,300
+If you want to grab it, you can take it with you.
+
+217
+00:15:49,300 --> 00:15:51,340
+We have a second one.
+
+218
+00:15:51,340 --> 00:15:52,340
+There we go.
+
+219
+00:15:52,340 --> 00:15:53,340
+Thanks.
+
+220
+00:15:53,340 --> 00:15:54,340
+Yeah.
+
+221
+00:15:54,340 --> 00:15:55,340
+Hold it close to your mouth when you talk too.
+
+222
+00:15:55,340 --> 00:15:56,340
+Next one.
+
+223
+00:15:56,340 --> 00:16:00,780
+How do you handle persistent data dependencies, like databases, that contain data where the
+
+224
+00:16:00,780 --> 00:16:05,100
+test may have a temporal component, meaning the test data expires?
+
+225
+00:16:05,100 --> 00:16:06,100
+Yes.
+
+226
+00:16:07,100 --> 00:16:11,420
+Test container API, I have shown you a very basic demo over here.
+
+227
+00:16:11,420 --> 00:16:16,420
+The API has support of those features as well.
+
+228
+00:16:16,420 --> 00:16:21,480
+So you can use, please go to the test containers forum and you can find all those functions
+
+229
+00:16:21,480 --> 00:16:22,980
+over there.
+
+230
+00:16:22,980 --> 00:16:25,380
+It has support to all of them.
+
+231
+00:16:25,380 --> 00:16:26,440
+All right.
+
+232
+00:16:26,440 --> 00:16:29,820
+Do you see test containers as a complete replacement for end-to-end tests?
+
+233
+00:16:29,820 --> 00:16:31,780
+Yes, I can see that.
+
+234
+00:16:31,780 --> 00:16:32,780
+Wow.
+
+235
+00:16:33,540 --> 00:16:38,740
+Because of the support of various software that I have provided that is available, plus
+
+236
+00:16:38,740 --> 00:16:41,540
+it's very easy to use.
+
+237
+00:16:41,540 --> 00:16:43,540
+Okay.
+
+238
+00:16:43,540 --> 00:16:46,260
+What benefits does it offer when we work with multiple services?
+
+239
+00:16:46,260 --> 00:16:50,980
+For example, in a microservice setup when writing integration tests.
+
+240
+00:16:50,980 --> 00:16:57,940
+So as I showcase in my demo that several downstream dependencies can be used directly.
+
+241
+00:16:57,940 --> 00:17:00,820
+So you don't have to configure anything.
+
+242
+00:17:00,820 --> 00:17:05,220
+All you have to do is just focus on starting up those dependencies and point your test
+
+243
+00:17:05,220 --> 00:17:06,220
+cases to them.
+
+244
+00:17:06,220 --> 00:17:07,220
+Nice.
+
+245
+00:17:07,220 --> 00:17:10,700
+I'm going to keep hitting you with questions here because we've got a lot of good ones.
+
+246
+00:17:10,700 --> 00:17:14,580
+Was it easy for your organization to adopt test containers?
+
+247
+00:17:14,580 --> 00:17:18,340
+Did it help lower your operational costs or speed up the development life cycle?
+
+248
+00:17:18,340 --> 00:17:20,860
+Yes, I can talk about two of them.
+
+249
+00:17:20,860 --> 00:17:26,940
+It has certainly speed up the development time.
+
+250
+00:17:26,940 --> 00:17:31,020
+I have seen that because we were focusing completely on writing the integration test
+
+251
+00:17:31,020 --> 00:17:32,020
+cases.
+
+252
+00:17:32,020 --> 00:17:34,540
+We are not mocking several dependencies over there.
+
+253
+00:17:34,540 --> 00:17:40,100
+And yes, our organization has completely adopted test containers.
+
+254
+00:17:40,100 --> 00:17:42,180
+Okay.
+
+255
+00:17:42,180 --> 00:17:45,300
+This question is interestingly phrased, but we can still automate...
+
+256
+00:17:45,300 --> 00:17:47,340
+Oh, sorry.
+
+257
+00:17:47,340 --> 00:17:50,500
+Josh is moderating back there and has moved questions around on me.
+
+258
+00:17:50,500 --> 00:17:55,300
+If the API that your code is dependent on is in a different repo and is changing upstream,
+
+259
+00:17:55,300 --> 00:17:57,820
+what's the best practice for when and how to update your containers?
+
+260
+00:17:57,820 --> 00:17:58,820
+Can you please come in?
+
+261
+00:17:58,820 --> 00:17:59,820
+Yeah.
+
+262
+00:17:59,820 --> 00:18:04,020
+So if the API that your code is dependent on is in a different repo and it's changing
+
+263
+00:18:04,020 --> 00:18:08,620
+upstream, so they're changing independently of you, what's the best practice for keeping
+
+264
+00:18:08,620 --> 00:18:10,100
+those containers updated?
+
+265
+00:18:10,100 --> 00:18:11,100
+Yeah.
+
+266
+00:18:11,100 --> 00:18:13,860
+I mean, the repo...
+
+267
+00:18:13,860 --> 00:18:15,500
+Is this repo dependent on any other...
+
+268
+00:18:15,500 --> 00:18:19,380
+I mean, there are integration test cases in this repo also or it is completely a repo
+
+269
+00:18:19,380 --> 00:18:21,620
+that I'm using for my development purposes?
+
+270
+00:18:21,620 --> 00:18:23,140
+So I'm going to interpret the question.
+
+271
+00:18:23,220 --> 00:18:27,820
+Let me know if I interpreted it incorrectly, Lee, wherever you are in the room.
+
+272
+00:18:27,820 --> 00:18:33,900
+Let's say one team is maintaining one service out of one repository and your team is another
+
+273
+00:18:33,900 --> 00:18:37,220
+service that's a dependency, but it's independent.
+
+274
+00:18:37,220 --> 00:18:38,220
+Right.
+
+275
+00:18:38,220 --> 00:18:43,540
+So if one team is writing a service and we are utilizing that service, we can still use
+
+276
+00:18:43,540 --> 00:18:45,060
+them with the help of generic container.
+
+277
+00:18:45,060 --> 00:18:46,900
+We don't have to...
+
+278
+00:18:46,900 --> 00:18:49,380
+We are not completely tightly coupled with them.
+
+279
+00:18:49,740 --> 00:18:51,700
+Suppose two services are interacting.
+
+280
+00:18:51,700 --> 00:18:55,940
+Service A is developed by team A. Service B is developed by team B. So we can very well
+
+281
+00:18:55,940 --> 00:18:58,260
+interact with them with the help of generic containers.
+
+282
+00:18:58,260 --> 00:19:00,340
+It is not tightly coupled with it.
+
+283
+00:19:00,340 --> 00:19:01,340
+Okay.
+
+284
+00:19:01,340 --> 00:19:02,700
+Last question.
+
+285
+00:19:02,700 --> 00:19:06,340
+Have you seen more confidence of contribution from your juniors?
+
+286
+00:19:06,340 --> 00:19:09,700
+Yes, because it's pretty easy to achieve.
+
+287
+00:19:09,700 --> 00:19:11,860
+They don't have to write a lot of complex code.
+
+288
+00:19:11,860 --> 00:19:15,220
+As I mentioned, if you are writing a service layer, if you have a persistence layer, all
+
+289
+00:19:15,220 --> 00:19:17,420
+they have to do is just simply invoke them.
+
+290
+00:19:17,420 --> 00:19:21,340
+So it's very easy for the junior engineers to work with test containers rather than writing
+
+291
+00:19:21,340 --> 00:19:22,340
+the separate JUnits.
+
+292
+00:19:22,340 --> 00:19:23,340
+Nice.
+
+293
+00:19:23,340 --> 00:19:24,340
+Okay.
+
+294
+00:19:24,340 --> 00:19:25,340
+I'm going to ask one more question for myself.
+
+295
+00:19:25,340 --> 00:19:31,660
+On a scale of zero to Bucky here, how excited are you about test containers?
+
+296
+00:19:31,660 --> 00:19:34,380
+A lot.
+
+297
+00:19:34,380 --> 00:19:35,700
+I'm going to interpret that as Bucky.
+
+298
+00:19:35,700 --> 00:19:36,700
+Thank you so much, Savir.
+
+299
+00:19:36,700 --> 00:19:37,700
+Thanks.
+
+300
+00:19:37,700 --> 00:19:38,200
+Thank you.
+

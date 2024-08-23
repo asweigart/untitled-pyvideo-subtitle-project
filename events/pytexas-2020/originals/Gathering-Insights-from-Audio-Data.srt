@@ -1,0 +1,2052 @@
+1
+00:00:00,000 --> 00:00:19,040
+Hi, PyTexas.
+
+2
+00:00:19,040 --> 00:00:23,200
+Thanks for attending my virtual talk on gathering us as some audio data.
+
+3
+00:00:23,200 --> 00:00:24,200
+I'm Ryan Bales.
+
+4
+00:00:24,200 --> 00:00:25,200
+Let's dig in.
+
+5
+00:00:25,200 --> 00:00:28,080
+So, I work at a company in Chicago called Dialog Tech.
+
+6
+00:00:28,080 --> 00:00:31,440
+I'm a director of data science and analytics.
+
+7
+00:00:31,440 --> 00:00:35,520
+The goal of my team is to work in the marketing technology space, so my team is responsible
+
+8
+00:00:35,520 --> 00:00:40,200
+for taking phone calls from our customers and converting them into text and the transcriptions.
+
+9
+00:00:40,200 --> 00:00:44,080
+And then from there, we have lots of different models and other processes to convert them
+
+10
+00:00:44,080 --> 00:00:47,920
+into different insights and outputs that we deliver to our customers.
+
+11
+00:00:47,920 --> 00:00:51,960
+Additionally, I also work in the Python and data engineering space here in Cleveland,
+
+12
+00:00:51,960 --> 00:00:55,080
+Ohio, where I'm based.
+
+13
+00:00:55,080 --> 00:00:57,800
+So the goal of this talk is to discuss audio data at different levels.
+
+14
+00:00:57,800 --> 00:01:01,280
+We're going to talk about audio data as raw sense, we're going to talk about tools to
+
+15
+00:01:01,280 --> 00:01:03,320
+look at audio data and explore it.
+
+16
+00:01:03,320 --> 00:01:06,880
+We're going to talk about how we gather features, train models, and then we'll go to text and
+
+17
+00:01:06,880 --> 00:01:10,640
+talk about ways we can work with it there.
+
+18
+00:01:10,640 --> 00:01:14,440
+So the first thing we'll talk about is how do we hear sound as humans?
+
+19
+00:01:14,440 --> 00:01:20,960
+So this is a picture of your ear, of a human ear.
+
+20
+00:01:20,960 --> 00:01:26,640
+And what we're seeing here is that to hear things, different pressures, difference in
+
+21
+00:01:26,680 --> 00:01:30,520
+pressure is picked up and passed into your ear canal from your outer ear, travels down
+
+22
+00:01:30,520 --> 00:01:37,000
+the ear canal into the on the far right of your screen, the cochlea.
+
+23
+00:01:37,000 --> 00:01:40,520
+And once it travels to the cochlea, there's a lot of different hair follicles there that
+
+24
+00:01:40,520 --> 00:01:45,360
+ride along the what's called the basilar membrane.
+
+25
+00:01:45,360 --> 00:01:50,480
+As those hair follicles vibrate up against the membrane, that creates electricity, small
+
+26
+00:01:50,480 --> 00:01:51,840
+electrical pulses.
+
+27
+00:01:51,840 --> 00:01:54,760
+And those are then carried by your auditory nerve up to your brain.
+
+28
+00:01:54,760 --> 00:01:56,680
+That's how we hear things.
+
+29
+00:01:56,680 --> 00:02:02,040
+And similarly, how a computer hears things, the analog sound signal is up top.
+
+30
+00:02:02,040 --> 00:02:05,880
+And then when the computer does its digital to analog conversion, it's converting that
+
+31
+00:02:05,880 --> 00:02:08,880
+sound to ones and zeros down below.
+
+32
+00:02:08,880 --> 00:02:14,440
+When the sound analog is high, the wave is high, it comes as a one, and then when it
+
+33
+00:02:14,440 --> 00:02:20,720
+drops down low, it gives us a zero over time.
+
+34
+00:02:20,720 --> 00:02:24,200
+So basic characteristics here, we'll talk about a wave.
+
+35
+00:02:24,200 --> 00:02:29,840
+We'll talk about the amplitude is the size or displacement of the vibration.
+
+36
+00:02:29,840 --> 00:02:32,040
+And it typically determines how loud the sound is.
+
+37
+00:02:32,040 --> 00:02:36,600
+I think about it this way, when you want to make the sound louder, you're amplifying or
+
+38
+00:02:36,600 --> 00:02:39,920
+you're increasing the sound of the wave.
+
+39
+00:02:39,920 --> 00:02:46,000
+And then separately, frequency is the speed of the wave.
+
+40
+00:02:46,000 --> 00:02:51,640
+And that controls the pitch of the sound you're hearing.
+
+41
+00:02:51,640 --> 00:02:55,680
+So one of the characteristics we want to think about when talking about digital data
+
+42
+00:02:55,680 --> 00:02:58,160
+is sampling rate.
+
+43
+00:02:58,160 --> 00:03:01,240
+And two different things we want to talk about with this when we're sampling, we want to
+
+44
+00:03:01,240 --> 00:03:03,480
+talk about the sampling rate and the bit depth.
+
+45
+00:03:03,480 --> 00:03:07,920
+So what you see here is just a basic chart of an analog signal, and then each of the
+
+46
+00:03:07,920 --> 00:03:11,440
+red lines is a sample that we're taking.
+
+47
+00:03:11,440 --> 00:03:16,440
+So what can lead to higher quality audio is how fast you're sampling.
+
+48
+00:03:16,440 --> 00:03:24,000
+For example, a typical phone call is sampling at 8 kilohertz, whereas a higher quality audio
+
+49
+00:03:24,000 --> 00:03:27,400
+recording is at 44.1 kHz.
+
+50
+00:03:27,400 --> 00:03:33,640
+And then it goes on and on up from there for high quality movies and other digital theater
+
+51
+00:03:33,640 --> 00:03:36,220
+type work is much higher.
+
+52
+00:03:36,220 --> 00:03:40,680
+But the larger that number, the more often you're taking a sample and the more often
+
+53
+00:03:40,680 --> 00:03:45,640
+you sample the wave, the better representation you'll have of that wave digitally.
+
+54
+00:03:45,640 --> 00:03:52,280
+Additionally, the bit depth is the number of bits being sampled for each sample.
+
+55
+00:03:52,280 --> 00:04:00,680
+Typically, you're going to see bit depths at 8, 16, or 24 bytes, 1, 2, or 3 bytes.
+
+56
+00:04:00,680 --> 00:04:05,200
+That's just simply controlling the amount of data you take for each sample.
+
+57
+00:04:05,200 --> 00:04:09,840
+So you want to have a high sampling rate and a high bit depth.
+
+58
+00:04:09,840 --> 00:04:15,000
+That's going to give you the better representation of the analog audio when it comes to digital
+
+59
+00:04:15,000 --> 00:04:18,040
+when you sample it.
+
+60
+00:04:18,040 --> 00:04:21,520
+So let's also briefly talk about wave file formats or audio file formats, excuse me.
+
+61
+00:04:21,520 --> 00:04:31,060
+So common audio file formats are waved uncompressed, FLAC lossless compressed, and MP3 loss decompressed.
+
+62
+00:04:31,060 --> 00:04:36,200
+So typically a dialect that we try to work with wave, we try to record things in near
+
+63
+00:04:36,200 --> 00:04:42,560
+CD quality audio, but we have been considering converting them to FLAC.
+
+64
+00:04:42,560 --> 00:04:47,400
+So FLAC will get you about 30 to 40% smaller files, and it does so with the compression
+
+65
+00:04:47,400 --> 00:04:53,800
+algorithm that is built, it's built with audio data in mind, so it knows how to compress
+
+66
+00:04:53,800 --> 00:04:58,480
+audio very well, and you will not lose quality of the audio.
+
+67
+00:04:58,480 --> 00:05:05,200
+Alternatively, MP3s give you 75 plus smaller samples, smaller file sizes, but you're going
+
+68
+00:05:05,200 --> 00:05:07,040
+to have some loss in the process.
+
+69
+00:05:07,040 --> 00:05:12,080
+So it really is going to depend on your application as to how you're going to work with that.
+
+70
+00:05:12,080 --> 00:05:15,840
+If you're working with audio with multiple speakers, you want to do your best to keep
+
+71
+00:05:15,840 --> 00:05:17,640
+a speaker per channel.
+
+72
+00:05:17,640 --> 00:05:22,960
+So when you talk about mono audio, that is audio where every single audio channel, every
+
+73
+00:05:22,960 --> 00:05:29,680
+person, every feed of audio into that file is mixed down into one channel or mono, single
+
+74
+00:05:29,680 --> 00:05:30,680
+channel.
+
+75
+00:05:30,680 --> 00:05:35,960
+What I'm showing you on the screen here is a typical phone call or conversation where
+
+76
+00:05:35,960 --> 00:05:36,960
+you have dual channels.
+
+77
+00:05:37,040 --> 00:05:41,280
+So you have speaker A, and you have speaker one, speaker two, and you're seeing there
+
+78
+00:05:41,280 --> 00:05:46,400
+are different pieces of audio as time progresses, that's a dual channel or sometimes called
+
+79
+00:05:46,400 --> 00:05:49,120
+stereo audio.
+
+80
+00:05:49,120 --> 00:05:53,680
+And similarly, think about it with, you know, some of you may have a home theater at home
+
+81
+00:05:53,680 --> 00:05:59,240
+and you have a 5.1 Dolby surround, that literally has six channels of audio being processed
+
+82
+00:05:59,240 --> 00:06:04,140
+for each sound it's trying to display, trying to produce.
+
+83
+00:06:04,140 --> 00:06:08,580
+So it has your center left and right channels up front, and then it has your left rear and
+
+84
+00:06:08,580 --> 00:06:09,580
+right rear.
+
+85
+00:06:09,580 --> 00:06:13,180
+And if you have that point one, you typically have a subwoofer trying to give you amplified
+
+86
+00:06:13,180 --> 00:06:16,980
+sound for those deep sounds.
+
+87
+00:06:16,980 --> 00:06:19,200
+So let's change gears a minute and talk about some tools.
+
+88
+00:06:19,200 --> 00:06:23,140
+So the first tool I really like is Sock, straight out of the box.
+
+89
+00:06:23,140 --> 00:06:30,380
+You can man Sock inside of Linux, it's cross platform, you can install it on Macs or Windows.
+
+90
+00:06:30,420 --> 00:06:34,480
+It's really just a Swiss Army knife, you know, jack of all trades tool.
+
+91
+00:06:34,480 --> 00:06:37,660
+Typically I'll drop in here Sock stash dash I for a WAV file.
+
+92
+00:06:37,660 --> 00:06:42,680
+If I get a piece of audio, I want to quickly know what's going on with it, I hop in here.
+
+93
+00:06:42,680 --> 00:06:49,700
+From here I can tell you this audio file has one channel, it's recorded at 44.1K, bit depth
+
+94
+00:06:49,700 --> 00:06:53,020
+of 16, etc.
+
+95
+00:06:53,020 --> 00:06:57,880
+You can also tell it's about three minutes and 32 seconds, actually, sorry, 3.3, about
+
+96
+00:06:57,880 --> 00:07:01,680
+three and a third seconds in length.
+
+97
+00:07:01,680 --> 00:07:05,720
+So in Socks you can do tons more than dash dash I, you can go to the man page on it or
+
+98
+00:07:05,720 --> 00:07:10,920
+Google it, there's hundreds of commands you can do with Socks, but it's a super easy to
+
+99
+00:07:10,920 --> 00:07:14,240
+work with tool that gets the ball rolling when you're trying to start with some audio
+
+100
+00:07:14,240 --> 00:07:15,240
+files.
+
+101
+00:07:15,240 --> 00:07:20,880
+And then if you like UIs better, I've really enjoyed Audacity, it's one of the first things
+
+102
+00:07:20,880 --> 00:07:23,600
+I install when I set up a new system.
+
+103
+00:07:23,600 --> 00:07:28,200
+I typically will grab a hold of Udacity, install it, and I love to just grab an audio file,
+
+104
+00:07:28,200 --> 00:07:34,480
+open up Udacity, take a look at the WAV files, you can even convert these things to different
+
+105
+00:07:34,480 --> 00:07:39,380
+characteristics of the file, you can use Audacity to record, you can skip ahead, there's a lot
+
+106
+00:07:39,380 --> 00:07:43,000
+of great things you can do with Audacity.
+
+107
+00:07:43,000 --> 00:07:44,920
+Also cross platform.
+
+108
+00:07:44,920 --> 00:07:49,760
+So next up we're going to talk about different types of audio features and how you can generate
+
+109
+00:07:49,760 --> 00:07:52,860
+them, and we'll show some code in a minute here.
+
+110
+00:07:52,860 --> 00:07:55,940
+So first we'll talk about raw audio data.
+
+111
+00:07:55,940 --> 00:08:00,020
+Right here we're working with an amplitude measurement taking into every sample.
+
+112
+00:08:00,020 --> 00:08:03,180
+So in this example we have a 5 second wave, you can see the 1 through 5 on the bottom
+
+113
+00:08:03,180 --> 00:08:08,900
+of the time scale, and the sampling here is at 44.1K.
+
+114
+00:08:08,900 --> 00:08:17,760
+So on this entire file, to produce this graph, we opened up and processed 221,000 elements
+
+115
+00:08:17,760 --> 00:08:18,760
+to produce this data.
+
+116
+00:08:19,660 --> 00:08:24,340
+This is simply opening up the file and showing the data.
+
+117
+00:08:24,340 --> 00:08:30,260
+Separately we can then convert that raw audio data into a spectrogram.
+
+118
+00:08:30,260 --> 00:08:35,180
+So a spectrogram, the next few things we're going to look at here are very much just mathematical
+
+119
+00:08:35,180 --> 00:08:39,800
+ways of shaping and converting this information, and you're going to see a lot of use of Fourier's
+
+120
+00:08:39,800 --> 00:08:40,800
+transforms.
+
+121
+00:08:40,800 --> 00:08:45,920
+So in this case, a spectrogram is created by taking digital data and breaking it up
+
+122
+00:08:46,080 --> 00:08:49,920
+into overlapped windows across time, and then over each window you're going to do a Fourier
+
+123
+00:08:49,920 --> 00:08:54,760
+transform to calculate the magnitude and frequency, and you're going to keep repeating over each
+
+124
+00:08:54,760 --> 00:08:56,240
+window of data.
+
+125
+00:08:56,240 --> 00:09:01,600
+So in this case you're going to take, the time is across the x-axis, the frequency is
+
+126
+00:09:01,600 --> 00:09:08,000
+on the y-axis, and the amplitude is displayed as that heat map there, that 0 dBs up to negative
+
+127
+00:09:08,000 --> 00:09:11,840
+80 dBs.
+
+128
+00:09:12,760 --> 00:09:18,040
+This is sometimes called a MEL spectrogram, because it's based on the MEL frequencies,
+
+129
+00:09:18,040 --> 00:09:22,400
+and the name MEL, as we all can probably guess, comes from the word melody, which indicates
+
+130
+00:09:22,400 --> 00:09:27,720
+the scale this is based on for its pitch comparisons.
+
+131
+00:09:27,720 --> 00:09:32,360
+And then another way of visualizing and working with audio features is a chromogram, also
+
+132
+00:09:32,360 --> 00:09:37,840
+known as chromo features, and this is based on comparison between the 12 different pitch
+
+133
+00:09:37,840 --> 00:09:42,400
+classes, you know, C, C sharp, D, D sharp, etc.
+
+134
+00:09:42,400 --> 00:09:48,240
+So like a spectrogram, in a chromogram, we are taking the audio, we're windowing over
+
+135
+00:09:48,240 --> 00:09:52,480
+it, we're doing what's called a short time Fourier transform, and then we're comparing
+
+136
+00:09:52,480 --> 00:09:57,880
+those results against each pitch class, and if you look at this chart, top to bottom,
+
+137
+00:09:57,880 --> 00:10:02,280
+the top here, you're going to, if you look closely enough at it, you would see 12 different
+
+138
+00:10:02,280 --> 00:10:06,000
+blocks vertically.
+
+139
+00:10:06,160 --> 00:10:10,160
+So that's every single pitch class, top to bottom, and then the color of that is the
+
+140
+00:10:10,160 --> 00:10:14,000
+difference between the pitch class and how well it lines up with that absolute pitch
+
+141
+00:10:14,000 --> 00:10:15,000
+class.
+
+142
+00:10:15,000 --> 00:10:21,000
+And the next one, probably the hardest to visualize is, and even a mouthful to say,
+
+143
+00:10:21,000 --> 00:10:25,400
+is a MEL frequency sep stroke coefficient.
+
+144
+00:10:25,400 --> 00:10:31,440
+Those are made up of MFCs, and it's really a result of using inverse Fourier transforms
+
+145
+00:10:31,440 --> 00:10:33,240
+of the signal.
+
+146
+00:10:33,480 --> 00:10:36,120
+So there's a lot of steps in math to this.
+
+147
+00:10:36,120 --> 00:10:39,720
+Just at a high level, kind of similar to a spectrogram, you're going to break everything
+
+148
+00:10:39,720 --> 00:10:44,080
+up into smaller chunks and window over the data, and then you're going to do a Fourier
+
+149
+00:10:44,080 --> 00:10:49,400
+transform of each of those windows, and then you're going to take the resulting spectrum
+
+150
+00:10:49,400 --> 00:10:51,480
+into the MEL frequency scale.
+
+151
+00:10:51,480 --> 00:10:55,400
+Then you're going to take a log of powers of that frequency, and finally you're going
+
+152
+00:10:55,400 --> 00:11:01,080
+to do a discrete cosine transform to your MEL scale log powers, and at the end you're
+
+153
+00:11:01,080 --> 00:11:04,400
+left with MFCs.
+
+154
+00:11:04,400 --> 00:11:13,200
+This is actually the type of feature that's typically used inside of different speech
+
+155
+00:11:13,200 --> 00:11:17,440
+to text conversion systems that are trying to transcribe audio.
+
+156
+00:11:17,440 --> 00:11:22,640
+Okay, let's look at a little bit of that code.
+
+157
+00:11:22,640 --> 00:11:27,720
+So I'm going to give all my demos here and examples inside of Jupyter, Jupyter Notebooks.
+
+158
+00:11:27,720 --> 00:11:29,920
+So I'm not going to go through everything line by line.
+
+159
+00:11:30,120 --> 00:11:35,000
+At the end, I'll put up a slide that'll have all of the information and how you can get
+
+160
+00:11:35,000 --> 00:11:38,240
+a hold of the data, but I'm using it in the code.
+
+161
+00:11:38,240 --> 00:11:42,040
+I'm using a package here called Librosa, a big fan of Librosa.
+
+162
+00:11:42,040 --> 00:11:46,400
+We're bringing in Matplotlib visualizations, and I'm going to go down here a little bit
+
+163
+00:11:46,400 --> 00:11:47,400
+quickly.
+
+164
+00:11:47,400 --> 00:11:48,400
+We're going to go to the raw audio line here.
+
+165
+00:11:48,400 --> 00:11:53,080
+So this line four that you see on the screen, this is Librosa.load, and it's passing in
+
+166
+00:11:53,080 --> 00:11:56,720
+my audio file, and I wanted to show this because it's important that you pass in none for your
+
+167
+00:11:56,720 --> 00:11:58,480
+sample rate, because you don't want it.
+
+168
+00:11:58,480 --> 00:12:01,720
+You can use a sample rate if you want to up or down sample.
+
+169
+00:12:01,720 --> 00:12:04,920
+I'm doing no sample conversion here.
+
+170
+00:12:04,920 --> 00:12:06,320
+I'm not up sampling or down sampling.
+
+171
+00:12:06,320 --> 00:12:08,220
+I just want to grab it raw.
+
+172
+00:12:08,220 --> 00:12:14,320
+So out comes the raw audio, and out comes my sample rate of 44.1 into my two output parameters.
+
+173
+00:12:14,320 --> 00:12:19,540
+Then I can simply just call Librosa.display, passing that data and visualize it.
+
+174
+00:12:19,540 --> 00:12:23,640
+And then likewise, I can do the same thing for the null spectrogram, passing in the audio
+
+175
+00:12:23,640 --> 00:12:24,920
+sample rate.
+
+176
+00:12:25,160 --> 00:12:31,200
+To draw the plot, to calculate the spectrogram, you have to tell it the size, the number of
+
+177
+00:12:31,200 --> 00:12:35,520
+4HM that you want to do, your windows effectively, and then your hop links, how far you want
+
+178
+00:12:35,520 --> 00:12:39,840
+to move through the file as you're processing through it.
+
+179
+00:12:39,840 --> 00:12:44,040
+And then from here, you're going to get out the spectrogram, and you're going to convert
+
+180
+00:12:44,040 --> 00:12:47,220
+those from powers to decibels, and then you plot.
+
+181
+00:12:47,220 --> 00:12:50,120
+And then down here, we see the output below.
+
+182
+00:12:50,120 --> 00:12:54,160
+And then you do the same thing for chromograms and MFCCs that when you grab a sample, you
+
+183
+00:12:54,160 --> 00:12:58,360
+take a closer look at and look at more closely.
+
+184
+00:12:58,360 --> 00:12:59,840
+But that's the basic overview.
+
+185
+00:12:59,840 --> 00:13:03,440
+Librosa is a really super powerful tool to work with.
+
+186
+00:13:03,440 --> 00:13:11,120
+Cool, so to go forward, we're going to take a look at an audio classification example.
+
+187
+00:13:11,120 --> 00:13:14,080
+So I downloaded a sample from Freesound.
+
+188
+00:13:14,080 --> 00:13:17,680
+I got it through Kaggle.
+
+189
+00:13:17,680 --> 00:13:21,640
+And I downloaded, there's 41 sample classes, over 9,000 examples.
+
+190
+00:13:21,640 --> 00:13:22,640
+We're going to walk through this data.
+
+191
+00:13:23,120 --> 00:13:25,640
+We're going to split it into training and test sets, and we're going to train the model
+
+192
+00:13:25,640 --> 00:13:29,480
+on this information and see how that goes.
+
+193
+00:13:29,480 --> 00:13:31,480
+So we'll go to our next notebook.
+
+194
+00:13:31,480 --> 00:13:36,400
+And again, we're not going to go through the whole notebook here in depth, but from here,
+
+195
+00:13:36,400 --> 00:13:40,680
+we're loading our training data set, and we can see that we have the file name, the label,
+
+196
+00:13:40,680 --> 00:13:43,680
+hi-hats, saxophones, cellos, et cetera.
+
+197
+00:13:43,680 --> 00:13:46,120
+And you also have this manually verified column.
+
+198
+00:13:46,120 --> 00:13:48,420
+That's going to come in handy in a second.
+
+199
+00:13:48,420 --> 00:13:51,920
+So there's just over 9,000 examples, 9,473.
+
+200
+00:13:51,920 --> 00:13:52,920
+There's 41 categories.
+
+201
+00:13:52,920 --> 00:13:55,640
+You can see a list of them here below.
+
+202
+00:13:55,640 --> 00:13:58,440
+And then what I chose to do for when I was building this was I wanted to look at the
+
+203
+00:13:58,440 --> 00:14:01,220
+manually verified, how it kind of broke down.
+
+204
+00:14:01,220 --> 00:14:07,040
+So for acoustic guitar, we have almost 200 that were not verified and 100 that were verified.
+
+205
+00:14:07,040 --> 00:14:09,760
+And then further, I went down and I plotted that.
+
+206
+00:14:09,760 --> 00:14:12,680
+So I did a stacked bar.
+
+207
+00:14:12,680 --> 00:14:19,000
+And then if we look here, the orange is where we have verified that information manually
+
+208
+00:14:19,000 --> 00:14:20,000
+and zero.
+
+209
+00:14:20,000 --> 00:14:21,640
+Blue is where we have it.
+
+210
+00:14:21,640 --> 00:14:29,040
+So looking at different examples here, gongs and flutes, we've done not a lot of verification,
+
+211
+00:14:29,040 --> 00:14:33,920
+but saxophone and violin or fiddle have done a lot of validation.
+
+212
+00:14:33,920 --> 00:14:40,400
+So further, I took a look at and said, let's just work with our manually verified data.
+
+213
+00:14:40,400 --> 00:14:47,360
+And then looking at that, we have 3,700 manually verified options.
+
+214
+00:14:47,360 --> 00:14:48,960
+So this notebook is in here.
+
+215
+00:14:48,960 --> 00:14:52,800
+If you grab the data and you want to work with it, this will help you to process the
+
+216
+00:14:52,800 --> 00:14:56,360
+CSV and split everything out into separate folders by type.
+
+217
+00:14:56,360 --> 00:15:02,120
+I'm not going to go through this directly, but this is simply taking our data set.
+
+218
+00:15:02,120 --> 00:15:06,200
+We're splitting it 80-20 into test and train sets.
+
+219
+00:15:06,200 --> 00:15:11,920
+And then from here, we're outputting our results into CSVs.
+
+220
+00:15:11,920 --> 00:15:14,640
+These CSVs are really important for our next couple of notebooks.
+
+221
+00:15:14,640 --> 00:15:19,240
+And then further, the audio files, we're moving them around on disk to get everything ready.
+
+222
+00:15:19,240 --> 00:15:22,960
+So this notebook is really helpful for munching your data around and getting it set up for
+
+223
+00:15:22,960 --> 00:15:23,960
+your modeling.
+
+224
+00:15:23,960 --> 00:15:28,840
+But the big thing is to take away from this is that we're taking these 3,700 examples
+
+225
+00:15:28,840 --> 00:15:32,640
+and we're splitting them 80-20.
+
+226
+00:15:32,640 --> 00:15:36,400
+So then further here in this third notebook, we're going to build a model using the MSVC
+
+227
+00:15:36,400 --> 00:15:37,400
+features.
+
+228
+00:15:37,400 --> 00:15:40,400
+And again, you're going to see a lot of stuff you've seen in previous notebooks.
+
+229
+00:15:40,400 --> 00:15:42,480
+We have Librosa coming in.
+
+230
+00:15:42,600 --> 00:15:48,120
+We're loading up NumPy, and we're also bringing in Pandas and Keras.
+
+231
+00:15:48,120 --> 00:15:51,320
+So we're bringing in Keras to do our modeling with, and we'll get there in a second.
+
+232
+00:15:51,320 --> 00:15:54,440
+So again, we have all of our feature extraction code.
+
+233
+00:15:54,440 --> 00:15:55,440
+Everything is up here.
+
+234
+00:15:55,440 --> 00:15:57,440
+You've seen this code before, showing all the visualizations.
+
+235
+00:15:57,440 --> 00:16:02,900
+We're going to skip past this, and we're going to come down here below.
+
+236
+00:16:02,900 --> 00:16:08,360
+This code is the getMSVC's function, and I just want to make a note that this function
+
+237
+00:16:08,360 --> 00:16:10,380
+actually has padding built into it.
+
+238
+00:16:10,380 --> 00:16:17,180
+So what I do here is I actually pad the file out with zeros if it's not long enough, and
+
+239
+00:16:17,180 --> 00:16:22,780
+if it is long, if it's too long, I just truncate it at the max length of 128 windows.
+
+240
+00:16:22,780 --> 00:16:28,140
+That was so when training a model, of course, you want to have similar length, same length
+
+241
+00:16:28,140 --> 00:16:32,900
+data going in, so we're just chopping off some files and we're rounding things out to
+
+242
+00:16:32,900 --> 00:16:33,900
+pad things.
+
+243
+00:16:34,900 --> 00:16:40,580
+Then we're looping over all the files on our disk, and we're building up our features,
+
+244
+00:16:40,580 --> 00:16:45,420
+and then from our features, we're taking all of those.
+
+245
+00:16:45,420 --> 00:16:50,220
+So we have all of those words, all of the categories that are text at this point.
+
+246
+00:16:50,220 --> 00:16:55,300
+This two-categorical is just converting those into a Y features list, just at the one-hot
+
+247
+00:16:55,300 --> 00:16:57,620
+of all of the different features that we have in the data.
+
+248
+00:16:57,620 --> 00:17:02,640
+Then the first thing I do, and I highly recommend this before I start training, is I save everything
+
+249
+00:17:02,640 --> 00:17:06,120
+off to this file that has features.numpy labels, label encoder.
+
+250
+00:17:06,120 --> 00:17:09,880
+If this notebook crashes, if my kernel goes away, if something dies, I can come back and
+
+251
+00:17:09,880 --> 00:17:10,880
+restart everything.
+
+252
+00:17:10,880 --> 00:17:11,880
+So that's super helpful.
+
+253
+00:17:11,880 --> 00:17:16,120
+It's a really helpful step to do before you get rolling.
+
+254
+00:17:16,120 --> 00:17:19,840
+You get so far in, you don't want to go through and re-generate your data and everything.
+
+255
+00:17:19,840 --> 00:17:23,520
+You want to be able to just come back to the cell, load your data, and keep going with
+
+256
+00:17:23,520 --> 00:17:25,400
+your training.
+
+257
+00:17:25,400 --> 00:17:29,080
+So the next cell here is my model, and it's all here in this one cell.
+
+258
+00:17:29,080 --> 00:17:30,520
+This is all I needed to do.
+
+259
+00:17:30,560 --> 00:17:34,200
+So I'm using a sequential model from Keras.
+
+260
+00:17:34,200 --> 00:17:38,200
+I'm just adding a batch normalization layer, just trying to normalize the data coming in
+
+261
+00:17:38,200 --> 00:17:45,800
+so that the types of data is balanced amongst those features, amongst those different categories.
+
+262
+00:17:45,800 --> 00:17:50,760
+And then I have two LFCM layers where I'm starting off at 128 units, because that's
+
+263
+00:17:50,760 --> 00:17:57,720
+my size of my width that I'm truncating my files at, 128 windows.
+
+264
+00:17:57,720 --> 00:18:02,040
+And then I'm coming down to 32 windows, and then from there I'm going to a dense layer
+
+265
+00:18:02,040 --> 00:18:06,360
+where the size of my dense layer is all of the classes, and I'm doing an activation of
+
+266
+00:18:06,360 --> 00:18:07,360
+Softmax.
+
+267
+00:18:07,360 --> 00:18:13,120
+So I'm predicting the probability of that audio file 41 times.
+
+268
+00:18:13,120 --> 00:18:18,000
+I'm telling it 41 different probabilities.
+
+269
+00:18:18,000 --> 00:18:23,200
+And then I'm also using Dropout here, .05 on my Dropout setting.
+
+270
+00:18:23,200 --> 00:18:24,800
+I'm using that to...
+
+271
+00:18:24,800 --> 00:18:29,000
+So Dropout when I'm training this model is just telling the model when I'm training it
+
+272
+00:18:29,000 --> 00:18:33,600
+just to randomly effectively turn off different nodes, so I try to avoid overfitting to different
+
+273
+00:18:33,600 --> 00:18:37,320
+categories, different types of files.
+
+274
+00:18:37,320 --> 00:18:39,480
+So I trained on a MacBook Pro.
+
+275
+00:18:39,480 --> 00:18:45,200
+I was able to do 50 epochs, batch size of 16, and you can see how everything started
+
+276
+00:18:45,200 --> 00:18:46,200
+off here.
+
+277
+00:18:46,200 --> 00:18:50,160
+It started off with a fairly high amount of loss.
+
+278
+00:18:50,160 --> 00:18:55,880
+I trained out as we went, and you can see my accuracy getting a little bit better, .58,
+
+279
+00:18:55,880 --> 00:18:57,920
+.6, et cetera.
+
+280
+00:18:57,920 --> 00:19:01,600
+Another helpful part of Keras is Model.Summer.
+
+281
+00:19:01,600 --> 00:19:04,800
+You can see once your model's trained how it turned out, and it's actually like I expect
+
+282
+00:19:04,800 --> 00:19:07,640
+a batch normalization, two LSTMs, and a dense layer.
+
+283
+00:19:07,640 --> 00:19:11,360
+And then before you start doing anything else, save it to disk.
+
+284
+00:19:11,360 --> 00:19:14,720
+Keras comes with H5 support, H5Pi.
+
+285
+00:19:14,720 --> 00:19:17,320
+So Model.save between H5 file, and you're done.
+
+286
+00:19:17,320 --> 00:19:18,320
+That way you have your saved model.
+
+287
+00:19:18,480 --> 00:19:21,280
+Again, if your notebook crashes, you didn't lose anything.
+
+288
+00:19:21,280 --> 00:19:24,000
+So let's see how we're doing.
+
+289
+00:19:24,000 --> 00:19:28,200
+It's telling us here we've got about a .75 on the accuracy.
+
+290
+00:19:28,200 --> 00:19:31,920
+Let's see how well we're holding up against our validation set.
+
+291
+00:19:31,920 --> 00:19:39,720
+So I'm going to load in one file, my validation set, and I'm showing you the first five.
+
+292
+00:19:39,720 --> 00:19:47,960
+Actually, I skipped here, so I'm loading up this one file, this base drum.
+
+293
+00:19:48,600 --> 00:19:57,240
+This wave file, and I'm converting it to msccs with my get msccs function, and then calling
+
+294
+00:19:57,240 --> 00:19:58,240
+model.predict.
+
+295
+00:19:58,240 --> 00:19:59,240
+And my prediction is this.
+
+296
+00:19:59,240 --> 00:20:03,000
+And as you expected, there are 41 different probabilities here, 41 different floats.
+
+297
+00:20:03,000 --> 00:20:08,800
+And then all I'm doing is numpy argmax, and I'm indexing into my classes list with that.
+
+298
+00:20:08,800 --> 00:20:12,760
+And then from there, I get the base drum back, so it worked.
+
+299
+00:20:12,760 --> 00:20:15,500
+So for one example, held up just fine.
+
+300
+00:20:15,500 --> 00:20:21,460
+So now if I look at my entire validation set, and I loop over these five and process them,
+
+301
+00:20:21,460 --> 00:20:25,740
+well, I process the whole validation set, and I look at these first five, like, not
+
+302
+00:20:25,740 --> 00:20:26,740
+too bad.
+
+303
+00:20:26,740 --> 00:20:27,740
+This is good.
+
+304
+00:20:27,740 --> 00:20:28,740
+This is good.
+
+305
+00:20:28,740 --> 00:20:29,740
+We missed the telephone.
+
+306
+00:20:29,740 --> 00:20:30,740
+We got three out of five.
+
+307
+00:20:30,740 --> 00:20:31,740
+Three out of five is pretty good.
+
+308
+00:20:31,740 --> 00:20:35,380
+So what we want to do next is we want to take a look at how well the model is performing.
+
+309
+00:20:35,380 --> 00:20:40,260
+So inside of the notebook here, I'm using sklearn, scikit-learn, and I'm just loading
+
+310
+00:20:40,260 --> 00:20:45,820
+up the classification report and passing in my Y validation and Y validation predicted.
+
+311
+00:20:45,820 --> 00:20:49,000
+And then from here, I get a per category F1 score.
+
+312
+00:20:49,000 --> 00:20:51,100
+So that lets me look at how well we're doing per category.
+
+313
+00:20:51,100 --> 00:20:55,900
+So acoustic guitar at a .8, very nice.
+
+314
+00:20:55,900 --> 00:21:02,700
+A bus, not so great, about a .50, really bad on keyboards, also with coughs, super awesome
+
+315
+00:21:02,700 --> 00:21:03,700
+on cowbell.
+
+316
+00:21:03,700 --> 00:21:05,220
+You kind of get the hint here.
+
+317
+00:21:05,220 --> 00:21:09,520
+So we're, you know, depending on the category, we're doing well on some and some not so great.
+
+318
+00:21:09,560 --> 00:21:13,280
+You know, overall, looking at a weighted average, we're about a .6.
+
+319
+00:21:13,280 --> 00:21:15,640
+So we're a little better than in a coin flip.
+
+320
+00:21:15,640 --> 00:21:20,560
+And again, there's some more training that we could do to work with this and improve
+
+321
+00:21:20,560 --> 00:21:21,560
+it.
+
+322
+00:21:21,560 --> 00:21:26,560
+So all in all, you know, for demo purposes, really helpful and, you know, concise way
+
+323
+00:21:26,560 --> 00:21:31,360
+to get started with audio data from training.
+
+324
+00:21:31,360 --> 00:21:32,560
+So back to a few slides.
+
+325
+00:21:32,560 --> 00:21:36,200
+So again, model results, .6.
+
+326
+00:21:36,200 --> 00:21:40,760
+As we noticed, some of the categories are higher or lower.
+
+327
+00:21:40,760 --> 00:21:41,760
+What improvements could be made?
+
+328
+00:21:41,760 --> 00:21:43,760
+Well, we could train for more than .50 epochs.
+
+329
+00:21:43,760 --> 00:21:44,760
+That might help.
+
+330
+00:21:44,760 --> 00:21:45,760
+We could go back and get more data.
+
+331
+00:21:45,760 --> 00:21:47,480
+We could get more data in certain categories.
+
+332
+00:21:47,480 --> 00:21:52,040
+We might be able to manually verify more of that data and bring it in.
+
+333
+00:21:52,040 --> 00:21:55,560
+We could also rework how we're truncating features, maybe if we went a little bit wider
+
+334
+00:21:55,560 --> 00:21:59,920
+and we took in more windows, we could do more with that to improve.
+
+335
+00:21:59,920 --> 00:22:01,760
+And then further, we could also tune the LSTM.
+
+336
+00:22:01,760 --> 00:22:05,920
+We could tune different parameters, maybe add another layer to see if that would help.
+
+337
+00:22:05,920 --> 00:22:09,560
+We could also do other model size LSTMs.
+
+338
+00:22:09,560 --> 00:22:13,360
+There are other types of machine learning models that we could use, other architectures
+
+339
+00:22:13,360 --> 00:22:17,880
+that we could use to work with this information with audio files.
+
+340
+00:22:17,880 --> 00:22:23,240
+So that's the overview on working with audio.
+
+341
+00:22:23,240 --> 00:22:26,760
+Let's change gears for a little bit here and talk about transcribing audio files.
+
+342
+00:22:26,760 --> 00:22:34,520
+So again, when transcribing, you want to make sure that your audio files are clean, transcriptions
+
+343
+00:22:34,600 --> 00:22:37,280
+are in separate files per speaker.
+
+344
+00:22:37,280 --> 00:22:42,440
+You're using lossless formats and you're working with high quality equipment as best you can.
+
+345
+00:22:42,440 --> 00:22:45,200
+And unless you're me, you have phone calls coming in, you do the best you can with the
+
+346
+00:22:45,200 --> 00:22:46,520
+phone call.
+
+347
+00:22:46,520 --> 00:22:48,920
+So there's different types of systems, APIs and non-prepats.
+
+348
+00:22:48,920 --> 00:22:52,680
+And all the big players in the industry have transcription options.
+
+349
+00:22:52,680 --> 00:22:56,000
+So there's AWS, there's Google Cloud, there's Azure, IBM.
+
+350
+00:22:56,000 --> 00:23:01,360
+They all have examples for APIs to do training.
+
+351
+00:23:01,360 --> 00:23:05,360
+So that's an output demo.
+
+352
+00:23:05,360 --> 00:23:07,160
+So I have a transcription notebook here.
+
+353
+00:23:07,160 --> 00:23:11,440
+We're in the middle of debates for our current election cycle, but I have everything downloaded
+
+354
+00:23:11,440 --> 00:23:18,160
+from 2016, all the debates there, the three presidential and one VP debate.
+
+355
+00:23:18,160 --> 00:23:23,120
+And from here, I'm just using the same tools to visualize them, take a look at them.
+
+356
+00:23:23,120 --> 00:23:27,400
+But further, inside these notebooks here, I have this transcription code.
+
+357
+00:23:27,400 --> 00:23:33,400
+So there's a couple of steps up to doing transcriptions of these files.
+
+358
+00:23:33,400 --> 00:23:36,320
+So first you want to upload the file to S3.
+
+359
+00:23:36,320 --> 00:23:39,160
+So this is all AWS using AWS Transcribe.
+
+360
+00:23:39,160 --> 00:23:41,760
+I'm using a tool called Bodo3 right here in Python.
+
+361
+00:23:41,760 --> 00:23:46,280
+I'm uploading my file into an S3 bucket.
+
+362
+00:23:46,280 --> 00:23:50,040
+Then once I upload it, I'm just kicking off the transcription job by having a transcription
+
+363
+00:23:50,040 --> 00:23:51,040
+client.
+
+364
+00:23:51,040 --> 00:23:53,640
+I'm telling that client where the audio file is.
+
+365
+00:23:53,640 --> 00:23:55,080
+I'm telling it's an MP3.
+
+366
+00:23:55,160 --> 00:23:59,040
+I'm telling it the output bucket to go work off of and to where the file should go.
+
+367
+00:23:59,040 --> 00:24:00,040
+And I tell it to go.
+
+368
+00:24:00,040 --> 00:24:02,280
+And then I sit back and watch.
+
+369
+00:24:02,280 --> 00:24:06,520
+I can pull the status of the job, but when it's done, all I'm going to do is download
+
+370
+00:24:06,520 --> 00:24:08,320
+the file and look at the transcription results.
+
+371
+00:24:08,320 --> 00:24:14,760
+So I come over here to my audio data, to my data file, and come in the data into my transcripts
+
+372
+00:24:14,760 --> 00:24:18,920
+and look at this, this debate is fine, and go into the results.
+
+373
+00:24:18,920 --> 00:24:22,920
+What you're looking for with transcription information is, so you get the full text of
+
+374
+00:24:22,920 --> 00:24:26,800
+the transcript, which you also want to look at, here it's in the items collection.
+
+375
+00:24:26,800 --> 00:24:32,040
+You really want to look at the different words and their start and end times, because that's
+
+376
+00:24:32,040 --> 00:24:36,760
+where a lot of the power shows up, is being able to search through words based on different
+
+377
+00:24:36,760 --> 00:24:40,880
+time, search through the whole transcript and look for certain words within X amount
+
+378
+00:24:40,880 --> 00:24:41,880
+of seconds between things.
+
+379
+00:24:41,880 --> 00:24:46,720
+You know, you get a lot more power with your modeling and work you can do when you're working
+
+380
+00:24:46,720 --> 00:24:50,320
+with that transcription information.
+
+381
+00:24:50,320 --> 00:25:00,000
+So now that we have gotten over into a transcription, we're going to talk about ways we can work
+
+382
+00:25:00,000 --> 00:25:01,000
+with those transcriptions.
+
+383
+00:25:01,000 --> 00:25:05,560
+So we're going to talk about some natural language processing techniques.
+
+384
+00:25:05,560 --> 00:25:08,880
+First thing we're going to look at is keywords.
+
+385
+00:25:08,880 --> 00:25:14,240
+So back to our, let's close this down.
+
+386
+00:25:14,240 --> 00:25:16,640
+Back to our notebooks, we're going to look at a couple different ways we're going to
+
+387
+00:25:16,640 --> 00:25:17,640
+look at keywords.
+
+388
+00:25:17,760 --> 00:25:20,280
+We're going to look at keyword extraction.
+
+389
+00:25:20,280 --> 00:25:24,680
+So from these VP debates, I can simply just do some basic keyword summarization, if you
+
+390
+00:25:24,680 --> 00:25:25,680
+will.
+
+391
+00:25:25,680 --> 00:25:26,680
+So I'm using a tool called Jensen.
+
+392
+00:25:26,680 --> 00:25:29,760
+It's another Python package you can download.
+
+393
+00:25:29,760 --> 00:25:34,160
+I'm doing some very basic preprocessing to remove stop words, and I'm summarizing and
+
+394
+00:25:34,160 --> 00:25:36,480
+doing keywords.
+
+395
+00:25:36,480 --> 00:25:37,620
+I'm also lemmatizing.
+
+396
+00:25:37,620 --> 00:25:44,720
+So I'm truncating the word down to just the lemmas or the stem of the word, if you will.
+
+397
+00:25:44,720 --> 00:25:48,560
+And then for keywords, I'm just showing the top 20.
+
+398
+00:25:48,560 --> 00:25:52,120
+This debate talked about taxes and Americans and businesses.
+
+399
+00:25:52,120 --> 00:25:55,640
+And then there can also sometimes be an interest in looking at the least 20 keywords as well.
+
+400
+00:25:55,640 --> 00:26:01,320
+So 20 keywords were treaties, private, stamina, et cetera.
+
+401
+00:26:01,320 --> 00:26:07,160
+Those words were not very much talked about, if you will.
+
+402
+00:26:07,160 --> 00:26:10,340
+So further in keyword spotting, that we can talk about ways that we can search.
+
+403
+00:26:10,340 --> 00:26:14,080
+So that was just ways to do summaries, but if you wanted to do searches of keywords,
+
+404
+00:26:14,080 --> 00:26:15,720
+I have some text, some code here.
+
+405
+00:26:15,720 --> 00:26:19,280
+Again, working with Jensen, I'm loading up all my transcripts.
+
+406
+00:26:19,280 --> 00:26:22,000
+I'm looping over each transcript and loading it up.
+
+407
+00:26:22,000 --> 00:26:27,960
+And then from here, I am processing the transcript into clean sentences, if you will.
+
+408
+00:26:27,960 --> 00:26:34,480
+So I'm going to, for each sentence, I'm doing get sentences, I'm removing stop words, I'm
+
+409
+00:26:34,480 --> 00:26:39,880
+stemming text, pulling out punctuation and removing white space.
+
+410
+00:26:39,880 --> 00:26:43,000
+And then I want to search for the keyword of taxes.
+
+411
+00:26:43,000 --> 00:26:48,400
+So again, for the same preprocessing steps you apply to the list of sentences, you also
+
+412
+00:26:48,400 --> 00:26:49,760
+want to apply to your search phrase.
+
+413
+00:26:49,760 --> 00:26:52,080
+So I'm applying my same four lines here.
+
+414
+00:26:52,080 --> 00:26:53,880
+That stems down to tax.
+
+415
+00:26:53,880 --> 00:26:58,920
+And then from here, I can loop over all of my documents and search for that keyword.
+
+416
+00:26:58,920 --> 00:27:05,320
+And you'll see that in a given debates, we found that tax 43 times, 32 times, et cetera,
+
+417
+00:27:05,400 --> 00:27:12,880
+So we're between 20 and 45 times the word tax was used within the debates.
+
+418
+00:27:12,880 --> 00:27:17,960
+So just a little general way you can work with that.
+
+419
+00:27:17,960 --> 00:27:22,040
+So also, we're going to run into a couple, we're going to finish on a couple of topics
+
+420
+00:27:22,040 --> 00:27:23,040
+here.
+
+421
+00:27:23,040 --> 00:27:27,720
+First, we're going to look at topic modeling, we'll look at ways you can generate topic
+
+422
+00:27:27,720 --> 00:27:32,320
+models and generate these types of really cool views and do some unsupervised type of
+
+423
+00:27:32,320 --> 00:27:33,960
+work with your keywords.
+
+424
+00:27:33,960 --> 00:27:36,240
+And then we'll look at sentiment analysis, we're going to look at polarity of the text
+
+425
+00:27:36,240 --> 00:27:38,480
+documents and take a look at those options.
+
+426
+00:27:38,480 --> 00:27:44,560
+So a couple more notebooks to open up and take a look at.
+
+427
+00:27:44,560 --> 00:27:52,640
+We'll go back into topic modeling and sentiment analysis, close this back down.
+
+428
+00:27:52,640 --> 00:27:59,040
+So topic modeling, yeah, I'm using a tool called, so again, Jensim and I'm bringing
+
+429
+00:27:59,040 --> 00:28:02,000
+in a tool called Spacey.
+
+430
+00:28:02,000 --> 00:28:03,440
+And I found a really cool tool.
+
+431
+00:28:03,440 --> 00:28:07,280
+I've really enjoyed working with called PyLDAViz, and we'll get to all these in a second.
+
+432
+00:28:07,280 --> 00:28:12,320
+So again, I'm loading up my debate files, I'm defining my helper functions here to process
+
+433
+00:28:12,320 --> 00:28:16,960
+the text to get text out of the files.
+
+434
+00:28:16,960 --> 00:28:20,160
+And then we're using Spacey for laminization.
+
+435
+00:28:20,160 --> 00:28:25,280
+We're loading up all of our, excuse me, our transcription files, and we're processing
+
+436
+00:28:25,280 --> 00:28:27,440
+them to remove stop words.
+
+437
+00:28:27,440 --> 00:28:32,960
+Then we're doing laminization across each one, and we're creating a dictionary of all
+
+438
+00:28:32,960 --> 00:28:35,000
+the words in our corpus.
+
+439
+00:28:35,000 --> 00:28:38,240
+And then from there, we're then generating a bag of words model.
+
+440
+00:28:38,240 --> 00:28:43,520
+So we're taking all of those and generating a bag of words for each document.
+
+441
+00:28:43,520 --> 00:28:48,240
+Then we're passing them into our latent Dirgelet allocation.
+
+442
+00:28:48,240 --> 00:28:55,440
+Effectively, that is a type of model where you're working with text, where you're working
+
+443
+00:28:55,440 --> 00:29:00,040
+with statistical differences about the text.
+
+444
+00:29:00,040 --> 00:29:06,360
+You're looking at different distances and calculations, trying to group text together
+
+445
+00:29:06,360 --> 00:29:09,800
+into known topics.
+
+446
+00:29:09,800 --> 00:29:11,800
+So I'm passing in different topics.
+
+447
+00:29:11,800 --> 00:29:18,280
+I'm passing in a topic count of 10, random state, number of passes, and per word topics
+
+448
+00:29:18,280 --> 00:29:19,280
+equal true.
+
+449
+00:29:19,280 --> 00:29:22,440
+And then I'm printing them off, and you're seeing different topics on their weights,
+
+450
+00:29:22,440 --> 00:29:24,280
+and that's super not helpful.
+
+451
+00:29:24,280 --> 00:29:29,920
+So then further, you can use this tool called PyLDAViz, and this could be really great to
+
+452
+00:29:29,920 --> 00:29:33,080
+give to your customers to work with their text data.
+
+453
+00:29:33,080 --> 00:29:38,840
+So from here, you can just prepare the notebook with the PyLDAViz, and it worked out better
+
+454
+00:29:38,840 --> 00:29:40,120
+for my screenshot in the slide.
+
+455
+00:29:40,120 --> 00:29:43,460
+But from here, I'm seeing all my different...
+
+456
+00:29:43,460 --> 00:29:47,560
+Each bubble is a topic, and then when I click on that topic, it shows me different words
+
+457
+00:29:47,560 --> 00:29:48,560
+within that topic.
+
+458
+00:29:48,560 --> 00:29:55,860
+So in this topic number one over here, go, say, Trump, American, President, et cetera,
+
+459
+00:29:55,860 --> 00:29:57,680
+and then these bubbles didn't render that well over here.
+
+460
+00:29:58,240 --> 00:30:02,920
+But as I scroll over to them, or I loop through my topics, I can see different words that
+
+461
+00:30:02,920 --> 00:30:08,160
+are in these different topics that are available to look at.
+
+462
+00:30:08,160 --> 00:30:15,040
+And I find this tool really helpful to see if my topic models are producing salient examples
+
+463
+00:30:15,040 --> 00:30:18,840
+that are helpful for my projects or for my research.
+
+464
+00:30:18,840 --> 00:30:23,740
+And then finally here, we're going to wrap up on sentiment analysis.
+
+465
+00:30:23,740 --> 00:30:29,820
+So when you're looking at sentiment analysis, you're looking at the polarity of the conversation.
+
+466
+00:30:29,820 --> 00:30:35,360
+So we're going to use a tool called the VADER algorithm from NLTK, and we're going to load
+
+467
+00:30:35,360 --> 00:30:43,380
+up the sentiment intensity analyzer and get that all ready to go.
+
+468
+00:30:43,380 --> 00:30:45,620
+We're going to load up our 2016 debates.
+
+469
+00:30:45,620 --> 00:30:48,860
+We're going to tokenize sentences, and then in front of you, we're going to loop over
+
+470
+00:30:48,860 --> 00:30:53,100
+every sentence, and we're going to calculate a polarity score.
+
+471
+00:30:53,100 --> 00:30:58,820
+So what we're doing here, we're looking for positive, neutral, and negative scores.
+
+472
+00:30:58,820 --> 00:31:02,500
+So we're adding up all the different types, we're dividing them by the sentences, and
+
+473
+00:31:02,500 --> 00:31:05,220
+we have 1,100 sentences.
+
+474
+00:31:05,220 --> 00:31:14,020
+For this document, you have the very much neutral leaning towards positive, but much
+
+475
+00:31:14,020 --> 00:31:18,300
+more neutral conversation than we saw positive overall in the document.
+
+476
+00:31:18,300 --> 00:31:21,620
+So that's the hand-rolled way, so to speak.
+
+477
+00:31:21,620 --> 00:31:25,140
+You're using different tools inside of your notebook to work on this, but if you want
+
+478
+00:31:25,140 --> 00:31:27,500
+to bring in some APIs, I've also had great luck.
+
+479
+00:31:27,500 --> 00:31:33,420
+Similar with the Transcribe API from AWS, they also have an API called AWS Comprehend,
+
+480
+00:31:33,420 --> 00:31:34,860
+where you can do comprehension of text.
+
+481
+00:31:34,860 --> 00:31:39,180
+And from here, I will note, though, it has a max of 5K bytes, so you may have to chunk
+
+482
+00:31:39,180 --> 00:31:41,060
+your file effectively.
+
+483
+00:31:41,060 --> 00:31:43,620
+So here, I'm opening up my file, my transcript.
+
+484
+00:31:43,620 --> 00:31:50,140
+I am starting up a comprehend session, and then I'm telling it to detect sentiment in
+
+485
+00:31:50,140 --> 00:31:54,620
+English, and I'm passing in the first 5,000 characters.
+
+486
+00:31:54,620 --> 00:31:59,940
+Outcomes as a result, this tells me overall, I had the sentiment scores for positive, neutral,
+
+487
+00:31:59,940 --> 00:32:04,220
+and negative, and overall, the beginning of this debate was neutral.
+
+488
+00:32:04,220 --> 00:32:09,540
+As you would expect in typical debates, you're going to see a lot of handshaking, welcoming,
+
+489
+00:32:09,540 --> 00:32:14,220
+opening statements, things like that, very neutral conversation.
+
+490
+00:32:14,220 --> 00:32:17,620
+But then at the end here, I started going through and detecting sentiment on the last
+
+491
+00:32:17,620 --> 00:32:23,980
+5,000 words in the debate text.
+
+492
+00:32:23,980 --> 00:32:29,260
+And again, I got my scores put out by my results, and overall, it was negative.
+
+493
+00:32:29,260 --> 00:32:34,740
+So this one debate that we're looking at here, as you would probably expect when things start
+
+494
+00:32:34,740 --> 00:32:38,140
+getting a little bit muscling you towards the end of the debate, got more negative and
+
+495
+00:32:38,140 --> 00:32:43,500
+got a little more on the negative side of the conversation.
+
+496
+00:32:43,500 --> 00:32:49,220
+So just a couple of ways to work with your transcriptions to get different kinds of
+
+497
+00:32:49,220 --> 00:32:53,380
+information out of them.
+
+498
+00:32:53,380 --> 00:32:57,500
+So in summary, we talked about analog, digital, and audio data characteristics.
+
+499
+00:32:57,500 --> 00:32:59,660
+We talked about audio features.
+
+500
+00:32:59,660 --> 00:33:03,140
+We talked about machine learning with those audio features, transcription, and natural
+
+501
+00:33:03,140 --> 00:33:06,420
+language processing.
+
+502
+00:33:06,420 --> 00:33:08,700
+Thank you all for coming and enjoying this talk virtually.
+
+503
+00:33:08,700 --> 00:33:10,820
+I'll leave the slide up at the end here.
+
+504
+00:33:11,820 --> 00:33:16,340
+And check out my github, Ryan Bales slash audio dash data dash insights.
+
+505
+00:33:16,340 --> 00:33:21,180
+There's my email address, Ryan at Balesofdata.com, and my Twitter is just my full name, Ryan Bales.
+
+506
+00:33:21,180 --> 00:33:24,660
+I'm happy to answer any questions and chat with all of you.
+
+507
+00:33:24,660 --> 00:33:28,620
+I'm sorry we couldn't be there together to talk about this at Pi Texas.
+
+508
+00:33:28,620 --> 00:33:33,260
+I hope to be there next year and talk more about other topics.
+
+509
+00:33:33,260 --> 00:33:34,420
+I hope you're all staying safe.
+
+510
+00:33:34,420 --> 00:33:36,020
+I hope you enjoyed this talk.
+
+511
+00:33:36,020 --> 00:33:37,020
+Please be well.
+
+512
+00:33:37,020 --> 00:33:38,020
+And again, let me know if any questions.
+
+513
+00:33:38,020 --> 00:33:41,420
+Thank you all for your time and have a great rest of your conference here at Pi Texas.
+

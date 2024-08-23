@@ -1,0 +1,856 @@
+1
+00:00:00,000 --> 00:00:08,760
+All right. Our next talk is going to be Harrington Joseph. He's going to tell us about when bullions
+
+2
+00:00:08,760 --> 00:00:12,880
+are not enough, state machines. Let's give him a round of applause.
+
+3
+00:00:12,880 --> 00:00:29,960
+Thanks, everyone. Can everybody hear me okay? What about now? Louder? All right. Okay. I'm
+
+4
+00:00:29,960 --> 00:00:34,040
+going to talk about when bullions are not enough and how we can use state machines in those cases.
+
+5
+00:00:34,040 --> 00:00:40,560
+My name is Harrington Joseph. I'm a senior software engineer at Netflix where I work on the data
+
+6
+00:00:40,560 --> 00:00:47,200
+platform team. My work is mostly focused on data orchestration and even driven architecture. Feel
+
+7
+00:00:47,200 --> 00:00:51,240
+free to find me after the talk if you want to know more about what I do on Netflix or you want to
+
+8
+00:00:51,240 --> 00:00:57,520
+share your favorite show or something like that. Expectations. This talk is about why,
+
+9
+00:00:57,560 --> 00:01:03,640
+how, and when to use state machines. This talk is not about the internals of a state machine.
+
+10
+00:01:03,640 --> 00:01:11,080
+I want to make that really clear. Let's start with a very simple analogy. Imagine that you have a
+
+11
+00:01:11,080 --> 00:01:18,240
+closet where you store tools and sport equipment. But this closet is so messy that you don't really
+
+12
+00:01:18,240 --> 00:01:22,800
+want to look at it. You don't want to think about it. Reality hits you the moment that you have to
+
+13
+00:01:22,800 --> 00:01:26,560
+get something from that closet and turns out that it's all the way at the bottom of the messy file
+
+14
+00:01:26,600 --> 00:01:30,600
+that you have in there. You don't really know if you can pull it out or not because everything may
+
+15
+00:01:30,600 --> 00:01:35,960
+fall apart. Things get actually worse when you ask someone to get something from that closet for
+
+16
+00:01:35,960 --> 00:01:41,120
+you. That person is probably not going to find what you need and it's very unlikely that he's
+
+17
+00:01:41,120 --> 00:01:46,440
+going to feel comfortable moving things around. This is exactly what happens when we use multiple
+
+18
+00:01:46,440 --> 00:01:51,680
+booleans to represent states and enforce business rules. Our code gets messy and no one wants to
+
+19
+00:01:51,680 --> 00:01:58,320
+touch it. So please raise your hand if you have a class with any of the following attributes.
+
+20
+00:01:58,320 --> 00:02:08,320
+Right. I think everybody feels identified. So the problem. Using multiple booleans to represent
+
+21
+00:02:08,320 --> 00:02:16,440
+states and enforce business rules. Very simple. Very concise. So let's take a look at the code.
+
+22
+00:02:16,440 --> 00:02:23,880
+Here we have a video class that receives a source which is the source of the video and it
+
+23
+00:02:23,880 --> 00:02:29,840
+initializes a source attribute with the given source but it also initializes a boolean attribute
+
+24
+00:02:29,840 --> 00:02:35,520
+called isPlaying equals false because at the beginning the video is not playing. This class
+
+25
+00:02:35,520 --> 00:02:41,520
+also provides three functions. Pause, play and stop. I'm not going to dive into the detail how
+
+26
+00:02:41,520 --> 00:02:46,720
+to play or pause or stop a video file but what is important here is the last line of this function
+
+27
+00:02:46,720 --> 00:02:53,200
+which is self.isPlaying. So when you call pause self.isPlaying is set to false. When you call
+
+28
+00:02:53,200 --> 00:03:00,680
+play self.isPlaying is set to true and when you call stop set.isPlaying is set to false. So we can
+
+29
+00:03:00,680 --> 00:03:09,120
+go and create a video instance. We can play the video. We can pause the video. We can stop the
+
+30
+00:03:09,120 --> 00:03:17,000
+video and we can check if the video is playing or not. But video.isPlaying what does it really mean?
+
+31
+00:03:17,000 --> 00:03:26,520
+When it's true it definitely means that the video is playing but what happens when it's false? Is it
+
+32
+00:03:26,520 --> 00:03:33,080
+paused or is it stopped? In reality we don't have enough information to answer this question so
+
+33
+00:03:33,080 --> 00:03:41,760
+naturally we will go and do something like this. So we created a new attribute called isPause which
+
+34
+00:03:41,760 --> 00:03:46,000
+by default we initialize it as false because when we create the instance of the video the video is
+
+35
+00:03:46,000 --> 00:03:51,040
+not paused either. Then when we call pause now we are going to update this attribute and we're going
+
+36
+00:03:51,040 --> 00:03:55,600
+to set it to true. When we call play we're going to set it to false and when we call stop we're
+
+37
+00:03:55,600 --> 00:04:02,640
+going to set it to false. So we can continue answering the video is playing by just calling
+
+38
+00:04:02,640 --> 00:04:11,400
+video.isPlaying. We can answer if the video is paused by calling video.isPause but when it comes
+
+39
+00:04:11,400 --> 00:04:16,320
+to knowing if the video is stopped we actually have to check if the video is not playing and not paused.
+
+40
+00:04:16,320 --> 00:04:23,520
+This is very ugly. It's not elegant at all but it's also really fragile. It's prone to errors. The
+
+41
+00:04:23,520 --> 00:04:30,200
+moment you introduce a new state any condition that you have built around this logic is going
+
+42
+00:04:30,200 --> 00:04:40,240
+to be broken. Let's talk about some business rules. Let's say that a video can only be played when
+
+43
+00:04:40,240 --> 00:04:49,640
+it's paused or stopped. Rule number two, a video can only be paused when it's playing. Rule number
+
+44
+00:04:49,640 --> 00:04:56,320
+three, a video can only be stopped when it's playing or paused. Very simple rules just like a
+
+45
+00:04:56,320 --> 00:05:02,800
+regular video player. So rule number one, a video can only be played when it's paused or stopped.
+
+46
+00:05:02,800 --> 00:05:08,320
+We go and modify our play function and now we check if the video is not playing or if the video
+
+47
+00:05:08,320 --> 00:05:14,320
+is paused then we make the call to play the video, update our isPlaying attribute to true,
+
+48
+00:05:14,320 --> 00:05:20,480
+set the isPause attribute to false and if this condition is not satisfied we basically raise
+
+49
+00:05:20,480 --> 00:05:25,320
+an exception saying that you cannot play a video that is already playing assuming that the video
+
+50
+00:05:25,320 --> 00:05:31,520
+is already playing. So there is some assumption here that leads to fragile code again the moment
+
+51
+00:05:31,520 --> 00:05:38,880
+you introduce new states or new business rules. For rule number two we say a video can only be
+
+52
+00:05:38,880 --> 00:05:44,920
+played when it's paused. A video can only be paused when it's playing. So in this case we check if the
+
+53
+00:05:44,920 --> 00:05:50,760
+video is already playing. In that case we make the call to pause the video, update our flags,
+
+54
+00:05:50,760 --> 00:05:56,440
+otherwise we raise an exception saying that we cannot pause a video that is not playing.
+
+55
+00:05:56,440 --> 00:06:04,040
+And for rule number three we say that a video can only be stopped when it's playing or paused. Again
+
+56
+00:06:04,040 --> 00:06:08,680
+we check if the video is playing or if the video is paused, we make the call to stop the video,
+
+57
+00:06:08,680 --> 00:06:17,240
+update our flags, otherwise we raise an exception. So the code is rapidly becoming complex. Our play,
+
+58
+00:06:17,280 --> 00:06:22,040
+pause and stop functions are not actually focusing on what they're supposed to be doing. They are
+
+59
+00:06:22,040 --> 00:06:27,320
+checking for the state, they are validating business rules instead of focusing on playing,
+
+60
+00:06:27,320 --> 00:06:32,920
+pausing or stopping the video. It's bloated. We added a bunch of code and we didn't get any
+
+61
+00:06:32,920 --> 00:06:40,320
+functionality. We're just checking for the state. It's repetitive. We keep checking for the state
+
+62
+00:06:40,320 --> 00:06:45,280
+and raising exceptions. Even though it's not exactly the same condition, it's something
+
+63
+00:06:45,280 --> 00:06:51,400
+repetitive. It's something that could probably be automated. And it's definitely hard to test.
+
+64
+00:06:51,400 --> 00:06:56,880
+In order to write unit tests for this, you have to write unit tests for play, for pause and stop,
+
+65
+00:06:56,880 --> 00:07:00,800
+with all the possible values that this flag can have. We're talking about only two flags.
+
+66
+00:07:00,800 --> 00:07:07,880
+Imagine the moment that you add more flags for different states. Here's a different approach.
+
+67
+00:07:07,880 --> 00:07:13,600
+You can have a video class where you define some constants for your states and then instead of
+
+68
+00:07:13,600 --> 00:07:18,700
+having the boolean flags, you can have a state. And then just to initialize this as stop because
+
+69
+00:07:18,700 --> 00:07:25,400
+the video is not playing once you create the instance. Now you say a video can only be played
+
+70
+00:07:25,400 --> 00:07:31,040
+when it's paused or stopped. The code actually didn't change much. Instead of checking booleans,
+
+71
+00:07:31,040 --> 00:07:35,760
+we'll continue checking for constants and now we have to update the states. We keep raising
+
+72
+00:07:35,760 --> 00:07:41,120
+the exception in all the cases and also we make assumptions. We say if the video is not playing,
+
+73
+00:07:41,200 --> 00:07:46,320
+then we can definitely play it. But is that true? It is true at the moment with the three business
+
+74
+00:07:46,320 --> 00:07:49,640
+rules we have. But the moment we introduce a new rule or we introduce a new state,
+
+75
+00:07:49,640 --> 00:07:59,520
+this code is going to be broken. Same thing for the pause case and same thing for the stop case.
+
+76
+00:07:59,520 --> 00:08:11,280
+So let's talk about state machines. What's a state machine? A state machine is a mathematical
+
+77
+00:08:11,280 --> 00:08:18,960
+model of computation with a finite number of states, transition between states and a
+
+78
+00:08:18,960 --> 00:08:25,040
+machine that can only be at a state in a given time. All these sounds very complex,
+
+79
+00:08:25,040 --> 00:08:29,840
+theoretical and mathematical. But in reality, a state machine can be seen as a directed graph
+
+80
+00:08:29,840 --> 00:08:37,200
+where each of the nodes represent a state in the machine and the connections between the nodes are
+
+81
+00:08:37,200 --> 00:08:42,080
+representing the transitions. Basically when two nodes are connected, it means that you can
+
+82
+00:08:42,080 --> 00:08:48,680
+transition from node A to node B. And then you just need a pointer that tells you in what state
+
+83
+00:08:48,760 --> 00:08:56,240
+you are at a given time. So here's a very simple example of a state machine. This is a state
+
+84
+00:08:56,240 --> 00:09:02,120
+machine for when a user lands on a website. Initially, the user is in the logout state when
+
+85
+00:09:02,120 --> 00:09:06,920
+you land for the first time on a website. Once you are in the logout state, you can perform the
+
+86
+00:09:06,920 --> 00:09:13,000
+login transition to move to the login state. Once in the login state, you can perform the logout
+
+87
+00:09:13,000 --> 00:09:19,960
+transition to move to the logout state. In this case, logout has this blueish glow representing
+
+88
+00:09:19,960 --> 00:09:26,280
+that that's the initial state or the current state at the beginning. So how do we design a state
+
+89
+00:09:26,280 --> 00:09:32,920
+machine? First, we need to define a number of states that we want to deal with. What are the
+
+90
+00:09:32,920 --> 00:09:40,760
+states that our object is going to be representing? Then we need to lay down the transition between
+
+91
+00:09:40,760 --> 00:09:47,560
+states. What are the business rules that we want to enforce? And finally, we just need to pick the
+
+92
+00:09:47,560 --> 00:09:55,000
+initial state. So step one, define a finite number of states. Plane, pause, and stop.
+
+93
+00:09:58,600 --> 00:10:03,480
+Step number two, lay down the transition between states. In this case, what we're doing here is
+
+94
+00:10:03,480 --> 00:10:08,840
+translating the business rules into edges in the graph. So rule number one said that a video can
+
+95
+00:10:08,840 --> 00:10:14,760
+only be played when it is stopped or paused. That's why you see two incoming arrows to the
+
+96
+00:10:14,760 --> 00:10:19,960
+playing state, one from stop and one from pause, and the name of the transition is called play.
+
+97
+00:10:21,880 --> 00:10:27,160
+Rule number two said that a video can only be paused when it's playing. That's why you see
+
+98
+00:10:27,160 --> 00:10:31,640
+only one incoming arrow to the pause state and it's coming from the playing state with the name
+
+99
+00:10:32,280 --> 00:10:40,200
+of pause. And rule number three said that a video can only be stopped when it's playing or paused.
+
+100
+00:10:40,200 --> 00:10:45,000
+That's why you see two incoming arrows to the stop state, one from playing and one from pause,
+
+101
+00:10:45,000 --> 00:10:53,320
+with the name stop. And finally, we just need to select the initial state, which in this case is
+
+102
+00:10:53,320 --> 00:10:59,400
+going to be stop because the video is not played at the beginning. So let's take a look at the code.
+
+103
+00:11:01,640 --> 00:11:06,280
+So I'm going to rely on a library called Transitions. It's an open source library
+
+104
+00:11:06,280 --> 00:11:11,560
+that you can find on GitHub. It's really simple to read, like the code is fairly easy to understand,
+
+105
+00:11:12,200 --> 00:11:15,720
+but you can find any other flavors in multiple languages as well.
+
+106
+00:11:18,680 --> 00:11:22,680
+So the first thing that you need to do to use Transitions is to import the machine.
+
+107
+00:11:23,720 --> 00:11:28,120
+Then you define all the states that you want to deal with. As you can see, this doesn't look very
+
+108
+00:11:28,120 --> 00:11:35,000
+different to the latest approach that I showed you. Next, we need to define the Transitions.
+
+109
+00:11:35,000 --> 00:11:38,520
+And this is the part that looks a little bit complex, but in reality it's not. What we're
+
+110
+00:11:38,520 --> 00:11:43,640
+doing here is describing the graph. The trigger is basically the arrow that represents the
+
+111
+00:11:43,640 --> 00:11:46,680
+connection. The value of the trigger is going to be the name of the transition.
+
+112
+00:11:47,880 --> 00:11:51,240
+Source is going to be the origin of the transition, and this is going to be
+
+113
+00:11:51,880 --> 00:11:56,360
+the destination of the transition. So for rule number one, that a video can only be played when
+
+114
+00:11:56,360 --> 00:12:01,960
+it's paused or stopped, we basically have two rules. One going from pause to playing,
+
+115
+00:12:01,960 --> 00:12:06,440
+and another one going from stop to playing, and the name of the transition is going to be play.
+
+116
+00:12:08,040 --> 00:12:10,840
+For rule number one, that a video can only be paused when it's playing,
+
+117
+00:12:11,640 --> 00:12:17,080
+then we have one transition that is going from playing to pause, and the name of the transition
+
+118
+00:12:17,080 --> 00:12:25,000
+is going to be called pause. And rule number three, that a video can only be stopped when it's playing
+
+119
+00:12:25,000 --> 00:12:30,200
+or paused means that we have two transition rules, one going from playing and one going to pause,
+
+120
+00:12:30,200 --> 00:12:34,760
+both ending in the stop state, and the name of the transition or the trigger is going to be stop.
+
+121
+00:12:35,720 --> 00:12:40,600
+Another thing that is important to mention of this definition here is that the trigger name
+
+122
+00:12:41,240 --> 00:12:46,520
+should match the name of the function that you're going to call. And I'll go over that in a moment.
+
+123
+00:12:49,160 --> 00:12:53,800
+Finally, you need to create the machine. When you create the machine, you say model equals self,
+
+124
+00:12:54,360 --> 00:12:59,640
+and I explain why this is important. It's related with the trigger name, transitions,
+
+125
+00:12:59,640 --> 00:13:02,840
+the list of transitions that we want to enforce or that we want to provide,
+
+126
+00:13:03,720 --> 00:13:06,440
+and the initial state, which in this case is stop.
+
+127
+00:13:10,360 --> 00:13:14,120
+Now our code actually looks like this. As you can see, there is not much there because
+
+128
+00:13:14,120 --> 00:13:17,880
+there is nothing related with the state anymore. We don't have to keep track of state. We don't
+
+129
+00:13:17,880 --> 00:13:23,720
+have to check the state. We don't have to raise exceptions. The code is actually focusing on
+
+130
+00:13:23,720 --> 00:13:28,920
+what it's supposed to be doing. Pause is going to pause the video. It doesn't care about the
+
+131
+00:13:28,920 --> 00:13:36,440
+state at all. Same thing for play and same thing for stop. So now we can create a video instance.
+
+132
+00:13:38,360 --> 00:13:43,240
+We can play the video and our state should transition to playing. If we really care,
+
+133
+00:13:43,240 --> 00:13:48,920
+we can actually check the state of the video. As you saw, I didn't create a state attribute,
+
+134
+00:13:48,920 --> 00:13:53,320
+but the machine itself is injecting this attribute into the object. When we provide
+
+135
+00:13:53,320 --> 00:13:57,960
+model equals self, the machine injects this attribute. You don't really have to access this
+
+136
+00:13:58,680 --> 00:14:02,200
+attribute at all because you technically shouldn't deal with the state. The machine
+
+137
+00:14:02,200 --> 00:14:05,240
+shouldn't handle that for you. But if you need, for some reason, it's available.
+
+138
+00:14:07,080 --> 00:14:13,560
+We can pause the video. The state transitions to pause. We can stop the video and the state
+
+139
+00:14:13,560 --> 00:14:20,760
+transitions to stop. But what happens if we call pause again? Remember, a video can only be paused
+
+140
+00:14:20,760 --> 00:14:26,600
+when it's playing, but we are in the stop state. This is going to give us a machine error. The
+
+141
+00:14:26,600 --> 00:14:32,280
+machine is taking care of validating that this transition is valid, and we get this pretty much
+
+142
+00:14:32,280 --> 00:14:36,280
+for free. All we had to do was to define the transitions, but we didn't have to write a single
+
+143
+00:14:36,280 --> 00:14:42,120
+condition. The way this works, remember that I mentioned that the trigger name was important
+
+144
+00:14:42,120 --> 00:14:47,640
+and the model equals self was important, is basically when we initialize the machine,
+
+145
+00:14:47,640 --> 00:14:51,000
+the machine is going to look all the trigger names, and it's going to look all the functions
+
+146
+00:14:51,000 --> 00:14:54,680
+that match the trigger name, and it's going to wrap them. When you call play, you're actually
+
+147
+00:14:54,680 --> 00:14:59,080
+going through the machine first. The machine is going to validate the current state and the
+
+148
+00:14:59,080 --> 00:15:05,480
+state where you want to go. If that is valid, then it calls the actual play function. If it's not,
+
+149
+00:15:05,480 --> 00:15:10,520
+it raises a machine error. Another thing that is important is that, for example, if you call play
+
+150
+00:15:10,520 --> 00:15:14,440
+and you get an exception saying, let's say that you try to play a file that doesn't exist or you
+
+151
+00:15:14,440 --> 00:15:21,160
+couldn't, something happened trying to execute this file, if your function raised the exception,
+
+152
+00:15:21,160 --> 00:15:25,080
+the exception is going to be propagated by the machine, and therefore the state is not going to
+
+153
+00:15:25,080 --> 00:15:39,400
+change. So how do we test this? We don't. If you're using a state machine library, you don't really
+
+154
+00:15:39,400 --> 00:15:44,120
+have to test that the state machine library is validating that you can transition from state A
+
+155
+00:15:44,120 --> 00:15:48,920
+to B, and then you cannot move from one state that is not connected to the other one, because
+
+156
+00:15:48,920 --> 00:15:54,920
+that's the state machine job. Instead, you can test if the machine was initialized with the right
+
+157
+00:15:54,920 --> 00:16:01,960
+transitions and the right initial state, and then you can actually focus on testing real functionality.
+
+158
+00:16:01,960 --> 00:16:06,360
+You can test that the play function actually does what it's supposed to be doing. Same thing
+
+159
+00:16:06,360 --> 00:16:11,800
+for pause and same thing for stop. Nothing related with the state. You don't really have to
+
+160
+00:16:11,800 --> 00:16:19,000
+care about that anymore. So let's add a new state, and let's call this state rewinding.
+
+161
+00:16:23,480 --> 00:16:29,720
+I'm highlighting in red all the changes that I made to the rules when I added this state
+
+162
+00:16:29,720 --> 00:16:33,560
+and a brand new rule. As you can see, there is a new node in the graph
+
+163
+00:16:34,520 --> 00:16:39,640
+called rewinding, and you see a bunch of new arrows. So rule number one saying that a video
+
+164
+00:16:39,640 --> 00:16:45,880
+can only be played when it's paused, stopped, or rewinding means that there's a new arrow going
+
+165
+00:16:45,880 --> 00:16:52,120
+from the rewinding state to the playing state with the name of play. The rule number two that a video
+
+166
+00:16:52,120 --> 00:16:57,800
+can only be paused when it's playing or rewinding means that there's got to be an incoming arrow
+
+167
+00:16:57,800 --> 00:17:04,760
+to the pause state from the rewinding state named pause. The rule number three that a video can only
+
+168
+00:17:04,760 --> 00:17:10,360
+be stopped when it's playing, paused, or rewinding leads to that big arrow on the right
+
+169
+00:17:12,760 --> 00:17:17,480
+that is basically saying that that is going from the rewinding state to the
+
+170
+00:17:17,480 --> 00:17:25,720
+stop state with the name of stop. And finally, a video can only be rewinding when it's playing
+
+171
+00:17:25,720 --> 00:17:31,320
+or paused that leads to the two new incoming arrows to the rewinding state, one from playing
+
+172
+00:17:31,320 --> 00:17:38,920
+and one from pause, and the name is rewind. So let's take a look at the code. In this case,
+
+173
+00:17:38,920 --> 00:17:44,920
+all we had to do was this. We basically defined a new state called rewinding, and now we modify
+
+174
+00:17:44,920 --> 00:17:50,040
+our transitions. So in this case, for rule number one, we added one new transition
+
+175
+00:17:51,480 --> 00:17:55,160
+that is going from the rewinding state to the playing state, and the name is going to be play.
+
+176
+00:17:55,720 --> 00:18:00,840
+Rule number two, we did exactly the same, but going from the rewinding state to the pause state,
+
+177
+00:18:00,840 --> 00:18:06,280
+and the name is pause. Similar for rule number three, going from the rewinding state to the
+
+178
+00:18:06,280 --> 00:18:12,680
+stop state with the name stop. And then for the brand new rule number four that a video can only
+
+179
+00:18:12,680 --> 00:18:18,360
+be rewinding when it's playing or paused, we added two new transitions, one going from playing,
+
+180
+00:18:18,360 --> 00:18:24,040
+and one going from pause to the rewinding state. The name of the transition is going to be rewind.
+
+181
+00:18:24,040 --> 00:18:28,840
+That's all we have to do. The only thing that is left here is to write the rewind function.
+
+182
+00:18:29,720 --> 00:18:35,880
+But we didn't have to actually change any of the play, pause, or stop logic. We don't really
+
+183
+00:18:35,880 --> 00:18:41,080
+have to care about the state of any of these functions. And the other good thing is like the
+
+184
+00:18:41,080 --> 00:18:45,320
+unit tests are not going to be broken. The only unit test that can be broken is the one that tests
+
+185
+00:18:45,320 --> 00:18:49,720
+that the machine was initialized with the right transitions. But the other unit tests for play,
+
+186
+00:18:49,720 --> 00:18:56,840
+pause, and stop remain the same. So when are booleans not enough?
+
+187
+00:18:59,240 --> 00:19:04,280
+When you have multiple booleans representing a single state. If you find yourself checking
+
+188
+00:19:04,280 --> 00:19:09,000
+multiple booleans in order to decide what the state of an object is, something smells fishy
+
+189
+00:19:09,000 --> 00:19:18,040
+here. There's got to be a better way of doing this. When business rules are informed by multiple
+
+190
+00:19:18,040 --> 00:19:24,040
+booleans. Along the same lines, if you find yourself checking multiple booleans or even
+
+191
+00:19:24,040 --> 00:19:29,000
+multiple constants, multiple attributes in order to decide if you can perform an action or not,
+
+192
+00:19:29,560 --> 00:19:33,880
+then you're probably in the wrong place. You probably have to change your approach.
+
+193
+00:19:37,640 --> 00:19:44,040
+So when to use a state machine? When states are not binary. Do you have something more than true
+
+194
+00:19:44,040 --> 00:19:47,720
+or false, one and zero, yes or no? You may want to consider using a state machine.
+
+195
+00:19:48,440 --> 00:19:50,760
+It's not a hard rule, but you may want to consider it.
+
+196
+00:19:53,400 --> 00:19:57,400
+When you have to account for future states, and this is not about over-engineering,
+
+197
+00:19:57,400 --> 00:20:03,160
+which we are really good at by the way, it's about knowing for a fact that you're going to add new
+
+198
+00:20:03,160 --> 00:20:08,600
+states anytime soon, for example, or even remove some states.
+
+199
+00:20:09,240 --> 00:20:13,000
+When you have to enforce a complex set of business rules. As you saw in the presentation,
+
+200
+00:20:13,000 --> 00:20:18,200
+we were talking about three states or four states in some cases, three or four rules in some cases,
+
+201
+00:20:18,200 --> 00:20:22,200
+and it got fairly complex. The moment we add more states and more business rules,
+
+202
+00:20:22,200 --> 00:20:28,440
+the complexity simply increases. So if we delegate all these complexity to a state machine,
+
+203
+00:20:28,440 --> 00:20:33,560
+we can actually focus on implementing the code that we want to write. We can focus on the
+
+204
+00:20:34,200 --> 00:20:40,600
+like, creating the functionality that we need to provide.
+
+205
+00:20:44,360 --> 00:20:48,920
+So in summary, I would like you to consider using state machines to represent states and
+
+206
+00:20:48,920 --> 00:20:53,960
+enforce business rules. As we saw in the presentation, when we use booleans to represent
+
+207
+00:20:53,960 --> 00:20:59,800
+states and enforce business rules, the code gets messy, unmaintainable, prone to errors,
+
+208
+00:20:59,800 --> 00:21:05,160
+and really hard to test, just like the closet analogy. On the other hand, if we use state
+
+209
+00:21:05,160 --> 00:21:11,080
+machines, we basically delegate this complexity, and it also helps us decrease in the amount of
+
+210
+00:21:11,960 --> 00:21:17,320
+unit tests that we have to write. It is important to mention that state machines are not a silver
+
+211
+00:21:17,320 --> 00:21:22,600
+bullet. So it means that it's not a one solution to solve all these problems. So know your tools,
+
+212
+00:21:22,600 --> 00:21:27,320
+think about the problem that you're trying to solve, and decide if it makes sense to add a
+
+213
+00:21:27,320 --> 00:21:33,720
+state machine to your solution. Be mindful about it and balance your decisions. That's all I have.
+
+214
+00:21:34,360 --> 00:21:46,040
+Thank you very much.
+

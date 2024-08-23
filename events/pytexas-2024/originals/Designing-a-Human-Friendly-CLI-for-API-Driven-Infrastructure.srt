@@ -1,0 +1,1116 @@
+1
+00:00:00,000 --> 00:00:04,720
+Hi my name is Oliver Rew and I am a software engineer at Bloomberg in New
+
+2
+00:00:04,720 --> 00:00:07,680
+York City. I'm the last Bloomberg presenter you'll see at this conference
+
+3
+00:00:07,680 --> 00:00:13,480
+unless someone put in for a lightning talk then I'm sorry but I'm here today to
+
+4
+00:00:13,480 --> 00:00:16,320
+talk to you about a tool that my team built and some of the design that went
+
+5
+00:00:16,320 --> 00:00:21,640
+into it. So at Bloomberg I'm on a team that builds automation and tooling to
+
+6
+00:00:21,640 --> 00:00:26,200
+make our infrastructure more reliable, scalable, and efficient. Now without
+
+7
+00:00:26,200 --> 00:00:29,680
+getting into too many details a while back we were tasked with building a new
+
+8
+00:00:29,680 --> 00:00:34,800
+tool. Its purpose was to unify the existing tools used by our operations
+
+9
+00:00:34,800 --> 00:00:43,240
+teams and in doing so increase their repeatability and efficiency. Now for
+
+10
+00:00:43,240 --> 00:00:47,680
+this tool we knew we wanted an API to host it but we also needed a CLI for
+
+11
+00:00:47,680 --> 00:00:51,400
+individuals to interact with it. To achieve this there's a fairly common
+
+12
+00:00:51,400 --> 00:00:56,000
+pattern you might be familiar with. On one side you have a REST API it's got
+
+13
+00:00:56,000 --> 00:01:00,240
+various methods and paths it speaks JSON and it's designed to be interacted
+
+14
+00:01:00,240 --> 00:01:05,600
+with programmatically. And on the right you have a CLI made for human interactions
+
+15
+00:01:05,600 --> 00:01:10,000
+and it translates between the REST API operations and human-friendly command
+
+16
+00:01:10,000 --> 00:01:16,000
+syntax and output. Usually these applications are tightly coupled and the
+
+17
+00:01:16,000 --> 00:01:24,080
+CLI is purpose-written specifically for the latest API spec. However from past
+
+18
+00:01:24,080 --> 00:01:29,440
+experiences we knew this design presented a couple challenges. We knew
+
+19
+00:01:29,440 --> 00:01:32,760
+our API would have quite a few operations and might indeed never stop
+
+20
+00:01:32,760 --> 00:01:36,840
+growing depending on the requirements of our infrastructure. While building a
+
+21
+00:01:36,840 --> 00:01:41,560
+tightly coupled API and CLI might seem easier at first keeping the two in sync
+
+22
+00:01:41,560 --> 00:01:48,520
+can be cumbersome as the project grows. So let's talk a little bit about why. So a
+
+23
+00:01:48,520 --> 00:01:53,240
+tightly coupled API and CLI is a simple and straightforward approach. The API is
+
+24
+00:01:53,240 --> 00:01:57,800
+for programmatic access, the CLI is for human interaction and the CLI code
+
+25
+00:01:57,800 --> 00:02:03,560
+translates between the two. But when an API and CLI are tightly coupled every
+
+26
+00:02:03,560 --> 00:02:08,320
+time you modify one you likely have to modify the other. You need to continually
+
+27
+00:02:08,320 --> 00:02:12,240
+maintain two separate code bases with automation, deployments and team
+
+28
+00:02:12,240 --> 00:02:17,960
+knowledge and you often need to deploy API and CLI versions together so they
+
+29
+00:02:17,960 --> 00:02:23,440
+can stay in sync and you don't have compatibility issues. It was at this
+
+30
+00:02:23,440 --> 00:02:27,480
+point that we had an idea. We're already planning on maintaining good API docs
+
+31
+00:02:27,480 --> 00:02:32,120
+for other API clients so what if the CLI commands were just based on the API
+
+32
+00:02:32,120 --> 00:02:37,240
+documentation? With this model the CLI would generate its commands by simply
+
+33
+00:02:37,240 --> 00:02:46,400
+reading the docs every time it starts. So when your CLI is auto-generated new
+
+34
+00:02:46,400 --> 00:02:51,040
+features and fixes only require an API change and because of this the API and
+
+35
+00:02:51,040 --> 00:02:56,200
+CLI can never get out of sync. One major drawback is that it's a bit more complex
+
+36
+00:02:56,200 --> 00:03:00,640
+than the simple model we discussed and it should be noted that with this design
+
+37
+00:03:00,640 --> 00:03:04,440
+you still need to maintain two separate code bases and need to deploy the API
+
+38
+00:03:04,440 --> 00:03:11,240
+and CLI separately. But the advantage comes from how this scales over time. In
+
+39
+00:03:11,240 --> 00:03:14,440
+the beginning the CLI and API will likely both be getting changed very
+
+40
+00:03:14,440 --> 00:03:18,840
+frequently because they're under active development but when the CLI matures and
+
+41
+00:03:18,840 --> 00:03:24,920
+the API gets continual updates such as bug fixes, new features, etc. the
+
+42
+00:03:24,920 --> 00:03:30,280
+CLI should hopefully only require minimal maintenance. Effectively at a
+
+43
+00:03:30,280 --> 00:03:35,680
+certain point you can stop deploying the CLI but continue changing the API and the
+
+44
+00:03:35,680 --> 00:03:42,520
+CLI gets updated for free. So we assembled our first draft with simple
+
+45
+00:03:42,520 --> 00:03:48,160
+one-to-one mappings between the API and CLI. API paths would map to space
+
+46
+00:03:48,160 --> 00:03:53,040
+separated CLI commands, each path parameter, query parameter, and request
+
+47
+00:03:53,040 --> 00:03:57,560
+body field would be a single CLI flag and the CLI would just print the JSON
+
+48
+00:03:57,560 --> 00:04:02,320
+API response. We weren't the first people to think of something like this. It's
+
+49
+00:04:02,320 --> 00:04:05,800
+been done a couple times in the past. You can Google it or ask your favorite
+
+50
+00:04:05,800 --> 00:04:11,960
+LLM to do it for you. But let's look at this scheme in a little more detail. So
+
+51
+00:04:11,960 --> 00:04:17,960
+here's a sample API endpoint that's used to get a list of servers. It uses a get
+
+52
+00:04:17,960 --> 00:04:23,360
+method, its path is slash device slash compute slash servers, it takes an
+
+53
+00:04:23,360 --> 00:04:27,920
+optional cluster underscore name query parameter to filter results by cluster
+
+54
+00:04:27,920 --> 00:04:33,720
+and it responds with a JSON blob containing a list of found servers. Now
+
+55
+00:04:33,720 --> 00:04:37,520
+if we weren't to naively generate a CLI command from this endpoint it would look
+
+56
+00:04:37,520 --> 00:04:44,800
+something like this. To use it you need to fully type out get device compute
+
+57
+00:04:44,800 --> 00:04:49,520
+servers, specify your cluster with the dash dash cluster underscore name flag
+
+58
+00:04:49,520 --> 00:04:55,800
+and you get back a HTTP status code and a huge JSON blob. If you can't already tell
+
+59
+00:04:55,800 --> 00:05:03,440
+this scheme leads to a bad CLI and is not much better than just using curl. So we
+
+60
+00:05:03,440 --> 00:05:07,160
+realized that simply bolting the API and CLI together with some simple mappings
+
+61
+00:05:07,160 --> 00:05:11,760
+was not going to work. Doing that created a really poor user experience in
+
+62
+00:05:11,760 --> 00:05:22,800
+the CLI. The problem is that good APIs and CLIs are designed for very
+
+63
+00:05:22,800 --> 00:05:27,920
+different purposes. APIs are made for programmers writing computer code but
+
+64
+00:05:27,920 --> 00:05:32,040
+CLIs are fundamentally a human interface. The underlying issue is that we're
+
+65
+00:05:32,040 --> 00:05:38,200
+trying to map API concepts to the CLI domain but REST API paths were never
+
+66
+00:05:38,200 --> 00:05:42,920
+meant to be typed CLI commands. API parameter names were never meant to be
+
+67
+00:05:42,920 --> 00:05:47,920
+typed CLI flags and API response data is usually not meant to be consumed raw by
+
+68
+00:05:47,920 --> 00:05:54,240
+humans. As we developed our first draft and ran into these issues we kept trying
+
+69
+00:05:54,240 --> 00:05:58,320
+to think of different ways to modify the API so that it's directly mapped CLI
+
+70
+00:05:58,320 --> 00:06:04,040
+commands would be more human friendly. We could shorten our API paths so
+
+71
+00:06:04,040 --> 00:06:08,760
+that the CLI commands are easier to type or maybe API path parameters could
+
+72
+00:06:08,760 --> 00:06:13,720
+always become positional arguments in the CLI and not require flags. We had a
+
+73
+00:06:13,720 --> 00:06:16,720
+couple more ideas like this but ultimately we were looking at it in the
+
+74
+00:06:16,720 --> 00:06:23,600
+wrong way. The end result would have been a bad API, a bad CLI or both. If our CLI
+
+75
+00:06:23,600 --> 00:06:27,160
+was going to auto-generate its commands from the API we needed a translation
+
+76
+00:06:27,160 --> 00:06:33,920
+layer in between. Then it occurred to us maybe we can include this translation
+
+77
+00:06:33,920 --> 00:06:38,120
+layer in our Open API docs. The docs already contain all the basic
+
+78
+00:06:38,120 --> 00:06:42,840
+information a client needs to know to use the API so why not include a little
+
+79
+00:06:42,840 --> 00:06:49,000
+additional information about how to define the CLI interface as well. You're
+
+80
+00:06:49,000 --> 00:06:54,880
+clapping that's good I like it. One problem we saw was that typing out long
+
+81
+00:06:54,880 --> 00:06:59,760
+API path typing out a long API path as a CLI command is a lot of work for a
+
+82
+00:06:59,760 --> 00:07:05,440
+human in a very poor CLI user experience. Ideally long API paths could be
+
+83
+00:07:05,440 --> 00:07:11,080
+abstracted into succinct intuitive CLI commands so why not have the docs just
+
+84
+00:07:11,080 --> 00:07:17,280
+define a CLI command for a given API endpoint. Then you go from this to this.
+
+85
+00:07:17,280 --> 00:07:20,800
+Shorter commands mean less typing but they're also cleaner and easier to
+
+86
+00:07:20,800 --> 00:07:28,720
+understand. Another obvious problem we saw was API output formatting. REST APIs
+
+87
+00:07:28,720 --> 00:07:33,480
+often speak JSON or some other structured data format but they're
+
+88
+00:07:33,480 --> 00:07:38,280
+usually not meant to be read by humans. Even if we pretty printed this JSON it's
+
+89
+00:07:38,280 --> 00:07:43,000
+still not going to be easy for a human to read. But what if the docs included
+
+90
+00:07:43,000 --> 00:07:47,160
+instructions on how to translate the JSON into something easier to read then
+
+91
+00:07:47,160 --> 00:07:53,960
+you can go from this to this. To accomplish this translation but still
+
+92
+00:07:53,960 --> 00:07:59,960
+keep the CLI completely decoupled from the API we use Jinja templates.
+
+93
+00:07:59,960 --> 00:08:05,440
+If you're not familiar with Jinja it's a relatively simple
+
+94
+00:08:05,440 --> 00:08:10,040
+templating language with widespread use across the Python community. So the docs
+
+95
+00:08:10,040 --> 00:08:14,520
+contain a server-defined Jinja template for each API endpoint and the CLI simply
+
+96
+00:08:14,520 --> 00:08:17,560
+passes the API response through the template to get the human-friendly
+
+97
+00:08:17,560 --> 00:08:24,600
+output. Now there's a bit more nuance to the output formatting problem. We also
+
+98
+00:08:24,600 --> 00:08:28,720
+observe that CLI users often wanted the ability to display the same essential
+
+99
+00:08:28,720 --> 00:08:33,320
+data but in slightly different ways. For example what if the user wanted this
+
+100
+00:08:33,320 --> 00:08:38,200
+same output but as a CSV file instead of the table shown. It would be kind of
+
+101
+00:08:38,200 --> 00:08:42,040
+silly to have multiple virtually identical API endpoints whose only
+
+102
+00:08:42,040 --> 00:08:45,840
+difference was how the data was displayed to the CLI user but we could
+
+103
+00:08:45,840 --> 00:08:49,680
+have multiple Jinja templates per API endpoint and just give the user a way
+
+104
+00:08:49,680 --> 00:08:56,000
+to choose between them. We could have one template to display the output of CSV
+
+105
+00:08:56,000 --> 00:09:02,080
+triggered by the dash dash CSV flag. Maybe another template just to show
+
+106
+00:09:02,080 --> 00:09:07,480
+network information triggered by the dash dash net flag. And of course all
+
+107
+00:09:07,480 --> 00:09:11,360
+these options would be shown to the users in the command help text. We also
+
+108
+00:09:11,360 --> 00:09:15,880
+added a dash dash JSON flag to every command. That's to give the user the
+
+109
+00:09:15,880 --> 00:09:22,160
+option to get the raw API output and pipe it to a file or jq or something else.
+
+110
+00:09:23,560 --> 00:09:28,520
+Another issue we noticed involved how arguments were passed to the API.
+
+111
+00:09:28,520 --> 00:09:34,120
+Originally we just planned on adding one CLI flag per API argument but take a
+
+112
+00:09:34,120 --> 00:09:37,760
+look at this get server command which was generated from the API endpoint code
+
+113
+00:09:37,760 --> 00:09:43,560
+shown above it. The dash dash hostname flag really isn't buying us much. This
+
+114
+00:09:43,560 --> 00:09:48,080
+API endpoint takes a single required argument so it's just more for the user
+
+115
+00:09:48,080 --> 00:09:54,000
+to type. Why not include the ability to make arguments positional like this? A
+
+116
+00:09:54,000 --> 00:10:01,360
+simple change but it makes the command a lot more human friendly. Staying on the
+
+117
+00:10:01,360 --> 00:10:05,520
+topic of arguments we noticed another unfortunate consequence of mapping API
+
+118
+00:10:05,520 --> 00:10:10,640
+arguments directly to the CLI. It's often handy and good code hygiene to have
+
+119
+00:10:10,640 --> 00:10:15,240
+descriptive variable names in your code. Here on the right we have an example API
+
+120
+00:10:15,240 --> 00:10:19,480
+endpoint that collects logs for a given server and saves them to a location on a
+
+121
+00:10:19,480 --> 00:10:24,080
+file system. To represent the log file destination we have a descriptive
+
+122
+00:10:24,080 --> 00:10:29,160
+variable called destination underscore file path. While this variable name might
+
+123
+00:10:29,160 --> 00:10:33,960
+be helpful to programmers it's an awfully long and cumbersome CLI flag to type. Not
+
+124
+00:10:34,000 --> 00:10:37,400
+to mention that the use of underscores and flags doesn't really follow POSIX
+
+125
+00:10:37,400 --> 00:10:42,560
+conventions. So why not have the ability to specifically define the CLI flag and
+
+126
+00:10:42,560 --> 00:10:50,600
+short flag used to represent a given API parameter like this. Now to specify the
+
+127
+00:10:50,600 --> 00:10:57,480
+destination file path you can use dash dash dest path or just dash P. Again it's
+
+128
+00:10:57,480 --> 00:11:01,040
+little improvements like this that go a long way in improving the CLI users
+
+129
+00:11:01,040 --> 00:11:08,320
+experience. The final problem we observed with API and CLI argument
+
+130
+00:11:08,320 --> 00:11:12,480
+mapping was that sometimes arguments just couldn't be represented easily
+
+131
+00:11:12,480 --> 00:11:17,660
+using simple strings. For example what if the CLI command needed to upload a local
+
+132
+00:11:17,660 --> 00:11:23,160
+file? What about Boolean CLI flags whose simple presence represents true? What
+
+133
+00:11:23,160 --> 00:11:27,320
+about list arguments with a fixed or dynamic number of entries? We knew we
+
+134
+00:11:27,320 --> 00:11:31,600
+needed to build a dynamic system to represent unusual API arguments on the
+
+135
+00:11:31,600 --> 00:11:41,840
+CLI in a human-friendly way. So now that we have a good understanding of the
+
+136
+00:11:41,840 --> 00:11:46,840
+problem let's talk about how to implement it. We use many of the great
+
+137
+00:11:46,840 --> 00:11:50,120
+open source projects that you see here but we're primarily going to focus on
+
+138
+00:11:50,120 --> 00:11:55,800
+FastAPI. If you aren't familiar with FastAPI it's a great open source web
+
+139
+00:11:55,800 --> 00:12:00,040
+framework for Python. While there are numerous good reasons to use FastAPI
+
+140
+00:12:00,040 --> 00:12:04,160
+one feature that we really love is the built-in support for Open API doc
+
+141
+00:12:04,160 --> 00:12:09,720
+generation. Here on the left we have a simple FastAPI endpoint implementation
+
+142
+00:12:09,720 --> 00:12:15,080
+with two endpoints. With just this code FastAPI automatically generates the open
+
+143
+00:12:15,080 --> 00:12:19,320
+API docs on the right. However what we see on the right is not really the
+
+144
+00:12:19,320 --> 00:12:23,160
+documentation itself. What you're seeing is just a pretty rendering of the actual
+
+145
+00:12:23,160 --> 00:12:30,440
+documentation which is defined in JSON and looks something like this. This JSON
+
+146
+00:12:30,440 --> 00:12:34,280
+is the actual Open API spec and it contains all the information a client
+
+147
+00:12:34,280 --> 00:12:39,560
+needs to know to call the API. And as you can see the JSON contains a section for
+
+148
+00:12:39,560 --> 00:12:44,560
+each path in the API. This is what our CLI will be parsing to generate its
+
+149
+00:12:44,560 --> 00:12:50,200
+commands. Let's take a slightly closer look at how the Open API JSON defines an
+
+150
+00:12:50,200 --> 00:12:56,480
+API endpoint. Here on the right you can see the Open API JSON generated
+
+151
+00:12:56,480 --> 00:13:01,160
+for the get hello endpoint shown on the left. It contains a summary, a
+
+152
+00:13:01,160 --> 00:13:04,960
+description of parameters, along with a little bit more information that I left
+
+153
+00:13:04,960 --> 00:13:11,000
+out for simplicity. For our use case we needed to find extra information for
+
+154
+00:13:11,000 --> 00:13:15,680
+each API endpoint so the CLI can configure itself. So we just added a
+
+155
+00:13:15,680 --> 00:13:22,280
+section like this. Each endpoint gets a CLI section that can define things like
+
+156
+00:13:22,280 --> 00:13:27,840
+the actual CLI command, the Jinja formatters, and more. Fortunately for us
+
+157
+00:13:27,840 --> 00:13:33,720
+FastAPI has a neat keyword arg called Open API extra and that allows the user
+
+158
+00:13:33,720 --> 00:13:37,920
+to embed arbitrary information in the Open API spec for an individual endpoint
+
+159
+00:13:37,920 --> 00:13:43,580
+and it's used like this. You just include your arbitrary object in the
+
+160
+00:13:43,580 --> 00:13:47,100
+endpoint decorator and it's automatically nested in the Open API
+
+161
+00:13:47,100 --> 00:13:51,700
+spec. We could just shoehorn a huge dictionary into every endpoint decorator
+
+162
+00:13:51,700 --> 00:13:57,580
+but that would be awfully crude and not very readable. So instead we decided to
+
+163
+00:13:57,580 --> 00:14:01,740
+implement our own child class of the FastAPI API router but added a couple
+
+164
+00:14:01,740 --> 00:14:06,140
+additional arguments to include the CLI specification. Something like what's
+
+165
+00:14:06,140 --> 00:14:10,380
+shown here. With that now we can define our API endpoints and
+
+166
+00:14:10,380 --> 00:14:16,620
+associated CLI commands like this. We write our endpoints just like we
+
+167
+00:14:16,620 --> 00:14:20,900
+normally would with FastAPI but with the option of specifying a CLI command
+
+168
+00:14:20,900 --> 00:14:26,220
+in just a few extra lines. Of course you still need to define the specific Jinja
+
+169
+00:14:26,220 --> 00:14:30,820
+templates to pre-print the CLI output but in many cases we found that different
+
+170
+00:14:30,820 --> 00:14:33,820
+endpoints could use identical templates and there are tons of opportunities for
+
+171
+00:14:33,820 --> 00:14:40,060
+code reuse. Well this is all we need to describe the CLI command for an endpoint
+
+172
+00:14:40,060 --> 00:14:46,140
+we still haven't covered how to handle CLI arguments. FastAPI already offers a
+
+173
+00:14:46,140 --> 00:14:52,260
+rich set of tools to define API argument behavior. Here's the query class. Here we
+
+174
+00:14:52,260 --> 00:14:57,420
+use the query class to define API query parameters and the field class to define
+
+175
+00:14:57,420 --> 00:15:01,860
+individual fields and a JSON request body with Pydantic. There are similar
+
+176
+00:15:01,860 --> 00:15:06,260
+classes to define other types of API arguments as well. The information
+
+177
+00:15:06,260 --> 00:15:11,940
+defining these classes is also reflected in the generated Open API JSON and like
+
+178
+00:15:11,940 --> 00:15:16,100
+the FastAPI endpoint decorators it's also easy to just tack on extra
+
+179
+00:15:16,100 --> 00:15:21,940
+information. So just like the endpoint CLI specification we use Pydantic to
+
+180
+00:15:21,940 --> 00:15:25,460
+define our model, add it to the end argument declaration and it
+
+181
+00:15:25,460 --> 00:15:31,300
+automatically shows up in the Open API JSON where it can be consumed by the CLI.
+
+182
+00:15:32,100 --> 00:15:36,140
+So now that we have all the pieces to implement a CLI command for an API
+
+183
+00:15:36,140 --> 00:15:40,700
+endpoint let's put it all together. Here on the left we have our endpoint from
+
+184
+00:15:40,700 --> 00:15:44,780
+earlier that's used to get a list of servers. On the right we have the CLI
+
+185
+00:15:44,780 --> 00:15:49,500
+command that we want for this endpoint. To implement the CLI command all you
+
+186
+00:15:49,500 --> 00:15:54,980
+have to add is this. Just include a small amount of information about the CLI
+
+187
+00:15:54,980 --> 00:16:04,780
+command and FastAPI, Open API and our dynamic CLI take care of the rest.
+
+188
+00:16:05,500 --> 00:16:09,620
+Hopefully by now you have a good understanding of the implementation but
+
+189
+00:16:09,620 --> 00:16:13,820
+I think a live demo is a really good way to showcase the utility of it. I've given
+
+190
+00:16:13,820 --> 00:16:21,180
+this demo twice and it's gone really well so maybe third time's a charm. We'll
+
+191
+00:16:21,180 --> 00:16:24,860
+see, but just give me a moment to get it set up.
+
+192
+00:16:37,860 --> 00:16:43,340
+All right in this window here we're gonna run something called Infra API. It's a
+
+193
+00:16:43,340 --> 00:16:48,460
+toy API made to interact with infrastructure but it's not really doing
+
+194
+00:16:48,460 --> 00:16:51,820
+anything it's just running locally on my computer. All you really have to know
+
+195
+00:16:51,820 --> 00:16:55,420
+about it is that it's written in FastAPI and it includes the extra information
+
+196
+00:16:55,420 --> 00:17:04,220
+we just talked about to define a CLI for it. And in this window we're gonna run
+
+197
+00:17:04,220 --> 00:17:11,700
+something called infracli. Can everyone read that? Just want to check thanks.
+
+198
+00:17:11,700 --> 00:17:17,260
+infracli is a toy CLI to interact with infrastructure but what it really is is
+
+199
+00:17:17,260 --> 00:17:22,900
+just a front on Infra API that I just showed you. All these commands here get
+
+200
+00:17:22,900 --> 00:17:29,700
+server, delete server, new server, those are all based off of API endpoints in
+
+201
+00:17:29,700 --> 00:17:36,620
+Infra API. Every time infracli starts it calls out to Infra API, gets the open
+
+202
+00:17:36,620 --> 00:17:42,300
+API JSON, parses it and creates these commands. So let's take a look at one of
+
+203
+00:17:42,300 --> 00:17:51,020
+these. So we've got infracli list servers. It displays a list of known
+
+204
+00:17:51,020 --> 00:17:56,100
+servers in the system. It's got a single dash dash cluster flag to optionally
+
+205
+00:17:56,100 --> 00:18:01,460
+filter servers by cluster and it's got three formatters. Dash dash JSON, dash
+
+206
+00:18:01,460 --> 00:18:07,820
+dash CSV and one to just show network information. So let's see what it does.
+
+207
+00:18:07,860 --> 00:18:13,780
+You run it and it prints this nice column separated table of servers. I can
+
+208
+00:18:13,780 --> 00:18:23,420
+run list servers dash dash CSV. Same information in CSV. Now we get some
+
+209
+00:18:23,420 --> 00:18:28,660
+feedback from our users. They say first of all list servers is too much to type.
+
+210
+00:18:28,660 --> 00:18:34,700
+We want it to be just list servers. All right fine. They say you've got some
+
+211
+00:18:34,700 --> 00:18:39,140
+pretty glaring typos in this help text here. You should probably fix those. And
+
+212
+00:18:39,140 --> 00:18:43,780
+lastly they say you know that this CSV flag is great but what would
+
+213
+00:18:43,780 --> 00:18:51,380
+really be nice is a TSV flag or tab separated value flag. Cool. Let's see what
+
+214
+00:18:51,380 --> 00:18:57,580
+it takes to make those few changes. I'm gonna do a tiny bit of live coding here.
+
+215
+00:18:57,580 --> 00:19:01,780
+It's not important you read everything. The main point to take away is how
+
+216
+00:19:01,780 --> 00:19:05,340
+little coding it takes to make those changes.
+
+217
+00:19:12,620 --> 00:19:17,940
+So here on line 72 if you're at all familiar with FastAPI you can see where
+
+218
+00:19:17,940 --> 00:19:22,940
+we decorate in our endpoint to make our we decorate our function to make our API
+
+219
+00:19:22,940 --> 00:19:27,820
+endpoint. Here's our API path slash device slash
+
+220
+00:19:27,820 --> 00:19:33,540
+compute slash servers. And then on line 76 here we've got our CLI specification.
+
+221
+00:19:33,540 --> 00:19:38,180
+That's where we define the CLI command for this API endpoint. So we've got our
+
+222
+00:19:38,180 --> 00:19:44,140
+typo written help text here. We've got our command and our formatters. So let's
+
+223
+00:19:44,140 --> 00:19:46,420
+fix them.
+
+224
+00:19:50,700 --> 00:19:55,980
+We fix the help text. We change the command. And last thing we got to do is
+
+225
+00:19:55,980 --> 00:20:00,140
+add another formatter. Those are in another file. They're defined like this
+
+226
+00:20:00,140 --> 00:20:06,140
+but we've got a CSV formatter that's a lot like TSV so let's just copy it.
+
+227
+00:20:07,300 --> 00:20:18,460
+We're gonna replace all of our commas with tabs. Let's rename it dash dash TSV.
+
+228
+00:20:18,460 --> 00:20:28,500
+Maybe add a short flag dash T and then our help text should say display servers
+
+229
+00:20:28,500 --> 00:20:38,540
+in TSV format. All right go back here. Last thing we have to do is import it.
+
+230
+00:20:39,420 --> 00:20:49,300
+All right. Start it up and it works. So that should have gone well. So if we go
+
+231
+00:20:49,300 --> 00:21:01,140
+back to InfoCLI now we see that list servers is now list servers. And if we go
+
+232
+00:21:01,140 --> 00:21:07,380
+in the list server's help text we'll see the description typos are fixed and it's
+
+233
+00:21:07,380 --> 00:21:18,980
+got a dash dash TSV flag. If we use it we see it's now tab separated values.
+
+234
+00:21:18,980 --> 00:21:31,140
+To recap we just changed three different parts of CLI behavior without changing
+
+235
+00:21:31,140 --> 00:21:36,180
+the CLI code at all. The only thing that changed was the API code. I want to show
+
+236
+00:21:36,180 --> 00:21:42,740
+you one more thing. In this window I'm gonna run something called meal API. It's
+
+237
+00:21:42,740 --> 00:21:47,980
+a mock API to interact with meal APIs written in FastAPI just like infra API
+
+238
+00:21:47,980 --> 00:21:55,260
+includes the information to define a CLI for it. And in this window we'll run meal
+
+239
+00:21:55,260 --> 00:22:03,660
+CLI. CLI and interact with meal APIs. Meal CLI meals. It'll show you some meals.
+
+240
+00:22:03,660 --> 00:22:12,900
+Great. That's all I really want to show you about that. Except that meal CLI and
+
+241
+00:22:12,900 --> 00:22:19,140
+infracli are the exact same thing. They're both something called auto CLI
+
+242
+00:22:19,140 --> 00:22:26,260
+pointed at a different API. So if I want to run meal CLI I just point auto CLI at
+
+243
+00:22:26,260 --> 00:22:36,140
+local host 8002. And if I want to run info CLI you point at 8001. That's an
+
+244
+00:22:36,140 --> 00:22:42,140
+infinite number of virtual CLIs for one logical CLI code base. And when you want
+
+245
+00:22:42,140 --> 00:22:48,420
+to change the CLI behavior you update the API and the CLI gets updated for free.
+
+246
+00:22:48,420 --> 00:22:52,900
+That is all I got. Thank you.
+
+247
+00:22:56,900 --> 00:23:02,140
+Nice. I've got a number of questions for you here. I just have to roll myself up
+
+248
+00:23:02,140 --> 00:23:09,220
+onto the stage after lunch. All right. I'm gonna start from the top here. Although
+
+249
+00:23:09,220 --> 00:23:12,380
+you mentioned command line interfaces are for humans do you ever use command
+
+250
+00:23:12,380 --> 00:23:20,860
+line interfaces for automation via shell scripts etc. Yes all the time. That's what
+
+251
+00:23:20,860 --> 00:23:26,380
+a lot of our automation is. This tool wasn't really made for that. Our hope was
+
+252
+00:23:26,380 --> 00:23:31,260
+that like programmatic users would hit the API but yeah you do that all the time.
+
+253
+00:23:31,260 --> 00:23:36,580
+I could totally see its use for for things like this too. So yeah I would
+
+254
+00:23:36,580 --> 00:23:41,860
+same answer. What benefit does Jinja provide in this particular scenario? Why
+
+255
+00:23:41,860 --> 00:23:45,100
+can't we use the same logic we define inside of the template directly and
+
+256
+00:23:45,100 --> 00:23:54,220
+and generate a string? I'm not sure I understand the question. Okay. I mean
+
+257
+00:23:54,220 --> 00:23:58,780
+Jinja is used to translate what's essentially a dictionary into
+
+258
+00:23:58,780 --> 00:24:05,020
+anything you want. And we thought of other ways to do that with the see it
+
+259
+00:24:05,020 --> 00:24:10,500
+with while still embedding it in the API docs but it seemed like the best option.
+
+260
+00:24:10,540 --> 00:24:17,060
+Okay. Fair answer. How do you measure the user experience for internal products
+
+261
+00:24:17,060 --> 00:24:21,860
+such as this one? So how do you know that users like the changes or things like
+
+262
+00:24:21,860 --> 00:24:26,820
+that? We have a bunch of metrics and logging that are attached to this
+
+263
+00:24:26,820 --> 00:24:33,020
+without going into too many details. We can see what commands users type and
+
+264
+00:24:33,020 --> 00:24:38,220
+which ones they type incorrectly but honestly we more get feedback from
+
+265
+00:24:38,260 --> 00:24:42,420
+having meetings with them. Like the tools we're making are made for operations
+
+266
+00:24:42,420 --> 00:24:46,260
+teams that we work very closely with. So we try to set up meetings and say what
+
+267
+00:24:46,260 --> 00:24:50,380
+do you want? What sucks? What's good? And they give us feedback on that and we
+
+268
+00:24:50,380 --> 00:24:54,980
+change it. And the model inherently makes it easy to do that because we change we
+
+269
+00:24:54,980 --> 00:24:59,020
+add a little bit to the API and it automatically goes to the CLI. We're
+
+270
+00:24:59,020 --> 00:25:03,900
+really to a point now where we can increase velocity of like deploying new
+
+271
+00:25:03,900 --> 00:25:08,020
+commands to the CLI because it's so simple. It's one PR to the API code base
+
+272
+00:25:08,020 --> 00:25:13,500
+and it just automatically goes out there. Nice. Is auto CLI.py open source?
+
+273
+00:25:13,500 --> 00:25:17,620
+I expected this to be the first question because it's a question I get every time
+
+274
+00:25:17,620 --> 00:25:25,660
+I give this talk. No. But maybe. So I've gotten the okay tentatively to open
+
+275
+00:25:25,660 --> 00:25:31,260
+sources in my company. It's just a matter of time. How it's implemented internally
+
+276
+00:25:31,340 --> 00:25:36,340
+is not what I showed you. I kind of wrote what I showed you like completely
+
+277
+00:25:36,340 --> 00:25:40,660
+separate from what we did internally just for the purposes of this talk to do
+
+278
+00:25:40,660 --> 00:25:44,300
+it right and open source it under my company. I got to put some time into it
+
+279
+00:25:44,300 --> 00:25:47,380
+but hopefully coming soon. Nice.
+

@@ -1,0 +1,976 @@
+1
+00:00:00,000 --> 00:00:28,860
+Over the last few years, I've been talking about what makes good Python code, often by
+
+2
+00:00:28,940 --> 00:00:34,460
+talking about how Python approaches ideas from other programming languages. Today, I'm here
+
+3
+00:00:34,460 --> 00:00:40,780
+to talk about the Zen of Python, which has been with us since time immemorial. We've been using
+
+4
+00:00:40,780 --> 00:00:46,780
+the Zen of Python to help us figure out how to write good Python code, and because many of us
+
+5
+00:00:46,780 --> 00:00:52,540
+are people who get into arguments on the internet, we use the Zen of Python as fuel for those
+
+6
+00:00:52,540 --> 00:00:58,460
+arguments. I think it's a good year to talk about the Zen of Python and its limitations,
+
+7
+00:00:58,460 --> 00:01:05,980
+and to talk about whether it does what we think it does. I've been a huge fan of the Zen of Python
+
+8
+00:01:05,980 --> 00:01:12,460
+for many years. This was reinforced in a talk at PyCon Australia in 2011, when Richard Jones gave
+
+9
+00:01:12,460 --> 00:01:18,620
+a fantastic deep dive, simply titled the Zen of Python, here's its abstract in its entirety,
+
+10
+00:01:19,340 --> 00:01:25,260
+and it showed how the Zen of Python was used in Python and its standard library. Sadly,
+
+11
+00:01:25,260 --> 00:01:30,140
+that talk wasn't recorded, but it shaped how I think about writing Python code,
+
+12
+00:01:30,140 --> 00:01:35,900
+because I saw how to put the Zen of Python into practice, and it taught me ways to recognise
+
+13
+00:01:35,900 --> 00:01:43,820
+whether some code was good Python or bad Python. But in a talk I wrote last year, I looked to the
+
+14
+00:01:43,820 --> 00:01:51,740
+Zen of Python to answer a question, and for the first time, I was left bereft. I had found a
+
+15
+00:01:51,740 --> 00:01:58,380
+design problem in Python, and the Zen of Python couldn't save me. And that's what I've come here
+
+16
+00:01:58,380 --> 00:02:06,380
+to talk about. Tim Peters' 20 Python theses. No, that spelling is how he introduced it.
+
+17
+00:02:07,500 --> 00:02:12,380
+And yes, there are only 19 of those theses written down, but they've come to be known
+
+18
+00:02:12,380 --> 00:02:17,740
+as the Zen of Python, or PEP 20, or that thing that appears in your terminal when you type
+
+19
+00:02:17,740 --> 00:02:25,020
+import this. And here are those 20 theses. Now, immediately in that very mailing list thread where
+
+20
+00:02:25,020 --> 00:02:30,060
+Tim introduced it, people thought it was fantastic. They thought it described everything that Python
+
+21
+00:02:30,060 --> 00:02:36,460
+was about. It was concise. It was opinionated, and it explained in very clear terms how Python
+
+22
+00:02:36,460 --> 00:02:43,100
+thought differently to Perl. And in the 1990s, that was super important. Now, in the years
+
+23
+00:02:43,100 --> 00:02:48,140
+following that, people started to identify languages with a prescriptive design philosophy.
+
+24
+00:02:48,940 --> 00:02:55,980
+A good example is Java, which was intended to be familiar to C developers, much like C++,
+
+25
+00:02:55,980 --> 00:03:00,060
+but without all of the ways that C++ would let you shoot yourself in the foot.
+
+26
+00:03:01,420 --> 00:03:05,820
+Now, looking at the Zen of Python, especially its first few lines also made people think
+
+27
+00:03:05,820 --> 00:03:12,060
+that Python had a prescriptive design philosophy. This was in contrast to, say, Perl.
+
+28
+00:03:13,260 --> 00:03:18,780
+Now, for the longest time, I have referred to the Zen of Python. I've referred to it when introducing
+
+29
+00:03:18,780 --> 00:03:23,500
+speakers at conferences. I've used it to answer questions that have been raised in my talks.
+
+30
+00:03:24,300 --> 00:03:30,540
+And I've used it to solve design problems in my code. I have definitely thought that the Zen of
+
+31
+00:03:30,540 --> 00:03:39,580
+Python was evidence that Python has a descriptive design philosophy. But it's not. Today, I want to
+
+32
+00:03:39,580 --> 00:03:44,940
+show you why the Zen of Python isn't prescriptive and why it's a terrible way to settle arguments
+
+33
+00:03:44,940 --> 00:03:50,860
+about the right way to do things in Python. Today, we're going to look at two design decisions
+
+34
+00:03:50,860 --> 00:03:55,260
+made since the Zen of Python was written that appear to have ignored the Zen of Python.
+
+35
+00:03:56,220 --> 00:04:00,380
+Then we're going to look at some code the Zen of Python thinks is reasonable,
+
+36
+00:04:00,380 --> 00:04:05,740
+but isn't. And we're going to look at whether the Zen of Python ruins our understanding
+
+37
+00:04:05,740 --> 00:04:13,580
+of why Python is the way that it is. So, I mentioned earlier that I got confused
+
+38
+00:04:13,580 --> 00:04:19,100
+by the Zen of Python last year. The Python feature that confused me was the decorator.
+
+39
+00:04:20,460 --> 00:04:26,060
+Decorators exist because sometimes in Python, you need to modify the behavior of a function
+
+40
+00:04:26,060 --> 00:04:30,780
+or a method. Now, people have been modifying the behavior of functions since well before
+
+41
+00:04:30,780 --> 00:04:35,180
+decorators existed. And one popular way to do this was through a thing called the
+
+42
+00:04:35,180 --> 00:04:42,620
+decorate pattern. The decorate pattern looked like this. First, you define a function. And then you
+
+43
+00:04:42,620 --> 00:04:47,260
+pass that function into another function and you assign it back to the original name. Now,
+
+44
+00:04:47,260 --> 00:04:53,420
+this is fine for short bits of code, but things can pull apart pretty quickly. If you need to
+
+45
+00:04:53,420 --> 00:04:58,940
+decorate the same function twice, well, things get a bit repetitive. And you have to decorate
+
+46
+00:04:58,940 --> 00:05:03,820
+your function from the inside out. So, the last decorator applied is actually the outermost
+
+47
+00:05:03,820 --> 00:05:10,620
+behavior at call time. So, here, the class method decorator gets called before the synchronized
+
+48
+00:05:10,620 --> 00:05:16,700
+behavior, but you have to define them in the opposite order. And it suffers from really,
+
+49
+00:05:16,700 --> 00:05:22,220
+really poor concept grouping. Decorators can substantially change the behavior of a function,
+
+50
+00:05:23,020 --> 00:05:28,140
+but here, it appears after the method body. And if your method is really long,
+
+51
+00:05:29,580 --> 00:05:35,500
+the decorate step might not even appear on the same window as the function declaration. This can
+
+52
+00:05:35,500 --> 00:05:42,620
+make for really unreadable code. And as we know from the Zen of Python, readability counts. So,
+
+53
+00:05:42,620 --> 00:05:50,700
+PEP 318 gave us some syntax for the decorate pattern. And now we have decorators. So, we know
+
+54
+00:05:50,700 --> 00:05:56,220
+if we read def in some Python code, it means, well, we're defining a function. So, if you see
+
+55
+00:05:56,220 --> 00:06:01,420
+a decorator, well, that must mean this function that we're defining has modified behavior.
+
+56
+00:06:02,380 --> 00:06:06,940
+In this case, we know that the new behavior is that it is synchronized and that it's a class
+
+57
+00:06:06,940 --> 00:06:15,420
+method. And it's easy to tell that at a glance. But this won't be surprising if you saw my talk
+
+58
+00:06:15,420 --> 00:06:22,220
+last year. That understanding of what a decorator does isn't exactly true. Because putting a
+
+59
+00:06:22,220 --> 00:06:26,460
+decorator before a function definition doesn't actually change the behavior of the function.
+
+60
+00:06:27,580 --> 00:06:32,140
+It can actually change the definition of a function. Let me show you what I mean.
+
+61
+00:06:33,500 --> 00:06:37,900
+Say you define a function called squares, which multiplies a number by itself.
+
+62
+00:06:38,700 --> 00:06:41,980
+You can then call that function and you get a value and everything is great.
+
+63
+00:06:42,940 --> 00:06:49,420
+Now, here's a decorator. This decorator is called apply. When you decorate a function with apply,
+
+64
+00:06:49,420 --> 00:06:54,140
+you also provide a transform lambda, which accepts a function as a parameter.
+
+65
+00:06:54,700 --> 00:06:59,820
+Now, when you decorate a function with apply, it will call that transform lambda with the decorated
+
+66
+00:06:59,820 --> 00:07:06,620
+function as its parameter. And instead of returning a callable, it returns the result of that transform
+
+67
+00:07:06,700 --> 00:07:13,500
+lambda. So what if we take our squares function and then we decorate it with apply?
+
+68
+00:07:14,780 --> 00:07:21,820
+And let's pass in map as our transform function. Now, after we define our function, squares isn't
+
+69
+00:07:21,820 --> 00:07:30,060
+a callable, it's a list. Because that's what our transform lambda returns. So we just created a
+
+70
+00:07:30,060 --> 00:07:35,740
+function using def to be called once at definition time and then discarded.
+
+71
+00:07:36,300 --> 00:07:42,460
+Just because that's what the decorator does. We define a callable, but we end up with a list
+
+72
+00:07:42,460 --> 00:07:50,300
+in its place. The fact that the thing we define is no longer necessarily callable isn't obvious
+
+73
+00:07:50,300 --> 00:07:56,460
+from syntax. But they're pretty plainly in the old decorate syntax. There's nothing that says
+
+74
+00:07:56,460 --> 00:08:03,180
+this thing has to return a function. And so it is with decorators. And that brings us to the Zen of
+
+75
+00:08:03,180 --> 00:08:12,060
+Python, which says explicit is better than implicit. And in Python, when you say def name,
+
+76
+00:08:12,060 --> 00:08:20,460
+well, that explicitly means that name is a callable. That's a contract with you, the developer,
+
+77
+00:08:21,260 --> 00:08:25,660
+and decorators let you break that contract easily. So could they have done better?
+
+78
+00:08:26,700 --> 00:08:31,980
+Well, okay. What if we made it so the things that decorators put in their place are callables?
+
+79
+00:08:31,980 --> 00:08:38,540
+Well, that would solve the immediate ambiguity. But property descriptors, which I think are very
+
+80
+00:08:38,540 --> 00:08:44,620
+Pythonic, are also implemented using decorators. Once you decorate a method with property,
+
+81
+00:08:44,620 --> 00:08:50,700
+you don't call the method you defined by calling it. You call it by accessing or assigning to an
+
+82
+00:08:50,700 --> 00:08:56,860
+attribute on an object. So you're actually calling code as a side effect of something that at a glance
+
+83
+00:08:56,860 --> 00:09:01,500
+has nothing to do with calling code. And you have to know this property thing does this weird
+
+84
+00:09:01,500 --> 00:09:08,140
+behavior modification. So we see that decorators can turn function definition into implicit
+
+85
+00:09:08,140 --> 00:09:14,940
+behavior that depends entirely on what the decorator function does. So if you follow the
+
+86
+00:09:14,940 --> 00:09:19,420
+Zen of Python, well, you may be asking yourself, are decorators Pythonic?
+
+87
+00:09:23,180 --> 00:09:28,780
+Now, let's skip 13 years of Python evolution and head to 2015, which was a much more interesting
+
+88
+00:09:28,780 --> 00:09:35,100
+time in core Python world. Because Python had got popular and people who had never got involved in
+
+89
+00:09:35,100 --> 00:09:39,580
+language design before decided to start contributing to design discussions amongst core
+
+90
+00:09:39,580 --> 00:09:45,660
+developers on mailing lists. Now, these people came from a generation of Python developers who
+
+91
+00:09:45,660 --> 00:09:52,060
+had learned to solve design problems in Python using the Zen of Python. And they understood
+
+92
+00:09:52,060 --> 00:09:58,060
+that simple is better than complex. There's no better demonstration of Python simplicity
+
+93
+00:09:58,060 --> 00:10:04,540
+than looking at the first program you write in Java. You need to know an awful lot about
+
+94
+00:10:04,540 --> 00:10:09,660
+how to program to write hello world in Java. You need to know about types. You need to know about
+
+95
+00:10:09,660 --> 00:10:17,020
+classes and function declarations. And Python's version is so much simpler. But this simplicity
+
+96
+00:10:17,020 --> 00:10:25,020
+has limitations. Python requires you to test behavior with unexpected types. Automatically
+
+97
+00:10:25,020 --> 00:10:30,300
+translating code was difficult, which really shot us in the foot in the translation between Python 2
+
+98
+00:10:30,300 --> 00:10:37,260
+and Python 3. And tools like IDEs, which work really, really well and are indispensable in Java,
+
+99
+00:10:38,060 --> 00:10:45,020
+were complicated to write and unreliable to use as a result. And as the Zen of Python says,
+
+100
+00:10:45,020 --> 00:10:51,980
+explicit is better than implicit. And so it was that a feature got added. We used a feature added
+
+101
+00:10:51,980 --> 00:10:58,460
+in Python 3.0 that let us provide argument and return hints to functions. And now you can specify
+
+102
+00:10:58,460 --> 00:11:03,900
+your function's contract with its callers. And these can be automatically tested by a type
+
+103
+00:11:03,900 --> 00:11:10,700
+checker. But in doing so, things become less simple. Providing type hints is an extra piece
+
+104
+00:11:10,700 --> 00:11:16,380
+of complexity that wasn't there previously. And as you add your type hints, your code can get
+
+105
+00:11:16,380 --> 00:11:22,620
+crowded and verbose and a whole bunch of other adjectives that remind people of Java. But
+
+106
+00:11:22,620 --> 00:11:29,260
+type hinting resolves ambiguity that doesn't need to be there. So type hinting laid bare a
+
+107
+00:11:29,260 --> 00:11:36,060
+contradiction. You had to choose between simplicity or explicitness, ambiguity or ugliness.
+
+108
+00:11:36,060 --> 00:11:42,700
+You had to choose where to accept your complexity. The Zen of Python couldn't really resolve this
+
+109
+00:11:42,700 --> 00:11:49,500
+argument. So we see two cases where the Zen of Python just didn't help matters. And if you think
+
+110
+00:11:49,500 --> 00:11:54,780
+the Zen of Python is there to tell you what Pythonic choices are, you're probably asking
+
+111
+00:11:54,780 --> 00:12:01,740
+yourself a question right now. Is Python Pythonic? Well, the answer to that one comes from actually
+
+112
+00:12:01,740 --> 00:12:08,460
+reading the Zen of Python. We saw that decorators are a feature that significantly improve the
+
+113
+00:12:08,460 --> 00:12:14,940
+readability of Python code. But in doing so, they take away a feature of Python with quite
+
+114
+00:12:14,940 --> 00:12:21,020
+explicit behaviour and turn it into something implicit. And we saw that adding type hints
+
+115
+00:12:22,060 --> 00:12:26,860
+takes a simple structure and understanding of Python code and makes it more complex.
+
+116
+00:12:29,020 --> 00:12:33,740
+And we saw that not including type hints means that the expected behaviour of functions
+
+117
+00:12:33,740 --> 00:12:39,580
+is implicit. These are two cases where the Zen of Python does not guide you towards a good solution.
+
+118
+00:12:40,540 --> 00:12:47,260
+And as Tim Peters said in that original mailing list thread in 1999, if the answer to any Python
+
+119
+00:12:47,260 --> 00:12:55,180
+design issue isn't obvious after reading those, you should give up. If you take the Zen of Python
+
+120
+00:12:55,180 --> 00:13:01,340
+at face value, you'd have to say it's failed to guide Python in the right direction. But I hear you
+
+121
+00:13:01,340 --> 00:13:07,980
+say, these are special cases. They do important things. Well, the Zen of Python says something
+
+122
+00:13:08,060 --> 00:13:15,100
+about special cases as well. It says that special cases aren't special enough to break the rules.
+
+123
+00:13:16,780 --> 00:13:22,460
+But almost as an afterthought, it also says that practicality beats purity.
+
+124
+00:13:24,300 --> 00:13:29,900
+So what does it mean for practicality to beat purity? Well, it means that not everything fits
+
+125
+00:13:29,900 --> 00:13:34,700
+neatly into one of those catchy little boxes the Zen of Python creates for you. It means that
+
+126
+00:13:34,700 --> 00:13:42,300
+sometimes you need to make choices. By the Zen of Python, allowing implicit behaviour means that
+
+127
+00:13:42,300 --> 00:13:49,580
+decorators aren't Pythonic. But decorators encoded an existing use case. In the before times,
+
+128
+00:13:49,580 --> 00:13:54,780
+when you wanted to decorate a function, you needed to sacrifice readability for functionality.
+
+129
+00:13:56,300 --> 00:14:00,300
+And as they were eventually implemented, decorators let you do everything that people
+
+130
+00:14:00,300 --> 00:14:05,900
+were doing beforehand. It meant that every use case where people were decorating functions
+
+131
+00:14:05,900 --> 00:14:14,140
+got covered. And it allowed for innovations like property descriptors. And type hints,
+
+132
+00:14:14,140 --> 00:14:19,100
+well, they solved a real use case that real Python developers could not solve with Python.
+
+133
+00:14:19,980 --> 00:14:25,660
+Inferring the types that a function would accept or return was difficult. And this limited the
+
+134
+00:14:25,660 --> 00:14:32,140
+tools that you could use with older Python code. And if you believe that explicit is better than
+
+135
+00:14:32,140 --> 00:14:38,380
+implicit, well, Python's original approach to typing was not Pythonic. But it did make Python
+
+136
+00:14:38,380 --> 00:14:46,860
+a practical choice for writing programs quickly. The solution isn't simple. Good type systems are
+
+137
+00:14:46,860 --> 00:14:53,980
+inherently complex. Bad type systems make it complex to write code. But they enable simplicity
+
+138
+00:14:53,980 --> 00:15:01,740
+in tests, in tooling and in automatic translation. So Python chose a system where you could choose
+
+139
+00:15:01,740 --> 00:15:07,420
+to opt out of static typing. There's a rich and useful typing system for people who need it.
+
+140
+00:15:07,420 --> 00:15:15,020
+And if you don't, you can opt out completely. This is the very definition of a practical choice.
+
+141
+00:15:15,820 --> 00:15:22,540
+If you prefer static typing, or if you prefer purely dynamic typing, or if you want a mix of both,
+
+142
+00:15:22,540 --> 00:15:30,860
+you can get the programming language that you want. So Python design decisions value simplicity,
+
+143
+00:15:30,860 --> 00:15:37,900
+explicitness, and a whole bunch of other things. But it also values practicality. This is a real
+
+144
+00:15:37,900 --> 00:15:43,580
+factor in design decisions. But it acknowledges that not every design problem fits into rules.
+
+145
+00:15:45,020 --> 00:15:48,860
+Or put another way, Python doesn't tell you how to do things.
+
+146
+00:15:49,820 --> 00:15:56,700
+But the Zen of Python also talks about being able to do things. And it says there should be one,
+
+147
+00:15:56,700 --> 00:16:02,780
+and preferably only one, obvious way to do it. And this is an approach that has served the language
+
+148
+00:16:02,780 --> 00:16:08,300
+really well over the years. Basically, it says that you should find a way to do something,
+
+149
+00:16:08,300 --> 00:16:14,540
+keep iterating until it's obvious that it's the way to do things. But that means in order for there
+
+150
+00:16:14,540 --> 00:16:21,100
+to be one obvious way, you need to try out a bunch of different other ways first. And quite often,
+
+151
+00:16:21,100 --> 00:16:27,420
+one of the ways that we choose on that path to the obvious way might seem like the one obvious way.
+
+152
+00:16:28,860 --> 00:16:34,700
+I've given talks in the past where multiprocessing and requests were the one obvious way.
+
+153
+00:16:35,420 --> 00:16:42,540
+They replaced threading and URL open. Today, I tell you to use async IO and AIO HTTP.
+
+154
+00:16:44,860 --> 00:16:50,940
+These things became the one obvious way because someone decided that the old way wasn't obvious
+
+155
+00:16:50,940 --> 00:16:58,220
+enough. Finding the obvious way involves experimentation and a certain acceptance
+
+156
+00:16:58,220 --> 00:17:03,500
+that there needs to be a way to do it. And generally speaking, Python is a language that
+
+157
+00:17:03,500 --> 00:17:09,340
+gives you the tools to bend things to your will. Things like Django's ORM are only possible because
+
+158
+00:17:09,340 --> 00:17:14,300
+Python lets you subvert normal behavior and replace it with something completely different.
+
+159
+00:17:15,180 --> 00:17:19,740
+So, let's take a feature that Python has deliberately long chosen to not implement.
+
+160
+00:17:19,740 --> 00:17:25,180
+The switch statement. Actually, in this case, we're going to look at its more modern pattern
+
+161
+00:17:25,180 --> 00:17:29,660
+matching because, well, Python really should be keeping up with the times. So, as an example,
+
+162
+00:17:29,660 --> 00:17:33,740
+we're going to look at one of those terrible programming interview questions, fizz buzz.
+
+163
+00:17:34,700 --> 00:17:40,380
+Now, to solve fizz buzz in Python, you usually need a bunch of if and lf statements to solve it.
+
+164
+00:17:41,020 --> 00:17:46,220
+But this version is tedious to write. You need to make sure that you spell the out variable
+
+165
+00:17:46,220 --> 00:17:52,460
+correctly in every one of those if blocks. And you might say, you can refactor this with a function.
+
+166
+00:17:53,100 --> 00:17:59,180
+And I'd say, well, yes, yes, you could. But it doesn't really help. You're still writing return
+
+167
+00:17:59,340 --> 00:18:04,300
+a bunch of times, and you've added an extra line of code, and you've added a level of indirection.
+
+168
+00:18:05,100 --> 00:18:09,900
+What I would prefer is something much more like what Kotlin has to offer. Kotlin's version looks
+
+169
+00:18:09,900 --> 00:18:14,620
+like this. You get to pull the variable assignment out of this when block, and then you're left with
+
+170
+00:18:14,620 --> 00:18:19,980
+just the conditionals and the block of code to execute when that condition is true. It's simple,
+
+171
+00:18:19,980 --> 00:18:25,500
+it's concise, and I really want something like that in Python. And as we know from the zen of
+
+172
+00:18:25,500 --> 00:18:31,100
+Python, there should be one way to do it. And I know the core team has been pursuing pattern
+
+173
+00:18:31,100 --> 00:18:38,220
+matching, but the zen of Python also says that now is better than never. So what tools do we have
+
+174
+00:18:38,220 --> 00:18:44,780
+right now? Well, if you think about it, these are just blocks of code that get executed under
+
+175
+00:18:44,780 --> 00:18:50,620
+certain circumstances and return a value. And these are the conditions where those blocks get
+
+176
+00:18:50,620 --> 00:18:55,260
+executed, and this is where the value of the executed block of code gets stored.
+
+177
+00:18:56,620 --> 00:19:02,380
+So what we need is a way to group several blocks of code, a way to define the conditions when those
+
+178
+00:19:02,380 --> 00:19:08,220
+blocks execute, and a way to store the output of whichever block executed. So you might ask
+
+179
+00:19:08,220 --> 00:19:17,740
+yourself, does Python have the tools we need to implement this? Well, first up, we have a decorator
+
+180
+00:19:17,740 --> 00:19:23,660
+called case. It's just a boring standard function decorator. It even returns the original function,
+
+181
+00:19:23,660 --> 00:19:28,220
+it just decorates some stuff on the function. There's not really anything magical going on here.
+
+182
+00:19:29,660 --> 00:19:34,380
+Secondly, we have this switch decorator, which is where there is magic happening.
+
+183
+00:19:34,940 --> 00:19:39,580
+It chews up the contents of the class it decorates, it will run all of the functions
+
+184
+00:19:39,580 --> 00:19:45,180
+that you gave to the case decorators as parameters, and will execute the method with the first matcher
+
+185
+00:19:45,180 --> 00:19:53,740
+that passes. Together, the switch and case decorators are written in 37 really sparse lines
+
+186
+00:19:53,740 --> 00:20:01,180
+of Python. It doesn't use anything creepy like inspect or bytecode decompilation, but in combination,
+
+187
+00:20:01,180 --> 00:20:06,140
+they can turn a class with some methods into a functioning pattern matching implementation.
+
+188
+00:20:07,180 --> 00:20:14,060
+And the implementation of fizzbuzz that results isn't terrible. It still suffers from a lot of
+
+189
+00:20:14,060 --> 00:20:21,180
+repetition. If you read the code, it's not obvious why this uses the class and class keyword and
+
+190
+00:20:21,180 --> 00:20:27,740
+methods, but these are the tools that Python has given us. On balance, I think it's less readable
+
+191
+00:20:27,740 --> 00:20:33,340
+than the version with functions that we factored out earlier, but I'd rather inline this than using
+
+192
+00:20:33,340 --> 00:20:40,140
+the multi-if and elif version with variable assignments. Now, this might not be the final
+
+193
+00:20:40,220 --> 00:20:47,340
+obvious way to do it, but it does solve a problem for me right now, and I can see situations where
+
+194
+00:20:47,340 --> 00:20:53,980
+this could be the obvious way. And as the Zen of Python says, well, now is better than never,
+
+195
+00:20:53,980 --> 00:20:58,300
+which is to say, well, if you need something, maybe you should implement it with the tools
+
+196
+00:20:58,300 --> 00:21:05,500
+that you have. But it also provides a word of caution. It says that never is often better than
+
+197
+00:21:05,500 --> 00:21:12,380
+right now. And so if we follow the Zen of Python's guidance, we find ourselves in a situation
+
+198
+00:21:12,380 --> 00:21:18,380
+where the only way to do things involves doing something that isn't obvious. And so we shouldn't
+
+199
+00:21:18,380 --> 00:21:25,740
+do that because it's bad Python. But we've seen that Python grows because people try things out
+
+200
+00:21:25,740 --> 00:21:30,780
+and they decide the best current approach doesn't work and then they try to improve upon it.
+
+201
+00:21:31,420 --> 00:21:36,700
+So what is practicality here? Is it using the tools that we have to structure code in the way
+
+202
+00:21:36,700 --> 00:21:43,180
+that we want? Or is it making use of what Python gives us and accepting that there may just never
+
+203
+00:21:43,180 --> 00:21:52,060
+be a good way to do something, even if it seems obvious? I've spent the last ten years thinking
+
+204
+00:21:52,060 --> 00:21:57,500
+of Python in a certain way, and last year I found myself confused by the advice of the rules that
+
+205
+00:21:57,500 --> 00:22:03,180
+we use to write good Python code. And I've been thinking about this fundamental assumption about
+
+206
+00:22:03,180 --> 00:22:09,420
+how Python wants us to do things. This prescriptive design philosophy that I thought the Zen of Python
+
+207
+00:22:09,420 --> 00:22:16,140
+gave us. Or to put it another way, can we follow a set of rules and always end up with good Python
+
+208
+00:22:16,140 --> 00:22:22,700
+code? Over the course of today's talk, we saw that even in fundamental design cases, the Zen of
+
+209
+00:22:22,700 --> 00:22:30,460
+Python, that's PEP20, gives contradictory advice. Accepting one of the 20 theses often means giving
+
+210
+00:22:30,460 --> 00:22:36,540
+no weight to another of those theses. So it's not a matter of whether following the rules will give
+
+211
+00:22:36,540 --> 00:22:43,660
+us good Python code, it's whether we can even follow the rules at all. PEP20 doesn't help us
+
+212
+00:22:43,660 --> 00:22:51,020
+be prescriptive, but there is a PEP that's all about being prescriptive. And that's PEP8. It's
+
+213
+00:22:51,020 --> 00:22:56,620
+a style guide. It tells you exactly what you should do. That is the very definition of a
+
+214
+00:22:56,620 --> 00:23:03,020
+prescriptive PEP. It should be exactly what we want. But if you actually read PEP8 as far as
+
+215
+00:23:04,060 --> 00:23:12,380
+the first heading, you're confronted with this. A foolish consistency is the hobgoblin of little minds.
+
+216
+00:23:14,940 --> 00:23:19,340
+Now what does that mean? It doesn't mean it's bad to be consistent. It actually means quite
+
+217
+00:23:19,340 --> 00:23:24,380
+the opposite. It means that you can be consistent, but you shouldn't be mindlessly consistent.
+
+218
+00:23:25,180 --> 00:23:30,460
+It means that you need to think and to consider whether it makes sense to be consistent in any
+
+219
+00:23:30,460 --> 00:23:37,980
+given case. So the most prescriptive of all the PEPs says that you shouldn't be foolishly consistent.
+
+220
+00:23:39,020 --> 00:23:47,260
+So Python is not prescriptive. But it's easy to think that it is. But it's not that. Python is
+
+221
+00:23:47,260 --> 00:23:52,940
+opinionated. Python is a language that has a strong opinion of how things should be done.
+
+222
+00:23:53,500 --> 00:23:59,180
+And the Zen of Python is just a list of one man's opinions. Mind you, they're generally pretty good
+
+223
+00:23:59,180 --> 00:24:05,740
+opinions, which you can use as guidelines to help you design better software. But at the end of the
+
+224
+00:24:05,740 --> 00:24:11,980
+day, they're just that. They're just opinions. And opinions that you agree with, no matter how
+
+225
+00:24:11,980 --> 00:24:18,380
+much you agree with them, aren't actually rules. No matter how much your favourite part of the Zen
+
+226
+00:24:18,380 --> 00:24:24,540
+of Python guides your development style, it should never be the only factor in deciding what good
+
+227
+00:24:24,540 --> 00:24:30,860
+code is. Remember that different people have different use cases. And Python has grown
+
+228
+00:24:30,860 --> 00:24:38,060
+spectacularly because we support those different use cases. Keeping a narrow view on the use cases
+
+229
+00:24:38,060 --> 00:24:45,980
+that you value doesn't keep Python simple. It just keeps it simple for you. So when problems come up
+
+230
+00:24:45,980 --> 00:24:52,620
+that Python can't solve, keep an open mind that people are actually having these problems. And we
+
+231
+00:24:52,620 --> 00:24:59,980
+can make Python simple for them as well. That should be a guiding principle. So while Python is
+
+232
+00:24:59,980 --> 00:25:05,180
+an opinionated language with a strong design aesthetic, it is that way because the people
+
+233
+00:25:05,180 --> 00:25:11,420
+who have designed Python made choices about how to improve the language. So if you want to write
+
+234
+00:25:11,420 --> 00:25:19,180
+good Python code, sometimes that means valuing some design opinions more than others. And sometimes
+
+235
+00:25:19,180 --> 00:25:26,140
+both opinions that you have to choose between are in the Zen of Python. So how do you choose?
+
+236
+00:25:26,540 --> 00:25:36,380
+Simple. Practicality beats purity. Thank you for coming along. I hope you've enjoyed this talk.
+
+237
+00:25:36,380 --> 00:25:41,580
+I'm going to be around chatting after this. If all has gone according to plan, I've actually been in
+
+238
+00:25:41,580 --> 00:25:46,860
+the text chat for this talk talking to you. So I will have told you where you can find me after this
+
+239
+00:25:46,860 --> 00:25:53,660
+talk. If you're watching this on delay, you can reach me by email or Twitter. My email address and
+
+240
+00:25:54,620 --> 00:26:00,060
+my Twitter handle are on this slide. And I'll also have notes for this talk including
+
+241
+00:26:00,060 --> 00:26:06,620
+implementations of everything I wrote up on my website at chrisjrn.com in the blog section.
+
+242
+00:26:07,420 --> 00:26:12,060
+Thanks to everyone at PyTexas for making this event happen. Thank you for inviting me to give
+
+243
+00:26:12,060 --> 00:26:19,180
+this talk. I hope you all enjoyed it. And I hope to see you at a real life event at some point when
+
+244
+00:26:19,180 --> 00:26:30,860
+all of this is no longer happening. Thank you all for coming along and see you next time.
+

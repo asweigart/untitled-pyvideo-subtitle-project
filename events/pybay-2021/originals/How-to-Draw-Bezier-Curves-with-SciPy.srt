@@ -1,0 +1,300 @@
+1
+00:00:00,000 --> 00:00:11,060
+Right, so I want to talk about how you would draw base year curves using Python.
+
+2
+00:00:11,060 --> 00:00:14,520
+So just to start off with the basics, what is base year curve?
+
+3
+00:00:14,520 --> 00:00:18,560
+If you have used Photoshop before, you most likely have seen base year curves before.
+
+4
+00:00:18,560 --> 00:00:24,440
+It is the way you draw the pen tools, and it's a very natural way to draw the curves
+
+5
+00:00:24,440 --> 00:00:27,040
+on the computer using only a few control points.
+
+6
+00:00:27,040 --> 00:00:31,840
+So it was a really good match for Photoshop in particular.
+
+7
+00:00:31,840 --> 00:00:35,840
+But then I want to talk about how to draw this in Python programmatically.
+
+8
+00:00:35,840 --> 00:00:41,240
+In my case, I just had to use this to draw a few pen patterns, but that's a long story.
+
+9
+00:00:41,240 --> 00:00:47,240
+And so there are many dedicated packages to do base year curves, but today I want to talk
+
+10
+00:00:47,240 --> 00:00:50,880
+about how you would do it using SciPy.
+
+11
+00:00:50,880 --> 00:00:54,920
+So SciPy is a scientific computing tool in Python.
+
+12
+00:00:54,920 --> 00:00:57,360
+It has been around for a while.
+
+13
+00:00:57,360 --> 00:01:01,400
+It is very widely used, and you definitely should use it if you have a chance.
+
+14
+00:01:01,400 --> 00:01:06,360
+And yeah, so the problem is how do we use it to calculate base year curves?
+
+15
+00:01:06,360 --> 00:01:13,520
+And it does have a utility to calculate that, and it's called SciPy.interpolating.bpoly.
+
+16
+00:01:13,520 --> 00:01:19,800
+So if there's any takeaway, it's basically that bpoly is what you would use to draw base
+
+17
+00:01:19,800 --> 00:01:20,800
+year curves.
+
+18
+00:01:21,480 --> 00:01:26,480
+And if you are like me, my first reaction was, what the heck is that name?
+
+19
+00:01:26,480 --> 00:01:30,600
+So it's interpolate, interpolate kind of makes sense, but why is it called bpoly?
+
+20
+00:01:30,600 --> 00:01:33,800
+So it took me a while to actually make sense of that, and which is why I want to talk about
+
+21
+00:01:33,800 --> 00:01:36,740
+it today, about how I made sense of it.
+
+22
+00:01:36,740 --> 00:01:40,120
+So first of all, what does interpolate mean?
+
+23
+00:01:40,120 --> 00:01:43,320
+So in general, interpolate is the way that we connect the dots.
+
+24
+00:01:43,320 --> 00:01:47,760
+It is how we fill in the blank between the data points we have.
+
+25
+00:01:48,560 --> 00:01:53,040
+A naive way to do that would be a linear interpolation by just connecting the dots with straight
+
+26
+00:01:53,040 --> 00:01:54,040
+lines.
+
+27
+00:01:54,040 --> 00:01:58,480
+It's janky, it's not very pretty, and so base year is actually a way to interpolate the
+
+28
+00:01:58,480 --> 00:02:00,640
+control points.
+
+29
+00:02:00,640 --> 00:02:06,240
+By using techniques that interpolate them, we kind of glide across the points smoothly,
+
+30
+00:02:06,240 --> 00:02:10,480
+and then we start with the first point, we end with the last point, and the other control
+
+31
+00:02:10,480 --> 00:02:14,160
+points kind of control where the curves will end up in.
+
+32
+00:02:14,160 --> 00:02:18,800
+And instead of using linear coefficients for the points, we instead use a basis called
+
+33
+00:02:18,800 --> 00:02:23,880
+Bernstein polynomials, which is where the name bpoly comes from.
+
+34
+00:02:23,880 --> 00:02:26,920
+So yeah, bpoly means Bernstein polynomials.
+
+35
+00:02:26,920 --> 00:02:32,160
+And it is kind of a complicated thing, but for Bernstein polynomials in one sentence,
+
+36
+00:02:32,160 --> 00:02:37,120
+it is basically a way to do weighted averaging of the points, where the points are emphasized
+
+37
+00:02:37,120 --> 00:02:43,140
+sequentially from the beginning to the end, but the weights always sum up to one.
+
+38
+00:02:43,140 --> 00:02:49,340
+So you can see how the curves, different curves, correspond to how important the point
+
+39
+00:02:49,340 --> 00:02:56,820
+is at each place in the curve, and you can see that the peaks shift between the points.
+
+40
+00:02:56,820 --> 00:03:01,620
+You start with full emphasis on the first point, and then you shift to the second point,
+
+41
+00:03:01,620 --> 00:03:05,140
+third point, fourth point, and then the last point.
+
+42
+00:03:05,140 --> 00:03:11,260
+So yeah, that's the basic of what bccurve is, and then the usage of it is actually not
+
+43
+00:03:11,260 --> 00:03:12,940
+that complicated.
+
+44
+00:03:12,940 --> 00:03:15,100
+So I have a small demo here.
+
+45
+00:03:15,100 --> 00:03:21,780
+So you would just import bpoly from interpolate, and numpy and matpoly are useful in general.
+
+46
+00:03:21,780 --> 00:03:26,700
+So I have my example here, but let's see if I can code this.
+
+47
+00:03:26,700 --> 00:03:31,680
+So first, you would start by defining your control points.
+
+48
+00:03:31,680 --> 00:03:36,980
+Control points is because I have four control points, so it would be a cubic base here.
+
+49
+00:03:36,980 --> 00:03:44,060
+And then you can define the curve using just bpoly, and then you just pass in the control
+
+50
+00:03:44,060 --> 00:03:45,060
+points.
+
+51
+00:03:45,060 --> 00:03:50,140
+And then you just have to do some weird stuff with it.
+
+52
+00:03:50,140 --> 00:03:58,500
+And then you pass in the interval where you want to say the points, the curve spans in.
+
+53
+00:03:58,500 --> 00:04:02,780
+So in this case, I say that as the points go from the beginning to the end, it is going
+
+54
+00:04:02,780 --> 00:04:04,420
+from zero to one.
+
+55
+00:04:04,420 --> 00:04:05,420
+And that's really it.
+
+56
+00:04:05,500 --> 00:04:07,300
+That's your basic curve right there.
+
+57
+00:04:07,300 --> 00:04:14,540
+But then when you want to draw it out, you need to generate a bunch of numbers in between
+
+58
+00:04:14,540 --> 00:04:15,540
+zero and one.
+
+59
+00:04:15,540 --> 00:04:17,500
+So I do that using linspace.
+
+60
+00:04:17,500 --> 00:04:23,820
+So this will generate out the 20 numbers in between zero and one, all the decimals.
+
+61
+00:04:23,820 --> 00:04:32,580
+And then the points can be created by just calling the bpoly object as a function and
+
+62
+00:04:32,740 --> 00:04:36,020
+pass in the number.
+
+63
+00:04:36,020 --> 00:04:40,260
+And you would just get a list of two-dimensional points, just like that.
+
+64
+00:04:40,260 --> 00:04:42,820
+So it's a really nice syntax, if you ask me.
+
+65
+00:04:42,820 --> 00:04:52,180
+And then when we have that, we can just plot it out, just like that.
+
+66
+00:04:52,180 --> 00:05:03,220
+Cool.
+
+67
+00:05:03,220 --> 00:05:08,780
+And if we also plot out the control points, you will see that it would make sense.
+
+68
+00:05:08,780 --> 00:05:14,820
+It would look just like a pen tool in Photoshop, just like that.
+
+69
+00:05:14,820 --> 00:05:15,820
+Cool.
+
+70
+00:05:15,820 --> 00:05:16,820
+Oh.
+
+71
+00:05:16,820 --> 00:05:17,820
+Okay.
+
+72
+00:05:17,820 --> 00:05:18,820
+All right.
+
+73
+00:05:18,900 --> 00:05:21,900
+All right.
+
+74
+00:05:21,900 --> 00:05:22,900
+That's all I have.
+
+75
+00:05:22,900 --> 00:05:23,980
+We have 30 seconds left, so cool.
+

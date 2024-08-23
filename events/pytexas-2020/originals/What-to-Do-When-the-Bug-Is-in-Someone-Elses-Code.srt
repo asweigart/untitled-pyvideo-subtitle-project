@@ -1,0 +1,1600 @@
+1
+00:00:00,000 --> 00:00:17,720
+Hi, everyone.
+
+2
+00:00:17,720 --> 00:00:19,880
+Welcome to PyTexas 2020.
+
+3
+00:00:19,880 --> 00:00:20,880
+My name is Paul Gansel.
+
+4
+00:00:20,880 --> 00:00:25,200
+I'm a software engineer and a contributor to many open source projects.
+
+5
+00:00:25,200 --> 00:00:29,840
+Among other things, I'm a core developer of Python and a maintainer of Datetail and
+
+6
+00:00:29,840 --> 00:00:32,000
+Setup Tools.
+
+7
+00:00:32,000 --> 00:00:36,720
+As someone who primarily develops libraries, I'm obviously a fan of shared code.
+
+8
+00:00:36,720 --> 00:00:41,160
+But I recognize that there are risks to taking on dependencies, whether they're third party
+
+9
+00:00:41,160 --> 00:00:44,080
+or within your own organization.
+
+10
+00:00:44,080 --> 00:00:49,600
+And the topic of this talk today is one of those risks, which is when something you depend
+
+11
+00:00:49,600 --> 00:00:53,960
+on has a bug or any other incompatibility, it's obviously not as easy to fix as it would
+
+12
+00:00:53,960 --> 00:00:57,840
+be if you were fixing a bug in your own code.
+
+13
+00:00:57,840 --> 00:00:59,720
+Before we get started, though, I want to give you a warning.
+
+14
+00:00:59,720 --> 00:01:05,000
+So this talk deals with a number of strategies for handling this situation, but it's organized
+
+15
+00:01:05,000 --> 00:01:10,440
+as a series of strategic retreats away from what I would consider the right thing to do.
+
+16
+00:01:10,440 --> 00:01:11,440
+Right?
+
+17
+00:01:11,440 --> 00:01:16,560
+While I've used each of these strategies in the past, they're mostly a collection of least
+
+18
+00:01:16,560 --> 00:01:21,080
+bad options, and each strategy is, I think, a little bit worse than the last.
+
+19
+00:01:21,080 --> 00:01:24,480
+So we will, of course, start with the right tool for the job.
+
+20
+00:01:24,480 --> 00:01:28,440
+But as we move along, it'll get increasingly hacky and dangerous.
+
+21
+00:01:28,440 --> 00:01:30,160
+OK.
+
+22
+00:01:30,160 --> 00:01:33,720
+So what do we mean by a bug in someone else's code?
+
+23
+00:01:33,720 --> 00:01:36,000
+Here's an example that I recently encountered at work.
+
+24
+00:01:36,000 --> 00:01:39,660
+This is a minimal working example.
+
+25
+00:01:39,660 --> 00:01:44,640
+And the idea is that normally we could take this data frame and we could use the ag function.
+
+26
+00:01:44,640 --> 00:01:51,720
+And what the ag function does is that it takes as arguments a function and then an access
+
+27
+00:01:51,840 --> 00:01:56,520
+and then any number of positional or keyword arguments.
+
+28
+00:01:56,520 --> 00:02:01,560
+And what it does is it applies that function to either the rows or the columns of the data
+
+29
+00:02:01,560 --> 00:02:09,840
+frame, basically calling the function with each row and then passing all additional arguments
+
+30
+00:02:09,840 --> 00:02:14,360
+that are passed to dataframe.ag on each call to the function.
+
+31
+00:02:14,360 --> 00:02:21,360
+So the way this should work is it should call f on our first row, and it should pass to
+
+32
+00:02:21,360 --> 00:02:25,560
+f the row and then the number 3.
+
+33
+00:02:25,560 --> 00:02:33,680
+But if we run this with Panda's version 1.1.3, it fails with some sort of thing about getting
+
+34
+00:02:33,680 --> 00:02:34,680
+inconsistent arguments.
+
+35
+00:02:34,680 --> 00:02:39,120
+It's getting two values for the argument access.
+
+36
+00:02:39,120 --> 00:02:45,720
+And if you change 3 from a positional argument to a keyword argument, it seems to work.
+
+37
+00:02:45,720 --> 00:02:46,720
+So that's weird.
+
+38
+00:02:46,720 --> 00:02:48,720
+Let's check the documentation.
+
+39
+00:02:48,760 --> 00:02:52,960
+As you can see, the documentation does say that we should be able to pass positional
+
+40
+00:02:52,960 --> 00:02:53,960
+arguments to it.
+
+41
+00:02:53,960 --> 00:02:56,160
+So this is obviously not my bug, right?
+
+42
+00:02:56,160 --> 00:02:58,280
+This is a bug in Panda's.
+
+43
+00:02:58,280 --> 00:02:59,680
+So what do we do about that?
+
+44
+00:02:59,680 --> 00:03:03,760
+Well, the right thing to do, which is definitely where we should start, is to file an issue
+
+45
+00:03:03,760 --> 00:03:04,760
+upstream, right?
+
+46
+00:03:04,760 --> 00:03:08,760
+They can't fix the bug unless they know about it.
+
+47
+00:03:08,760 --> 00:03:13,360
+So I put a minimal reproducer there and tell them the expected results.
+
+48
+00:03:13,360 --> 00:03:14,640
+We can also try and fix it.
+
+49
+00:03:14,640 --> 00:03:16,680
+In this case, it was easy enough for me to fix.
+
+50
+00:03:16,680 --> 00:03:20,640
+So I submitted a patch and submitted a pull request.
+
+51
+00:03:20,640 --> 00:03:25,240
+And in fact, this was straightforward enough to review that within a couple of days, it
+
+52
+00:03:25,240 --> 00:03:26,840
+got merged.
+
+53
+00:03:26,840 --> 00:03:29,840
+And so far, this is looking like a great open source success story.
+
+54
+00:03:29,840 --> 00:03:31,960
+So what do I have to do next?
+
+55
+00:03:31,960 --> 00:03:36,860
+I just have to wait for a release and then update my version, right?
+
+56
+00:03:36,860 --> 00:03:41,920
+So within a month, I'll be able to have this new version of Panda's that has my bug fixed.
+
+57
+00:03:41,920 --> 00:03:42,920
+So what could go wrong?
+
+58
+00:03:43,440 --> 00:03:46,700
+Well, for one thing, I might have production deadlines that are a little bit shorter than
+
+59
+00:03:46,700 --> 00:03:48,260
+one month.
+
+60
+00:03:48,260 --> 00:03:55,720
+If I have something that needs to get out next week and it's affected by this bug, I
+
+61
+00:03:55,720 --> 00:03:59,800
+don't have time to wait for a new release.
+
+62
+00:03:59,800 --> 00:04:04,160
+And also, maybe I do have a month, but there are some projects where the release cycle
+
+63
+00:04:04,160 --> 00:04:06,000
+is quite long.
+
+64
+00:04:06,000 --> 00:04:14,720
+Python actually just shortened its release cycle from being 18 months to one year.
+
+65
+00:04:14,720 --> 00:04:19,120
+But even still, if you are relying on a new feature from Python, you're going to have
+
+66
+00:04:19,120 --> 00:04:22,880
+to wait a year before it even gets released.
+
+67
+00:04:22,880 --> 00:04:27,120
+And then you have to wait for your in-house deployment cycle.
+
+68
+00:04:27,120 --> 00:04:34,940
+If you're using some stable Linux distro or long-term support, it may be months or weeks
+
+69
+00:04:35,100 --> 00:04:36,260
+or years.
+
+70
+00:04:36,260 --> 00:04:43,420
+Even internal faster-moving systems can take quite a long time to get through testing and
+
+71
+00:04:43,420 --> 00:04:47,380
+QA and check for compatibility with all the packages you deploy.
+
+72
+00:04:47,380 --> 00:04:51,780
+So if you have a problem now and you need it fixed right away, what are you supposed
+
+73
+00:04:51,780 --> 00:04:52,780
+to do?
+
+74
+00:04:52,780 --> 00:04:55,940
+Well, you can start with a one-off workaround.
+
+75
+00:04:55,940 --> 00:05:02,740
+In this case, it's pretty easy to just change our position argument to a keyword argument.
+
+76
+00:05:02,780 --> 00:05:05,180
+In this case, we're also pretty indifferent to it, right?
+
+77
+00:05:05,180 --> 00:05:09,980
+So I put a to-do comment here, but it's not even necessarily true that we need a to-do
+
+78
+00:05:09,980 --> 00:05:10,980
+comment.
+
+79
+00:05:10,980 --> 00:05:15,020
+If it was a little more hacky, I would want a to-do comment that says, hey, please clean
+
+80
+00:05:15,020 --> 00:05:17,100
+this up when something changes.
+
+81
+00:05:17,100 --> 00:05:20,700
+But in this case, it's not a big deal.
+
+82
+00:05:20,700 --> 00:05:25,140
+And this works well if you only hit the bug in one place or if the workaround is very
+
+83
+00:05:25,140 --> 00:05:27,660
+simple.
+
+84
+00:05:27,660 --> 00:05:32,300
+But if you're hitting it a lot or it gets a little more complicated, you may want a
+
+85
+00:05:32,300 --> 00:05:33,420
+wrapper function.
+
+86
+00:05:33,420 --> 00:05:38,940
+So a wrapper function is basically something where you sort of mimic the function that
+
+87
+00:05:38,940 --> 00:05:44,100
+has the bug in it, and then you encapsulate in that whatever workaround logic you need.
+
+88
+00:05:44,100 --> 00:05:51,140
+So in this case, I've implemented data frame underscore ag as a wrapper around df.ag, and
+
+89
+00:05:51,140 --> 00:05:54,500
+then we just detect whether someone is passing positional arguments.
+
+90
+00:05:54,620 --> 00:05:59,780
+If so, I eagerly bind them to the function before I pass it to df.ag.
+
+91
+00:05:59,780 --> 00:06:05,700
+I'm just closing over these original arguments so that df.ag never has to pass anything except
+
+92
+00:06:05,700 --> 00:06:08,940
+keyword arguments.
+
+93
+00:06:08,940 --> 00:06:11,780
+So this is nice because it encapsulates the workaround logic.
+
+94
+00:06:11,780 --> 00:06:15,460
+I don't have to re-implement this anywhere.
+
+95
+00:06:15,460 --> 00:06:18,460
+And it also provides an easy target for later removal.
+
+96
+00:06:18,460 --> 00:06:24,300
+All I have to do is search and replace data frame underscore ag with df.ag or something
+
+97
+00:06:24,300 --> 00:06:33,100
+like that, and then all of my call sites get fixed once the bug is fixed upstream.
+
+98
+00:06:33,100 --> 00:06:38,100
+But we can say that we're going to clean up that tech debt later, but how often does that
+
+99
+00:06:38,100 --> 00:06:39,820
+really happen, right?
+
+100
+00:06:39,820 --> 00:06:43,820
+So generally, I like to assume that these sorts of hacks are going to be a little bit
+
+101
+00:06:43,820 --> 00:06:49,860
+more long-lived than I would hope, and try to minimize the scope by building in an expiration,
+
+102
+00:06:49,860 --> 00:06:54,860
+if possible, one that detects at runtime whether we even need the hack.
+
+103
+00:06:54,860 --> 00:06:57,580
+And I call this opportunistic upgrading.
+
+104
+00:06:57,580 --> 00:07:01,340
+I don't know if other people call it something different.
+
+105
+00:07:01,340 --> 00:07:06,060
+The way it works is we can take our original function, and all we have to do is we have
+
+106
+00:07:06,060 --> 00:07:11,940
+to add in this little thing that says, oh, actually only do this binding trick if we're
+
+107
+00:07:11,940 --> 00:07:14,420
+affected by the pandas bug, right?
+
+108
+00:07:14,420 --> 00:07:20,380
+So our hack is only triggered if we would otherwise have hit the bug, which is great,
+
+109
+00:07:20,380 --> 00:07:21,380
+right?
+
+110
+00:07:21,380 --> 00:07:22,380
+It's minimal in scope.
+
+111
+00:07:22,380 --> 00:07:24,780
+So how do we write that has pandas bug?
+
+112
+00:07:24,780 --> 00:07:29,580
+Well, there's two ways to write this function, or two general strategies.
+
+113
+00:07:29,580 --> 00:07:32,340
+One is to use feature detection.
+
+114
+00:07:32,340 --> 00:07:37,020
+In this case, what we can do, we can detect, you know, sometimes the mission feature is
+
+115
+00:07:37,020 --> 00:07:41,340
+like an attribute or a function that either exists or doesn't exist.
+
+116
+00:07:41,340 --> 00:07:46,140
+In this case, it's a bug, and the mineral reproducer is easy enough that I can just
+
+117
+00:07:46,140 --> 00:07:49,700
+write a little function that tries to hit the bug deliberately.
+
+118
+00:07:49,700 --> 00:07:54,840
+And if it does hit the bug, return true, otherwise return false.
+
+119
+00:07:54,840 --> 00:07:56,340
+You can also use version checking.
+
+120
+00:07:56,340 --> 00:08:02,220
+In this case, I happen to know the first version that's affected by the bug, and I also know
+
+121
+00:08:02,220 --> 00:08:07,340
+the first version that's going to be released that isn't affected by the bug.
+
+122
+00:08:07,340 --> 00:08:12,160
+So I can just write this function by looking at the version of pandas we have and checking
+
+123
+00:08:12,160 --> 00:08:16,360
+if it's in the acceptable range.
+
+124
+00:08:16,360 --> 00:08:23,380
+We can also improve on this a little bit by, instead of including the opportunistic upgrading
+
+125
+00:08:23,380 --> 00:08:30,120
+in the wrapper function itself, is to only define the wrapper function if we're hitting,
+
+126
+00:08:30,120 --> 00:08:31,700
+if we would hit the bug, right?
+
+127
+00:08:31,700 --> 00:08:39,160
+So here, if we're affected by the bug, we write our wrapper function, otherwise we just
+
+128
+00:08:39,160 --> 00:08:46,460
+directly pass through, and data frame underscore ag is just an alias for pd.dataframe.ag.
+
+129
+00:08:46,460 --> 00:08:54,620
+And this is nice because it really serves to minimize the scope of your hack, and it
+
+130
+00:08:54,620 --> 00:08:57,900
+also minimizes the overhead, right?
+
+131
+00:08:57,900 --> 00:09:03,700
+You don't have any additional function calling or anything going on in there.
+
+132
+00:09:03,700 --> 00:09:08,460
+So I tend to do this pretty much all the time, whenever it's ergonomic to do it, or whenever
+
+133
+00:09:08,460 --> 00:09:12,380
+it's cheap to check for the existence of the bug.
+
+134
+00:09:12,380 --> 00:09:14,820
+Okay, so real-life examples.
+
+135
+00:09:14,820 --> 00:09:21,000
+Most of the ones that, most of the real-life examples that I see that continue to exist
+
+136
+00:09:21,000 --> 00:09:27,820
+are not backports of bug fixes, which is essentially what we're doing in our pandas example, but
+
+137
+00:09:28,340 --> 00:09:29,640
+backports of features.
+
+138
+00:09:29,640 --> 00:09:33,900
+So 6 is probably the most famous example, it's one of the most popular libraries on
+
+139
+00:09:33,900 --> 00:09:42,100
+PyPI, and it's just used to allow you to opportunistically upgrade, to use Python 3 features, and to
+
+140
+00:09:42,100 --> 00:09:46,700
+just write code that works for both Python 2 and Python 3.
+
+141
+00:09:46,700 --> 00:09:52,300
+I have a couple of other examples here that you can check the slides for, they're pretty
+
+142
+00:09:52,340 --> 00:09:58,580
+much just various kinds of backports, and you can check the code there if you want to
+
+143
+00:09:58,580 --> 00:10:01,580
+see exactly how they're implemented.
+
+144
+00:10:01,580 --> 00:10:08,820
+Okay, so that brings us to the next strategy, and this is where we start getting into sort
+
+145
+00:10:08,820 --> 00:10:16,220
+of properly dangerous and hacky territory, and this strategy is monkey patching.
+
+146
+00:10:16,220 --> 00:10:22,220
+So the idea behind monkey patching is that most modules and classes in Python are mutable,
+
+147
+00:10:22,300 --> 00:10:28,820
+they also live in a global namespace, so you can actually just dynamically modify any of
+
+148
+00:10:28,820 --> 00:10:34,420
+the code that you would want to patch at runtime, instead of applying a patch to the source
+
+149
+00:10:34,420 --> 00:10:35,780
+code.
+
+150
+00:10:35,780 --> 00:10:43,980
+So here's an example where we've decided that the abs method is sort of stodgy and flat,
+
+151
+00:10:43,980 --> 00:10:49,620
+and it's just always returning positive numbers.
+
+152
+00:10:49,620 --> 00:10:58,180
+We would like it to sort of embrace chaos and to shake things up, so what we've done
+
+153
+00:10:58,180 --> 00:11:04,220
+is we've written our own version of abs called sixpack that 20% of the time will just return
+
+154
+00:11:04,220 --> 00:11:06,140
+a negative number.
+
+155
+00:11:06,140 --> 00:11:12,860
+And then if we assign dunder builtin.abs to be our sixpack function, whenever anyone calls
+
+156
+00:11:12,860 --> 00:11:18,360
+abs, they'll actually be calling sixpack, and you can see that that works, we sometimes
+
+157
+00:11:18,360 --> 00:11:20,600
+get negative numbers when we call abs three.
+
+158
+00:11:20,600 --> 00:11:24,640
+And this affects not just us, but it affects anyone using the namespace.
+
+159
+00:11:24,640 --> 00:11:33,280
+So the fractions module uses abs in its hash, and so once we've patched it this way, you
+
+160
+00:11:33,280 --> 00:11:40,280
+sometimes will, for the same fraction object, get a different hash.
+
+161
+00:11:40,280 --> 00:11:47,200
+Right, so obviously it's cool that we can break the hash of function, of fraction objects,
+
+162
+00:11:47,200 --> 00:11:48,920
+but how does it actually help us fix bugs?
+
+163
+00:11:48,920 --> 00:11:54,400
+Well, if we go back to our pandas example, you can see that we can take our wrapper function,
+
+164
+00:11:54,400 --> 00:12:02,680
+and instead of making everyone call it, we can actually just patch it directly onto pd.dataframe.
+
+165
+00:12:02,680 --> 00:12:09,560
+And that will just sort of globally and transparently fix the issue for all future callers.
+
+166
+00:12:09,560 --> 00:12:19,800
+So this is nice because it allows you to make it so you only have to change the code in
+
+167
+00:12:19,800 --> 00:12:23,160
+one place when you're ready to remove your patch, you just have to remove the monkey
+
+168
+00:12:23,160 --> 00:12:28,960
+patch, you don't have to change all the call sites to remove their wrapper functions.
+
+169
+00:12:28,960 --> 00:12:33,720
+And it also is mostly helpful when you're trying to fix an issue in other code that
+
+170
+00:12:33,720 --> 00:12:34,720
+you don't control, right?
+
+171
+00:12:34,720 --> 00:12:40,400
+So if you're calling one of your dependencies, which in turn calls dataframe.ag using positional
+
+172
+00:12:40,400 --> 00:12:46,960
+arguments, and that's suddenly breaking, if you monkey patch pandas.dataframe.ag, that
+
+173
+00:12:46,960 --> 00:12:48,040
+will fix the issue.
+
+174
+00:12:48,040 --> 00:12:57,840
+And obviously, you're not able to replace third party code's function calls with your
+
+175
+00:12:57,840 --> 00:13:01,200
+wrapper functions, and you wouldn't want to do that anyway.
+
+176
+00:13:01,200 --> 00:13:06,360
+So that's kind of the benefit, but why is this a terrible idea?
+
+177
+00:13:06,360 --> 00:13:09,640
+Because from here on out, pretty much all of it is terrible ideas.
+
+178
+00:13:09,640 --> 00:13:14,440
+Well, the biggest problem is the code that uses this is hard to reason about, right?
+
+179
+00:13:14,440 --> 00:13:21,600
+It has action at a distance, the values or the things that happen when you call a given
+
+180
+00:13:21,600 --> 00:13:29,360
+function depend on which things have monkey patched what, and they may depend on things
+
+181
+00:13:29,360 --> 00:13:31,760
+that have nothing to do with your code, right?
+
+182
+00:13:31,760 --> 00:13:33,480
+Also no one is expecting you to do this, right?
+
+183
+00:13:33,480 --> 00:13:38,060
+They may be expecting to get the original function, and maybe your code has some slightly
+
+184
+00:13:38,060 --> 00:13:41,360
+different properties that will start breaking things.
+
+185
+00:13:41,360 --> 00:13:45,820
+And also, in order for monkey patching to be useful, it tends to be tightly coupled
+
+186
+00:13:45,820 --> 00:13:47,680
+to implementation details.
+
+187
+00:13:47,680 --> 00:13:55,000
+So you're often not patching something like dataframe.ag, you're often patching something
+
+188
+00:13:55,000 --> 00:14:00,960
+like dataframe.underscore aggregate or some other private implementation detail.
+
+189
+00:14:00,960 --> 00:14:04,120
+And that sort of thing doesn't survive well, version upgrades, and it doesn't work very
+
+190
+00:14:04,120 --> 00:14:11,080
+well when you're trying to support using your module with different versions of your dependencies.
+
+191
+00:14:11,080 --> 00:14:16,760
+So if you do decide to do this, it's important to scope your patch correctly.
+
+192
+00:14:16,760 --> 00:14:20,960
+So here's an example where we have two modules that appear to do the exact same thing, right?
+
+193
+00:14:20,960 --> 00:14:26,240
+They just expose a function that returns pi over 2.
+
+194
+00:14:26,240 --> 00:14:35,360
+And if we decide that we want to patch math.pi so that pi is no longer 3.141, whatever, and
+
+195
+00:14:35,360 --> 00:14:38,280
+is instead exactly 3, we can do that.
+
+196
+00:14:38,280 --> 00:14:42,160
+And if you note, the first module actually works, right?
+
+197
+00:14:42,160 --> 00:14:43,680
+Pi over 2 is now 1.5.
+
+198
+00:14:43,680 --> 00:14:44,680
+That's great.
+
+199
+00:14:44,680 --> 00:14:47,800
+The second module, though, didn't get the monkey patch.
+
+200
+00:14:47,800 --> 00:14:48,800
+Why is that?
+
+201
+00:14:48,800 --> 00:14:54,760
+Well, the reason is that your first module, pi module, imports math.
+
+202
+00:14:54,760 --> 00:14:57,280
+So it holds a reference to the global math module.
+
+203
+00:14:57,280 --> 00:15:04,000
+And then it looks up the value of pi in the math namespace every time you call that function.
+
+204
+00:15:04,000 --> 00:15:09,720
+Whereas pi module 2 looks at the value of pi on math at import time.
+
+205
+00:15:09,720 --> 00:15:14,920
+And then it uses the saved value every time you call pi over 2, right?
+
+206
+00:15:14,920 --> 00:15:19,520
+So here, we import pi module 2.
+
+207
+00:15:19,520 --> 00:15:22,880
+That resolves this pi to our 3.141 object.
+
+208
+00:15:22,880 --> 00:15:32,620
+And then later, when we patch math.pi, the pi module 2 is unaffected, but pi module isn't.
+
+209
+00:15:32,620 --> 00:15:37,800
+If we want to fix this, we actually have to patch pi in the pi module 2 namespace.
+
+210
+00:15:37,800 --> 00:15:42,240
+So this is another one of those implementation details that you may be tightly coupled to.
+
+211
+00:15:42,280 --> 00:15:47,240
+You have to make sure that you're patching the functions and the attributes and stuff
+
+212
+00:15:47,240 --> 00:15:56,000
+that you need to use in the places where they're actually used, which can cause some inconsistencies
+
+213
+00:15:56,000 --> 00:15:58,640
+and other problems.
+
+214
+00:15:58,640 --> 00:16:02,480
+One other way you can scope as tightly as possible is that if you only need your patch
+
+215
+00:16:02,480 --> 00:16:08,480
+to be active while you're calling certain functions, you can use a context manager,
+
+216
+00:16:08,480 --> 00:16:12,360
+which will allow you to scope your patch to either just the body of the context manager
+
+217
+00:16:12,360 --> 00:16:13,880
+or just to a function, right?
+
+218
+00:16:13,880 --> 00:16:20,680
+So if you use this handy function from the standard library, contextlib.contextmanager,
+
+219
+00:16:20,680 --> 00:16:27,000
+you can have it apply your patch, execute the body of either the function or the context,
+
+220
+00:16:27,000 --> 00:16:28,720
+and then undo the patch.
+
+221
+00:16:28,720 --> 00:16:34,700
+And this will automatically just work both as a context manager and as a decorator.
+
+222
+00:16:34,700 --> 00:16:37,480
+So that's a helpful tip there.
+
+223
+00:16:37,480 --> 00:16:38,920
+All right.
+
+224
+00:16:38,920 --> 00:16:43,360
+Real life examples, probably the most prominent real life example that you would see this
+
+225
+00:16:43,360 --> 00:16:49,360
+being used at is SetupTools, which extensively patches distutails whenever you import it.
+
+226
+00:16:49,360 --> 00:16:55,520
+It's implemented a bunch of its bug fixes and some of its features as changes to the
+
+227
+00:16:55,520 --> 00:16:58,020
+standard library distutails module.
+
+228
+00:16:58,020 --> 00:17:06,080
+And at some point, PIP started importing SetupTools automatically before running setup.py so that
+
+229
+00:17:06,080 --> 00:17:10,400
+it would be able to take advantage of some of the fixes that SetupTools is applying to
+
+230
+00:17:10,400 --> 00:17:12,440
+distutails.
+
+231
+00:17:12,440 --> 00:17:18,800
+This was, I guess, expedient at the time, but it has made a lot of people start relying
+
+232
+00:17:18,800 --> 00:17:22,820
+on this SetupTools patch distutails, which has made it very difficult for SetupTools
+
+233
+00:17:22,820 --> 00:17:28,480
+to unravel this monkey patching, which it's been trying to do for years now.
+
+234
+00:17:28,480 --> 00:17:29,480
+Okay.
+
+235
+00:17:29,480 --> 00:17:34,780
+Well, that moves us on to our next strategy, which is vendoring.
+
+236
+00:17:34,780 --> 00:17:36,060
+So what is vendoring?
+
+237
+00:17:36,060 --> 00:17:41,580
+Well, Webster's dictionary defines vendoring as, the word you've entered isn't in the dictionary.
+
+238
+00:17:41,580 --> 00:17:46,500
+But that's just because the fat cats at the dictionary don't want you to know that vendoring
+
+239
+00:17:46,500 --> 00:17:50,620
+is actually the practice of including your dependencies directly in your project's source
+
+240
+00:17:50,620 --> 00:17:53,620
+tree.
+
+241
+00:17:53,620 --> 00:18:00,300
+I'm not sure exactly why the dictionary has decided to censor this word, but I'm on to
+
+242
+00:18:00,300 --> 00:18:01,300
+you, Merriam-Webster.
+
+243
+00:18:01,300 --> 00:18:03,380
+All right.
+
+244
+00:18:03,380 --> 00:18:05,580
+So how do we achieve this?
+
+245
+00:18:05,580 --> 00:18:09,820
+Well, basically, you just take the source code of something you want to include in your
+
+246
+00:18:09,820 --> 00:18:13,020
+project, and then you put it under your project tree somewhere.
+
+247
+00:18:13,020 --> 00:18:18,740
+Usually you would put it under myproject.underscorevendored, and then you would update all your references
+
+248
+00:18:18,740 --> 00:18:21,860
+to the project to refer to the vended version.
+
+249
+00:18:21,860 --> 00:18:27,260
+So if you're trying to vendor squalene, you just go to some package called squalene.
+
+250
+00:18:27,260 --> 00:18:30,020
+That's not a real package.
+
+251
+00:18:30,020 --> 00:18:34,860
+You just take all your statements that say import squalene and change them to import
+
+252
+00:18:34,860 --> 00:18:39,340
+myproject.underscorevendored.squalene.
+
+253
+00:18:39,340 --> 00:18:45,040
+And then, of course, you would apply any patches to your local copy of squalene that you want
+
+254
+00:18:45,040 --> 00:18:47,140
+if that's why you're vendoring this.
+
+255
+00:18:47,140 --> 00:18:51,860
+So the advantage here is that this sort of pins your dependency, so you don't have to
+
+256
+00:18:51,860 --> 00:18:59,380
+worry if upstream changes or if your users may have globally installed different versions
+
+257
+00:18:59,380 --> 00:19:06,140
+of the module, your potentially fragile hack will not be affected by that.
+
+258
+00:19:06,140 --> 00:19:09,620
+Of course, it means you're pinned to a specific dependency, and there may be breakage when
+
+259
+00:19:09,620 --> 00:19:12,820
+you try and upgrade the dependency you're pinned at.
+
+260
+00:19:12,820 --> 00:19:15,220
+It's also nice that this is scoped to your package only, right?
+
+261
+00:19:15,220 --> 00:19:17,340
+It doesn't modify any globals.
+
+262
+00:19:17,340 --> 00:19:19,180
+No one else has to reason about it.
+
+263
+00:19:19,180 --> 00:19:21,460
+It's fairly self-contained.
+
+264
+00:19:21,460 --> 00:19:25,620
+And probably the biggest use for this kind of thing is that it allows two packages to
+
+265
+00:19:25,620 --> 00:19:29,020
+use otherwise incompatible versions of a shared dependency.
+
+266
+00:19:29,020 --> 00:19:37,820
+So if I have a package A and B that I depend on, and A depends on B and has a maximum version
+
+267
+00:19:37,820 --> 00:19:46,140
+of 1, but I depend on version 2 or more of B, then what I can do is I can vendor B directly
+
+268
+00:19:46,140 --> 00:19:51,780
+into my source tree and use B version 2.0, while globally B version 1.0 is installed
+
+269
+00:19:51,780 --> 00:19:54,380
+to satisfy A's dependency.
+
+270
+00:19:54,380 --> 00:19:59,820
+And then I can do that while I hopefully wait for A to become compatible with version 2
+
+271
+00:19:59,820 --> 00:20:00,820
+of B.
+
+272
+00:20:00,820 --> 00:20:08,620
+All right, so if we decide to do vendoring, two of the most common issues that arise when
+
+273
+00:20:08,620 --> 00:20:12,900
+you're vendoring these things are sort of related and they're worth keeping in mind.
+
+274
+00:20:12,900 --> 00:20:17,980
+The first is that when there's two or more copies of any module existing in your runtime,
+
+275
+00:20:17,980 --> 00:20:21,960
+it may have incompatibilities that you may not have anticipated.
+
+276
+00:20:21,960 --> 00:20:27,960
+So for example, most classes implement their comparison operations in terms of comparisons
+
+277
+00:20:27,960 --> 00:20:30,000
+to objects of the same class.
+
+278
+00:20:30,000 --> 00:20:35,720
+But if you have more than one copy of the same module in your runtime, even if they're
+
+279
+00:20:35,720 --> 00:20:39,840
+the exact same version, you still have two different implementations of that class and
+
+280
+00:20:39,840 --> 00:20:43,800
+they aren't considered the same object for the purposes of isInstance or is or anything
+
+281
+00:20:43,800 --> 00:20:44,800
+like that.
+
+282
+00:20:44,800 --> 00:20:53,280
+So comparisons between vendored and non-vendored versions of the instances of the classes won't
+
+283
+00:20:53,280 --> 00:20:56,520
+be able to compare to one another.
+
+284
+00:20:56,520 --> 00:21:03,000
+And this is compounded by the next issue, which is that references to the packages top
+
+285
+00:21:03,000 --> 00:21:07,320
+level name, even within the vendor package, will still hit the global package.
+
+286
+00:21:07,320 --> 00:21:13,360
+So if you have something that is sometimes using absolute imports and importing squalene
+
+287
+00:21:13,360 --> 00:21:22,000
+dot magnitude and sometimes using relative imports, they're just importing from dot magnitude,
+
+288
+00:21:22,000 --> 00:21:29,320
+you can come across a situation where this magnitude is coming from the global package
+
+289
+00:21:29,320 --> 00:21:36,480
+and this instance of a magnitude is coming from the local package, the vendor package.
+
+290
+00:21:36,760 --> 00:21:44,560
+And if we ever hit the code path that compares this object to this one, we're going to get
+
+291
+00:21:44,560 --> 00:21:45,760
+a type error.
+
+292
+00:21:45,760 --> 00:21:49,600
+And to solve this, your options are pretty much all bad, right?
+
+293
+00:21:49,600 --> 00:21:54,760
+They either involve extensively patching the local source to make sure that it has no references
+
+294
+00:21:54,760 --> 00:22:00,440
+to the global module or doing some sort of dark wizardry to get the namespaces to resolve
+
+295
+00:22:00,440 --> 00:22:03,720
+correctly and to get imports to work correctly and things like that.
+
+296
+00:22:03,720 --> 00:22:14,560
+So pretty much we're starting to see some downsides, which is that it's a little hard
+
+297
+00:22:14,560 --> 00:22:15,560
+to implement.
+
+298
+00:22:15,560 --> 00:22:19,920
+It can be hard to maintain, not least of which because it complicates your build and your
+
+299
+00:22:19,920 --> 00:22:27,240
+packaging, which is often one of the harder things to do when you're doing Python deployments.
+
+300
+00:22:27,240 --> 00:22:29,960
+It also has a tendency to be leaky in one way or the other.
+
+301
+00:22:29,960 --> 00:22:33,200
+The import system was really not designed for you to have two versions of the same module
+
+302
+00:22:33,200 --> 00:22:35,480
+importable.
+
+303
+00:22:35,480 --> 00:22:41,040
+In some sense, this is not terribly different from just having your own implementation of
+
+304
+00:22:41,040 --> 00:22:46,280
+the library, but it's fairly easy to conflate in your mind the idea that you have a version
+
+305
+00:22:46,280 --> 00:22:53,040
+of that package even if it's vended.
+
+306
+00:22:53,040 --> 00:22:56,320
+And of course, this doesn't work very well for any dependency that's part of the public
+
+307
+00:22:56,320 --> 00:22:57,320
+API, right?
+
+308
+00:22:57,320 --> 00:23:01,120
+You can't be returning objects that are references to your own vended versions.
+
+309
+00:23:01,120 --> 00:23:09,200
+You can't be returning myproject.underscorevendored.sqln magnitude objects, especially if people
+
+310
+00:23:09,200 --> 00:23:13,200
+are going to have their own squalene magnitudes to compare things to.
+
+311
+00:23:13,200 --> 00:23:18,560
+All right, so now that brings us to the real life examples.
+
+312
+00:23:18,560 --> 00:23:20,560
+One of the real life examples is actually this talk.
+
+313
+00:23:20,560 --> 00:23:26,800
+So to make it easier to deploy this talk, I have, I tend, I vendor my only two dependencies,
+
+314
+00:23:26,800 --> 00:23:32,040
+which are reveal.js and Jekyll Reveal.js.
+
+315
+00:23:32,040 --> 00:23:38,840
+And in fact, this talk specifically carries a patch in Jekyll Reveal because I found a
+
+316
+00:23:38,840 --> 00:23:44,480
+bug in Jekyll Reveal right before it was time to record the talk.
+
+317
+00:23:44,480 --> 00:23:51,440
+And because I'm a procrastinator, I obviously didn't have enough time to get it upstream.
+
+318
+00:23:51,440 --> 00:23:54,520
+So hopefully I'll be able to get it upstream later.
+
+319
+00:23:54,560 --> 00:24:00,320
+If you want some examples of Python packages that use vendoring, there's pip and setup
+
+320
+00:24:00,320 --> 00:24:03,200
+tools, and then there's also invoke.
+
+321
+00:24:03,200 --> 00:24:06,000
+And you can check their implementations to see.
+
+322
+00:24:06,000 --> 00:24:11,000
+I think they each do it a little bit differently, both resolving the namespaces and doing the
+
+323
+00:24:11,000 --> 00:24:12,560
+actual vendoring.
+
+324
+00:24:12,560 --> 00:24:20,080
+All right, so the last option is deploying and maintaining a patch version of the library
+
+325
+00:24:20,080 --> 00:24:22,040
+in your production distribution.
+
+326
+00:24:22,040 --> 00:24:28,400
+So the difference with vendoring is that this is global rather than local to your package.
+
+327
+00:24:28,400 --> 00:24:31,920
+So what you would do here is that you would take your patched version and you would either
+
+328
+00:24:31,920 --> 00:24:36,360
+deploy it in whatever your production distribution is, whether that's a Linux-like distribution
+
+329
+00:24:36,360 --> 00:24:42,400
+or you have a mirror of PyPI and you can put some patched wheels and tarballs up there,
+
+330
+00:24:42,400 --> 00:24:46,920
+or you have a mono repo and you checked in a patched version.
+
+331
+00:24:46,920 --> 00:24:51,560
+Unfortunately, in my experience, people take this not as their last option, but as their
+
+332
+00:24:51,560 --> 00:24:57,400
+first option because patching your local version is relatively easy to do and the cost kind
+
+333
+00:24:57,400 --> 00:25:06,560
+of only comes into play later on when you end up not being able to remove those patches.
+
+334
+00:25:06,560 --> 00:25:12,160
+So the way it's usually accomplished is using patch files.
+
+335
+00:25:12,160 --> 00:25:16,640
+So what you do is you store the original code as a tarball or as a folder or something,
+
+336
+00:25:16,640 --> 00:25:20,960
+and then you store next to it some patches, and when you apply those patches, it gives
+
+337
+00:25:21,120 --> 00:25:26,720
+you, it's either that you store the original code and the patches and then you apply the
+
+338
+00:25:26,720 --> 00:25:31,160
+patches as part of build, or you store the patched version and the patches and then you
+
+339
+00:25:31,160 --> 00:25:37,480
+can undo the patches if you want to see the original code.
+
+340
+00:25:37,480 --> 00:25:42,920
+This is helpful because it gives you a record of everything that you're changing, and to
+
+341
+00:25:42,920 --> 00:25:47,240
+the extent that the patches will still cleanly apply to new versions, it might be easier
+
+342
+00:25:47,320 --> 00:25:50,840
+to reduce friction when doing upgrades.
+
+343
+00:25:50,840 --> 00:25:54,920
+A lot of people use this software called Quilt for generating and managing those patches.
+
+344
+00:25:54,920 --> 00:26:00,680
+I don't really have time to go into it, but this link here is written by an expert and
+
+345
+00:26:00,680 --> 00:26:05,720
+it seems like a fairly good explanation of how Quilt works, and it will do a much better
+
+346
+00:26:05,720 --> 00:26:13,000
+job than I could in the 30 seconds or so I have to cover this concept.
+
+347
+00:26:13,240 --> 00:26:20,360
+If you have very simple patches, and hopefully you do keep your patches very simple, you
+
+348
+00:26:20,360 --> 00:26:24,520
+may even be able to accomplish this without any sort of patch management software or anything,
+
+349
+00:26:24,520 --> 00:26:29,040
+just by adding a little rule in your makefile that uses sed or some other little scripting
+
+350
+00:26:29,040 --> 00:26:30,040
+language.
+
+351
+00:26:30,040 --> 00:26:34,560
+Obviously, if that gets too complicated, it's much worse than maintaining patches, but for
+
+352
+00:26:34,560 --> 00:26:43,600
+something simple like search and replace of the path to a file, it seems fairly easy.
+
+353
+00:26:43,600 --> 00:26:47,440
+And this seems to be an idiom that's common in the Arch Linux world, where they have a
+
+354
+00:26:47,440 --> 00:26:52,400
+pretty strong cultural norm against patching upstream sources.
+
+355
+00:26:52,400 --> 00:26:58,800
+Okay, so we've already started on the downsides, but I really want to hammer these home because
+
+356
+00:26:58,800 --> 00:27:02,280
+I think this is the most tempting of the options.
+
+357
+00:27:02,280 --> 00:27:05,600
+What you're doing here is you're basically maintaining a fork that Upstream doesn't know
+
+358
+00:27:05,600 --> 00:27:06,600
+about.
+
+359
+00:27:06,600 --> 00:27:10,080
+For small patches, it may seem like you're like, oh, I just carry a couple of patches,
+
+360
+00:27:10,080 --> 00:27:17,080
+but the issue is that the best case scenario is that Upstream just steps on your patches
+
+361
+00:27:17,080 --> 00:27:19,840
+and you have to redo your patches every once in a while.
+
+362
+00:27:19,840 --> 00:27:24,080
+The worst case scenario is that you make some choices that are just fundamentally incompatible
+
+363
+00:27:24,080 --> 00:27:29,120
+with the way that Upstream is moving, and other people in your organization have come
+
+364
+00:27:29,120 --> 00:27:31,280
+to rely on those choices, right?
+
+365
+00:27:31,280 --> 00:27:36,640
+So that ends up adding friction to your upgrade process, and it may prevent you from upgrading
+
+366
+00:27:36,640 --> 00:27:37,640
+at all.
+
+367
+00:27:37,640 --> 00:27:42,760
+And your minor patches end up, in the end, becoming a proper full-on fork, and you have
+
+368
+00:27:42,760 --> 00:27:51,360
+to maintain all the new features, and you can't really cleanly get patches from Upstream.
+
+369
+00:27:51,360 --> 00:27:57,400
+And then, of course, as time goes on, there's less guarantee of compatibility, right?
+
+370
+00:27:57,400 --> 00:28:04,320
+If other third-party packages are using the package that you're patching, they can't test
+
+371
+00:28:04,320 --> 00:28:05,600
+against your patch version, right?
+
+372
+00:28:05,600 --> 00:28:07,480
+They test against Upstream's version.
+
+373
+00:28:07,480 --> 00:28:12,080
+So as time goes on, as you're carrying more and more patches, they are less and less likely
+
+374
+00:28:12,080 --> 00:28:17,800
+to be compatible, and you can get yourself into a sort of tangled morass that's very
+
+375
+00:28:17,800 --> 00:28:19,480
+hard to get out of.
+
+376
+00:28:19,480 --> 00:28:25,640
+Okay, so I barely really even need to talk about the real-life examples.
+
+377
+00:28:25,680 --> 00:28:31,440
+Pretty much every Linux distro does something like this, and most big companies do as well.
+
+378
+00:28:31,440 --> 00:28:34,280
+There are some generally good reasons to do this, right?
+
+379
+00:28:34,280 --> 00:28:39,040
+If you're just adjusting the package to work for your build system, that's something that
+
+380
+00:28:39,040 --> 00:28:43,520
+you would obviously not want to go in Upstream.
+
+381
+00:28:43,520 --> 00:28:47,960
+And there are certain changes that are minimal enough, and maybe you tell Upstream about
+
+382
+00:28:47,960 --> 00:28:52,640
+them, that it's worth maintaining a small fork.
+
+383
+00:28:52,640 --> 00:28:57,040
+But generally, you want to minimize the use of this strategy.
+
+384
+00:28:57,040 --> 00:29:00,640
+Okay, well, that's it for all the strategies.
+
+385
+00:29:00,640 --> 00:29:03,840
+I thought I would leave you with a couple of final thoughts.
+
+386
+00:29:03,840 --> 00:29:09,600
+The first is that it's very easy to overlook the value of patience.
+
+387
+00:29:09,600 --> 00:29:15,880
+Each of these strategies involves incurring some technical debt, just as an expedient,
+
+388
+00:29:15,880 --> 00:29:18,720
+to get things moving, to get things moving faster.
+
+389
+00:29:18,720 --> 00:29:23,240
+But you may want to consider reflecting on if you're using these strategies a lot, or
+
+390
+00:29:23,240 --> 00:29:28,160
+if you really feel the need for them, is there anything about your process that would allow
+
+391
+00:29:28,160 --> 00:29:35,920
+you to develop strategies to patiently wait for Upstream fixes to deploy?
+
+392
+00:29:35,920 --> 00:29:43,080
+Or at least to minimize the extent to which you are deviating from what Upstream is doing?
+
+393
+00:29:43,080 --> 00:29:47,480
+And then also, I think there's a tendency to start patching things and then say, well,
+
+394
+00:29:47,480 --> 00:29:48,840
+in for a penny, in for a pound, right?
+
+395
+00:29:48,840 --> 00:29:55,720
+We started patching things, and so we may as well just add our own features to things.
+
+396
+00:29:55,720 --> 00:29:57,760
+But really, this is technical debt, right?
+
+397
+00:29:57,760 --> 00:30:02,800
+You should be glad that you're only in for a penny and not in for a whole pound.
+
+398
+00:30:02,800 --> 00:30:06,880
+You should accrue it thoughtfully and pay it down as quickly as possible.
+
+399
+00:30:06,880 --> 00:30:09,200
+Okay, well, that's my talk.
+
+400
+00:30:09,200 --> 00:30:12,200
+Thank you so much for watching, and I hope you enjoy the rest of the conference.
+

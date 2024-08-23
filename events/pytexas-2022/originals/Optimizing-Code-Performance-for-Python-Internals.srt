@@ -1,0 +1,560 @@
+1
+00:00:00,000 --> 00:00:10,000
+Hi everyone, and thanks for coming to PyTexas. I hope you're not too sleepy after lunch.
+
+2
+00:00:10,000 --> 00:00:18,000
+My name is Jonathan Goldsmith. I came a long way from Israel. I like everything about computers and software.
+
+3
+00:00:18,000 --> 00:00:24,000
+I got a chance to work on many open source projects in many fields, and I like wine as well.
+
+4
+00:00:24,000 --> 00:00:32,000
+I'm currently a research team lead at GrandRite. GrandRite helps companies optimize their workloads,
+
+5
+00:00:32,000 --> 00:00:36,000
+improve performance, and leverage that to reduce costs.
+
+6
+00:00:36,000 --> 00:00:44,000
+Now, this is my first session given outside of Israel, so good luck for me.
+
+7
+00:00:44,000 --> 00:00:51,000
+And it's going to be quite technical. Feel free to stop me at any point and ask questions, and please do that.
+
+8
+00:00:51,000 --> 00:00:58,000
+I intend it to be more entertaining and mind-opening and not especially technical, so stop me.
+
+9
+00:00:58,000 --> 00:01:06,000
+So, we'll start with something a bit bumming, and I do not intend to bum you.
+
+10
+00:01:06,000 --> 00:01:17,000
+The Internet is full of these graphs. I'm sadly no magician, so if you expected these kind of speed-ups from my session,
+
+11
+00:01:17,000 --> 00:01:24,000
+then you won't have them, sadly. If you don't want this kind of speed-up, then you have Ross Texas over there.
+
+12
+00:01:24,000 --> 00:01:28,000
+You can try it out. Kidding.
+
+13
+00:01:28,000 --> 00:01:32,000
+How are we doing? What can we do to improve the performance of our piling code?
+
+14
+00:01:32,000 --> 00:01:42,000
+Well, there are plenty of options from different frameworks, like Namba, which helps you create better code for mathematical computations.
+
+15
+00:01:43,000 --> 00:01:52,000
+AsyncIO, which makes better use of threads. You have profiles that let you identify code bottlenecks and improve them.
+
+16
+00:01:52,000 --> 00:02:00,000
+And you can try different Python implementations, such as PyPy, and you can try to improve the algorithms of your code.
+
+17
+00:02:00,000 --> 00:02:04,000
+All these methods can help you improve performance, but we're not going to focus them.
+
+18
+00:02:05,000 --> 00:02:12,000
+We're going to focus things at the level of Python itself, and specifically CPython, which is the Python you're all probably using,
+
+19
+00:02:12,000 --> 00:02:16,000
+and version 3.10, which is the latest one.
+
+20
+00:02:16,000 --> 00:02:25,000
+So, what is Python itself? When I say that I actually meant the Python interpreter, the interpreter, which includes the Python runtime,
+
+21
+00:02:25,000 --> 00:02:32,000
+is responsible to take your Python text and make sure that the computer, the transit, actually does what you requested it to do.
+
+22
+00:02:32,000 --> 00:02:40,000
+This, among other things, includes compiling Python text code to Python bytecode, which can be reviewed with this module.
+
+23
+00:02:40,000 --> 00:02:48,000
+The interpreter then interprets the bytecode, performing one small task at a time, to achieve the ultimate goal of your code.
+
+24
+00:02:48,000 --> 00:02:57,000
+Now, there is much more under the hood. For example, garbage collection and managing the Python environment itself.
+
+25
+00:02:58,000 --> 00:03:04,000
+Now, why should I care about the interpreter? Well, the interpreter is our friend.
+
+26
+00:03:04,000 --> 00:03:12,000
+It tries to run our code, and it tries to run it as fast as possible. It involves many, many optimization techniques during this process.
+
+27
+00:03:12,000 --> 00:03:21,000
+If we pay some level of attention to the details underneath, we can help it do a better job, and we'll have our code run faster,
+
+28
+00:03:21,000 --> 00:03:24,000
+and that's what we're going to focus on today.
+
+29
+00:03:25,000 --> 00:03:35,000
+So, I have collected a number of demos. For simplicity, I chose demos focusing on dictionaries, which are a key component of the Python runtime.
+
+30
+00:03:35,000 --> 00:03:43,000
+There are many, many other optimizations, though. Once again, feel free to stop me with any questions during the demos.
+
+31
+00:03:43,000 --> 00:03:50,000
+So, the first one will revolve around the dictionary lookup types.
+
+32
+00:03:50,000 --> 00:03:58,000
+Dictionaries are complex. They power many parts of the Python runtime, from the attributes of classes and instances,
+
+33
+00:03:58,000 --> 00:04:06,000
+to global and built-in variables, and to plain data structures, such as things we marshal or unmarshal with JSON.
+
+34
+00:04:06,000 --> 00:04:14,000
+All dictionaries behave the same to us. We can access keys, delete keys, insert keys, but they actually have numerous underlying implementation.
+
+35
+00:04:14,000 --> 00:04:20,000
+Actually, four to be precise. And now we will see the demo of them.
+
+36
+00:04:24,000 --> 00:04:26,000
+I won't touch it again.
+
+37
+00:04:26,000 --> 00:04:37,000
+So, I have prepared here a demo which displays the speed effect of dictionary lookups, depending on the key types that we are using.
+
+38
+00:04:37,000 --> 00:04:47,000
+For that, I have wrote a utility library, which the code of it would be shared later, to display the internal attributes of a dictionary,
+
+39
+00:04:47,000 --> 00:04:51,000
+those not exposed for us in the Python library.
+
+40
+00:04:51,000 --> 00:05:04,000
+So, I will create a small dictionary with some string keys, mapping to integers, and we can use this function to print information about the dict.
+
+41
+00:05:04,000 --> 00:05:09,000
+The thing I want to focus on this demo is the look dict function.
+
+42
+00:05:09,000 --> 00:05:17,000
+As I said, there are numerous implementations for the lookup method for different dictionaries, depending on the dictionary type, the keys type.
+
+43
+00:05:17,000 --> 00:05:29,000
+In this case, we are using the function called look dict unicode no dummy, which is a long name to mean the dictionary has only string keys and no deleted entries.
+
+44
+00:05:29,000 --> 00:05:32,000
+That is, you have never performed a delete operation.
+
+45
+00:05:32,000 --> 00:05:37,000
+So, I have a small function to benchmark the dictionary.
+
+46
+00:05:37,000 --> 00:05:40,000
+Not this one.
+
+47
+00:05:40,000 --> 00:05:48,000
+We can run it and see how much time does it take to look up for the dict 10,000 times.
+
+48
+00:05:48,000 --> 00:05:52,000
+So, it takes about 380 microseconds.
+
+49
+00:05:53,000 --> 00:06:04,000
+Now, we can delete an entry, and if we print the dictionary again, we can see that its lookup method has changed, because we have performed the deletion.
+
+50
+00:06:04,000 --> 00:06:09,000
+Sorry? Yeah, I will just get back to the mic.
+
+51
+00:06:09,000 --> 00:06:21,000
+So, since I have performed the deletion, the dictionary now uses the standard look dict unicode method, which is a bit slower than the no dummy one, the one without deletions.
+
+52
+00:06:21,000 --> 00:06:27,000
+But if we time it now, I don't suppose we will see a large effect.
+
+53
+00:06:27,000 --> 00:06:30,000
+Let's see.
+
+54
+00:06:30,000 --> 00:06:36,000
+A bit, a bit of an effect, but now let's do something more brutal and insert a non-string key.
+
+55
+00:06:36,000 --> 00:06:49,000
+If we print the dictionary now, we can see that it has moved to the look dict function, which is the generic one that works with all types of keys, from integers to flows to classes to whatever you can choose.
+
+56
+00:06:49,000 --> 00:06:59,000
+If we benchmark it now, we can see that it has become, should have become even more slower.
+
+57
+00:06:59,000 --> 00:07:07,000
+It can go to about 30% slower now that the look dict function has changed.
+
+58
+00:07:08,000 --> 00:07:21,000
+So, the technical reasoning behind it is that the look dict unicode function and the variant no dummy can assume that all strings, all keys are strings, and it can use faster lookups.
+
+59
+00:07:21,000 --> 00:07:41,000
+It can directly call the string comparison functions, and since string comparison never can raise exceptions or do any kind of harm, it does not need to wrap the key checking with exception catching, and it has less work to do, so it's faster.
+
+60
+00:07:41,000 --> 00:07:52,000
+Now, you may be thinking it was very insignificant. It's all in the matter of nanoseconds or microseconds. What effect does it have on your application?
+
+61
+00:07:52,000 --> 00:08:10,000
+So, just need to remember that dictionary lookups can compose about 10% of your Python program runtime, so now those 20% of improvement that I've shown you, they take 2% of your application, which is significant.
+
+62
+00:08:10,000 --> 00:08:15,000
+So, you need to look at the full numbers. That's the demo itself.
+
+63
+00:08:15,000 --> 00:08:24,000
+Okay. Now, another demo. This will evolve about instance dictionaries and their sizes.
+
+64
+00:08:24,000 --> 00:08:39,000
+We started with a small explanation on the dictionary structure in CPython. A dictionary object called PyDictObject, which is this one, holds a reference to its keys object, which is called PyDictKeysObject.
+
+65
+00:08:39,000 --> 00:08:48,000
+The keys object holds the key entries in decay entries, which is a simple array of objects of the value and the key and hash items.
+
+66
+00:08:48,000 --> 00:09:08,000
+There's also decay indexes, which is an array that maps the hash results to the entries in the decay entries. So, the key lookup, we calculate the hash of the key, we find the index via decay indexes, and then we get an index into decay entries, and finally we get the value.
+
+67
+00:09:08,000 --> 00:09:21,000
+That's also roughly how things look like in Python 2. Now, since Python 3.3, we have the separation of PyDictKeysObject, and why is it required?
+
+68
+00:09:21,000 --> 00:09:32,000
+So, the reason we are behind the separation was to support key sharing dictionaries. As I mentioned, one of the very common use cases of Dict is to store instance attributes.
+
+69
+00:09:32,000 --> 00:09:46,000
+Behind the scenes, all instances such as X1 and X2, in this case, have a dictionary that maps their attribute names to the attribute values, except for when using slots, and more on that later.
+
+70
+00:09:46,000 --> 00:09:55,000
+If we look at the two dictionaries that we have here, we can see that they share most, share a lot in common. Decay indexes is actually the same.
+
+71
+00:09:55,000 --> 00:10:05,000
+Decay entries is an array of the same size, it holds the same keys, but the values are different because these are different objects, after all.
+
+72
+00:10:05,000 --> 00:10:20,000
+So, came key sharing dictionaries PEP, which was PEP 4.12, I think, and with this PEP, we have one copy of the keys object, and multiple dictionaries using this very copy.
+
+73
+00:10:20,000 --> 00:10:31,000
+Now, they have an additional values array, which contains just the values, and the indexes from the decay entries are used to index this array as well.
+
+74
+00:10:31,000 --> 00:10:40,000
+Now, this has a drastic effect on the memory consumption of Python objects, as we will now see on the next demo.
+
+75
+00:10:40,000 --> 00:10:53,000
+Once again, make it a bit larger. So, here I have a quite unorthodox, simple OOP demo class called Animal, which has the name and the species and the age attributes,
+
+76
+00:10:53,000 --> 00:11:06,000
+and if the animal has a sound or a smell, then we will also store these attributes. So, let's copy that to our demo.
+
+77
+00:11:06,000 --> 00:11:18,000
+Now, we can make a fish animal, I named him Flipper, and we can print the dictionary attributes of Flipper.
+
+78
+00:11:18,000 --> 00:11:24,000
+We can see that it's using the lookDictSplit method, which is the one used for key sharing dictionaries.
+
+79
+00:11:24,000 --> 00:11:36,000
+We can see that it is about 104 bytes in size. We can see the entries, and we can see that its keys have the rough count of two.
+
+80
+00:11:36,000 --> 00:11:49,000
+Two dictionaries are referencing these keys. One is the Flipper object, and the other one is the Animal class, which remembers that this is the keys object used for instances of animal.
+
+81
+00:11:49,000 --> 00:12:05,000
+Now, let's create a skunk, which has a smelly attribute, and we can print the attributes of the skunk.
+
+82
+00:12:05,000 --> 00:12:17,000
+So, it's again using the lookDictSplit method, and it has the same size. Now, the keys rough count is three, because we have created another object which uses the same keys.
+
+83
+00:12:17,000 --> 00:12:36,000
+Now, I'll create a cat, which has no smell but has a sound, and if we print the cat now, we can see that it's not using the lookDictSplit method anymore, and its size has grown drastically, and the keys rough count is one.
+
+84
+00:12:36,000 --> 00:12:46,000
+What happened here? So, what happened is that the keys had to be resized because we added more attributes, more different attributes.
+
+85
+00:12:46,000 --> 00:13:00,000
+The shared keys had those four attributes, the name, the species, the age, and the smell, and now we needed to add the sound attribute, and there was no room in the keys object, so we had to create a new one.
+
+86
+00:13:00,000 --> 00:13:29,000
+By creating a new one, we basically unshared the key showing dictionaries for this class, for the Milo instance, and actually, for all new instances, if we now recreate Flipper and print it, you can see that it will not use the lookDictSplit method anymore, but the Unicode one, and its size has grown more than twice the size, which is bad.
+
+87
+00:13:30,000 --> 00:13:50,000
+And now, actually, we can never revert it back. From this moment, CPython will no longer try to share the keys of any instance of the animal class. We actually have to restart the interpreter for that, so let's restart it, and repaste this code.
+
+88
+00:13:50,000 --> 00:14:19,000
+Now, if we recreate an animal, and let's say print Milo, we can see that, again, it is using lookDictSplit, but now I will use the mute method, which is, you can see its code, it's basically deleting the sound, so I can do that, and I can print the dict again, and it, again, stopped being a shared dictionary.
+
+89
+00:14:19,000 --> 00:14:36,000
+And now, if I do create another animal, it will not use the shared keys anymore. The moment I have deleted an attribute from a class, from an instance of a class, key sharing is stopped for all future instances of that class.
+
+90
+00:14:36,000 --> 00:14:53,000
+These are the code areas from CPython, where it decides to skip or to bail out on the key sharing, because we've broken the assumptions of no deletion and no resize after the init method.
+
+91
+00:14:53,000 --> 00:15:04,000
+Now, this effect is huge, so do make sure to never delete instance attributes and to always initialize everything in your init.
+
+92
+00:15:04,000 --> 00:15:30,000
+Now, a word on slots. Slots are a pretty archaic feature of Python, which allow you to define a static list of attributes for instances, and then each instance will not have a dict, but only an array of values for those attributes, and it greatly reduces the memory footprint of each instance.
+
+93
+00:15:30,000 --> 00:15:53,000
+Now, since key sharing dictionaries, which are not as good as slots, but in my opinion, basically renders slots useless, because it gives most of the effect, which is pretty cool that we have a seamless optimization that replaced an optimization that required us, the developers, to manually type and define the attributes that we want to use.
+
+94
+00:15:54,000 --> 00:15:58,000
+Anyway, it's pretty cool, and slots are dead in my opinion.
+
+95
+00:15:58,000 --> 00:16:08,000
+Okay, so one last example would be about global variables. So far everything was about dictionaries, and the same would be here.
+
+96
+00:16:08,000 --> 00:16:24,000
+Global variables are based on dictionaries. A function defined in a module has its globals attached to the dictionaries of the module, so a global variable access is basically lookups in the dictionary of that module.
+
+97
+00:16:24,000 --> 00:16:38,000
+Now globals are very common, and as we've seen so far, dictionaries are not very fast. Loading global variables has been taking a significant portion of standard Python applications, so a solution was sought.
+
+98
+00:16:38,000 --> 00:16:53,000
+Now, under the hood, global variables are read with the load global Python opcode. Each load global opcode is attached to the name. It's supposed to load, for example in this case, a global variable.
+
+99
+00:16:53,000 --> 00:17:08,000
+Now CPython implements a concept called inline caches, which is caching at the site of an operation, like a call site for a function, in contrary to a cache placed on the target site, for example a function wrapped with a caching decoito.
+
+100
+00:17:08,000 --> 00:17:19,000
+Now inline caches are a very powerful concept, and they are used in many, many language runtimes, and even CPython itself uses them for many more areas, not only for global variables.
+
+101
+00:17:19,000 --> 00:17:32,000
+So how does it work? Well, each dictionary in Python has a version field attached to it. The version of a dict changes whenever the dict changes, assigning a new value, deleting an existing value, modifying a value.
+
+102
+00:17:32,000 --> 00:17:41,000
+On the right hand, you have a simple Python code that reads the version of a dict, and if we modify the dict and read it again, the version will change.
+
+103
+00:17:42,000 --> 00:18:00,000
+The load global cache, inline cache, stores the version of the globals and the built-ins, but we won't get into that. Upon the next run of the same opcode in this same function, if the version hasn't changed, then we can skip the lookup and use the cached object, which is cool.
+
+104
+00:18:00,000 --> 00:18:08,000
+Now this cache can break, but I have 10 minutes, so I think we will skip this demo and I'll just explain about it.
+
+105
+00:18:09,000 --> 00:18:21,000
+This optimization, unlike the other two, which are ones that break, and once they break, you have to restart the interpreter or redefine the class or recreate the dictionary in order to revert to the previous state.
+
+106
+00:18:21,000 --> 00:18:38,000
+This optimization is self-healing. If you do change the version of a dictionary, for example, if you do modify a global variable, then upon the next time, the cache will just self-heal and will continue caching going forward.
+
+107
+00:18:38,000 --> 00:18:51,000
+So does it even matter for real code? Well, the larger the module is, the more functions that it has, and the more functions are using the same global variables, and the more likely that the cache is to break.
+
+108
+00:18:51,000 --> 00:19:02,000
+So for example, to the right, I have a screenshot from a random file. I don't think you're seeing anything, but the idea is just to demonstrate that it's a lot of code.
+
+109
+00:19:02,000 --> 00:19:15,000
+It's about a thousand lines of code, and it's enough for just one of those functions to modify one small global variable, and the caches of all functions in that module break, which is a shame.
+
+110
+00:19:15,000 --> 00:19:29,000
+So global variables are, it's not a designer pattern stock, but global variables are not very good generally, but modifying them is even worse, so try not to.
+
+111
+00:19:29,000 --> 00:19:41,000
+Okay, now enough for the demos. I wanted to give a short note on other languages since most of what I've discussed is relevant to all dynamic interpreted languages.
+
+112
+00:19:42,000 --> 00:19:51,000
+I gave examples specific to CPython, but the same concepts remain. There are many similar optimizations performed by the underlying engines.
+
+113
+00:19:51,000 --> 00:20:05,000
+Taking a node, for example, we're in PyTexas and not in NodeTexas, but had we been at NodeTexas, there would be countless examples to give about node.
+
+114
+00:20:05,000 --> 00:20:19,000
+As a small one, we have seen four different lookup methods in Python. Node has about 20 different underlying implementations for maps or objects, which are the equivalents of dicts.
+
+115
+00:20:19,000 --> 00:20:31,000
+Node is based on the V8 engine, which also powers the Chrome browser. It has very advanced optimizations in place, which means that there is much to lose if your code doesn't play well with them.
+
+116
+00:20:31,000 --> 00:20:42,000
+I won't give a node example here because, as I said, I'm running out of time, but I have attached a great read about similar types of optimizations in node.
+
+117
+00:20:42,000 --> 00:20:53,000
+Shortly speaking, the auto managed to cut down the execution time of a CPU having node script by about 4x, with many techniques relating to the internals of V8, the engine.
+
+118
+00:20:53,000 --> 00:20:59,000
+So if you've liked what I talked about here, then I encourage you to read it and give it a try.
+
+119
+00:21:00,000 --> 00:21:14,000
+Now, a word on SIP Python itself. SIP Python is getting improved lately by much. Since 3.10, which is October 21, I think, Eric and Mark, who are core devs, and Guido, the creator of Python,
+
+120
+00:21:14,000 --> 00:21:21,000
+they are focusing on improving SIP Python performance in a non-breaking way so that everyone can benefit from that.
+
+121
+00:21:21,000 --> 00:21:28,000
+This includes tons of new interpreter level and runtime level optimizations, many similar to what we've seen today.
+
+122
+00:21:28,000 --> 00:21:42,000
+Now, this is a very bright future, and 3.11 itself is going to be a huge boost, about 2x the speed, so you can just dump everything I said today and upgrade to 3.11 and you will get most of the benefits.
+
+123
+00:21:42,000 --> 00:21:55,000
+But as I mentioned for Node.js, on the one hand, more optimizations means that we will have more to benefit from, and on the other hand, failing to benefit from those new optimizations will incur a higher cost,
+
+124
+00:21:55,000 --> 00:22:09,000
+because now the difference between optimized and unoptimized is larger. So for the best performance going forward, it will become more and more important to understand the engine and to understand how your program is handled by the interpreter.
+
+125
+00:22:09,000 --> 00:22:24,000
+And I will point about the...that's about 2reel's plan, a cool repository to read about the futures of SIP Python, but again, in SIP Python 3.13, I think, they plan to reach about 5x performance, which is pretty cool.
+
+126
+00:22:24,000 --> 00:22:47,000
+Now, some takeaways. From these two snippets, which do the same, which one you would say is faster and which one is more PyTonic? More PyTonic, more Python code.
+
+127
+00:22:47,000 --> 00:23:03,000
+Well, the top one is the more PyTonic one. It is concise and it is easy to read, but it is about twice as slow. I'm not instructing you to un-Pythonize your code.
+
+128
+00:23:03,000 --> 00:23:15,000
+We write Python because it is easy, fast and pure. Readability counts. Making your code complex is never the target. If you make your code complex, then move to another language.
+
+129
+00:23:15,000 --> 00:23:29,000
+But do remember that the interpreter is your friend and it wants to help you run your code faster. Those few snippets that I've shown you here are just a small bit, the tip of the iceberg of what SIP Python encompasses.
+
+130
+00:23:29,000 --> 00:23:36,000
+Remember those details and pay attention to them where needed and your code shall be rewarded.
+
+131
+00:23:36,000 --> 00:23:47,000
+And on a final note, I hope that this talk has opened your mind to this world of engine level optimizations. Personally, I find it very interesting and cool.
+
+132
+00:23:47,000 --> 00:24:04,000
+I spent a lot of time reading SIP Python's code just to understand those bits and things. But if we stop for a moment and think one level above about improving performance, then you should start with profiling.
+
+133
+00:24:04,000 --> 00:24:16,000
+Any type of optimization performed without profiling is most usually a waste of your time. So start with profiling and only then look at all those concepts I've explained today.
+
+134
+00:24:16,000 --> 00:24:27,000
+That's it. Any questions so far? It's not mixing key types. His question was if my example was about mixing key types, the first example.
+
+135
+00:24:27,000 --> 00:24:37,000
+So it's not about mixing key types in general. SIP Python specifically has better handling for string keys because we have many dictionaries that are only string keys.
+
+136
+00:24:37,000 --> 00:24:50,000
+Or dictionaries that are the dictionaries of instances and classes and modules and they're all only string keys. So specifically mixing string keys with non-strings is bad.
+
+137
+00:24:50,000 --> 00:25:06,000
+Everything else just goes to the default method so you can put whatever you want. But if you have a dictionary that is mostly string keys, then kick out the non-strings because it will make it faster by 30%.
+
+138
+00:25:06,000 --> 00:25:15,000
+All right. Well, thanks. And one final note. I will put the code snippets I mentioned on that repository to the top.
+
+139
+00:25:15,000 --> 00:25:26,000
+And I'm also dropping a link to a repository called WTF Python, which is a cool repository containing many intriguing snippets about the behavior of Python.
+
+140
+00:25:26,000 --> 00:25:37,000
+Two of the demos I presented here are actually snippets that I have contributed to WTF Python about a year ago. Check it out. It's pretty cool. Thank you.
+

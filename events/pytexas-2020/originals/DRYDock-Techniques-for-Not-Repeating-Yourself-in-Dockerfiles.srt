@@ -1,0 +1,1328 @@
+1
+00:00:00,000 --> 00:00:24,060
+Hello, and welcome to Dry Dock, techniques for not repeating yourself in Docker files.
+
+2
+00:00:24,060 --> 00:00:25,940
+My name is Micah June Culpepper.
+
+3
+00:00:25,940 --> 00:00:30,060
+I work for a hosting company where I write some Python applications and I maintain some
+
+4
+00:00:30,060 --> 00:00:34,500
+things that run in Docker containers, and today I'm going to talk to you about a problem
+
+5
+00:00:34,500 --> 00:00:36,260
+that I have.
+
+6
+00:00:36,260 --> 00:00:40,900
+First, before we get into the weeds of what the problem is, I'm going to go over a very
+
+7
+00:00:40,900 --> 00:00:46,580
+basic introduction to what Docker files are and why we might have these problems.
+
+8
+00:00:46,580 --> 00:00:52,940
+If you're already familiar with Docker files and Docker in general, then you may not need
+
+9
+00:00:52,940 --> 00:00:58,660
+this part, but just so that this is approachable to everyone or for those who have been using
+
+10
+00:00:58,660 --> 00:01:04,820
+Docker files but weren't really sure exactly what they did or why they needed to have them.
+
+11
+00:01:04,820 --> 00:01:10,340
+So we're going to say that Docker is a system for running VMs.
+
+12
+00:01:10,340 --> 00:01:15,300
+That's not quite accurate, but for the sake of explanation, it's close enough.
+
+13
+00:01:15,300 --> 00:01:22,580
+So a Docker VM is called a container, and if you want to have a Docker VM running, then
+
+14
+00:01:22,580 --> 00:01:27,820
+you go to your console and you type Docker run with some extra arguments to start up
+
+15
+00:01:27,820 --> 00:01:31,900
+that VM, and so the running VM is called a container.
+
+16
+00:01:31,900 --> 00:01:39,300
+Now in order to run this VM, you first need to have the VM's file system or the image
+
+17
+00:01:39,300 --> 00:01:42,340
+existing on disk.
+
+18
+00:01:42,340 --> 00:01:46,340
+Now Docker images can come from a lot of places.
+
+19
+00:01:46,340 --> 00:01:51,860
+There are some good publicly available images if you want to run something like Linux or
+
+20
+00:01:51,860 --> 00:01:54,100
+NGINX or Python.
+
+21
+00:01:54,100 --> 00:01:59,980
+There are plenty of publicly available images, however, for most production purposes, you're
+
+22
+00:01:59,980 --> 00:02:05,340
+going to want to make your own image, either completely from scratch with tons of customization
+
+23
+00:02:05,340 --> 00:02:10,340
+or by taking one of those off the shelf publicly available images and adding a little bit of
+
+24
+00:02:10,340 --> 00:02:16,300
+customization on top, even if it's just simply copying your application into it.
+
+25
+00:02:16,980 --> 00:02:23,180
+Next, if you want to create one of these images yourself, what you need to do is you need
+
+26
+00:02:23,180 --> 00:02:28,940
+to run the Docker build command, and that will produce an image on disk according to
+
+27
+00:02:28,940 --> 00:02:33,680
+your instructions, but you don't give all the instructions in the Docker build command.
+
+28
+00:02:33,680 --> 00:02:40,340
+You supply instructions to Docker build in a Docker file, and the Docker files are what
+
+29
+00:02:40,340 --> 00:02:42,860
+we're here to talk about today.
+
+30
+00:02:42,860 --> 00:02:48,600
+So taking it from the top, you begin with your Docker file, which is configuration or
+
+31
+00:02:48,600 --> 00:02:53,020
+code that you write, and then you use that to build an image, and then you use the image
+
+32
+00:02:53,020 --> 00:02:59,380
+to run a container for whatever purpose you're trying to solve.
+
+33
+00:02:59,380 --> 00:03:07,620
+So to give you an example, here is a Flask app, and this is just a very simple demonstration
+
+34
+00:03:07,620 --> 00:03:13,820
+purposes example of sort of the minimum required to get a Docker container running.
+
+35
+00:03:13,820 --> 00:03:20,300
+So first we have our Python file, and this is just a tiny little Hello World web server.
+
+36
+00:03:20,300 --> 00:03:25,420
+And then this is the Docker file that we would use to produce an image to run our Hello World
+
+37
+00:03:25,420 --> 00:03:26,420
+server.
+
+38
+00:03:26,420 --> 00:03:31,540
+Now, in the Docker file, the way I have my syntax highlighting set up here is all of
+
+39
+00:03:32,540 --> 00:03:38,300
+words, the first word in each line, are the Docker file directives or the commands that
+
+40
+00:03:38,300 --> 00:03:43,180
+you have to work with in the sort of Docker file domain specific language.
+
+41
+00:03:43,180 --> 00:03:47,620
+So the first line there says from Python 3.8.
+
+42
+00:03:47,620 --> 00:03:53,060
+Now, normally, the first line in a Docker file is going to say from.
+
+43
+00:03:53,060 --> 00:03:55,980
+It doesn't have to, but usually it does.
+
+44
+00:03:55,980 --> 00:03:59,960
+And that describes the base image that you are working from.
+
+45
+00:03:59,960 --> 00:04:05,520
+So we're saying go out and get the publicly available Python 3.8 image, and then we're
+
+46
+00:04:05,520 --> 00:04:08,320
+going to build on top of that.
+
+47
+00:04:08,320 --> 00:04:13,920
+Now keep in mind what I just said is that we are building on top of it.
+
+48
+00:04:13,920 --> 00:04:17,860
+In other words, we are building up layers on layers on layers.
+
+49
+00:04:17,860 --> 00:04:20,440
+That's actually key to how Docker works.
+
+50
+00:04:20,440 --> 00:04:24,360
+So the next line that we run there is run pip3 install flask.
+
+51
+00:04:24,360 --> 00:04:28,380
+So that's just going to install our Python dependency.
+
+52
+00:04:28,380 --> 00:04:34,940
+Then we're going to copy app.py from the host machine where we are building this image
+
+53
+00:04:34,940 --> 00:04:38,880
+into the image.
+
+54
+00:04:38,880 --> 00:04:42,520
+And then we're going to export an environment variable that we need for this to work.
+
+55
+00:04:42,520 --> 00:04:49,060
+And then we're going to set our default command so that when you run this image in the future,
+
+56
+00:04:49,060 --> 00:04:56,400
+when you start a container based off of it, by default, it's going to run flask.
+
+57
+00:04:56,400 --> 00:05:02,900
+So here's an example of actually building that container in real life and then running
+
+58
+00:05:02,900 --> 00:05:03,900
+it.
+
+59
+00:05:03,900 --> 00:05:09,380
+Now you'll notice that when I ran the Docker build command there, it completed almost instantly.
+
+60
+00:05:09,380 --> 00:05:14,080
+And you see a lot of lines where it says using cache, using cache.
+
+61
+00:05:14,080 --> 00:05:18,200
+Docker has a lot of caching systems built in.
+
+62
+00:05:18,200 --> 00:05:19,940
+And that's kind of key to how it works.
+
+63
+00:05:19,940 --> 00:05:23,860
+So in this case, the build completed instantly because I had already done the build on my
+
+64
+00:05:23,860 --> 00:05:26,560
+computer for testing purposes.
+
+65
+00:05:26,560 --> 00:05:30,380
+If you were following along at home and doing the same command that I did, it might take
+
+66
+00:05:30,380 --> 00:05:33,800
+a little bit longer for it to actually build up the image.
+
+67
+00:05:33,800 --> 00:05:41,160
+But once the image has been built, I use my Docker run command with some additional arguments.
+
+68
+00:05:41,160 --> 00:05:45,980
+And that actually starts a container based off of the image that I just produced.
+
+69
+00:05:45,980 --> 00:05:49,580
+And it gives me the hash of the running container there.
+
+70
+00:05:49,580 --> 00:05:54,140
+And now that that's running, I can curl localhost and I get the hello world message.
+
+71
+00:05:54,140 --> 00:05:56,900
+That shows you that my server really is running.
+
+72
+00:05:56,900 --> 00:06:01,260
+And that's about as simple as it gets for building your own Docker images and deploying
+
+73
+00:06:01,260 --> 00:06:03,100
+them.
+
+74
+00:06:03,100 --> 00:06:08,300
+Now back to the point that I made earlier about layers.
+
+75
+00:06:08,300 --> 00:06:16,880
+Docker images are made up of layers and each line in your Docker file makes a new layer.
+
+76
+00:06:16,880 --> 00:06:23,520
+So when you download a publicly available image, that is one layer that you are starting
+
+77
+00:06:23,520 --> 00:06:24,520
+with.
+
+78
+00:06:24,520 --> 00:06:29,400
+And often that publicly available image is actually a list of many layers that build
+
+79
+00:06:29,400 --> 00:06:31,500
+on top of each other.
+
+80
+00:06:31,500 --> 00:06:38,160
+And then as you customize it, you are adding more layers on top of that.
+
+81
+00:06:38,160 --> 00:06:43,040
+What this means is that similar images can share disk space.
+
+82
+00:06:43,040 --> 00:06:49,160
+So let's say that you have ten applications that all need a Python 3.8 image and they
+
+83
+00:06:49,160 --> 00:06:55,080
+need Flask installed and then they only differ at the very end where they're actually copying
+
+84
+00:06:55,080 --> 00:06:59,340
+that Flask application into the container's disk space.
+
+85
+00:06:59,340 --> 00:07:06,840
+This is great because on disk, the images, because they share some layers in common,
+
+86
+00:07:06,840 --> 00:07:10,460
+don't take up, you know, ten images worth of space.
+
+87
+00:07:10,460 --> 00:07:16,040
+They only take up maybe like one and a half images worth of space.
+
+88
+00:07:16,040 --> 00:07:21,460
+And again, running containers can all be based off of one image.
+
+89
+00:07:21,460 --> 00:07:26,940
+So if for some reason you did want to have an image that was actually identical for multiple
+
+90
+00:07:26,940 --> 00:07:30,740
+applications, you could do that.
+
+91
+00:07:30,740 --> 00:07:34,920
+Now I'm going to start to introduce you to the problem.
+
+92
+00:07:34,920 --> 00:07:39,740
+These are real files from my work.
+
+93
+00:07:40,360 --> 00:07:44,800
+Let's go through them and see if you can see what I'm seeing.
+
+94
+00:07:44,800 --> 00:07:51,280
+So first, we have from CentOS 7, so this is an application that decided it wanted to run
+
+95
+00:07:51,280 --> 00:07:54,200
+on CentOS 7 for whatever reason, okay.
+
+96
+00:07:54,200 --> 00:07:58,220
+And then we're installing Apple, we're doing some updates, we're installing Python, we're
+
+97
+00:07:58,220 --> 00:08:03,860
+installing our Python dependencies, we're pip installing our package, we're setting
+
+98
+00:08:03,860 --> 00:08:07,720
+some environment variables and we're setting our CMD at the end.
+
+99
+00:08:07,720 --> 00:08:09,140
+These are all fine.
+
+100
+00:08:09,140 --> 00:08:13,860
+These are relatively normal things that you would have in a Docker file.
+
+101
+00:08:13,860 --> 00:08:16,940
+But let's look at this next one.
+
+102
+00:08:16,940 --> 00:08:23,080
+So here's another Docker file from a different project where we're starting with CentOS 7
+
+103
+00:08:23,080 --> 00:08:28,020
+and we're installing Apple and we're doing our updates and we're installing Python and
+
+104
+00:08:28,020 --> 00:08:30,500
+we're installing our Python dependencies.
+
+105
+00:08:30,500 --> 00:08:38,060
+Can you see how in the previous Docker file and then in the new Docker file, we're essentially
+
+106
+00:08:38,060 --> 00:08:45,140
+doing the same thing, but these files have nothing to do with one another.
+
+107
+00:08:45,140 --> 00:08:48,180
+Here's another example.
+
+108
+00:08:48,180 --> 00:08:54,780
+In this application, for whatever reason, we decided we wanted to run on Alpine Linux.
+
+109
+00:08:54,780 --> 00:08:59,000
+Not a bad choice, just a choice.
+
+110
+00:08:59,000 --> 00:09:01,380
+And we're doing basically the same thing here.
+
+111
+00:09:01,380 --> 00:09:05,920
+We're doing our updates, we're installing our application.
+
+112
+00:09:05,920 --> 00:09:14,200
+So what this tends towards is a situation where we have multiple applications that have
+
+113
+00:09:14,200 --> 00:09:16,400
+essentially the same system requirements.
+
+114
+00:09:16,400 --> 00:09:21,560
+They just need Linux and they need Python packages.
+
+115
+00:09:21,560 --> 00:09:27,420
+But the layers that build up all of these images are completely different.
+
+116
+00:09:27,420 --> 00:09:36,360
+So what we started to do to try to solve this was we came up with a base image and
+
+117
+00:09:36,360 --> 00:09:44,040
+the base image has installed on it Linux, Python, it's got patches and a couple of other
+
+118
+00:09:44,040 --> 00:09:48,800
+things that we needed in order for things to run correctly in our environment.
+
+119
+00:09:48,800 --> 00:09:55,720
+And so this Docker file starts with the base image that we made and then it installs our
+
+120
+00:09:55,720 --> 00:09:58,640
+package and that's about it.
+
+121
+00:09:58,640 --> 00:10:01,220
+So OK, this file is getting a little bit shorter.
+
+122
+00:10:01,220 --> 00:10:04,400
+We're starting to repeat ourselves less.
+
+123
+00:10:04,400 --> 00:10:07,180
+But then look at this one.
+
+124
+00:10:07,180 --> 00:10:11,080
+Here's another approach to doing the same thing.
+
+125
+00:10:11,080 --> 00:10:18,680
+This file starts from scratch and then it copies the entire file system out of the base
+
+126
+00:10:18,680 --> 00:10:24,580
+image into this image and then kind of does the same things that we normally want to do
+
+127
+00:10:24,940 --> 00:10:26,020
+on top of that.
+
+128
+00:10:26,020 --> 00:10:30,020
+It's installing Python dependencies and it's installing a Python package and it's setting
+
+129
+00:10:30,020 --> 00:10:33,380
+our CMD.
+
+130
+00:10:33,380 --> 00:10:38,480
+So really the problem that I'm talking about and that I've been working to solve at my
+
+131
+00:10:38,480 --> 00:10:43,040
+job is that of Dockerfile repetition.
+
+132
+00:10:43,040 --> 00:10:50,580
+The problem with having Dockerfile repetition is not maybe immediately obvious, but you
+
+133
+00:10:50,620 --> 00:10:57,780
+start to see it after you've been running an environment for a while with applications
+
+134
+00:10:57,780 --> 00:11:02,140
+whose Dockerfiles were all over the place to begin with and didn't have any configuration
+
+135
+00:11:02,140 --> 00:11:03,380
+standards.
+
+136
+00:11:03,380 --> 00:11:08,980
+What this means is that you don't know what your configuration standards are.
+
+137
+00:11:08,980 --> 00:11:14,400
+You can't count on things being the same from one image to the next.
+
+138
+00:11:14,400 --> 00:11:17,820
+And are you doing security patching?
+
+139
+00:11:17,820 --> 00:11:20,860
+Did you harden these containers at all?
+
+140
+00:11:20,860 --> 00:11:22,120
+How would you know?
+
+141
+00:11:22,120 --> 00:11:28,140
+Did you do it to one of them or to all of them?
+
+142
+00:11:28,140 --> 00:11:32,700
+Another common problem is that bug fixes and enhancements to one app's Dockerfile don't
+
+143
+00:11:32,700 --> 00:11:34,420
+get applied to other apps.
+
+144
+00:11:34,420 --> 00:11:39,700
+This is the same problem that you have when there's code proliferation anywhere else.
+
+145
+00:11:39,700 --> 00:11:47,500
+If you're not refactoring it to use some kind of shared library, updates don't get everywhere
+
+146
+00:11:47,500 --> 00:11:50,540
+that they should get.
+
+147
+00:11:50,540 --> 00:11:55,900
+And then again, the same problem that I mentioned earlier with the way Docker layering works.
+
+148
+00:11:55,900 --> 00:12:01,900
+If you have 20 different applications that all essentially just need Linux, Python, and
+
+149
+00:12:01,900 --> 00:12:07,600
+a couple other things, but each one is a unique snowflake in terms of its layer makeup, you're
+
+150
+00:12:07,600 --> 00:12:12,200
+wasting a lot of disk space.
+
+151
+00:12:12,200 --> 00:12:13,680
+And there's just the mental overhead.
+
+152
+00:12:13,680 --> 00:12:17,740
+If you're trying to maintain this environment, or if you're trying to develop applications
+
+153
+00:12:17,740 --> 00:12:23,780
+that go into this environment, how do you know which of the different Dockerfiles that
+
+154
+00:12:23,780 --> 00:12:28,900
+exist you should be copying and pasting into your project?
+
+155
+00:12:28,900 --> 00:12:33,400
+And how do you know what troubleshooting tools are available to you if you need to inspect
+
+156
+00:12:33,400 --> 00:12:35,340
+one of these containers?
+
+157
+00:12:35,340 --> 00:12:39,980
+It just gets more complicated than it has any right to be.
+
+158
+00:12:39,980 --> 00:12:42,240
+This all leads to sad whales.
+
+159
+00:12:42,240 --> 00:12:44,020
+We don't want sad whales.
+
+160
+00:12:44,020 --> 00:12:47,940
+That's what we're here today to prevent.
+
+161
+00:12:47,940 --> 00:12:57,420
+So the principle of don't repeat yourself, or sometimes you'll hear it phrased, reference
+
+162
+00:12:57,420 --> 00:13:03,340
+don't copy, is something that we're very familiar with as programmers.
+
+163
+00:13:03,340 --> 00:13:10,520
+And it seems bad that all of our Dockerfiles are repeating themselves and doing basically
+
+164
+00:13:10,520 --> 00:13:15,180
+the same thing in a myriad of different ways.
+
+165
+00:13:15,180 --> 00:13:21,560
+So we're trying to think of ways that we can not repeat ourselves in Dockerfiles.
+
+166
+00:13:21,560 --> 00:13:25,160
+And for that, it helps to look at Python.
+
+167
+00:13:25,160 --> 00:13:29,620
+In Python, which is something that we are more familiar with, we have these excellent
+
+168
+00:13:29,620 --> 00:13:31,980
+tools for not repeating ourselves.
+
+169
+00:13:31,980 --> 00:13:36,500
+We can use functions, we can use classes, and we can use modules.
+
+170
+00:13:36,520 --> 00:13:44,720
+Now it's not immediately obvious how to use these principles in a Dockerfile because Dockerfiles
+
+171
+00:13:44,720 --> 00:13:46,000
+don't have these things.
+
+172
+00:13:46,000 --> 00:13:51,440
+You can't really define a Dockerfile function or class or module.
+
+173
+00:13:51,440 --> 00:13:55,560
+You can't import a Dockerfile from another Dockerfile.
+
+174
+00:13:55,560 --> 00:14:00,240
+But let's think for a minute about what we're really doing here.
+
+175
+00:14:00,240 --> 00:14:06,280
+When you define a function in Python, what you're saying is, here's my function def.
+
+176
+00:14:06,380 --> 00:14:11,300
+I'm going to write some code now, but it's not going to execute now.
+
+177
+00:14:11,300 --> 00:14:14,060
+We're just going to load it into memory.
+
+178
+00:14:14,060 --> 00:14:16,060
+We'll use it later.
+
+179
+00:14:16,060 --> 00:14:17,480
+Same thing with classes.
+
+180
+00:14:17,480 --> 00:14:22,500
+Here is a template for an object that we could make, but we're not making one of these objects
+
+181
+00:14:22,500 --> 00:14:24,140
+right now.
+
+182
+00:14:24,140 --> 00:14:25,580
+And same thing with modules.
+
+183
+00:14:25,580 --> 00:14:31,220
+Typically, when you import a module, you are just getting a bunch of definitions for code
+
+184
+00:14:31,220 --> 00:14:32,220
+that you could use.
+
+185
+00:14:32,220 --> 00:14:35,180
+Now, there are some modules that actually do things when you import them, but we're
+
+186
+00:14:35,180 --> 00:14:38,360
+going to pretend those don't exist for the moment.
+
+187
+00:14:38,360 --> 00:14:44,720
+So what we're looking for is a way to write code now and save execution for later.
+
+188
+00:14:44,720 --> 00:14:49,680
+And actually, Docker does provide us a couple of tools that help achieve that.
+
+189
+00:14:49,680 --> 00:14:56,760
+We have args and onbuild to help dry up our Dockerfiles.
+
+190
+00:14:56,760 --> 00:14:58,920
+So first, let's talk about args.
+
+191
+00:14:58,920 --> 00:15:02,160
+Args is a Dockerfile directive.
+
+192
+00:15:02,160 --> 00:15:05,860
+This declares a variable that can be used later in the Dockerfile, and the values of
+
+193
+00:15:05,860 --> 00:15:09,200
+the variables come from arguments to Docker build.
+
+194
+00:15:09,200 --> 00:15:11,660
+So this is what it would look like in a Dockerfile.
+
+195
+00:15:11,660 --> 00:15:15,380
+You just have arg and then the name of the argument that you want.
+
+196
+00:15:15,380 --> 00:15:22,040
+And that's basically just declaring a variable that we are expecting whoever is building
+
+197
+00:15:22,040 --> 00:15:27,340
+this image to supply at build time.
+
+198
+00:15:27,340 --> 00:15:31,820
+Here's an example of using an argument.
+
+199
+00:15:32,480 --> 00:15:39,720
+Now, in Docker, when you're building an image, typically you have a Dockerfile on disk that
+
+200
+00:15:39,720 --> 00:15:40,780
+you are supplying.
+
+201
+00:15:40,780 --> 00:15:46,860
+You can also just type a Dockerfile into standard out.
+
+202
+00:15:46,860 --> 00:15:51,580
+That's fine for demo purposes, so you can see exactly what we're doing.
+
+203
+00:15:51,580 --> 00:15:58,020
+So here, I'm just making a new Docker image, and I'm starting from a Linux base.
+
+204
+00:15:58,020 --> 00:16:01,960
+And I'm saying I'm declaring an argument of name, and then we're just going to run
+
+205
+00:16:01,960 --> 00:16:04,640
+hello name.
+
+206
+00:16:04,640 --> 00:16:11,600
+Now you can see down there under step three of three, it says hello Micah, and I didn't
+
+207
+00:16:11,600 --> 00:16:14,960
+actually type Micah anywhere in the Dockerfile itself.
+
+208
+00:16:14,960 --> 00:16:20,520
+I supplied Micah as a build arg up here.
+
+209
+00:16:20,520 --> 00:16:24,960
+So that's one way that when you're writing your Dockerfiles, you can include variables,
+
+210
+00:16:25,100 --> 00:16:29,020
+and then those have to be supplied at build time.
+
+211
+00:16:29,020 --> 00:16:32,820
+Now here's a slightly more powerful example.
+
+212
+00:16:32,820 --> 00:16:36,100
+You can use arguments in scripts.
+
+213
+00:16:36,100 --> 00:16:43,580
+So the run command in a Dockerfile is essentially just executing a shell command, and that shell
+
+214
+00:16:43,580 --> 00:16:49,300
+command can include control structures like you'd normally use in good old bash.
+
+215
+00:16:49,520 --> 00:16:57,320
+So you can create an argument of, let's say, venv, because we're saying that inside this
+
+216
+00:16:57,320 --> 00:17:02,240
+image, we may want to create a virtual environment, or we may not.
+
+217
+00:17:02,240 --> 00:17:08,040
+We're going to let the user decide that when they build the container.
+
+218
+00:17:08,040 --> 00:17:14,000
+So if there is an argument of venv, then we're going to create a Python virtual environment
+
+219
+00:17:14,000 --> 00:17:16,320
+at the given path.
+
+220
+00:17:16,320 --> 00:17:18,440
+And if not, then we don't.
+
+221
+00:17:18,440 --> 00:17:23,980
+So that's a way to use one Dockerfile that could do multiple things depending on the
+
+222
+00:17:23,980 --> 00:17:27,700
+arguments that are supplied at build time.
+
+223
+00:17:27,700 --> 00:17:36,340
+Now earlier I mentioned that from does not have to be the first line in a Dockerfile.
+
+224
+00:17:36,340 --> 00:17:41,700
+Now until you use from, there are a lot of things that you can't do.
+
+225
+00:17:41,700 --> 00:17:47,140
+So usually it's going to be very high up in the order of things.
+
+226
+00:17:47,140 --> 00:17:49,460
+But you can do something like this.
+
+227
+00:17:49,460 --> 00:17:56,900
+You can actually have arguments where the user supplies variables that influence the
+
+228
+00:17:56,900 --> 00:17:58,780
+base of this image.
+
+229
+00:17:58,780 --> 00:18:06,880
+So let's say, for example, that I had some test suite that I needed to run on multiple
+
+230
+00:18:06,880 --> 00:18:09,920
+flavors of Linux.
+
+231
+00:18:09,920 --> 00:18:16,240
+Well I could create a Dockerfile, and in that Dockerfile have a run command that runs my
+
+232
+00:18:16,720 --> 00:18:18,360
+test suite.
+
+233
+00:18:18,360 --> 00:18:23,160
+And then at the beginning of the Dockerfile, I actually accept arguments for which version
+
+234
+00:18:23,160 --> 00:18:26,100
+of Linux this needs to run on.
+
+235
+00:18:26,100 --> 00:18:34,280
+And then you can use the same Dockerfile and literally just loop through a list of distributions
+
+236
+00:18:34,280 --> 00:18:39,860
+that you want to run these tests for and run Docker build with slightly different arguments
+
+237
+00:18:39,860 --> 00:18:45,160
+and not have to write a completely different Dockerfile for each Linux version that you
+
+238
+00:18:45,160 --> 00:18:49,200
+want to test on.
+
+239
+00:18:49,200 --> 00:18:50,200
+All right.
+
+240
+00:18:50,200 --> 00:18:52,440
+Now moving on to the on build directive.
+
+241
+00:18:52,440 --> 00:18:56,880
+This was the other thing that helps us to dry up our Dockerfiles.
+
+242
+00:18:56,880 --> 00:19:04,000
+On build goes before other directives like add, and it turns those directives into triggers.
+
+243
+00:19:04,000 --> 00:19:06,040
+Triggers are run when a child image is built.
+
+244
+00:19:06,040 --> 00:19:13,560
+So add by itself is a very common Dockerfile directive that's basically just copying files
+
+245
+00:19:13,560 --> 00:19:14,560
+over.
+
+246
+00:19:14,560 --> 00:19:18,640
+Typically when you're building an image, you're going to copy some files from the build host
+
+247
+00:19:18,640 --> 00:19:20,360
+into the container.
+
+248
+00:19:20,360 --> 00:19:25,280
+Maybe it's the application itself, maybe it's some configuration files.
+
+249
+00:19:25,280 --> 00:19:33,800
+But putting the word on build in front of it modifies add so that we are no longer running
+
+250
+00:19:33,800 --> 00:19:37,020
+add when we get to that point in the Dockerfile.
+
+251
+00:19:37,020 --> 00:19:44,120
+What we're doing is we are staging an add command for the future so that if somebody
+
+252
+00:19:44,120 --> 00:19:50,920
+builds another image based on the image that we are currently building, then it runs add.
+
+253
+00:19:50,920 --> 00:19:53,580
+So here's an example of this.
+
+254
+00:19:53,580 --> 00:20:00,340
+We're going to start off by building just a very simple image that includes an on build
+
+255
+00:20:00,340 --> 00:20:09,320
+add command, I'm sorry, an on build run command so you can see how we can load a trigger for
+
+256
+00:20:09,320 --> 00:20:12,020
+future use.
+
+257
+00:20:12,020 --> 00:20:16,500
+So I put in workdir there so that's literally just creating a directory called demo and
+
+258
+00:20:16,500 --> 00:20:17,960
+changing to it.
+
+259
+00:20:17,960 --> 00:20:24,140
+We're going to run ls and then we're going to say on build add dot dot.
+
+260
+00:20:24,140 --> 00:20:29,100
+Now you can see in the ls output there under step three of four, there's nothing in this
+
+261
+00:20:29,100 --> 00:20:30,100
+directory.
+
+262
+00:20:30,100 --> 00:20:34,780
+It's just showing dot and dot dot like you would normally see.
+
+263
+00:20:34,780 --> 00:20:41,900
+Now we're going to build a new Docker image based off of the one that we just ran.
+
+264
+00:20:41,900 --> 00:20:47,940
+So we're going to say from demo base latest, the thing we just created.
+
+265
+00:20:47,940 --> 00:20:52,740
+And we're just going to run ls dash al and that's it.
+
+266
+00:20:52,740 --> 00:20:59,100
+Now you can see in the output there, it says step one of two from demo base latest executing
+
+267
+00:20:59,100 --> 00:21:00,820
+one build trigger.
+
+268
+00:21:00,820 --> 00:21:04,180
+That's that on build that we staged earlier.
+
+269
+00:21:04,180 --> 00:21:07,260
+And the on build trigger, if you remember, was add dot dot.
+
+270
+00:21:07,260 --> 00:21:12,700
+In other words, copy everything from the current working directory on the host into the image.
+
+271
+00:21:12,700 --> 00:21:16,540
+And then step two of two is run ls dash al.
+
+272
+00:21:16,540 --> 00:21:20,820
+So we just list the contents and hey, look, there's files there now.
+
+273
+00:21:20,820 --> 00:21:22,980
+I copied stuff over.
+
+274
+00:21:22,980 --> 00:21:30,900
+So this is how you can pre-stage things that you know your child images or your inheritor
+
+275
+00:21:30,900 --> 00:21:39,740
+images are going to need.
+
+276
+00:21:39,740 --> 00:21:50,660
+So now here's another example, trying to put some of these concepts together.
+
+277
+00:21:50,660 --> 00:21:52,860
+We're going to start off with debian 10 slim.
+
+278
+00:21:52,860 --> 00:21:57,140
+It's just a standard Linux image.
+
+279
+00:21:57,140 --> 00:22:03,860
+And we're going to say on build arg, because you can combine those depths.
+
+280
+00:22:03,860 --> 00:22:07,900
+So on build, tell me what your dependencies are.
+
+281
+00:22:07,900 --> 00:22:13,060
+And then on build run, install those dependencies.
+
+282
+00:22:13,060 --> 00:22:18,300
+We've just taken a very common step from all those Docker files that I was showing you
+
+283
+00:22:19,140 --> 00:22:24,780
+earlier, and we've moved it into a parent image.
+
+284
+00:22:24,780 --> 00:22:29,140
+So now if I want to build a child image, I can just do Docker build.
+
+285
+00:22:29,140 --> 00:22:31,220
+And then here's my build argument.
+
+286
+00:22:31,220 --> 00:22:38,940
+I need curl and lib ssl dev for this application that I'm building today.
+
+287
+00:22:38,940 --> 00:22:41,780
+So for this to work, we have to do from demo base.
+
+288
+00:22:41,780 --> 00:22:45,100
+That's our parent image that we just built.
+
+289
+00:22:45,100 --> 00:22:48,740
+And then you can see it's executing two build triggers.
+
+290
+00:22:48,740 --> 00:22:50,140
+That's some apt output.
+
+291
+00:22:50,140 --> 00:22:53,140
+It's actually installing the things that we asked it to install.
+
+292
+00:22:53,140 --> 00:23:00,460
+So now we don't need to have proliferation of 50 different Docker files that all install
+
+293
+00:23:00,460 --> 00:23:07,140
+curl and lib ssl and whatever else we need for the application that we're building today.
+
+294
+00:23:07,140 --> 00:23:13,380
+We can just have those as arguments that get passed into a base image.
+
+295
+00:23:13,420 --> 00:23:19,380
+So here's some ideas that I have of how you can use all of these concepts in practice
+
+296
+00:23:19,380 --> 00:23:23,220
+to actually stop repeating yourself in Docker files.
+
+297
+00:23:23,220 --> 00:23:29,380
+You can have a single Docker file that manages dependencies for multiple apps.
+
+298
+00:23:29,380 --> 00:23:33,440
+And you can have a single Docker file that handles testing or packaging operations for
+
+299
+00:23:33,440 --> 00:23:36,940
+multiple Linux distro versions.
+
+300
+00:23:36,940 --> 00:23:43,980
+Now to get the benefit of this, what you need to do is maintain a base image.
+
+301
+00:23:43,980 --> 00:23:51,780
+Now maybe the way that you and your team work, you just need one base image and you standardize
+
+302
+00:23:51,780 --> 00:23:53,260
+everything on that.
+
+303
+00:23:53,260 --> 00:23:55,900
+Maybe there are multiple common stacks that you work with.
+
+304
+00:23:55,900 --> 00:24:01,300
+And so you need three or five base images.
+
+305
+00:24:01,300 --> 00:24:06,860
+But I think that the important thing is to pick or create base images and then standardize
+
+306
+00:24:06,860 --> 00:24:10,220
+on them.
+
+307
+00:24:10,220 --> 00:24:15,820
+When you're doing this, when you're making the switch to basically de-duplicate your
+
+308
+00:24:15,820 --> 00:24:20,980
+Docker files and move to a standard, you want to use dash dash pull in all of your downstream
+
+309
+00:24:20,980 --> 00:24:22,900
+build commands.
+
+310
+00:24:22,900 --> 00:24:28,140
+Because by default, when you use Docker build, it's just going to use the latest version
+
+311
+00:24:28,140 --> 00:24:34,980
+of the from line there of your base image that it has cached on disk already.
+
+312
+00:24:34,980 --> 00:24:38,660
+So adding dash dash pull to your Docker build command is going to make it always check for
+
+313
+00:24:38,660 --> 00:24:43,220
+the latest first so that when you do apply patches and updates, they make it into your
+
+314
+00:24:43,220 --> 00:24:46,540
+downstream containers.
+
+315
+00:24:46,540 --> 00:24:48,680
+Here's an example at my work.
+
+316
+00:24:48,680 --> 00:24:51,540
+Now unfortunately, this is a private image.
+
+317
+00:24:51,540 --> 00:24:54,920
+You can see it's a Rackspace.net host name there.
+
+318
+00:24:54,920 --> 00:24:58,340
+It has some things in it that would not be appropriate for a general audience.
+
+319
+00:24:58,340 --> 00:25:03,620
+And so that's why I haven't open sourced it, but it uses all the concepts that I've talked
+
+320
+00:25:03,620 --> 00:25:06,420
+about in this presentation.
+
+321
+00:25:06,420 --> 00:25:10,540
+And it means that our individual applications, Docker files can look like this.
+
+322
+00:25:10,540 --> 00:25:12,380
+They can just be two lines.
+
+323
+00:25:12,380 --> 00:25:19,860
+They can say, use the base image, here's the command that I need, done, walk away.
+
+324
+00:25:19,860 --> 00:25:25,060
+So this has gotten me to a point where I'm happy with the state of Docker files in our
+
+325
+00:25:25,060 --> 00:25:26,060
+environment.
+
+326
+00:25:26,060 --> 00:25:30,640
+And I hope that these are some tips and tricks that can help you.
+
+327
+00:25:30,640 --> 00:25:36,160
+Thank you very much to Dustin Ingram and the other organizers of PyTexas for letting me
+
+328
+00:25:36,160 --> 00:25:38,040
+speak with you today.
+
+329
+00:25:38,040 --> 00:25:39,400
+Happy to be here.
+
+330
+00:25:39,400 --> 00:25:46,280
+And I am available for questions and comments through the rest of PyTexas and always on
+
+331
+00:25:46,280 --> 00:25:47,280
+Twitter.
+
+332
+00:25:47,280 --> 00:25:47,780
+Thank you.
+

@@ -1,0 +1,1468 @@
+1
+00:00:00,000 --> 00:00:05,120
+Hey, everyone.
+
+2
+00:00:05,120 --> 00:00:12,480
+My name is Sin, and my talk will be on solving tracking problems with Stone Soup.
+
+3
+00:00:12,480 --> 00:00:14,120
+So a little bit about myself.
+
+4
+00:00:14,120 --> 00:00:19,560
+I'm a back-end software engineer for a government contractor, and that's pretty much all I can
+
+5
+00:00:19,560 --> 00:00:27,240
+say because I signed an NDA, and you don't want to be on the bad side of the U.S. government.
+
+6
+00:00:27,240 --> 00:00:34,360
+So my talk will be on solving tracking problems with Stone Soup, but before we get into the
+
+7
+00:00:34,360 --> 00:00:39,300
+code walkthrough, I'll go over a popular filter called the Common Filter.
+
+8
+00:00:39,300 --> 00:00:42,640
+So brace yourself because there's going to be a lot of math.
+
+9
+00:00:42,640 --> 00:00:47,720
+Also some of the words that I use might not make sense initially, but hopefully as the
+
+10
+00:00:47,720 --> 00:00:50,840
+talk continues, it'll be clearer to you.
+
+11
+00:00:50,840 --> 00:00:53,440
+So this is the roadmap for this talk.
+
+12
+00:00:53,440 --> 00:00:55,720
+We'll start off with an intro to Common Filters.
+
+13
+00:00:55,720 --> 00:00:59,480
+We'll look at the intuition and the math behind Common Filters.
+
+14
+00:00:59,480 --> 00:01:07,000
+Then we'll look at Stone Soup, the code walkthrough, and if there's time left, a Q&A.
+
+15
+00:01:07,000 --> 00:01:13,060
+So the Common Filter is a temporal iterative stochastic process, and I know that's a lot
+
+16
+00:01:13,060 --> 00:01:16,040
+of words, so let's try to break it down.
+
+17
+00:01:16,040 --> 00:01:21,920
+The Common Filter is temporal because we're modeling the evolution of a state over time,
+
+18
+00:01:22,120 --> 00:01:25,360
+It's iterative because it operates recursively.
+
+19
+00:01:25,360 --> 00:01:31,320
+In order to make a new estimate of our state at each new time step, we use a prior estimate
+
+20
+00:01:31,320 --> 00:01:35,220
+and fuse it with incoming measurements from our sensors.
+
+21
+00:01:35,220 --> 00:01:40,040
+And it's stochastic because it deals with uncertainty.
+
+22
+00:01:40,040 --> 00:01:46,340
+The Common Filter was invented in the 60s by Rudolf Kallmann as a way to estimate linear
+
+23
+00:01:46,340 --> 00:01:51,440
+systems with noisy data, and it has several different use cases from signal processing
+
+24
+00:01:51,440 --> 00:01:56,800
+to predicting time series data in finance.
+
+25
+00:01:56,800 --> 00:02:01,440
+The Common Filter is essentially a weighted average of noisy measurements.
+
+26
+00:02:01,440 --> 00:02:04,840
+There's some unknown value that we're interested in.
+
+27
+00:02:04,840 --> 00:02:11,040
+Unfortunately, we don't know the true value, but we have sensors that give us estimates,
+
+28
+00:02:11,040 --> 00:02:15,720
+and we combine these estimates to produce a better approximation.
+
+29
+00:02:15,720 --> 00:02:20,080
+So here's an example using a signal processing example.
+
+30
+00:02:20,080 --> 00:02:24,680
+Here we're trying to estimate the position of an object using noisy measurements from
+
+31
+00:02:24,680 --> 00:02:29,360
+two different sensors, a GPS sensor and an IMU.
+
+32
+00:02:29,360 --> 00:02:34,720
+And let's say that the GPS provides accurate but infrequent position updates while the
+
+33
+00:02:34,720 --> 00:02:39,620
+IMU provides frequent but noisier measurements.
+
+34
+00:02:39,620 --> 00:02:45,280
+We might think the GPS would be a better estimator since it provides accurate measurements, but
+
+35
+00:02:45,280 --> 00:02:48,600
+the Common Filter is an equal opportunist.
+
+36
+00:02:48,600 --> 00:02:54,280
+So we'd include the measurements from both sensors because they contain useful information.
+
+37
+00:02:54,280 --> 00:03:00,960
+The Common Filter reviews both measurements to produce a more accurate and reliable estimation
+
+38
+00:03:00,960 --> 00:03:04,920
+of the object's position.
+
+39
+00:03:04,920 --> 00:03:09,800
+So the end goal for the Common Filter is to produce an optimal estimator, and remember
+
+40
+00:03:09,800 --> 00:03:14,000
+this optimal estimator is essentially a weighted average.
+
+41
+00:03:14,040 --> 00:03:18,920
+The weight given to each device's measurement is proportional to the confidence we have
+
+42
+00:03:18,920 --> 00:03:19,920
+in that device.
+
+43
+00:03:19,920 --> 00:03:24,800
+So going back to our example, the GPS would have a higher weight than the IMU since we
+
+44
+00:03:24,800 --> 00:03:28,840
+have more confidence in that device's measurement.
+
+45
+00:03:28,840 --> 00:03:33,040
+And the confidence we have in a particular device is modeled using covariances.
+
+46
+00:03:33,040 --> 00:03:38,160
+And as a refresher, the covariance looks at the relationship between two random variables.
+
+47
+00:03:38,160 --> 00:03:42,760
+It's essentially the unnormalized version of the correlation.
+
+48
+00:03:42,760 --> 00:03:47,120
+And if you remember, the correlation is the covariance divided by the product of the standard
+
+49
+00:03:47,120 --> 00:03:49,600
+deviation of x and the standard deviation of y.
+
+50
+00:03:49,600 --> 00:03:51,160
+That's a lot of mumbo jumbo.
+
+51
+00:03:51,160 --> 00:03:55,640
+Basically, we're saying that when you hear the covariance, think of variability.
+
+52
+00:03:55,640 --> 00:03:58,800
+The smaller the covariance, the less variability we have.
+
+53
+00:03:58,800 --> 00:04:02,660
+The larger the covariance, the more variability and uncertainty we have.
+
+54
+00:04:02,660 --> 00:04:07,080
+So there's this inverse relationship, which is why having a smaller covariance is linked
+
+55
+00:04:07,080 --> 00:04:09,920
+to having a higher confidence.
+
+56
+00:04:09,920 --> 00:04:15,840
+And the device that produces the measurements, like the GPS sensor or the IMU, are modeled
+
+57
+00:04:15,840 --> 00:04:18,760
+as continuous random variables.
+
+58
+00:04:18,760 --> 00:04:24,400
+As another refresher, a random variable is a variable that can have multiple possible
+
+59
+00:04:24,400 --> 00:04:25,400
+values.
+
+60
+00:04:25,400 --> 00:04:30,120
+So it has the possibility of taking on this value or the possibility of taking on another
+
+61
+00:04:30,120 --> 00:04:31,120
+value.
+
+62
+00:04:31,120 --> 00:04:34,240
+A very popular example is rolling a six-sided die.
+
+63
+00:04:34,240 --> 00:04:40,120
+The random variable would be represented as a set or a tuple with the values 1, 2, 3,
+
+64
+00:04:40,120 --> 00:04:46,120
+4, 5, and 6, because our die could land on any of those values.
+
+65
+00:04:46,120 --> 00:04:50,280
+So how does the common filter choose the weights for each sensor?
+
+66
+00:04:50,280 --> 00:04:55,040
+Weights, also known as the common gain, are chosen to minimize the mean squared error
+
+67
+00:04:55,040 --> 00:04:59,700
+between the prior estimate and the incoming measurements at each set.
+
+68
+00:04:59,700 --> 00:05:04,780
+And this is done iteratively, which is great for us since we usually don't know the initial
+
+69
+00:05:04,780 --> 00:05:08,820
+state of the system, nor do we know the control inputs.
+
+70
+00:05:08,820 --> 00:05:13,620
+And since we don't know the initial state, there's a chance that our initial assumption
+
+71
+00:05:13,620 --> 00:05:21,260
+could be way off, which could lead to an egregious divergence from the true state, which is really
+
+72
+00:05:21,260 --> 00:05:22,260
+bad.
+
+73
+00:05:22,260 --> 00:05:26,340
+So to avoid this nightmare, we incorporate incoming measurements at each time step.
+
+74
+00:05:26,340 --> 00:05:30,200
+And here is a quick snapshot of how the common filter works.
+
+75
+00:05:30,200 --> 00:05:32,380
+We start with our initial assumption.
+
+76
+00:05:32,380 --> 00:05:36,820
+And then we have these two steps, the prediction step and the update step, and we loop between
+
+77
+00:05:36,820 --> 00:05:39,220
+these two as new measurements come in.
+
+78
+00:05:39,220 --> 00:05:45,300
+So with the prediction step, we start with an initial state.
+
+79
+00:05:45,300 --> 00:05:50,760
+At each time step, we get an approximation of the state at time t using prior information
+
+80
+00:05:50,760 --> 00:05:52,380
+from t minus 1.
+
+81
+00:05:52,380 --> 00:05:55,460
+And we call this the a priori estimate.
+
+82
+00:05:55,460 --> 00:05:58,500
+And then for the update step, sometimes call the correction.
+
+83
+00:05:58,500 --> 00:06:03,700
+We use the a priori estimate, and we fuse it with incoming measurement data taken at
+
+84
+00:06:03,700 --> 00:06:04,700
+time t.
+
+85
+00:06:04,700 --> 00:06:07,260
+And this creates the a posteriori estimate.
+
+86
+00:06:07,260 --> 00:06:08,580
+I hope I'm saying this right.
+
+87
+00:06:08,580 --> 00:06:09,860
+My Latin is not that good.
+
+88
+00:06:09,860 --> 00:06:16,340
+So the a posteriori is used by the common filter to produce the prior estimate for the
+
+89
+00:06:16,340 --> 00:06:19,740
+next increment of time.
+
+90
+00:06:19,900 --> 00:06:25,840
+And this is a great visual of what's going on with the common filter.
+
+91
+00:06:25,840 --> 00:06:28,980
+So we start off with our initial assumptions.
+
+92
+00:06:28,980 --> 00:06:33,780
+Next we find the common gain, which are the optimal weights chosen to minimize the mean
+
+93
+00:06:33,780 --> 00:06:34,780
+squared error.
+
+94
+00:06:34,780 --> 00:06:37,620
+And you can think of this as like a trust gauge.
+
+95
+00:06:37,620 --> 00:06:42,500
+It decides how much trust we have in the new sensor data.
+
+96
+00:06:42,500 --> 00:06:50,740
+We then make a new guess that combines our original estimate and incoming sensor measurements.
+
+97
+00:06:50,740 --> 00:06:52,100
+So this is that step here.
+
+98
+00:06:52,100 --> 00:06:57,220
+To get closer to the truth, next we update our confidence.
+
+99
+00:06:57,220 --> 00:07:02,580
+Next we update how confident we are about this new guess, which is this step here.
+
+100
+00:07:02,580 --> 00:07:07,820
+And then lastly, we have a new and improved guess we use to make predictions about what
+
+101
+00:07:07,900 --> 00:07:13,500
+we'll see next, like guessing where an airplane or a car will be in a few seconds.
+
+102
+00:07:13,500 --> 00:07:16,780
+This process repeats itself at each new time step.
+
+103
+00:07:16,780 --> 00:07:21,940
+Overall, the common filter is making better guesses each time by mixing prior estimates
+
+104
+00:07:21,940 --> 00:07:25,100
+with incoming information.
+
+105
+00:07:25,100 --> 00:07:29,420
+And this slide is another diagram of how the common filter works.
+
+106
+00:07:29,420 --> 00:07:32,300
+It's the same information presented in a slightly different way.
+
+107
+00:07:32,300 --> 00:07:35,820
+And we'll actually see these equations again.
+
+108
+00:07:35,820 --> 00:07:39,220
+So here's StoneSoup.
+
+109
+00:07:39,220 --> 00:07:43,140
+And this QR code takes you to the documentation for StoneSoup.
+
+110
+00:07:43,140 --> 00:07:48,140
+And StoneSoup is a framework for developing and testing state estimation and tracking
+
+111
+00:07:48,140 --> 00:07:49,860
+algorithms.
+
+112
+00:07:49,860 --> 00:07:53,900
+So now let's move on to the walkthrough.
+
+113
+00:07:53,900 --> 00:07:58,140
+Hopefully you can see this, and I'll be zooming in too.
+
+114
+00:07:58,140 --> 00:08:03,420
+So here we have the code that I want to walk through.
+
+115
+00:08:03,420 --> 00:08:11,140
+So I'm using TrajAir, which is a set of decoded ADSB messages.
+
+116
+00:08:11,140 --> 00:08:15,620
+And ADSB is short for Automatic Dependent Surveillance Broadcast.
+
+117
+00:08:15,620 --> 00:08:21,900
+It's basically surveillance data for aircrafts or other airborne vehicles like drones.
+
+118
+00:08:21,900 --> 00:08:26,180
+And this data was collected by the AIRLAB, which is a research team from the Robotics
+
+119
+00:08:26,180 --> 00:08:28,500
+Institute at Carnegie Mellon.
+
+120
+00:08:28,500 --> 00:08:32,740
+And it has a lot of great information when you are trying to create a tracker, things
+
+121
+00:08:32,820 --> 00:08:38,100
+like latitude, longitude, altitude, a lot of great stuff.
+
+122
+00:08:38,100 --> 00:08:42,780
+So the first 13 columns were a part of the original data set.
+
+123
+00:08:42,780 --> 00:08:48,340
+This third one, I thought I needed a geometry column, but I didn't.
+
+124
+00:08:48,340 --> 00:08:51,500
+So here I'm just loading in the data.
+
+125
+00:08:51,500 --> 00:08:54,080
+But now we're getting into creating our actual tracker.
+
+126
+00:08:54,080 --> 00:08:56,820
+So how do we make a tracker?
+
+127
+00:08:56,820 --> 00:08:58,620
+We need these several different components.
+
+128
+00:08:58,620 --> 00:09:04,180
+We need detections, which are essentially measurements, predictors, updaters, data
+
+129
+00:09:04,180 --> 00:09:09,460
+associators, hypothesizers, initiators, and deleters.
+
+130
+00:09:09,460 --> 00:09:14,300
+And we'll go through what each of these different objects does.
+
+131
+00:09:14,300 --> 00:09:18,780
+Once we have all these components, we can create and run our tracker.
+
+132
+00:09:18,780 --> 00:09:21,980
+So we'll start with what a state is.
+
+133
+00:09:21,980 --> 00:09:28,400
+A state vector is a representation of the state of a system at any given point in time.
+
+134
+00:09:28,400 --> 00:09:32,400
+So in this demo, or in this walkthrough, we're interested in the latitude and longitude
+
+135
+00:09:32,400 --> 00:09:34,040
+of an aircraft.
+
+136
+00:09:34,040 --> 00:09:42,040
+And this can be represented as this vector here, where x is our latitude, y is our longitude,
+
+137
+00:09:42,040 --> 00:09:45,960
+x dot is the change in latitude, and y dot is the change in longitude.
+
+138
+00:09:45,960 --> 00:09:51,680
+I'm not sure if I mixed up my variables, but if I did, I'm pretty sure you got the drift.
+
+139
+00:09:51,680 --> 00:09:56,560
+So Stone Soup's state vector is a wrapper for NumPy arrays.
+
+140
+00:09:56,560 --> 00:10:00,600
+Next we have a detection, which is another way of saying measurement.
+
+141
+00:10:00,600 --> 00:10:04,160
+And these observations are generated from a sensor.
+
+142
+00:10:04,160 --> 00:10:09,640
+So going back to our example with the GPS sensor, it would produce these measurements.
+
+143
+00:10:09,640 --> 00:10:12,780
+And a detection requires a state vector.
+
+144
+00:10:12,780 --> 00:10:19,060
+So here I'm creating a Pandas reader, which takes in a data frame, a Pandas data frame,
+
+145
+00:10:19,060 --> 00:10:25,560
+and each row will be converted into, or will be used to create a state vector.
+
+146
+00:10:25,560 --> 00:10:28,920
+So here is the line where we create our state vector.
+
+147
+00:10:28,920 --> 00:10:32,460
+We're only interested in the latitude and the longitude.
+
+148
+00:10:32,460 --> 00:10:37,320
+And there is some other information that's useful too, like the ID and tail and speed
+
+149
+00:10:37,320 --> 00:10:40,400
+and altitude and whatnot.
+
+150
+00:10:40,400 --> 00:10:44,480
+But we don't want to add it into our state vector, so we can just add it as metadata.
+
+151
+00:10:44,480 --> 00:10:49,480
+All right, so next up is a predictor object.
+
+152
+00:10:49,480 --> 00:10:55,120
+And this is used to predict a new state, given a prior state and a transition model.
+
+153
+00:10:55,120 --> 00:10:59,040
+And transition models are sometimes referred to as motion models.
+
+154
+00:10:59,040 --> 00:11:04,400
+So here we're using a constant velocity model as our transition model, since aircraft usually
+
+155
+00:11:04,400 --> 00:11:09,480
+maintain a certain speed, heading, and altitude while in flight.
+
+156
+00:11:09,480 --> 00:11:14,160
+And this uniform motion can be modeled using constant velocity.
+
+157
+00:11:14,160 --> 00:11:16,800
+There are other models to choose from too.
+
+158
+00:11:16,800 --> 00:11:21,300
+So here's the math or the equation to that.
+
+159
+00:11:21,300 --> 00:11:23,120
+And I want to go into what this means.
+
+160
+00:11:23,120 --> 00:11:27,080
+But first, I'll say we can ignore g and u, because these are control inputs.
+
+161
+00:11:27,080 --> 00:11:30,920
+So g is the control matrix and u is the control vector.
+
+162
+00:11:30,920 --> 00:11:33,600
+Sometimes we don't know it, so in the stone soup, this is optional.
+
+163
+00:11:33,600 --> 00:11:36,040
+What's really important is this here.
+
+164
+00:11:36,040 --> 00:11:40,520
+So this f is our transition model or motion model.
+
+165
+00:11:40,520 --> 00:11:45,400
+And it's important because this simulates how the movement of our object, it simulates
+
+166
+00:11:45,400 --> 00:11:48,560
+the movement of the object that we want to track.
+
+167
+00:11:48,560 --> 00:11:51,800
+And we right multiply it with the prior state.
+
+168
+00:11:51,800 --> 00:11:57,040
+So x hat is what we're trying to estimate, since we don't know what x is.
+
+169
+00:11:57,040 --> 00:12:01,240
+And we use the prior state and the transition model to get our prediction.
+
+170
+00:12:01,240 --> 00:12:02,240
+Cool.
+
+171
+00:12:02,240 --> 00:12:10,380
+So then next up, we have the updater object.
+
+172
+00:12:10,380 --> 00:12:13,640
+The updater object is used to update the predicted state.
+
+173
+00:12:13,640 --> 00:12:16,840
+It uses a measurement and a measurement model.
+
+174
+00:12:17,840 --> 00:12:22,920
+There's several different processes that are being computed during this part here.
+
+175
+00:12:22,920 --> 00:12:27,440
+I won't go into all of it in detail, but we'll start off with the common gain.
+
+176
+00:12:27,440 --> 00:12:29,360
+And this is the equation for the common gain.
+
+177
+00:12:29,360 --> 00:12:33,040
+I'm not going to go into the math for that.
+
+178
+00:12:33,040 --> 00:12:38,200
+We just know that k is the common gain, p is the predicted error covariance, h is the
+
+179
+00:12:38,200 --> 00:12:44,280
+observation matrix, and r is the measurement noise covariance matrix.
+
+180
+00:12:44,320 --> 00:12:46,960
+I will say, though, that h is very important.
+
+181
+00:12:46,960 --> 00:12:50,760
+It measures what we observe in our state vector.
+
+182
+00:12:50,760 --> 00:12:57,600
+So sometimes there are hidden states, for example, angular velocities like pitch rate.
+
+183
+00:12:57,600 --> 00:13:02,100
+We probably don't have a sensor, or maybe the data is corrupted.
+
+184
+00:13:02,100 --> 00:13:04,560
+So that would be considered a hidden state.
+
+185
+00:13:04,560 --> 00:13:13,380
+What we can see or what we can observe would be this matrix, h, multiplied by a state.
+
+186
+00:13:13,380 --> 00:13:16,180
+Next up is the update estimate.
+
+187
+00:13:16,180 --> 00:13:19,140
+I will actually go into what this equation does.
+
+188
+00:13:19,140 --> 00:13:24,580
+Just remember that z is our incoming measurement from a sensor.
+
+189
+00:13:24,580 --> 00:13:32,140
+Here we start with the prediction of our state that we calculated earlier, so up here.
+
+190
+00:13:32,140 --> 00:13:34,220
+And then we add this term to it.
+
+191
+00:13:34,220 --> 00:13:39,700
+Starting with the parentheses, this difference here is called the innovation.
+
+192
+00:13:39,700 --> 00:13:45,180
+The innovation measures the divergence between the actual measurements and the predicted
+
+193
+00:13:45,180 --> 00:13:46,180
+measurements.
+
+194
+00:13:46,180 --> 00:13:52,320
+So what's coming in from a GPS sensor subtracted from what we predicted?
+
+195
+00:13:52,320 --> 00:13:58,620
+And then we multiply this by the common gain, and this minimizes the innovation, which results
+
+196
+00:13:58,620 --> 00:14:05,700
+in a smaller covariance matrix and increases our confidence of that state estimate.
+
+197
+00:14:05,700 --> 00:14:12,580
+So overall, this is how we incorporate new measurements to update our predicted state.
+
+198
+00:14:12,580 --> 00:14:15,940
+And remember, this is the a posteriori.
+
+199
+00:14:15,940 --> 00:14:21,380
+And then lastly, we have the update covariance.
+
+200
+00:14:21,380 --> 00:14:24,620
+I'm not going to go into that equation.
+
+201
+00:14:24,620 --> 00:14:31,380
+Just know that i is the identity matrix, and p is used for finding the common gain.
+
+202
+00:14:31,380 --> 00:14:35,540
+So here in these three blocks, I am defining the transition model.
+
+203
+00:14:35,540 --> 00:14:40,780
+Remember, we're looking at latitude and longitude, and we're using the constant velocity motion
+
+204
+00:14:40,780 --> 00:14:41,780
+model.
+
+205
+00:14:41,780 --> 00:14:46,200
+And then I'm defining the measurement model and using those two to create the predictor
+
+206
+00:14:46,200 --> 00:14:48,300
+and updater.
+
+207
+00:14:48,300 --> 00:14:53,140
+Next up, we have the hypothesizer object, which uses a track and a set of detections
+
+208
+00:14:53,140 --> 00:14:56,180
+to produce a hypothesis of association.
+
+209
+00:14:56,180 --> 00:14:58,580
+So what does that mean?
+
+210
+00:14:58,580 --> 00:15:03,100
+The hypothesizer answers the question, what is the likelihood that this detection is
+
+211
+00:15:03,100 --> 00:15:04,860
+a part of this track?
+
+212
+00:15:04,860 --> 00:15:08,340
+The track is a group of observations that are related.
+
+213
+00:15:08,340 --> 00:15:16,780
+So an example would be observations related to an aircraft with a particular ID.
+
+214
+00:15:16,780 --> 00:15:24,940
+So our hypothesizer is going to look at a detection and see whether or not it is supposed
+
+215
+00:15:24,940 --> 00:15:27,860
+to or if it belongs to a particular track.
+
+216
+00:15:27,860 --> 00:15:36,220
+So here, I define my own hypothesizer because I was getting issues with Stone Soup's hypothesizer.
+
+217
+00:15:36,220 --> 00:15:40,420
+My state vector, for whatever reason, wasn't a one-dimensional array.
+
+218
+00:15:40,420 --> 00:15:45,920
+But let me just scroll up, because I'm pretty sure this is a one-dimensional array.
+
+219
+00:15:45,920 --> 00:15:47,260
+This is a one-dimensional NumPy array.
+
+220
+00:15:47,260 --> 00:15:50,500
+I'm not crazy.
+
+221
+00:15:50,500 --> 00:15:55,700
+So for whatever reason, Stone Soup was just being really finicky, so I had to create my
+
+222
+00:15:55,700 --> 00:15:56,700
+own.
+
+223
+00:15:56,700 --> 00:16:04,940
+So here, I am using the ravel function to convert those state vectors into a one-dimensional
+
+224
+00:16:04,940 --> 00:16:06,380
+NumPy array.
+
+225
+00:16:06,380 --> 00:16:11,780
+And then I'm using size spatial, the Mahalanobis distance to calculate the distance between
+
+226
+00:16:11,780 --> 00:16:13,580
+those two state vectors.
+
+227
+00:16:13,580 --> 00:16:17,140
+But Stone Soup does have the same thing.
+
+228
+00:16:17,140 --> 00:16:20,660
+I just couldn't get it to work for me for whatever reason.
+
+229
+00:16:20,660 --> 00:16:22,200
+OK, cool.
+
+230
+00:16:22,200 --> 00:16:24,800
+So next, we have a data associator.
+
+231
+00:16:24,800 --> 00:16:30,540
+This object associates tracks and detections, and it requires a hypothesizer.
+
+232
+00:16:30,540 --> 00:16:37,160
+So recall, we're using the Mahalanobis distance to compute the likelihood of a detection being
+
+233
+00:16:37,160 --> 00:16:40,760
+associated with a track.
+
+234
+00:16:40,760 --> 00:16:43,280
+Next up, we have the initiator object.
+
+235
+00:16:43,280 --> 00:16:47,040
+And this takes detections and uses them to create new tracks.
+
+236
+00:16:47,040 --> 00:16:51,740
+It estimates the initial state of an aircraft based on the detection.
+
+237
+00:16:51,740 --> 00:16:55,040
+It also ignores false alarm detections.
+
+238
+00:16:55,040 --> 00:16:57,220
+So that's the initiator.
+
+239
+00:16:57,220 --> 00:17:02,260
+And lastly, we have a deleter object, which identifies tracks for deletions.
+
+240
+00:17:02,260 --> 00:17:06,980
+Without this, a system might be cluttered with outdated or false tracks, which could
+
+241
+00:17:06,980 --> 00:17:11,380
+be computationally expensive and produce low quality results.
+
+242
+00:17:11,380 --> 00:17:16,500
+So in this walkthrough, our deleter will delete tracks if they haven't been updated for 10
+
+243
+00:17:16,500 --> 00:17:17,500
+minutes.
+
+244
+00:17:17,500 --> 00:17:18,500
+Great.
+
+245
+00:17:18,500 --> 00:17:23,180
+So now that we have all those different components, we combine them to create a tracker.
+
+246
+00:17:23,180 --> 00:17:28,420
+And firstly, the tracker calls the data associator on any active tracks.
+
+247
+00:17:28,420 --> 00:17:31,640
+Tracks are updated if a detection is associated.
+
+248
+00:17:31,640 --> 00:17:36,420
+If the detection is a dud, the tracker leaves it as a prediction.
+
+249
+00:17:36,420 --> 00:17:39,400
+Next, tracks are checked for deletion.
+
+250
+00:17:39,400 --> 00:17:45,220
+And then finally, the initiator will use any remaining unassociated detections to create
+
+251
+00:17:45,220 --> 00:17:47,020
+new tracks.
+
+252
+00:17:47,020 --> 00:17:52,220
+And so here, we're using the multi-target tracker because our data set has multiple
+
+253
+00:17:52,220 --> 00:17:53,300
+aircrafts.
+
+254
+00:17:53,300 --> 00:17:56,620
+And we want to track multiple targets at the same time.
+
+255
+00:17:56,620 --> 00:17:57,860
+All right.
+
+256
+00:17:57,860 --> 00:17:59,300
+So that's it.
+
+257
+00:17:59,300 --> 00:18:01,680
+No complex math formulas to remember.
+
+258
+00:18:01,680 --> 00:18:04,720
+Stone soup is like Build-A-Bear for trackers.
+
+259
+00:18:04,720 --> 00:18:09,660
+So you could mix and match different components if you wanted to.
+
+260
+00:18:09,660 --> 00:18:14,900
+So for example, instead of using Mahalanobis, you probably could have used Euclidean distance.
+
+261
+00:18:14,900 --> 00:18:19,180
+Or instead of using constant velocity, you could have used constant acceleration or a
+
+262
+00:18:19,180 --> 00:18:24,100
+mixture of the different motion models, which is really fun.
+
+263
+00:18:24,100 --> 00:18:25,340
+Yeah.
+
+264
+00:18:25,340 --> 00:18:29,120
+And there's other things that you can mix and match, too.
+
+265
+00:18:29,120 --> 00:18:31,940
+And that's the walkthrough for creating a tracker.
+
+266
+00:18:31,940 --> 00:18:34,140
+And I said that I'd show you how to create a tracker.
+
+267
+00:18:34,140 --> 00:18:38,440
+I didn't say it had to be a good tracker.
+
+268
+00:18:38,440 --> 00:18:42,180
+So this tracker is very slow.
+
+269
+00:18:43,100 --> 00:18:47,820
+I was trying to plot the data that I did get, which gave me a whole bunch of duplicates.
+
+270
+00:18:47,820 --> 00:18:50,500
+So in blue is the ground truth.
+
+271
+00:18:50,500 --> 00:18:54,940
+And then this single red dot is from the tracker.
+
+272
+00:18:54,940 --> 00:18:58,500
+But now you know how to create a tracker using Stone Soup.
+
+273
+00:18:58,500 --> 00:19:04,540
+And Stone Soup also does have a plotter class that allows you to plot changes in your tracker
+
+274
+00:19:04,540 --> 00:19:05,780
+over time.
+
+275
+00:19:05,780 --> 00:19:10,540
+So if you happen to create a tracker and use it for any plotting functions, I'd love to
+
+276
+00:19:10,540 --> 00:19:12,020
+check it out.
+
+277
+00:19:12,020 --> 00:19:16,740
+And if you're a tech savvy stand and want to track your favorite celebrity's private
+
+278
+00:19:16,740 --> 00:19:19,900
+jet, now you can.
+
+279
+00:19:19,900 --> 00:19:23,700
+Although I don't encourage stalking celebrities.
+
+280
+00:19:23,700 --> 00:19:25,660
+All right.
+
+281
+00:19:25,660 --> 00:19:31,340
+So thanks for listening to my talk.
+
+282
+00:19:31,340 --> 00:19:34,340
+I have this newsletter here that's relatively new.
+
+283
+00:19:34,340 --> 00:19:38,980
+And I'll be posting a more refined version of the Jupyter Notebook along with a couple
+
+284
+00:19:38,980 --> 00:19:43,660
+papers I read that helped me understand the common filter.
+
+285
+00:19:43,660 --> 00:19:49,380
+Eventually, I'll post other things related to geospatial open source software.
+
+286
+00:19:49,380 --> 00:19:52,940
+And there's also my LinkedIn if you want to get in touch via social media.
+
+287
+00:19:52,940 --> 00:19:55,460
+And there's plenty of time for questions.
+
+288
+00:19:55,460 --> 00:19:57,980
+A lot of time, Ho and Gee.
+
+289
+00:20:07,180 --> 00:20:08,300
+Thank you.
+
+290
+00:20:08,380 --> 00:20:12,860
+I have to say I think the most universal experience is I tried using this thing that existed.
+
+291
+00:20:12,860 --> 00:20:13,860
+It didn't do what I wanted.
+
+292
+00:20:13,860 --> 00:20:14,860
+So I just built my own.
+
+293
+00:20:14,860 --> 00:20:15,860
+Yeah.
+
+294
+00:20:15,860 --> 00:20:16,860
+I love that.
+
+295
+00:20:16,860 --> 00:20:17,860
+OK.
+
+296
+00:20:17,860 --> 00:20:19,580
+A few questions from the Slido.
+
+297
+00:20:19,580 --> 00:20:24,940
+And pardon me if I'm going to try and make I'm learning I'm learning the context here.
+
+298
+00:20:24,940 --> 00:20:28,980
+Have you tried using KF, I assume, common filters for fraud detection patterns with
+
+299
+00:20:28,980 --> 00:20:30,820
+behavior time series data?
+
+300
+00:20:30,820 --> 00:20:33,820
+And if not, what other MSC or algorithm would you recommend?
+
+301
+00:20:33,820 --> 00:20:36,220
+Could you repeat the question?
+
+302
+00:20:36,220 --> 00:20:38,020
+Yes, I will try.
+
+303
+00:20:38,460 --> 00:20:44,260
+Have you tried using Kalman filters for fraud detection fraud detection patterns with behavior
+
+304
+00:20:44,260 --> 00:20:45,620
+time series data?
+
+305
+00:20:45,620 --> 00:20:50,140
+So I've only used so I've only used common filters for sensor fusion.
+
+306
+00:20:50,140 --> 00:20:57,140
+I can't really say much, but just imagine that you're trying to track a bad guy in an
+
+307
+00:20:57,140 --> 00:21:00,140
+airplane.
+
+308
+00:21:00,140 --> 00:21:03,980
+All right.
+
+309
+00:21:03,980 --> 00:21:07,980
+Well, that's tough said.
+
+310
+00:21:07,980 --> 00:21:12,580
+Are there any alternatives to the stone soup framework that you considered using?
+
+311
+00:21:12,580 --> 00:21:15,380
+And if so, what made stone soup the best option?
+
+312
+00:21:15,380 --> 00:21:18,060
+So there is pie filter.
+
+313
+00:21:18,060 --> 00:21:24,140
+That's another class or another package that you could use to create, I guess, trackers
+
+314
+00:21:24,140 --> 00:21:25,460
+using common filters.
+
+315
+00:21:25,460 --> 00:21:33,620
+But it's only it only has, I guess, code for creating common filters.
+
+316
+00:21:33,660 --> 00:21:37,660
+Stone soup has so much more going on besides using common filters.
+
+317
+00:21:37,660 --> 00:21:40,860
+You can use other filters as well.
+
+318
+00:21:40,860 --> 00:21:43,500
+And you can you can import different types of data.
+
+319
+00:21:43,500 --> 00:21:49,500
+So you can import video data, CSVs, Kafka, a plethora of different things.
+
+320
+00:21:49,500 --> 00:21:56,140
+I feel like hot stone soup just has more for you if you're interested in going that route
+
+321
+00:21:56,140 --> 00:21:58,380
+than pie pie filter.
+
+322
+00:21:58,380 --> 00:21:59,380
+OK.
+
+323
+00:21:59,860 --> 00:22:03,660
+Someone asked the name of the Tony Lacey book that you cited.
+
+324
+00:22:03,660 --> 00:22:05,620
+Oh, Tony Lacey.
+
+325
+00:22:05,620 --> 00:22:06,740
+I can go back to that slide.
+
+326
+00:22:11,780 --> 00:22:12,540
+It's not a book.
+
+327
+00:22:12,540 --> 00:22:14,540
+It's like notes.
+
+328
+00:22:14,540 --> 00:22:18,900
+So if you type in Tony Lacey, Chapter 11 tutorial, you'll see it.
+
+329
+00:22:18,900 --> 00:22:21,780
+It's probably the first or second link on Google.
+
+330
+00:22:21,780 --> 00:22:24,100
+OK, cool.
+
+331
+00:22:24,100 --> 00:22:28,140
+How do you choose the model to use for your data when it's not obvious which might work
+
+332
+00:22:28,140 --> 00:22:31,300
+best and is there a best fit method?
+
+333
+00:22:31,300 --> 00:22:38,180
+Yeah, that's why you need to like explore different models and see which one works for you.
+
+334
+00:22:38,180 --> 00:22:44,820
+I've only ever used the the regular and regular common filter.
+
+335
+00:22:44,820 --> 00:22:49,860
+There's there's like the unscented common filter and some other stuff, too.
+
+336
+00:22:49,860 --> 00:22:53,620
+But I think it depends on your level of comfort.
+
+337
+00:22:53,620 --> 00:22:57,220
+I start with the common filter because it's the most simplest one.
+
+338
+00:22:57,220 --> 00:22:58,220
+Hopefully it's simple.
+
+339
+00:22:58,220 --> 00:23:03,780
+I know these equations are kind of complicated looking.
+
+340
+00:23:03,780 --> 00:23:09,140
+Yeah, I define simple differently, but if it makes sense for you.
+
+341
+00:23:09,140 --> 00:23:13,420
+Is it safe to infer that common filters work like ML models?
+
+342
+00:23:13,420 --> 00:23:16,940
+That's a good question.
+
+343
+00:23:16,940 --> 00:23:18,340
+I'm not sure.
+
+344
+00:23:18,340 --> 00:23:20,340
+I am not a machine learning engineer.
+
+345
+00:23:20,340 --> 00:23:21,900
+I'm just a back end engineer.
+
+346
+00:23:21,900 --> 00:23:25,700
+So I don't really I don't know if I can answer that question.
+
+347
+00:23:25,700 --> 00:23:31,500
+OK, what are some assumptions of the common filter, particularly with respect to statistical
+
+348
+00:23:31,500 --> 00:23:33,620
+properties of input data?
+
+349
+00:23:33,620 --> 00:23:34,620
+That's a hard one.
+
+350
+00:23:34,620 --> 00:23:39,140
+So the common this one in particular is expecting that your system is linear.
+
+351
+00:23:39,140 --> 00:23:47,260
+And also when you're calculating the let me go back to the Mahalo Novus stuff.
+
+352
+00:23:47,260 --> 00:23:55,900
+So when you're finding the inverse, the inverse of the covariance matrix, it has to be what's
+
+353
+00:23:55,900 --> 00:23:56,900
+it called?
+
+354
+00:23:56,900 --> 00:23:58,100
+It has to be a square matrix.
+
+355
+00:23:58,100 --> 00:24:03,580
+And dang, this the term is like losing.
+
+356
+00:24:03,580 --> 00:24:07,140
+It's not coming to me, but they're there.
+
+357
+00:24:07,140 --> 00:24:08,140
+I'll get back to you.
+
+358
+00:24:08,140 --> 00:24:11,340
+Whoever asks that question, just like reach out to me and I'll get back to you because
+
+359
+00:24:11,340 --> 00:24:12,340
+I'm blinking right now.
+
+360
+00:24:12,340 --> 00:24:13,340
+All right.
+
+361
+00:24:13,340 --> 00:24:14,340
+That's what discourse for.
+
+362
+00:24:14,340 --> 00:24:15,340
+We've got the discourse.
+
+363
+00:24:15,340 --> 00:24:16,340
+Awesome.
+
+364
+00:24:16,420 --> 00:24:18,300
+So that was the last of our questions.
+
+365
+00:24:18,300 --> 00:24:19,420
+Thank you so much for that.
+
+366
+00:24:19,420 --> 00:24:20,420
+I appreciate it.
+
+367
+00:24:20,420 --> 00:24:21,860
+Everyone help me think Cynthia.
+

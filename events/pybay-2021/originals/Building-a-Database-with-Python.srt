@@ -1,0 +1,1116 @@
+1
+00:00:00,000 --> 00:00:12,080
+This talk is going to be about building a database with Python.
+
+2
+00:00:12,080 --> 00:00:21,680
+We're going to start with talking about what HDB is so that you guys understand the context
+
+3
+00:00:22,240 --> 00:00:27,360
+of the talk and the extent of the problems that we had to deal with and the
+
+4
+00:00:30,000 --> 00:00:35,520
+extent of the code base actually. The goal of this talk is that we can just go home
+
+5
+00:00:36,880 --> 00:00:40,880
+with the knowledge about HDB and its internals and just reimplement HDB from scratch
+
+6
+00:00:41,600 --> 00:00:50,400
+in about five years. So what is HDB? HDB is a new relational database built on top of PostgreSQL
+
+7
+00:00:50,400 --> 00:00:57,760
+and the concept of building a database on top of another database isn't exactly new. There are a
+
+8
+00:00:57,760 --> 00:01:06,000
+bunch of NoSQL databases, for example, that build on top of RocksDB or LevelDB. It's normal. We are
+
+9
+00:01:06,000 --> 00:01:11,360
+just elevating this concept further and instead of building on some super low-level database,
+
+10
+00:01:11,360 --> 00:01:15,360
+we're building on a high-level database on top of a high-level database which is PostgreSQL.
+
+11
+00:01:15,920 --> 00:01:21,680
+PostgreSQL is reliable. It's robust. It's universally trusted. It's open source. It
+
+12
+00:01:21,680 --> 00:01:26,960
+meets all the right qualities. Sure. Can you hear me now?
+
+13
+00:01:29,360 --> 00:01:37,440
+So instead of focusing on the low-level specifics of database operation, we are focusing more on the
+
+14
+00:01:38,160 --> 00:01:44,800
+developer experience and some other high-level features of relational database. Ultimately,
+
+15
+00:01:44,800 --> 00:01:50,960
+the goal that we have in mind is to make people fall in love with relational databases again.
+
+16
+00:01:50,960 --> 00:01:58,160
+It's rare that developers actually like relational databases or if they like SQL or
+
+17
+00:01:58,160 --> 00:02:03,680
+if they even understand it. Even though the technology itself, relational databases,
+
+18
+00:02:03,680 --> 00:02:10,400
+they are amazing. They're a great piece of tech. So what does HDB bring to the table? It brings
+
+19
+00:02:10,400 --> 00:02:20,640
+a new query language. It brings its own fresh take on the relational data model.
+
+20
+00:02:21,440 --> 00:02:28,560
+Some promising features like migrations, for example, are solved right in the core of the
+
+21
+00:02:28,560 --> 00:02:34,080
+database. It has well-designed CLIs, of course, GraphQL, and thanks to, again, being built on top
+
+22
+00:02:34,080 --> 00:02:41,040
+of PostgreSQL, it's reliable and fast. Most importantly for this conference is that it's
+
+23
+00:02:41,040 --> 00:02:51,280
+built with Python mostly. So this is kind of a glimpse of what a schema in HDB looks like.
+
+24
+00:02:51,280 --> 00:02:56,720
+It's probably a little bit too small for you guys to read on the screen. But the idea is that
+
+25
+00:02:56,880 --> 00:03:05,040
+that schemas in HDB can be defined in two ways. You can either use low-level DDL commands like
+
+26
+00:03:05,040 --> 00:03:09,760
+create type, create link, create property, or something like that, or you can just describe
+
+27
+00:03:09,760 --> 00:03:16,800
+your schema in a file using a special language which we call schema declaration language.
+
+28
+00:03:17,600 --> 00:03:23,280
+If you look closer at the syntax that we have here, that we have there, you will recognize
+
+29
+00:03:23,280 --> 00:03:29,120
+that you don't actually need to know the syntax to understand what it is about. You can easily
+
+30
+00:03:30,160 --> 00:03:35,760
+declare types, abstract types, relationships between those types, properties, and links
+
+31
+00:03:35,760 --> 00:03:41,200
+between the types. It kind of looks like, I don't know, TypeScript interfaces or Python data classes
+
+32
+00:03:41,200 --> 00:03:47,520
+to you, except that it's language agnostic. So you can use HDB with pretty much any language.
+
+33
+00:03:47,520 --> 00:03:51,520
+The schema is still going to be the same. The mechanisms of the schema are not going to be
+
+34
+00:03:51,520 --> 00:04:00,160
+different based on what language you're interacting with it. HDB has advanced and strict type system,
+
+35
+00:04:00,160 --> 00:04:06,800
+and in fact it's, in some corner cases, it's even more strict than PostgreSQL itself. The type
+
+36
+00:04:06,800 --> 00:04:11,600
+system supports multiple interesting features. One of them is multiple inheritance. This is how
+
+37
+00:04:11,600 --> 00:04:21,920
+we implement polymorphism. Basically it's similar to Python or Mixins in some other languages.
+
+38
+00:04:23,200 --> 00:04:30,320
+The advantage of this model over what a relational database typically offers is that
+
+39
+00:04:31,120 --> 00:04:39,280
+HDB type system is high level already. You don't have to use ORMS or some libraries or
+
+40
+00:04:40,240 --> 00:04:45,440
+build like any sort of boilerplate code to just work with the type system and
+
+41
+00:04:47,280 --> 00:04:51,680
+build on top of it or integrate it in your language. It's already pretty much there.
+
+42
+00:04:52,480 --> 00:04:58,960
+Programmers, we don't think in tables. We actually think in types or in structs or in classes,
+
+43
+00:04:58,960 --> 00:05:07,040
+and this is what HDB basically exposes natively. And of course HDB comes with all the regular
+
+44
+00:05:07,040 --> 00:05:12,640
+features that any relational database must have. It supports indexes, constraints,
+
+45
+00:05:13,200 --> 00:05:18,400
+abstract types, user-defined functions, introspection, and everything else.
+
+46
+00:05:20,080 --> 00:05:30,400
+This is a sneak peek at our query language. If there is one thing that can quickly give you an
+
+47
+00:05:30,400 --> 00:05:38,080
+idea of what HQL looks like, it's as if GraphQL and SQL had a child. That would be HQL. It kind
+
+48
+00:05:38,080 --> 00:05:47,360
+of looks like GraphQL because it allows you to easily fetch nested hierarchies of types and
+
+49
+00:05:47,360 --> 00:05:53,440
+objects. And it's kind of like SQL because it's fairly advanced. It's composable. You can have
+
+50
+00:05:53,440 --> 00:05:58,880
+complicated expressions everywhere you want. You can do analytical queries with HQL. That said,
+
+51
+00:05:59,520 --> 00:06:13,760
+it's strict type language. It's declarative one. And one of the design goals of HQL was to
+
+52
+00:06:14,400 --> 00:06:20,720
+basically make it surpass SQL in power. Already you can do some things in HQL that would be
+
+53
+00:06:20,720 --> 00:06:30,560
+pretty hard to actually do in SQL. And of course it supports all the advanced features that you
+
+54
+00:06:30,560 --> 00:06:37,280
+need, like subqueries or nested mutations or combining multiple different inserts and deletes
+
+55
+00:06:37,280 --> 00:06:45,040
+and updates in one query. We can do some pretty amazing stuff with HQL. So ultimately HDB is
+
+56
+00:06:45,040 --> 00:06:51,280
+packed with different features. As I said, it supports GraphQL. We have, I think,
+
+57
+00:06:51,280 --> 00:07:00,160
+best in class JSON support. You can do pretty interesting things with JSON and HDB. In HDB,
+
+58
+00:07:00,160 --> 00:07:08,000
+you can cast complex types and complex shapes to JSON, and you can construct things fairly quick.
+
+59
+00:07:08,000 --> 00:07:12,400
+Whereas in PostgreSQL, you would be calling a bunch and bunch of different functions. In HDB,
+
+60
+00:07:12,400 --> 00:07:17,680
+we have high level syntax constructs that just allow you to build JSON super quickly.
+
+61
+00:07:17,680 --> 00:07:23,440
+We have some interesting workflow innovations, I would call them. We have, for example,
+
+62
+00:07:23,440 --> 00:07:29,120
+a thing that we call HDB projects, and it's kind of similar to Python virtual environments.
+
+63
+00:07:29,120 --> 00:07:35,200
+Basically, you can have multiple different projects on your disk, and each of those projects
+
+64
+00:07:35,200 --> 00:07:41,520
+can have a separate database, a separate version of the database. But when you are inside that
+
+65
+00:07:41,520 --> 00:07:45,760
+project, you can just connect without any arguments. You can just use your CLI, and
+
+66
+00:07:46,320 --> 00:07:52,080
+HDB automatically understands which instance of the database you're talking to. This is actually
+
+67
+00:07:52,080 --> 00:07:58,800
+incredibly convenient. We will soon, probably after 1.0 release, which will happen in about
+
+68
+00:07:58,800 --> 00:08:06,400
+three to four weeks, we will introduce access control policies, something that has been a
+
+69
+00:08:06,400 --> 00:08:12,160
+long-awaited feature, which would basically allow you to specify access control policies
+
+70
+00:08:12,160 --> 00:08:17,440
+right in your schema, and then the same query would just behave differently based on, for example,
+
+71
+00:08:18,000 --> 00:08:23,360
+what kind of user privileges you have or anything else, really. The system is incredibly
+
+72
+00:08:26,080 --> 00:08:34,880
+flexible. We've been kind of quiet about HDB operating in the stealth mode on purpose,
+
+73
+00:08:35,440 --> 00:08:42,720
+simply because it's a relational database. Once we commit to the APIs, to the language syntax,
+
+74
+00:08:43,360 --> 00:08:48,800
+to our schema, we cannot actually release any version of HDB and just roll some of those
+
+75
+00:08:48,800 --> 00:08:55,680
+decisions back. We have to support them for years to come. So we spend years, actually,
+
+76
+00:08:55,680 --> 00:09:02,000
+working on HDB and making sure that all the APIs and data models and query languages that we have
+
+77
+00:09:02,000 --> 00:09:07,920
+are sound and that we can live with them for a long, long time. We will soon release 1.0,
+
+78
+00:09:08,640 --> 00:09:15,600
+as I said, in about three weeks, maybe months, and after that we will become definitely more
+
+79
+00:09:15,600 --> 00:09:23,520
+vocal about HDB, saying that people should try it. Anyways, enough about HDB itself. Let's talk
+
+80
+00:09:23,520 --> 00:09:30,800
+about the architecture of HDB and let's talk about the role of Python in that architecture.
+
+81
+00:09:32,560 --> 00:09:38,800
+HDB loves Python. HDB is coded primarily in Python, at least its core parts.
+
+82
+00:09:40,080 --> 00:09:46,240
+And the question is why? Traditionally, people use different languages to create things like
+
+83
+00:09:46,240 --> 00:09:57,680
+databases, usually C or C++, maybe Java or Golang or recently Rust. So when we started with HDB,
+
+84
+00:09:57,680 --> 00:10:02,240
+we didn't actually have a clear understanding that, hey, this is going to be a database.
+
+85
+00:10:02,240 --> 00:10:09,520
+We started many years ago when originally HDB was sort of an ORM for Python. So
+
+86
+00:10:11,760 --> 00:10:15,840
+the first reason, I guess, is historical. We knew Python well. We started with Python and we
+
+87
+00:10:15,840 --> 00:10:22,800
+continued to use Python. But then we also understood a few things. Python allows for
+
+88
+00:10:23,360 --> 00:10:31,200
+incredibly fast iteration, especially now with MyPy. Just refactoring your entire application
+
+89
+00:10:31,200 --> 00:10:38,240
+can be done reasonably quickly with Python, as opposed to in some more rigid languages like
+
+90
+00:10:38,240 --> 00:10:43,360
+Rust or C++. Sometimes you would need to do a fairly complicated rewrite of your program. So
+
+91
+00:10:43,360 --> 00:10:51,280
+if you really don't have 100% clear picture of what you're building, starting with Python actually
+
+92
+00:10:51,280 --> 00:10:59,120
+makes a lot of sense. Python is also open to contributions. And over the years, we contributed
+
+93
+00:10:59,120 --> 00:11:06,640
+a lot of things to Python. It's not obviously super easy, but it's definitely possible to become
+
+94
+00:11:06,640 --> 00:11:10,720
+a Python core developer. And if you have a complicated feature, an interesting feature
+
+95
+00:11:10,720 --> 00:11:18,080
+to contribute to the language, you can convince other core developers to do that and then you
+
+96
+00:11:18,080 --> 00:11:25,520
+have it in your language. I'm not sure of any other language that has this streamlined process
+
+97
+00:11:25,520 --> 00:11:34,000
+that is pretty much open to everyone to contribute successfully something to the language,
+
+98
+00:11:34,000 --> 00:11:39,600
+and especially things like changing syntax or something like that. Usually it's kind of
+
+99
+00:11:39,600 --> 00:11:46,720
+reserved for the insiders. Python is incredibly open in that regard. And Python actually rapidly
+
+100
+00:11:46,720 --> 00:11:55,520
+evolves to this day, which is quite surprising for a language of its age. Just recently we got
+
+101
+00:11:55,520 --> 00:12:01,520
+support for pattern matching. In the next version of Python, we will likely have exception groups,
+
+102
+00:12:01,520 --> 00:12:09,440
+which will simplify some aspects of async-await programming. Mark Shannon and his team are working
+
+103
+00:12:09,440 --> 00:12:14,560
+on speeding up Python, so hopefully we'll see Python becoming faster and faster and faster
+
+104
+00:12:14,560 --> 00:12:23,040
+from now on with each new release. So Python is great. It's open, it's quick to iterate with,
+
+105
+00:12:24,320 --> 00:12:31,120
+and it's still evolving, which is cool. So there are multiple different moving parts
+
+106
+00:12:31,120 --> 00:12:40,960
+in HDB. HDB is a huge product. The two things that we're going to talk about today is the core
+
+107
+00:12:40,960 --> 00:12:46,880
+parts of HDB, which is the IO server and the compiler stack, both of which are written in
+
+108
+00:12:46,880 --> 00:12:51,440
+Python. There are multiple other things, like client libraries and the command line interface,
+
+109
+00:12:51,440 --> 00:12:56,240
+which is actually a pretty big project on its own. There is also upcoming HDB cloud,
+
+110
+00:12:56,240 --> 00:13:03,280
+which is a huge project, and some of those things are using Python exclusively, some of them just
+
+111
+00:13:03,280 --> 00:13:09,360
+using it in some way, but IO server and compiler are pretty much exclusively Python. So we're going
+
+112
+00:13:09,360 --> 00:13:19,120
+to talk about those two components. So the IO server part of HDB has just a few things
+
+113
+00:13:20,000 --> 00:13:28,000
+that it has to cover, which is managing client connections to HDB. Then it's about orchestrating
+
+114
+00:13:28,000 --> 00:13:33,680
+PostgreSQL instances. Remember HDB is built on top of Postgres, so it fully controls and kind of
+
+115
+00:13:33,680 --> 00:13:39,520
+envelopes PostgreSQL, and then to also orchestrate compilers, which we're going to talk
+
+116
+00:13:39,520 --> 00:13:48,720
+a little bit later. So when we started to work on the IO server, we had some basic requirements,
+
+117
+00:13:48,720 --> 00:13:54,080
+pretty much, that first of all, we wanted to be able to handle a lot of connections, a lot of
+
+118
+00:13:54,080 --> 00:14:00,880
+connections concurrently. And second, opening a connection must be cheap to HDB. If you know
+
+119
+00:14:00,880 --> 00:14:07,040
+anything about PostgreSQL architecture, for example, when you connect to PostgreSQL,
+
+120
+00:14:07,040 --> 00:14:14,160
+it usually spawns a process. So connections to Postgres are pretty expensive, and this is why
+
+121
+00:14:14,160 --> 00:14:22,480
+people put things like pgBouncer or pgProxy in front of Postgres to kind of create this pool
+
+122
+00:14:22,480 --> 00:14:28,160
+of connections for you. So we thought hard about this at HDB and decided, hey, we don't actually
+
+123
+00:14:28,160 --> 00:14:35,360
+want people to deal with these things. How about HDB just does it out of the box for you? You
+
+124
+00:14:35,360 --> 00:14:43,120
+shouldn't be bothered with setting up all of this advanced architecture and advanced stack on top
+
+125
+00:14:43,120 --> 00:14:50,240
+of your database. The database should be just able to handle it for you. Then again, by nature,
+
+126
+00:14:50,240 --> 00:15:03,600
+we have things that just execute asynchronously. Postgres servers and the pool of HDB compiler
+
+127
+00:15:03,600 --> 00:15:08,640
+processes, and they're all kind of asynchronous. So handling asynchronous notifications also was
+
+128
+00:15:08,640 --> 00:15:17,920
+kind of a requirement. So async IO was a clear choice for HDB. So IO server in HDB is an async
+
+129
+00:15:17,920 --> 00:15:26,000
+IO application. And then from the get-go, we knew that we need to make IO server, basically,
+
+130
+00:15:26,000 --> 00:15:32,640
+as fast as possible. And because async IO is written in Python, in pure vanilla Python,
+
+131
+00:15:32,640 --> 00:15:39,040
+it naturally has some runtime overhead. So this is how UV loop was born. This is a little
+
+132
+00:15:39,040 --> 00:15:44,000
+known fact about UV loop, but basically it was created for HDB to make sure that
+
+133
+00:15:44,480 --> 00:15:52,240
+IO in HDB is as fast as possible. Generally, UV loop can provide up to 4X speed up of your
+
+134
+00:15:52,240 --> 00:15:58,480
+application. You just drop a line, import UV loop, then UV loop that install, and that's all you want
+
+135
+00:15:58,480 --> 00:16:06,400
+to do. Your program will just become faster. In HDB case, it makes HDB about three times faster
+
+136
+00:16:07,360 --> 00:16:12,800
+than it would be with vanilla async IO. But there are some other good reasons to actually use UV
+
+137
+00:16:12,800 --> 00:16:19,520
+loop. The first one is that it's not actually tied to CPython release cycle. So if we need to
+
+138
+00:16:19,520 --> 00:16:28,080
+add a feature or some sort of debug API, or we need to fix a vulnerability or some bug or
+
+139
+00:16:28,080 --> 00:16:32,400
+annoyance in UV loop, we can just do it. We don't really care about releases. We can
+
+140
+00:16:32,400 --> 00:16:39,440
+release multiple times a day if we absolutely have to. So this is another reason why
+
+141
+00:16:40,400 --> 00:16:45,920
+actually running UV loop in your environment might be beneficial. And for us, it also makes
+
+142
+00:16:45,920 --> 00:16:51,200
+sense because we created it. So we fully control it. If we miss some feature, we can just go
+
+143
+00:16:51,200 --> 00:17:00,160
+and edit it. It's our project. So we use UV loop. And then the IO server part specifically
+
+144
+00:17:00,160 --> 00:17:08,880
+heavily uses Cython. Pretty much 90% of the code base is in Cython, and it provides significant
+
+145
+00:17:08,880 --> 00:17:18,400
+speed up. So the thing with Cython is that if you just compile your Python code with Cython,
+
+146
+00:17:18,400 --> 00:17:26,880
+it might make it 30% faster, maybe 20% faster, basically by just eliminating the overhead
+
+147
+00:17:26,880 --> 00:17:32,160
+of the CUR loop. But it's still going to be using the Python object model and the entire
+
+148
+00:17:32,160 --> 00:17:38,480
+Python CPy behind the scenes. The only way for you to actually achieve a significant speed up
+
+149
+00:17:38,480 --> 00:17:47,680
+is to kind of go all in and just use all of the syntax extensions that Cython provides.
+
+150
+00:17:48,400 --> 00:17:57,280
+So you end up with a bunch of PYX files, which is Cython native files with some weird Cython syntax.
+
+151
+00:17:57,840 --> 00:18:04,080
+But then it can eliminate a lot of things like attribute lookup, for example, because it will
+
+152
+00:18:04,080 --> 00:18:10,560
+just compile your code to use C structs. It will make your function calls faster because
+
+153
+00:18:10,560 --> 00:18:18,720
+instead of using Python calling convention, it would use C calling convention. You can basically
+
+154
+00:18:18,720 --> 00:18:23,760
+drop down and do some memory operations if you want, just as you would be doing in C. You can
+
+155
+00:18:24,880 --> 00:18:30,240
+manually mutate buffers and do some unsafe pointer arithmetic if you want. And we do that a bunch,
+
+156
+00:18:30,240 --> 00:18:39,200
+actually, in SDP core. But then as opposed to C, we also have async and await in Cython. So
+
+157
+00:18:39,200 --> 00:18:44,880
+your code can be reasonably high level and have this high level structure and organization.
+
+158
+00:18:44,880 --> 00:18:50,000
+And then when you need to do some direct memory manipulation, you can do that as well.
+
+159
+00:18:50,640 --> 00:18:56,720
+There are some downsides to using Cython. As I said, the language itself, it's not as elegant
+
+160
+00:18:56,720 --> 00:19:02,800
+as Python. Sometimes it feels a little bit hacky. There is not a lot of integration for Cython,
+
+161
+00:19:02,800 --> 00:19:09,600
+like IDE support is kind of not so good. But then again, if you need absolute performance
+
+162
+00:19:09,600 --> 00:19:19,120
+from a Python-like code, then Cython is the way to go, at least for now. So those were kind of
+
+163
+00:19:19,120 --> 00:19:29,440
+the infrastructure bits, I guess, or what you can do with extra tools and extra runtimes to
+
+164
+00:19:29,440 --> 00:19:37,520
+make your code faster. But also a lot of the performance can be squeezed by just properly
+
+165
+00:19:37,520 --> 00:19:43,760
+designing your service. And we paid a lot of attention in HDB to just make sure that HDB will
+
+166
+00:19:43,760 --> 00:19:50,560
+work as fast as possible. So first, and it's true for any application or any service,
+
+167
+00:19:50,560 --> 00:19:54,720
+you just need to make sure that your fast path is actually as fast as possible.
+
+168
+00:19:56,000 --> 00:20:02,240
+And that involves many different things, like for example, to make sure that your communication
+
+169
+00:20:02,240 --> 00:20:08,640
+channel between the server and the client doesn't have unnecessary round trips, for example. Ideally,
+
+170
+00:20:08,640 --> 00:20:12,880
+you should just send one request and get one response. And this is what we do in HDB. It's
+
+171
+00:20:12,880 --> 00:20:18,240
+not true for all other databases. In PostgreSQL, you might end up exchanging several request
+
+172
+00:20:18,240 --> 00:20:24,240
+responses before you get results for your query. And this is where it might become slower than
+
+173
+00:20:24,240 --> 00:20:30,400
+necessary, especially if there is some network latency involved. So in HDB, we carefully designed
+
+174
+00:20:30,400 --> 00:20:41,760
+our binary protocol to just eliminate all the extra round trip. Then compilation of queries
+
+175
+00:20:41,760 --> 00:20:48,160
+is actually expensive because you have to parse an HQL query or a GraphQL query. You have to
+
+176
+00:20:48,160 --> 00:20:53,840
+validate it. You have to compile it. And it's a lengthy process. So ideally, you shouldn't do that
+
+177
+00:20:54,640 --> 00:20:59,280
+often. And there is one observation about any application is that applications don't usually
+
+178
+00:20:59,280 --> 00:21:05,280
+have an infinite number of queries. The number of queries is actually usually pretty limited.
+
+179
+00:21:05,280 --> 00:21:12,640
+So if you can cache them, that's great. So this is what we do. But then what happens if you,
+
+180
+00:21:12,640 --> 00:21:17,680
+for example, just inline some constants in your queries? So one of your query can be select 42,
+
+181
+00:21:17,680 --> 00:21:22,800
+and the other can be select one. They are essentially the same queries. They're just
+
+182
+00:21:22,800 --> 00:21:30,320
+different by one constant. So in order for us to speed up executions of these queries, we do this
+
+183
+00:21:30,320 --> 00:21:36,400
+trick. We lex those queries. We extract constants, replace them with parameters,
+
+184
+00:21:37,120 --> 00:21:46,160
+and then we can cache them. This particular path we just implemented with Rust. So we have a Rust
+
+185
+00:21:46,160 --> 00:21:53,520
+tokenizer of HQL and GraphQL. It's extremely fast. So we tokenize the query. We extract constants.
+
+186
+00:21:54,480 --> 00:22:00,400
+And all of that is done in Rust. It's a relatively small code base.
+
+187
+00:22:01,360 --> 00:22:07,040
+And that's basically it. We don't have anything else beyond AsyncIO, UV loop,
+
+188
+00:22:07,040 --> 00:22:15,920
+Cython, and a tiny little bit of Rust in our server code base. So is server IO and HDB
+
+189
+00:22:15,920 --> 00:22:22,480
+fast enough? Well, apparently it is. We probably cannot see the benchmark numbers on the small
+
+190
+00:22:22,480 --> 00:22:30,000
+screen. You can go to HDB.com, open our blog, and open the Alpha 1 and Alpha 2 announcements,
+
+191
+00:22:30,000 --> 00:22:38,400
+which actually describe the benchmarks that we have in great detail and the methodology.
+
+192
+00:22:38,400 --> 00:22:45,040
+But basically in our benchmarks, they're kind of comprehensive benchmarks. So they test different
+
+193
+00:22:45,040 --> 00:22:50,000
+scenarios of how you can interact with your database, different libraries, and different
+
+194
+00:22:50,000 --> 00:22:58,640
+languages. So for Python libraries and ORMs, HDB can be anywhere from two to four to five times
+
+195
+00:22:58,640 --> 00:23:05,600
+faster. For some JavaScript-popular ORMs, we are faster than them by a factor of 1,000, which is
+
+196
+00:23:05,600 --> 00:23:13,600
+just mind-boggling. So clearly, HDB IO is kind of good enough, and Python allowed us to get there.
+
+197
+00:23:13,600 --> 00:23:20,160
+So does Python actually work for us, for the server IO component of the system? Well, yes,
+
+198
+00:23:20,160 --> 00:23:29,120
+it does. But there are some caveats. One of them is that currently we have a known limitation that
+
+199
+00:23:29,120 --> 00:23:42,320
+if you have a very massive PostgreSQL backend behind HDB, we're not utilizing it fully. We need
+
+200
+00:23:42,320 --> 00:23:48,000
+to implement what's called end-to-end scheduling, but HDB will have to do some interesting
+
+201
+00:23:48,000 --> 00:23:54,320
+interprocess communication to do it properly because of Gill. We cannot just have several
+
+202
+00:23:54,320 --> 00:24:00,240
+event loops in one process. It's doable, and this is something that we will do relatively soon,
+
+203
+00:24:00,240 --> 00:24:08,400
+and it will bring some nice speedups. In somewhat distant future, though, we might actually
+
+204
+00:24:08,400 --> 00:24:16,560
+consider rewriting the server part of HDB in a language like C++ or Rust,
+
+205
+00:24:18,000 --> 00:24:24,560
+simply because we want to support things like HTTP2 and HTTP3 and live streaming and get rid of
+
+206
+00:24:24,560 --> 00:24:33,360
+GC pauses in the IO process. We might actually go that route. It's possible. It's still going to be
+
+207
+00:24:33,360 --> 00:24:38,720
+a pretty involved project. So in the foreseeable future, it's unlikely that we'll be doing that.
+
+208
+00:24:38,720 --> 00:24:46,160
+Python is definitely good enough. Maybe in the future we'll do that. Let's quickly talk about
+
+209
+00:24:46,800 --> 00:24:53,120
+the compilers in HDB. They're also written in Python, and this is basically, I think, 80%
+
+210
+00:24:53,120 --> 00:24:59,600
+of HDB code base is just different compilers. We have a bunch of them. So our query language,
+
+211
+00:24:59,600 --> 00:25:04,720
+which is called HQL, we compile it internally to intermediate representation,
+
+212
+00:25:04,720 --> 00:25:08,800
+and before that we have to parse it, we have to validate it, and then we compile it to IR.
+
+213
+00:25:09,520 --> 00:25:15,360
+Then we can compile IR to SQL. We also have a compiler for GraphQL to HQL, and this is how
+
+214
+00:25:15,360 --> 00:25:23,040
+we execute GraphQL. And there is also a huge machinery for just validating your database
+
+215
+00:25:23,040 --> 00:25:30,880
+schema, drive the migrations engine, and things like that. A couple of observations
+
+216
+00:25:31,520 --> 00:25:39,520
+about our compiler infrastructure. First one is kind of funny one. We use a lot of single dispatch
+
+217
+00:25:40,080 --> 00:25:48,640
+in our compiler. It's surprisingly useful to write code like that because you can eliminate
+
+218
+00:25:48,640 --> 00:25:56,800
+nesting. It's faster than the popular visitor pattern that I think almost everybody is using.
+
+219
+00:25:57,440 --> 00:26:02,160
+It makes code just easier to follow and easier to read and better organize, so this is just like a
+
+220
+00:26:02,160 --> 00:26:07,840
+nice interesting detail about our code base. If you're working on something like a compiler,
+
+221
+00:26:08,640 --> 00:26:16,880
+just give single dispatch a try. It's a nice little helper API. The bigger thing about compiler,
+
+222
+00:26:16,880 --> 00:26:24,720
+and I think this is what makes HDB code base sort of unique, is that we use a lot of immutable data
+
+223
+00:26:24,720 --> 00:26:31,040
+structures. It's actually quite interesting because this idea of using immutable data structures in
+
+224
+00:26:31,040 --> 00:26:38,480
+HDB, I think it was motivated by my work on adding context variables to Python because back then I
+
+225
+00:26:39,040 --> 00:26:46,240
+just did a research. How do functional languages like Clojure, for example, how do they actually
+
+226
+00:26:46,720 --> 00:26:53,600
+manage immutable data? So I discovered this interesting data structure called hashed array
+
+227
+00:26:54,560 --> 00:27:03,360
+map trace. I implemented that for CPython and then we started to reuse this code and we ship it now
+
+228
+00:27:04,000 --> 00:27:12,560
+in the immutables package. You can install it from the PyPI, but in HDB it's pretty much fundamental
+
+229
+00:27:13,200 --> 00:27:19,040
+that we use immutables because immutable state allows you to do interesting things to it.
+
+230
+00:27:19,040 --> 00:27:24,240
+For example, you can support transactions. This way you can make your state transactional
+
+231
+00:27:25,280 --> 00:27:31,600
+because you never actually mutate anything. It also allows you to do better caching
+
+232
+00:27:32,320 --> 00:27:38,160
+in your system because if you have a huge immutable data structure, you don't have to
+
+233
+00:27:38,160 --> 00:27:44,800
+just recursively compare it to different structures. You just compare basically are they
+
+234
+00:27:44,800 --> 00:27:53,600
+the same object or not and if they are, well, it's the same data. So we take advantage of that
+
+235
+00:27:53,600 --> 00:28:01,200
+in our RPC protocols and pretty much everywhere else. So immutability is a pretty cool thing for
+
+236
+00:28:01,200 --> 00:28:10,800
+us. We also just fully embraced MyPy. We spent about three months on strictly type annotating
+
+237
+00:28:10,800 --> 00:28:16,960
+our code base. It was sort of painful, but it brought massive quality of life improvement.
+
+238
+00:28:16,960 --> 00:28:23,040
+It's so much easier to refactor right now. It's so much easier to just rely on our CI now to catch
+
+239
+00:28:23,040 --> 00:28:30,800
+some weird things and unsafe refactorings. So I can definitely and wholeheartedly
+
+240
+00:28:30,800 --> 00:28:38,640
+just recommend to use MyPy. An interesting thing about MyPy is that it has a plugin API.
+
+241
+00:28:38,640 --> 00:28:46,880
+So in HDB code base, we have a few interesting data structures that are a little bit too magical
+
+242
+00:28:46,880 --> 00:28:52,880
+for MyPy to just understand. So we created MyPy plugins to make MyPy understand those things.
+
+243
+00:28:53,840 --> 00:29:00,800
+So again, if you have something unusual in your Python code and code base and you don't know how
+
+244
+00:29:00,800 --> 00:29:11,840
+to make MyPy work with it, explore the MyPy plugin API. What's next is probably for us to try MyPy
+
+245
+00:29:11,840 --> 00:29:21,120
+C. The performance of our compiler infrastructure is it needs improvement and we hope that MyPy C
+
+246
+00:29:21,120 --> 00:29:29,440
+can help us with that. I definitely believe that MyPy C will have a bright future simply because I
+
+247
+00:29:29,440 --> 00:29:35,760
+have a lot of experience dealing with Cython and I know how fragile that thing is. And I just wish
+
+248
+00:29:35,760 --> 00:29:44,400
+that I could just write a strictly typed Python code and just compile it to something low level
+
+249
+00:29:45,040 --> 00:29:54,160
+and fast. And MyPy C basically can fulfill that promise. And yeah, it's probably going to be one
+
+250
+00:29:54,160 --> 00:30:01,200
+of the next big things that we're going to be trying for MyPy C for HDB is trying to use MyPy
+
+251
+00:30:01,200 --> 00:30:09,200
+C heavily. Thankfully, Michael Sullivan is with us and he's one of MyPy core developers. So hopefully
+
+252
+00:30:09,200 --> 00:30:13,680
+we'll be able to contribute like any improvements that we need to do in MyPy or MyPy C
+
+253
+00:30:14,400 --> 00:30:23,760
+to make it actually happen. I'm looking forward to it. Okay. Some other tidbits. So we have lots of
+
+254
+00:30:23,760 --> 00:30:31,440
+tests in HDB. We have over 4,400 of tests and those are not unit tests. Every test is basically
+
+255
+00:30:31,440 --> 00:30:36,480
+an integration test. Every test might have a bunch of different queries and those queries actually
+
+256
+00:30:36,480 --> 00:30:43,440
+attach a lot of different aspects of the system. So those tests are pretty heavy to run. We use
+
+257
+00:30:43,440 --> 00:30:49,120
+standard unit tests for them, but we do have a custom test launcher that we created specifically
+
+258
+00:30:49,120 --> 00:30:56,640
+for HDB because our test flow is actually quite complicated. And thanks God we did it. So if we
+
+259
+00:30:56,640 --> 00:31:03,360
+just run test sequentially, it takes about an hour. But if you have one of those fancy thread reaper
+
+260
+00:31:03,360 --> 00:31:09,760
+machines, running test with J32 brings it down to three and a half minutes, which is amazing.
+
+261
+00:31:09,760 --> 00:31:15,360
+So this is another recommendation I can give if your project has lots of unit tests and you
+
+262
+00:31:15,360 --> 00:31:20,800
+cannot otherwise speed them up, try to make them run concurrently. And speaking of concurrently
+
+263
+00:31:20,800 --> 00:31:27,840
+running tests, so we had this limitation on GitHub actions. So the virtual machines that
+
+264
+00:31:27,840 --> 00:31:35,360
+run your GitHub actions, they're limited. You can use J2 and that would be it. So running our
+
+265
+00:31:35,360 --> 00:31:42,960
+test suite a few months ago on GitHub was about 40 minutes or 50 minutes per run, which really
+
+266
+00:31:42,960 --> 00:31:52,160
+made it hard for us to just merge PRs relatively quickly. So we employed an interesting solution
+
+267
+00:31:52,160 --> 00:31:58,640
+to that. So we basically analyze our test suite. This is done automatically after it's run and we
+
+268
+00:31:58,640 --> 00:32:03,360
+just automatically segregate tests in different buckets and then we automatically paralyze these
+
+269
+00:32:03,360 --> 00:32:10,720
+buckets into like separate GitHub action jobs. So if you look at any HDB PR, you will see that
+
+270
+00:32:10,720 --> 00:32:19,360
+there are like 18 CI actions that are just running in parallel and that brings down the current CI
+
+271
+00:32:19,360 --> 00:32:24,720
+time to just eight minutes from one and a half hours, which is also amazing and I haven't seen
+
+272
+00:32:24,720 --> 00:32:33,440
+projects do it this way. So does Python actually work for HDB compilers? Well, yes, but we do need
+
+273
+00:32:33,440 --> 00:32:42,080
+to improve the performance. Hopefully MyPyC will help us with that. Rewriting our compiler
+
+274
+00:32:42,080 --> 00:32:46,880
+infrastructure in any other language is probably off the table for the foreseeable future and I'm
+
+275
+00:32:46,880 --> 00:32:54,960
+not sure that we will ever do this. We'll just try to keep pushing Python forward past its limits,
+
+276
+00:32:54,960 --> 00:33:03,120
+I guess, to make the performance more and more acceptable. But to kind of sum it up,
+
+277
+00:33:03,920 --> 00:33:10,720
+Python is a wonderful language and a lot of people don't understand that it's rarely a bottleneck
+
+278
+00:33:11,280 --> 00:33:18,080
+in your application. You can push Python pretty far and you can get amazing performance out of it
+
+279
+00:33:18,080 --> 00:33:31,600
+if you just invest heavily in the ecosystem and use the right tools.
+

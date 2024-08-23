@@ -1,0 +1,1588 @@
+1
+00:00:00,000 --> 00:00:18,560
+Hi, Pi Texas.
+
+2
+00:00:18,560 --> 00:00:23,480
+I am Paul Bailey, and I'm going to be talking about building a sensor network with LoRaWAN
+
+3
+00:00:23,480 --> 00:00:24,480
+and Python.
+
+4
+00:00:25,240 --> 00:00:31,640
+I'm the Pizza Panther on Twitter, GitHub, and I'm also in the Pi Texas Slack.
+
+5
+00:00:31,640 --> 00:00:34,200
+If you have questions, look me up.
+
+6
+00:00:34,200 --> 00:00:36,760
+Before we get started, a little bit about myself.
+
+7
+00:00:36,760 --> 00:00:44,640
+Currently, I'm a systems architect at Cognitive Space, and we do machine learning for satellite
+
+8
+00:00:44,640 --> 00:00:48,040
+vehicle planning and other orbital vehicles.
+
+9
+00:00:48,040 --> 00:00:54,120
+We are hiring right now for an ML engineer and a full stack developer, so look me up
+
+10
+00:00:54,240 --> 00:00:57,360
+in the Pi Texas Slack or on Twitter.
+
+11
+00:00:57,360 --> 00:01:02,480
+Again, that's Pizza Panther, and send me a message, and we'll get talking.
+
+12
+00:01:02,480 --> 00:01:05,960
+All right, so that's out of the way.
+
+13
+00:01:05,960 --> 00:01:09,440
+Let's talk about LoRa and LoRaWAN.
+
+14
+00:01:09,440 --> 00:01:11,640
+What is LoRa, first of all?
+
+15
+00:01:11,640 --> 00:01:23,480
+LoRa stands for long range, sort of an acronym, and all it is is just a low power radio scheme.
+
+16
+00:01:23,520 --> 00:01:33,600
+We want to do things like sensors, maybe like a doorbell, things that are going to be longer
+
+17
+00:01:33,600 --> 00:01:40,600
+range than Wi-Fi, and these are going to be small things, so we want the radio scheme
+
+18
+00:01:40,600 --> 00:01:46,840
+to handle or to be accommodating of low power devices.
+
+19
+00:01:46,840 --> 00:01:52,320
+Because of that, though, because we want long range and low power, the downside of that
+
+20
+00:01:52,360 --> 00:02:00,280
+is that we have a low data rate, but LoRa isn't really designed for that, so we're thinking
+
+21
+00:02:00,280 --> 00:02:10,480
+little sensors all over the place, but could potentially be miles away.
+
+22
+00:02:10,480 --> 00:02:15,560
+This protocol, this radio scheme was designed for the Internet of Things.
+
+23
+00:02:15,560 --> 00:02:18,400
+So that's LoRa.
+
+24
+00:02:18,400 --> 00:02:24,040
+LoRaWAN now is the protocol that's on top of LoRa.
+
+25
+00:02:24,040 --> 00:02:28,960
+LoRa is just about managing the radio frequency and modulation and such.
+
+26
+00:02:28,960 --> 00:02:36,560
+LoRaWAN is responsible for all the things that we typically see in a network.
+
+27
+00:02:36,560 --> 00:02:40,760
+Think routing, security, performance.
+
+28
+00:02:40,760 --> 00:02:47,840
+In terms of routing, we could have a sensor out in, let's say, a city parking lot somewhere.
+
+29
+00:02:48,000 --> 00:02:53,640
+In that situation, it may be able to talk to several different gateways, and we'll get
+
+30
+00:02:53,640 --> 00:02:56,080
+into these definitions soon.
+
+31
+00:02:56,080 --> 00:03:00,840
+And so we don't want that sensor data to be duplicated.
+
+32
+00:03:00,840 --> 00:03:08,320
+So LoRaWAN is responsible for deduplicating packets, security, there's encryption protocols
+
+33
+00:03:08,320 --> 00:03:12,000
+built in, performance.
+
+34
+00:03:12,000 --> 00:03:15,920
+We want to make sure a certain sensor doesn't overwhelm the network.
+
+35
+00:03:15,920 --> 00:03:22,560
+So LoRaWAN is kind of responsible for all these low-level things so that we can just
+
+36
+00:03:22,560 --> 00:03:26,640
+send our packets of data, and it just kind of happens.
+
+37
+00:03:26,640 --> 00:03:28,760
+All right.
+
+38
+00:03:28,760 --> 00:03:34,440
+So let's go a little bit into what a LoRaWAN network looks like and what are some of the
+
+39
+00:03:34,440 --> 00:03:38,080
+things we're going to be talking about.
+
+40
+00:03:38,080 --> 00:03:44,000
+So over here on the left, this is the low-power devices that we're talking about.
+
+41
+00:03:44,000 --> 00:03:49,680
+So you can see you got a pet tracker, smoke alarm, water meter, all kinds of different
+
+42
+00:03:49,680 --> 00:03:54,400
+things that we might have a sensor on.
+
+43
+00:03:54,400 --> 00:04:00,440
+And these color lines over here on the left, that really represents the LoRa part of it.
+
+44
+00:04:00,440 --> 00:04:06,600
+So this pet that maybe ran away could be several miles away.
+
+45
+00:04:06,600 --> 00:04:15,840
+When that sensor sends out some data, it's going to send that over to LoRaWAN frequencies
+
+46
+00:04:15,840 --> 00:04:18,200
+to a gateway.
+
+47
+00:04:18,200 --> 00:04:22,320
+And then this gateway is what's connected to the internet.
+
+48
+00:04:22,320 --> 00:04:30,480
+And then that gateway sends that packet to some kind of network server.
+
+49
+00:04:30,480 --> 00:04:35,200
+And this is usually some kind of service that we're using, and we'll get into some of these
+
+50
+00:04:35,360 --> 00:04:37,000
+shortly.
+
+51
+00:04:37,000 --> 00:04:41,440
+And then eventually over here on the right, the application server would be like the server
+
+52
+00:04:41,440 --> 00:04:48,320
+that maybe you maintain, and you have your database, and you're recording a little Fifi
+
+53
+00:04:48,320 --> 00:04:50,800
+and Fufu running away.
+
+54
+00:04:50,800 --> 00:04:54,920
+And so this might be a web server or whatever.
+
+55
+00:04:54,920 --> 00:05:02,160
+So the LoRa part is over here on the side, on the left-hand side, but these are also
+
+56
+00:05:02,400 --> 00:05:07,400
+important pieces, too, of getting your data to you.
+
+57
+00:05:07,400 --> 00:05:11,640
+And you can see, right, with these lines, again, we talked about the duplication.
+
+58
+00:05:11,640 --> 00:05:16,960
+So this trash container sensor is in range of three gateways, but when it comes through
+
+59
+00:05:16,960 --> 00:05:25,320
+the network, we only receive that one, whatever the sensor reading is at that moment.
+
+60
+00:05:25,320 --> 00:05:27,560
+All right.
+
+61
+00:05:27,560 --> 00:05:29,120
+Let's go on here.
+
+62
+00:05:29,120 --> 00:05:37,280
+So to go back, this network server portion of it, that's what I'm going to show you
+
+63
+00:05:37,280 --> 00:05:39,240
+next here.
+
+64
+00:05:39,240 --> 00:05:47,280
+So like I said, there's several services that you will have to shuttle your data through.
+
+65
+00:05:47,280 --> 00:05:53,480
+This could potentially also be an open source, so there's open source gateways that you can
+
+66
+00:05:53,480 --> 00:05:55,960
+shuttle your service through.
+
+67
+00:05:55,960 --> 00:05:58,760
+And here's a map of Austin.
+
+68
+00:05:58,800 --> 00:06:01,520
+One of these networks is called the Things Network.
+
+69
+00:06:01,520 --> 00:06:08,840
+It seems to be a lot more sensors in Europe than there is in the US, but you can see there's
+
+70
+00:06:08,840 --> 00:06:12,920
+quite a few sensors around Austin.
+
+71
+00:06:12,920 --> 00:06:19,200
+So if you're using the Things Network and your sensor is close to one of these, you'll
+
+72
+00:06:19,200 --> 00:06:28,200
+be able to shuttle data from your sensor through the Things Network and then over to your application.
+
+73
+00:06:29,000 --> 00:06:32,760
+And again, we're going to get into if you want.
+
+74
+00:06:32,760 --> 00:06:39,120
+So the range that we're talking about for these sensors is in kilometers.
+
+75
+00:06:39,120 --> 00:06:42,520
+So not a lot, particularly a lot of sensors here.
+
+76
+00:06:42,520 --> 00:06:46,480
+You could potentially be out of range, so we'll talk about maybe setting up your own
+
+77
+00:06:46,480 --> 00:06:50,360
+gateway here in a little bit.
+
+78
+00:06:50,360 --> 00:06:57,440
+So one of the other networks in the US is the Helium Network, and you can see they have
+
+79
+00:06:57,440 --> 00:07:02,880
+quite a few more gateways in Austin.
+
+80
+00:07:02,880 --> 00:07:12,880
+So potentially you could get through their network with a higher probability.
+
+81
+00:07:12,880 --> 00:07:19,760
+Now the Helium Network is kind of interesting because it's like a Wi-Fi router, and then
+
+82
+00:07:19,760 --> 00:07:23,200
+they built the LoRa protocol into it.
+
+83
+00:07:23,200 --> 00:07:27,440
+So they've been, I think they launched last year.
+
+84
+00:07:27,440 --> 00:07:29,760
+They were selling these Wi-Fi routers.
+
+85
+00:07:29,760 --> 00:07:33,360
+So if you look, I don't know if you can see it on this picture, but you'll see like a
+
+86
+00:07:33,360 --> 00:07:35,400
+lot of businesses.
+
+87
+00:07:35,400 --> 00:07:42,120
+So you have these gateways and a lot of businesses, they're serving up Wi-Fi, but then also able
+
+88
+00:07:42,120 --> 00:07:44,960
+to ingest sensor data.
+
+89
+00:07:44,960 --> 00:07:47,400
+I haven't particularly used them.
+
+90
+00:07:47,400 --> 00:07:49,200
+We're going to go over to Things Network.
+
+91
+00:07:49,200 --> 00:07:52,360
+They've been around a little bit longer than Helium has.
+
+92
+00:07:52,360 --> 00:07:56,760
+Helium just launched this past year.
+
+93
+00:07:56,760 --> 00:08:02,120
+But you can see though, because of this kind of router scheme that they have, they've grown
+
+94
+00:08:02,120 --> 00:08:05,720
+in the US at least a lot faster.
+
+95
+00:08:05,720 --> 00:08:07,440
+All right.
+
+96
+00:08:07,440 --> 00:08:09,760
+So let's talk about the gateways.
+
+97
+00:08:09,760 --> 00:08:15,400
+So again, if you have one of these, we'll go back to these pictures here, if you're
+
+98
+00:08:15,480 --> 00:08:24,000
+buy one of these points, you could potentially set up a sensor, sign up for this service,
+
+99
+00:08:24,000 --> 00:08:30,520
+Helium service, and your sensor could go through there and it reports back to your application.
+
+100
+00:08:30,520 --> 00:08:35,280
+However, I'm out here in Canyon Lake.
+
+101
+00:08:35,280 --> 00:08:38,800
+And so here's my area.
+
+102
+00:08:39,200 --> 00:08:45,680
+And the nearest one before I made mine was in Fisher, Texas, but I'm down here.
+
+103
+00:08:45,680 --> 00:08:49,360
+So you can see though, this is my gateway.
+
+104
+00:08:49,360 --> 00:08:54,160
+I wanted to put a water temperature sensor in the lake.
+
+105
+00:08:54,160 --> 00:08:59,320
+And so I had nothing for miles and miles.
+
+106
+00:08:59,320 --> 00:09:03,360
+And so I had to build a gateway.
+
+107
+00:09:03,360 --> 00:09:11,360
+So like I said, the range for Laura, it actually really highly depends on the sensor that you're
+
+108
+00:09:11,360 --> 00:09:14,240
+building and how much power you want to run through it.
+
+109
+00:09:14,240 --> 00:09:19,840
+But in a city, typically two to three kilometers out in a rural area, if you just have like
+
+110
+00:09:19,840 --> 00:09:26,720
+a big field and a big straight line of sight, you can get five to seven kilometers.
+
+111
+00:09:26,720 --> 00:09:33,000
+Again, if you kind of go past the recommended specs for some of these things, they've had
+
+112
+00:09:33,640 --> 00:09:41,320
+tests go to hundreds of kilometers and someone even tested out a satellite.
+
+113
+00:09:41,320 --> 00:09:48,400
+So they sent up a small satellite and were able to get Laura devices to talk to the satellite.
+
+114
+00:09:48,400 --> 00:09:50,320
+That would be really nice.
+
+115
+00:09:50,320 --> 00:09:53,640
+So out here at the lake, it's really hilly.
+
+116
+00:09:53,640 --> 00:10:00,000
+So if I don't have a straight line of sight to my antenna, I'm not going to get that signal.
+
+117
+00:10:00,000 --> 00:10:04,240
+But if you have a satellite, you might need more power to get to it.
+
+118
+00:10:04,240 --> 00:10:10,040
+But you always have a straight line of sight at some time of the day whenever it's overhead.
+
+119
+00:10:10,040 --> 00:10:15,360
+So I actually built this rack gateway.
+
+120
+00:10:15,360 --> 00:10:17,520
+And here's a picture of it.
+
+121
+00:10:17,520 --> 00:10:23,800
+And you can kind of go as expensive or as cheap as you want to go.
+
+122
+00:10:23,800 --> 00:10:27,120
+It just depends how much money you want to spend.
+
+123
+00:10:27,120 --> 00:10:29,880
+You could go really cheap.
+
+124
+00:10:29,880 --> 00:10:33,880
+The really cheap gateways usually only have one channel.
+
+125
+00:10:33,880 --> 00:10:37,400
+And so it's not really like a full size gateway.
+
+126
+00:10:37,400 --> 00:10:39,920
+A gateway like this is still pretty cheap.
+
+127
+00:10:39,920 --> 00:10:46,320
+I think it was a I think you can get them for 100 or 200 bucks now.
+
+128
+00:10:46,320 --> 00:10:51,840
+But it has all eight channels that you can use with the gateway.
+
+129
+00:10:51,840 --> 00:10:55,200
+And you can see actually this model additionally.
+
+130
+00:10:55,920 --> 00:11:02,720
+I believe it's this left hand top on the left is the Lora antenna.
+
+131
+00:11:02,720 --> 00:11:04,680
+It has a GPS antenna.
+
+132
+00:11:04,680 --> 00:11:08,080
+And then these two bottom ones are actually LTE.
+
+133
+00:11:08,080 --> 00:11:15,600
+So there's an LTE model where you could send data over the internet through a wireless carrier.
+
+134
+00:11:15,600 --> 00:11:17,200
+I just got the Wi-Fi model.
+
+135
+00:11:17,200 --> 00:11:19,800
+So I have mine sitting at my house.
+
+136
+00:11:19,800 --> 00:11:25,240
+And when sensor data comes in, it just transmits it through my Wi-Fi.
+
+137
+00:11:25,240 --> 00:11:28,000
+And this is actually just a Raspberry Pi.
+
+138
+00:11:28,000 --> 00:11:30,640
+So you can buy these, make these on your own.
+
+139
+00:11:30,640 --> 00:11:34,360
+Actually, you could even just buy the pieces individually and put them in a case.
+
+140
+00:11:34,360 --> 00:11:36,920
+That's all this really is.
+
+141
+00:11:36,920 --> 00:11:39,920
+But it's nice to kind of bundle it all together for you.
+
+142
+00:11:39,920 --> 00:11:46,040
+And Helium is even now selling this as one of their gateways.
+
+143
+00:11:46,040 --> 00:11:48,280
+They gave it some kind of other name.
+
+144
+00:11:48,360 --> 00:11:53,880
+This is the original Helium hotspot over here that includes Lora.
+
+145
+00:11:53,880 --> 00:12:00,960
+But if you buy this gateway on your own, you can run a private Lora gateway server
+
+146
+00:12:00,960 --> 00:12:05,080
+and then just shuttle the data to your application directly.
+
+147
+00:12:05,080 --> 00:12:10,840
+Or you can install the Things network and shuttle data through there.
+
+148
+00:12:10,840 --> 00:12:14,920
+So the nice thing, though, is if you use one of these gateways
+
+149
+00:12:14,920 --> 00:12:17,880
+and you're on the Things or the Helium network,
+
+150
+00:12:17,880 --> 00:12:21,600
+other people can also send data through.
+
+151
+00:12:21,600 --> 00:12:28,400
+So back to the security of LoraWAN, the packets,
+
+152
+00:12:28,400 --> 00:12:34,280
+and we'll show how this is set up here shortly, are all encrypted.
+
+153
+00:12:34,280 --> 00:12:39,920
+So the idea is that just as long as you're in range of any gateway,
+
+154
+00:12:39,920 --> 00:12:46,160
+you can transmit your data safely to your application in an encrypted manner.
+
+155
+00:12:46,160 --> 00:12:54,960
+So if you're in Canyon Lake and you have a Lora device,
+
+156
+00:12:54,960 --> 00:12:57,200
+you can go through my gateway.
+
+157
+00:12:57,200 --> 00:13:02,320
+And of course, now I have mine hooked up to the Things network currently.
+
+158
+00:13:02,320 --> 00:13:08,480
+So if you had it hooked up to the Helium network, it's not going to do much.
+
+159
+00:13:08,480 --> 00:13:11,160
+I don't think they have an interconnect.
+
+160
+00:13:11,160 --> 00:13:14,400
+But that could possibly happen in the future.
+
+161
+00:13:14,400 --> 00:13:17,480
+But if you're hooked up to the Things network, you'll be able to transmit data.
+
+162
+00:13:17,480 --> 00:13:20,520
+So it's an open device.
+
+163
+00:13:20,520 --> 00:13:25,080
+Anyone in the area can send data through.
+
+164
+00:13:25,080 --> 00:13:29,400
+But like we talked about, the LoraWAN also has budgets.
+
+165
+00:13:29,400 --> 00:13:35,080
+So if a sensor is sending too much data through the network,
+
+166
+00:13:35,080 --> 00:13:41,480
+part of the LoraWAN protocol is budgets so that it will stop picking up that
+
+167
+00:13:41,760 --> 00:13:44,400
+or stop it going through.
+
+168
+00:13:44,400 --> 00:13:47,720
+But for the most part, we don't really have to worry about this
+
+169
+00:13:47,720 --> 00:13:49,760
+because we're talking about low-power devices.
+
+170
+00:13:49,760 --> 00:13:51,520
+We're talking about sensors.
+
+171
+00:13:51,520 --> 00:13:57,840
+And it's not like they're sending gigabytes worth of video or anything like that.
+
+172
+00:13:57,840 --> 00:14:01,120
+All right, so that's the gateway.
+
+173
+00:14:01,120 --> 00:14:03,520
+Here's a picture of the sensor I built.
+
+174
+00:14:03,520 --> 00:14:05,840
+So let's talk about the sensors a little bit.
+
+175
+00:14:05,840 --> 00:14:09,720
+So I wanted to go over my build here.
+
+176
+00:14:09,720 --> 00:14:15,920
+And actually, let's look up here, the Rack Gateway.
+
+177
+00:14:15,920 --> 00:14:22,720
+So you can go as much of this you want to build yourself.
+
+178
+00:14:22,720 --> 00:14:23,600
+You can build it.
+
+179
+00:14:23,600 --> 00:14:27,720
+You can see there's a little Rack Gateway that we're talking about.
+
+180
+00:14:27,720 --> 00:14:34,120
+But there's also all kinds of sensors already pre-built.
+
+181
+00:14:34,120 --> 00:14:38,840
+So if you don't want to build a sensor, you can go out there and buy some.
+
+182
+00:14:38,920 --> 00:14:44,240
+So this right here is a home sensor, I think, for weather.
+
+183
+00:14:44,240 --> 00:14:47,360
+So if you wanted a weather sensor, you could just buy this.
+
+184
+00:14:47,360 --> 00:14:53,600
+And if you're close to a gateway, it could start reporting data.
+
+185
+00:14:53,600 --> 00:14:56,760
+I think this one right here is like a GPS.
+
+186
+00:14:56,760 --> 00:14:58,600
+Maybe these two are GPS sensors.
+
+187
+00:14:58,600 --> 00:15:05,360
+So what you would do is you could stick this on like a car and track the car.
+
+188
+00:15:05,360 --> 00:15:07,840
+And so it's got a GPS built in.
+
+189
+00:15:07,840 --> 00:15:12,160
+So it tracks where that car is.
+
+190
+00:15:12,160 --> 00:15:17,960
+And when it's in range of a lower gateway, it will transmit the location
+
+191
+00:15:17,960 --> 00:15:20,240
+where the car has been.
+
+192
+00:15:20,240 --> 00:15:21,880
+So that's a couple pre-built.
+
+193
+00:15:21,880 --> 00:15:23,600
+This is just Rack.
+
+194
+00:15:23,600 --> 00:15:28,560
+There's actually tons of other sensors pre-built that you can buy.
+
+195
+00:15:28,560 --> 00:15:32,080
+And you can just throw up on the network.
+
+196
+00:15:32,080 --> 00:15:36,280
+Like I said, I wanted to build a temperature sensor for the lake.
+
+197
+00:15:36,280 --> 00:15:40,040
+And so I wanted something that I could stick in the water.
+
+198
+00:15:40,040 --> 00:15:45,440
+So you can see down here, there's a big long cable that's like, I think,
+
+199
+00:15:45,440 --> 00:15:50,040
+nine feet long that I can stick in the water and is waterproof.
+
+200
+00:15:50,040 --> 00:15:53,560
+And then I also needed something waterproof for rain so that I could just
+
+201
+00:15:53,560 --> 00:15:56,200
+stick it out there and not have to worry about it.
+
+202
+00:15:56,200 --> 00:15:58,800
+So I went ahead and built mine.
+
+203
+00:15:58,800 --> 00:16:03,680
+You can see it runs on solar power also.
+
+204
+00:16:03,680 --> 00:16:06,440
+So what's inside that box there?
+
+205
+00:16:06,440 --> 00:16:09,800
+How did I build my sensor?
+
+206
+00:16:09,800 --> 00:16:14,560
+And I put some of these down because there's actually a million ways to build
+
+207
+00:16:14,560 --> 00:16:17,640
+these sensors, but it's nice to have a reference.
+
+208
+00:16:17,640 --> 00:16:22,560
+And also this Voltaic Systems battery and solar panel.
+
+209
+00:16:22,560 --> 00:16:29,160
+The battery is specifically designed to be charged with a solar panel.
+
+210
+00:16:29,160 --> 00:16:31,240
+So it can do trickle charging.
+
+211
+00:16:31,280 --> 00:16:35,920
+Solar panels of that size do not produce that much energy.
+
+212
+00:16:35,920 --> 00:16:38,120
+So you need something that can be trickle charged.
+
+213
+00:16:38,120 --> 00:16:43,000
+And also if it runs out, let's say there's a couple of days of cloudy weather
+
+214
+00:16:43,000 --> 00:16:49,640
+and my battery runs out, the battery from this Voltaic Systems actually will
+
+215
+00:16:49,640 --> 00:16:52,840
+power back on when it gets recharged.
+
+216
+00:16:52,840 --> 00:16:57,560
+So it waits until it gets to like 25% and turns back on.
+
+217
+00:16:57,560 --> 00:17:04,120
+So it has special features that are nice for building a sensor like this.
+
+218
+00:17:04,120 --> 00:17:07,240
+I also used a Raspberry Pi Zero.
+
+219
+00:17:07,240 --> 00:17:09,320
+So that's in the box.
+
+220
+00:17:09,320 --> 00:17:11,000
+I use a digital temperature sensor.
+
+221
+00:17:11,000 --> 00:17:17,560
+So that cable with the long temperature probe, that's this model here
+
+222
+00:17:17,560 --> 00:17:20,680
+that you can see.
+
+223
+00:17:20,680 --> 00:17:26,160
+So on top of my Raspberry Pi, or I guess soldered to it,
+
+224
+00:17:26,160 --> 00:17:29,480
+I put this model of transceiver.
+
+225
+00:17:29,480 --> 00:17:34,000
+I got most of, I think, these two things from Adafruit.
+
+226
+00:17:34,000 --> 00:17:35,160
+So that's a good place.
+
+227
+00:17:35,160 --> 00:17:37,560
+But I also got some of the stuff off of Amazon.
+
+228
+00:17:37,560 --> 00:17:41,160
+So look there.
+
+229
+00:17:41,160 --> 00:17:49,840
+And apparently I had a waterproof box, as most of us would say.
+
+230
+00:17:49,840 --> 00:17:51,680
+So that's what was inside.
+
+231
+00:17:51,680 --> 00:17:57,560
+Now, you could potentially use, like I said, all kinds of other different parts.
+
+232
+00:17:57,560 --> 00:18:05,240
+The Raspberry Pi Zero is a little bit more power hungry than, let's say,
+
+233
+00:18:05,240 --> 00:18:07,920
+some of the other smaller boards.
+
+234
+00:18:07,920 --> 00:18:13,800
+But with that said, why I like the Raspberry Pi Zero is it's just plain Linux
+
+235
+00:18:13,800 --> 00:18:15,680
+and I can run Python on it.
+
+236
+00:18:15,680 --> 00:18:18,320
+So it made it very easy.
+
+237
+00:18:18,320 --> 00:18:21,560
+I'm just learning things here and sticking stuff together.
+
+238
+00:18:21,560 --> 00:18:28,720
+So the fact that I could just use Linux and Python, that was a big win for me.
+
+239
+00:18:28,720 --> 00:18:36,640
+And the extra draw of the Raspberry Pi Zero, which isn't very much,
+
+240
+00:18:36,640 --> 00:18:42,240
+but it's enough that for a device like this, the battery, I think,
+
+241
+00:18:42,240 --> 00:18:44,880
+lasts me two days maybe at the most.
+
+242
+00:18:44,880 --> 00:18:49,840
+So if I don't have a sunny day, like an Arduino would have been better.
+
+243
+00:18:49,840 --> 00:18:53,960
+But just buy a bigger battery and a bigger solar panel.
+
+244
+00:18:53,960 --> 00:18:58,760
+So I think the Arduino might have been cheaper, too,
+
+245
+00:18:58,760 --> 00:19:02,400
+in terms of some of the other pieces, because I could have made the battery
+
+246
+00:19:02,400 --> 00:19:04,120
+smaller and solar panel smaller.
+
+247
+00:19:04,120 --> 00:19:12,400
+But like I said, I wanted to be able to do Python and just handle Linux as usual.
+
+248
+00:19:12,440 --> 00:19:17,160
+So I bought all these parts, kind of found out what I wanted to do.
+
+249
+00:19:17,160 --> 00:19:22,280
+And at this point, I'm like, I have no idea what I'm doing.
+
+250
+00:19:22,280 --> 00:19:25,240
+I'm soldering stuff and I'm not really a hardware person,
+
+251
+00:19:25,240 --> 00:19:27,360
+not very good at soldering.
+
+252
+00:19:27,360 --> 00:19:32,000
+But eventually, I was able to figure it out and get something going.
+
+253
+00:19:32,000 --> 00:19:39,320
+I think I blew out maybe one Raspberry Pi Zero.
+
+254
+00:19:39,320 --> 00:19:41,640
+They're only like $10.
+
+255
+00:19:41,640 --> 00:19:46,080
+I blew out a temperature sensor because I soldered it wrong.
+
+256
+00:19:46,080 --> 00:19:49,560
+And I think I killed a transceiver also.
+
+257
+00:19:49,560 --> 00:19:54,400
+So just about all these parts where you had to solder stuff together,
+
+258
+00:19:54,400 --> 00:20:01,240
+I think I blew them all out at least once and had to buy an additional one.
+
+259
+00:20:01,240 --> 00:20:03,200
+But eventually, I got something working.
+
+260
+00:20:03,200 --> 00:20:08,160
+And so, yeah, let's actually look at some Python now.
+
+261
+00:20:08,160 --> 00:20:09,960
+And this isn't all of my Python.
+
+262
+00:20:09,960 --> 00:20:12,880
+I didn't want to post everything.
+
+263
+00:20:12,880 --> 00:20:18,680
+I cut a lot out because depending on the sensor you get and the hardware
+
+264
+00:20:18,680 --> 00:20:24,960
+that you're using, this could change a lot.
+
+265
+00:20:24,960 --> 00:20:30,120
+But what's really cool, though, is Adafruit publishes a lot of Python
+
+266
+00:20:30,120 --> 00:20:33,480
+libraries for these devices and a lot of code.
+
+267
+00:20:33,480 --> 00:20:37,600
+So when you buy a sensor of any particular type
+
+268
+00:20:37,640 --> 00:20:43,200
+for a radio of any particular type, look up the Python code.
+
+269
+00:20:43,200 --> 00:20:48,360
+And a lot of times, Adafruit will have the libraries out there that you can use.
+
+270
+00:20:48,360 --> 00:20:52,560
+So this piece of code is just reading the temperature.
+
+271
+00:20:52,560 --> 00:20:57,040
+So when you have everything set up and you have to go in and change
+
+272
+00:20:57,040 --> 00:21:00,200
+some settings on the Raspberry Pi and such.
+
+273
+00:21:00,200 --> 00:21:07,480
+But once you have that all set up, it shows up as a file on the file system.
+
+274
+00:21:07,480 --> 00:21:14,400
+And so reading the temperature is basically as easy as reading a file in Python, right?
+
+275
+00:21:14,400 --> 00:21:22,760
+So the number of that file changes, but that's the location for that particular sensor.
+
+276
+00:21:22,760 --> 00:21:28,000
+So when we get the temperature, let's go down here a little bit.
+
+277
+00:21:28,000 --> 00:21:38,680
+We're just reading that file, stripping away some of the spacing and such.
+
+278
+00:21:38,680 --> 00:21:46,600
+And the read raw temp, yeah, you can see it's just reading that file.
+
+279
+00:21:46,600 --> 00:21:53,720
+And it's looking for a line where it says t equals, so that that's where the temperature is.
+
+280
+00:21:53,720 --> 00:22:00,520
+I forget what units it is, but I want mine in degrees Fahrenheit.
+
+281
+00:22:00,520 --> 00:22:07,720
+So you have to do some a little bit of math there from high school to convert that temperature.
+
+282
+00:22:07,720 --> 00:22:10,920
+And then we were just return that temperature.
+
+283
+00:22:10,920 --> 00:22:16,720
+So, you know, it's pretty easy if you can read a file, do a little math.
+
+284
+00:22:16,720 --> 00:22:20,640
+That's how you get your temperature.
+
+285
+00:22:20,640 --> 00:22:24,160
+All right, moving on.
+
+286
+00:22:24,160 --> 00:22:27,320
+All right, so let's talk about sending the data.
+
+287
+00:22:27,320 --> 00:22:39,720
+Now, this is the code, the Python code I didn't really put in because the temperature data from different or the sensor data from different sensors is pretty consistent and works like that.
+
+288
+00:22:39,720 --> 00:22:43,080
+So that was kind of a nice little example of like showing reading a file.
+
+289
+00:22:43,080 --> 00:22:51,880
+But the different depending on the transceiver you get, those kind of work differently.
+
+290
+00:22:51,880 --> 00:22:59,160
+So I didn't really want to put that code in there because I don't even know if they sell that particular transceiver anymore.
+
+291
+00:22:59,160 --> 00:23:03,440
+So that changes a lot. You'll have to go look into that.
+
+292
+00:23:03,440 --> 00:23:08,920
+Again, Adafruit published a library for that transceiver that I could use.
+
+293
+00:23:08,920 --> 00:23:19,480
+But what I did want to talk about is once you kind of have that Python code to send the data, you will have to set it up on your network.
+
+294
+00:23:19,480 --> 00:23:28,000
+So whether it's the Helium, the Things Network or a private gateway that you have to set up.
+
+295
+00:23:28,000 --> 00:23:35,160
+So when you go in and this is a picture of setting up a device, let's go into my Things Network console here.
+
+296
+00:23:35,160 --> 00:23:43,480
+So first of all, before we talk about setting up the device, you can see here's my gateway.
+
+297
+00:23:43,480 --> 00:23:51,160
+So I set up my gateway and my devices, since they're around my house, talk to this gateway.
+
+298
+00:23:51,160 --> 00:23:53,560
+But then you can also set up applications.
+
+299
+00:23:53,560 --> 00:23:59,480
+So I have my application here and I have some devices on that application.
+
+300
+00:23:59,480 --> 00:24:04,680
+And so you can see when you register a device, you have to fill out some of this information.
+
+301
+00:24:04,680 --> 00:24:12,120
+These are the different keys that will be used to encrypt traffic for your sensor.
+
+302
+00:24:12,120 --> 00:24:21,680
+And some of these keys, you have to go ahead and put them in the code that you're running so that it can encrypt stuff properly.
+
+303
+00:24:21,680 --> 00:24:25,960
+And you can see this is the demo. I'm going to do a demo here.
+
+304
+00:24:25,960 --> 00:24:33,000
+I have one already set up so you can see some of my keys, the IDs.
+
+305
+00:24:33,000 --> 00:24:42,560
+So you have to put in these three things right here to be able to talk over the network.
+
+306
+00:24:42,560 --> 00:24:48,640
+So you have to register your device on whichever network you're using.
+
+307
+00:24:48,640 --> 00:24:54,720
+All right. So if you looked at the screenshot, you said it said low stick.
+
+308
+00:24:54,720 --> 00:25:02,480
+So while I was doing this, going through all this whole mess of trying to solder stuff
+
+309
+00:25:02,480 --> 00:25:10,320
+and constantly burning myself and burning out boards and stuff, I found this little thing.
+
+310
+00:25:10,320 --> 00:25:18,880
+And so this is a cool little device. If you're just kind of messing around and you just want to send some data through the network,
+
+311
+00:25:18,880 --> 00:25:25,200
+maybe you're not going to have a permanent sensor. This little low stick thing is really awesome.
+
+312
+00:25:25,200 --> 00:25:29,760
+And I think they make them in batches. So you can't get it on Amazon right now.
+
+313
+00:25:29,760 --> 00:25:36,440
+But they may have it in other places. Hopefully they'll make another batch here soon.
+
+314
+00:25:36,440 --> 00:25:41,360
+But this low stick, let's open that up, is a little USB device.
+
+315
+00:25:41,360 --> 00:25:51,560
+So you can plug it in and they have Python code that you can run and play with, play around with stuff.
+
+316
+00:25:51,600 --> 00:26:05,160
+And since it's a serial device, it makes it really easy to send data over LoRa because you're just doing text commands.
+
+317
+00:26:05,160 --> 00:26:12,520
+So and we'll see some of those here in a second. And actually, what I did, this takes up a little bit more power.
+
+318
+00:26:12,520 --> 00:26:17,560
+But I made a version two of my sensor. I use this instead.
+
+319
+00:26:17,560 --> 00:26:26,960
+So instead of having solder stuff into the board, I just got a little USB adapter for the Raspberry Pi and made a version two.
+
+320
+00:26:26,960 --> 00:26:36,600
+This takes up more energy for sure, more power. But it was just kind of nice to build it fast and stick this on there.
+
+321
+00:26:36,600 --> 00:26:44,360
+And then use somewhat simpler Python here that we'll see here in a second.
+
+322
+00:26:44,360 --> 00:26:51,240
+And so it comes with examples in the code. We're going to look at this one for our demonstration here.
+
+323
+00:26:51,240 --> 00:26:57,800
+And so I'll show that code off here in a second. So I highly recommend this for testing.
+
+324
+00:26:57,800 --> 00:27:03,120
+Or even if you want to make a device, it works actually pretty great.
+
+325
+00:27:03,120 --> 00:27:10,000
+So here's some of the Python from the low stick. And this is in some of those example files.
+
+326
+00:27:10,000 --> 00:27:14,120
+Again, I just kind of cut out the important part.
+
+327
+00:27:14,120 --> 00:27:19,840
+And so you're just talking over a serial port. So you open that port.
+
+328
+00:27:19,840 --> 00:27:27,360
+And then you're sending text commands. So this is where you can see when we looked at.
+
+329
+00:27:27,360 --> 00:27:39,680
+My device registration over here and the application ID, put that in an application key, put that in and I have a device ID also.
+
+330
+00:27:39,680 --> 00:27:50,280
+And then you say, join the network. So OTAA is a type of network protocol.
+
+331
+00:27:50,280 --> 00:27:56,240
+This is the newer encryption scheme. There's actually an older encryption scheme.
+
+332
+00:27:56,240 --> 00:28:00,000
+You could also potentially use that, but this is the newer, more secure version.
+
+333
+00:28:00,000 --> 00:28:07,120
+So probably want to use this this scheme if you want the best security.
+
+334
+00:28:07,160 --> 00:28:13,720
+And then so once we join the network. We just send the command.
+
+335
+00:28:13,720 --> 00:28:21,840
+So with each packet in Lora, part of the protocol is you send a counter and the things network,
+
+336
+00:28:21,840 --> 00:28:26,960
+other networks will actually check this counter to make sure it's always increasing.
+
+337
+00:28:26,960 --> 00:28:33,760
+And that way, it's part of the security check. You can turn that security check off, too.
+
+338
+00:28:33,760 --> 00:28:40,560
+But, you know, so when you send, let's say the temperature for my water sensor, then.
+
+339
+00:28:40,560 --> 00:28:46,200
+I said that once, you know, that's counter number one, I sent it again, counter number two, counter number three.
+
+340
+00:28:46,200 --> 00:28:51,720
+So if something ever comes as counter number one again, it's going to reject it.
+
+341
+00:28:51,720 --> 00:28:57,240
+And then so I send the counter, but then I also transmit some data.
+
+342
+00:28:57,240 --> 00:29:02,480
+And so this is where I'm transmitting some data and I'm sending a data packet.
+
+343
+00:29:02,480 --> 00:29:11,600
+So a lot easier because I just open device again, almost like a file and send some commands through.
+
+344
+00:29:11,600 --> 00:29:14,720
+So a lot easier to use if you're just playing around with things.
+
+345
+00:29:14,720 --> 00:29:24,640
+Not again, not the best, though, if you're trying to make like a really low power device or sensor.
+
+346
+00:29:24,640 --> 00:29:29,240
+All right. So I think I put the picture here. Yeah.
+
+347
+00:29:29,240 --> 00:29:34,640
+So we talked about our sensor over here. We talked about the gateway.
+
+348
+00:29:34,640 --> 00:29:40,920
+You'll build or use a gateway next to you. We talked about the network server.
+
+349
+00:29:40,920 --> 00:29:45,120
+So that was the things network or helium or your own private gateway.
+
+350
+00:29:45,120 --> 00:29:53,400
+Again, there's open source, there's open source gateway network servers that you can run.
+
+351
+00:29:53,400 --> 00:29:56,920
+So the last part is this these lines over here.
+
+352
+00:29:56,920 --> 00:30:01,200
+So it comes into the network service.
+
+353
+00:30:01,200 --> 00:30:09,480
+Now you want to transmit it back to some application or database.
+
+354
+00:30:09,480 --> 00:30:15,600
+So with the things network, they have several integrations.
+
+355
+00:30:15,600 --> 00:30:18,480
+You can see down here, this is the one I'm going to be using.
+
+356
+00:30:18,480 --> 00:30:23,160
+It's an HTTP integration, but they have several other integrations.
+
+357
+00:30:23,200 --> 00:30:29,960
+So when data comes in and they even kind of have like a like Cloud Function type deal,
+
+358
+00:30:29,960 --> 00:30:38,920
+so you could transform some of the data and send it off to one of these integrations.
+
+359
+00:30:38,920 --> 00:30:46,360
+I'm just going to do straight HTTP and send that data over to my server.
+
+360
+00:30:46,360 --> 00:30:51,680
+All right. So now I think it's time for our demo.
+
+361
+00:30:51,680 --> 00:30:53,160
+So let's check this out.
+
+362
+00:30:56,440 --> 00:31:06,400
+All right. So this is and this is the low stick code straight from that GitHub that I showed off earlier.
+
+363
+00:31:06,400 --> 00:31:13,360
+And I went ahead and just plugged in all of my IDs, hardcoded them into the file.
+
+364
+00:31:13,360 --> 00:31:16,920
+But normally you can run this with command line switches.
+
+365
+00:31:16,920 --> 00:31:18,480
+And so let's start this up.
+
+366
+00:31:18,480 --> 00:31:21,800
+So this is going to simulate my sensor.
+
+367
+00:31:21,800 --> 00:31:28,240
+I'm just sending random integers through as data.
+
+368
+00:31:28,240 --> 00:31:30,800
+But this is coming off my low stick.
+
+369
+00:31:30,800 --> 00:31:33,080
+So you can see. All right.
+
+370
+00:31:33,080 --> 00:31:35,960
+It's going to try to join a network.
+
+371
+00:31:35,960 --> 00:31:39,920
+Hopefully it will find my gateway here.
+
+372
+00:31:39,920 --> 00:31:44,280
+And it hasn't found anything yet.
+
+373
+00:31:44,280 --> 00:31:45,960
+All right. So let's look while that's going.
+
+374
+00:31:46,000 --> 00:31:49,160
+So that's going to keep on looping until it can up.
+
+375
+00:31:49,160 --> 00:31:55,160
+There we go. We got accepted onto the network and we transmitted some data.
+
+376
+00:31:55,160 --> 00:31:59,760
+All right. So let's go over to our things network here.
+
+377
+00:31:59,760 --> 00:32:04,720
+And we got this device and we can look at the data in real time.
+
+378
+00:32:04,720 --> 00:32:13,760
+So that little lower when example from low stick, it just sends, like I said, like an integer over and then you can see it.
+
+379
+00:32:13,760 --> 00:32:17,960
+So the counter is increasing every time it loops.
+
+380
+00:32:17,960 --> 00:32:23,360
+I think it's like every five seconds here, we'll see a piece of data come through.
+
+381
+00:32:23,360 --> 00:32:26,240
+So back to our picture.
+
+382
+00:32:26,240 --> 00:32:31,280
+So we have our low stick sending data to our gateway.
+
+383
+00:32:31,280 --> 00:32:38,120
+So the gateway is in my house and then that connects via Wi-Fi to the things network.
+
+384
+00:32:38,120 --> 00:32:42,880
+And so we're seeing the data come into the things network here.
+
+385
+00:32:42,880 --> 00:32:45,320
+All right. So what's that last piece, though?
+
+386
+00:32:45,320 --> 00:32:49,480
+I actually have this hooked up to the HTTP integration.
+
+387
+00:32:49,480 --> 00:32:53,960
+Now, since this is just random data, we're just going to see a bunch of errors.
+
+388
+00:32:53,960 --> 00:33:00,120
+But here's my Heroku app. So this is out in the cloud somewhere on AWS.
+
+389
+00:33:00,120 --> 00:33:06,960
+And we can see every five seconds, it's hitting my sensors endpoint.
+
+390
+00:33:06,960 --> 00:33:09,600
+And again, this isn't real temperature data.
+
+391
+00:33:09,600 --> 00:33:14,960
+So it's trying to code the temperature data and it's just random data, so it's erring out.
+
+392
+00:33:14,960 --> 00:33:19,800
+But you can see this hitting the endpoint every five seconds and receiving the data.
+
+393
+00:33:23,200 --> 00:33:27,960
+And I think that's it. So that's our demo actually worked.
+
+394
+00:33:27,960 --> 00:33:32,280
+And you can see it's going to keep on transmitting until I shut it down.
+
+395
+00:33:32,280 --> 00:33:37,160
+But that's lower when and using Python.
+
+396
+00:33:37,160 --> 00:33:45,040
+Again, I'm in the go back to the first slide here on Pizza Panther and the Slack and on Twitter.
+
+397
+00:33:45,040 --> 00:33:54,120
+So if you have any questions about this or about the job that I said in the beginning of the presentation, send me a message. Thanks.
+

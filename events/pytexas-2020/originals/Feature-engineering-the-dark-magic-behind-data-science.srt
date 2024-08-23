@@ -1,0 +1,1236 @@
+1
+00:00:00,000 --> 00:00:18,760
+Hey everyone, thank you for tuning in.
+
+2
+00:00:18,760 --> 00:00:21,600
+I hope you're all having a great virtual conference.
+
+3
+00:00:21,600 --> 00:00:25,960
+My name is Serena and I'm a data scientist on the multi-channel data team at Shopify
+
+4
+00:00:25,960 --> 00:00:26,960
+in Toronto.
+
+5
+00:00:27,600 --> 00:00:30,800
+One of the most common questions I get from friends who are familiar with machine
+
+6
+00:00:30,800 --> 00:00:34,880
+learning but don't work in data science is how do you decide what data to use to
+
+7
+00:00:34,880 --> 00:00:35,880
+train a model?
+
+8
+00:00:35,880 --> 00:00:39,560
+So today I'm going to talk a little bit about that process, which we call feature
+
+9
+00:00:39,560 --> 00:00:40,560
+engineering.
+
+10
+00:00:42,400 --> 00:00:46,160
+By the end of this talk, I hope that you'll be familiar with the concept of
+
+11
+00:00:46,160 --> 00:00:53,000
+feature and what that means in terms of data science and understand what
+
+12
+00:00:53,000 --> 00:00:55,800
+feature engineering is and why it's important.
+
+13
+00:00:56,200 --> 00:01:00,240
+And we'll also go over some basic techniques and practical examples of
+
+14
+00:01:00,240 --> 00:01:01,240
+feature engineering.
+
+15
+00:01:03,640 --> 00:01:08,000
+Before we jump into that, I want to take a step back and define our problem space.
+
+16
+00:01:08,800 --> 00:01:12,680
+Data science is a relatively young discipline and there's an ongoing
+
+17
+00:01:12,680 --> 00:01:16,760
+discussion on its definition and how it relates to various fields.
+
+18
+00:01:17,400 --> 00:01:21,160
+But in the day-to-day practice of organizations, a data scientist is someone
+
+19
+00:01:21,160 --> 00:01:27,480
+to that works to manipulate data and extract meaning from it using tools from
+
+20
+00:01:27,480 --> 00:01:31,720
+statistics, computer science, and some common sense and judgment too.
+
+21
+00:01:33,360 --> 00:01:37,880
+So a data scientist is typically involved in a variety of activities, and some of
+
+22
+00:01:37,880 --> 00:01:41,840
+them are strictly technical like data collection, processing and analysis.
+
+23
+00:01:42,520 --> 00:01:45,680
+But some require more human intuition, like understanding the domain of the
+
+24
+00:01:45,680 --> 00:01:50,080
+problem, identifying what information is going to be relevant to solve it and
+
+25
+00:01:50,080 --> 00:01:54,400
+making recommendations to the business on the basis of the results of the analysis.
+
+26
+00:01:54,840 --> 00:01:58,520
+So a data scientist sits between engineering and business, bridging the
+
+27
+00:01:58,520 --> 00:01:59,440
+gap between the two.
+
+28
+00:02:01,920 --> 00:02:05,720
+Now, reality is messy, so representing it meaningfully with numbers is
+
+29
+00:02:05,720 --> 00:02:09,560
+challenging and it requires a fluid and iterative process.
+
+30
+00:02:09,880 --> 00:02:14,240
+So typically you'll start with a question or a problem to solve and you want to get
+
+31
+00:02:14,240 --> 00:02:17,800
+to some insights and a way to communicate them or action them.
+
+32
+00:02:18,800 --> 00:02:22,040
+But you'll go through this fluid, non-linear process and you'll probably
+
+33
+00:02:22,040 --> 00:02:28,600
+iterate through a few of the steps one time, a few times, maybe all of them over
+
+34
+00:02:28,600 --> 00:02:31,680
+and over before you're sat on an approach.
+
+35
+00:02:32,920 --> 00:02:36,280
+So feature engineering sits at the center of this process.
+
+36
+00:02:37,080 --> 00:02:41,960
+And in general, you'll have to iterate on it at least once or twice before coming up
+
+37
+00:02:42,200 --> 00:02:44,320
+with an approach that will work for your problem.
+
+38
+00:02:46,040 --> 00:02:47,040
+So what is a feature?
+
+39
+00:02:48,800 --> 00:02:52,960
+In software design, it's an intentional distinguishing characteristic of a piece
+
+40
+00:02:52,960 --> 00:02:57,360
+of software, and so that might refer to functionality or performance, but that's
+
+41
+00:02:57,360 --> 00:02:59,080
+not what we mean in machine learning.
+
+42
+00:03:00,240 --> 00:03:05,920
+In machine learning, a feature is an individual measurable property or the
+
+43
+00:03:05,920 --> 00:03:08,280
+characteristic of an object of analysis.
+
+44
+00:03:08,840 --> 00:03:12,960
+And so it's equivalent to the concept of variable in statistics.
+
+45
+00:03:13,200 --> 00:03:16,200
+And in fact, I'm going to use variable and feature with the same meaning in
+
+46
+00:03:16,200 --> 00:03:17,480
+this talk going forward.
+
+47
+00:03:18,800 --> 00:03:23,200
+So if you're thinking of a data set, your columns, those are your variables
+
+48
+00:03:23,200 --> 00:03:24,320
+and those are your features.
+
+49
+00:03:27,720 --> 00:03:31,880
+Feature engineering is the process of manipulating raw data to produce
+
+50
+00:03:31,880 --> 00:03:38,080
+features that represent the problem at hand, doing so by extracting information,
+
+51
+00:03:38,280 --> 00:03:41,200
+highlighting patterns and incorporating domain knowledge.
+
+52
+00:03:41,640 --> 00:03:46,120
+So it lets us feed our analytical tools meaningful input, and it's the best way
+
+53
+00:03:46,120 --> 00:03:47,920
+to improve machine learning models.
+
+54
+00:03:50,400 --> 00:03:54,200
+More data, it's clever algorithms, but better data means more data.
+
+55
+00:03:54,400 --> 00:03:55,400
+I really like this talk.
+
+56
+00:03:55,440 --> 00:04:00,360
+I feel like it's really, it really summarizes a lot of what data science is.
+
+57
+00:04:01,240 --> 00:04:05,560
+It's another question that I get often is how much data do I need?
+
+58
+00:04:05,560 --> 00:04:08,000
+How much data do I need to solve this problem?
+
+59
+00:04:08,000 --> 00:04:12,360
+How much data do I need to train this model and have it answer correctly?
+
+60
+00:04:13,200 --> 00:04:18,360
+The answer generally is more, but really what you need is more quality data.
+
+61
+00:04:20,520 --> 00:04:24,720
+The concept of garbage in, garbage out is all about new in tech, but it really
+
+62
+00:04:24,720 --> 00:04:27,560
+becomes super relevant in the context of data science.
+
+63
+00:04:28,000 --> 00:04:32,040
+So the implications, because the implications can be quite serious.
+
+64
+00:04:32,320 --> 00:04:36,760
+So first of all, machine learning models are not smart per se.
+
+65
+00:04:36,880 --> 00:04:43,160
+No matter how fancy your math is, simple algorithms can outperform more complex
+
+66
+00:04:43,160 --> 00:04:45,520
+ones if they're trained on enough quality data.
+
+67
+00:04:46,680 --> 00:04:53,440
+And the other side of the coin is that incorrect, inconsistent and biased
+
+68
+00:04:53,440 --> 00:04:55,080
+data leads to wrong conclusions.
+
+69
+00:04:55,880 --> 00:05:00,120
+So the implications can be quite serious, especially as companies rely more and
+
+70
+00:05:00,120 --> 00:05:02,560
+more on data and models to make decisions.
+
+71
+00:05:03,400 --> 00:05:07,240
+Now let's make an example to really understand what feature engineering means.
+
+72
+00:05:08,240 --> 00:05:12,160
+Let's say we have a bunch of photos and we want to train a model to be able to
+
+73
+00:05:12,160 --> 00:05:15,160
+recognize if the object in the photo is a motorcycle.
+
+74
+00:05:16,760 --> 00:05:19,520
+In machine learning, this is called a classification problem.
+
+75
+00:05:20,000 --> 00:05:23,960
+And so for each photo, we want the algorithm to assign one of two labels,
+
+76
+00:05:24,000 --> 00:05:25,880
+motorbike or not motorbike in this case.
+
+77
+00:05:26,840 --> 00:05:30,800
+The problem of feature engineering then translates to finding a set of inputs
+
+78
+00:05:31,000 --> 00:05:36,120
+or features, which describe the photo in a way that makes it easier for the
+
+79
+00:05:36,120 --> 00:05:38,320
+model to assign the label correctly.
+
+80
+00:05:41,480 --> 00:05:45,400
+Let's take a few seconds to internalize where the problem comes from.
+
+81
+00:05:46,000 --> 00:05:52,400
+So as humans, we see a combination of shapes and colors, but the machine
+
+82
+00:05:53,080 --> 00:05:57,080
+sees an array of numbers and each of these numbers will be representing a color,
+
+83
+00:05:58,120 --> 00:06:00,200
+the color of a pixel in the photo.
+
+84
+00:06:02,800 --> 00:06:06,000
+So we need to find a way to represent it or to feed it to the model.
+
+85
+00:06:06,720 --> 00:06:10,440
+Let's assume that we want to just use a raw data and that we want to
+
+86
+00:06:10,440 --> 00:06:11,960
+limit the complexity of our model.
+
+87
+00:06:11,960 --> 00:06:15,440
+So instead of passing the entire array of pixels, we just pick two.
+
+88
+00:06:17,440 --> 00:06:21,280
+The naive approach would be to take two pixels and then pass them to
+
+89
+00:06:21,280 --> 00:06:24,400
+the model, which would be to take two pixels on the photo and feed it,
+
+90
+00:06:24,400 --> 00:06:25,280
+feed them to the model.
+
+91
+00:06:25,600 --> 00:06:30,200
+And this is equivalent to asking, for example, given that one pixel is
+
+92
+00:06:30,200 --> 00:06:34,880
+gray and one pixel is blue, is there a motorbike in this photo?
+
+93
+00:06:35,920 --> 00:06:39,440
+So that's a pretty hard question to answer even for a person.
+
+94
+00:06:40,120 --> 00:06:44,280
+And so if we use this set of raw features, any learning algorithm will
+
+95
+00:06:44,280 --> 00:06:47,200
+struggle to accurately classify our images.
+
+96
+00:06:47,200 --> 00:06:49,680
+An alternative approach might be to create new features.
+
+97
+00:06:49,840 --> 00:06:51,760
+So we'll create two binary features.
+
+98
+00:06:52,480 --> 00:06:57,440
+Wheels is true when the object in the photo has wheels and falls otherwise.
+
+99
+00:06:58,080 --> 00:07:03,040
+And handlebar very similarly as true when a handlebar appears in the photo.
+
+100
+00:07:04,400 --> 00:07:08,240
+Now, the question that we're asking to the algorithm this time is, even
+
+101
+00:07:08,240 --> 00:07:12,240
+though there are wheels and handlebar in this photo, is this a motorbike?
+
+102
+00:07:13,520 --> 00:07:15,360
+And so this is my answer to this question.
+
+103
+00:07:16,160 --> 00:07:18,000
+And so this is much easier to answer.
+
+104
+00:07:18,560 --> 00:07:23,040
+The model will not always be right, but training it on this set of features
+
+105
+00:07:23,040 --> 00:07:25,040
+will yield much more accurate results.
+
+106
+00:07:27,760 --> 00:07:32,960
+Both examples only use two features, but the second set of features performs
+
+107
+00:07:32,960 --> 00:07:37,040
+better because it embeds information that is more relevant to discriminating
+
+108
+00:07:37,040 --> 00:07:38,000
+between two classes.
+
+109
+00:07:39,040 --> 00:07:43,040
+Intuitively, knowing that there's some pixels are gray and some pixels are
+
+110
+00:07:43,120 --> 00:07:49,520
+blue is not, it's way less meaningful than knowing that there are wheels and
+
+111
+00:07:49,520 --> 00:07:50,800
+a handlebar in the photo.
+
+112
+00:07:51,440 --> 00:07:55,440
+So hopefully you're starting to see how we can obtain wildly different results
+
+113
+00:07:55,440 --> 00:07:58,560
+with the same number of inputs, with the same number of features.
+
+114
+00:08:01,200 --> 00:08:05,680
+That concept of better data, not necessarily more data.
+
+115
+00:08:06,880 --> 00:08:11,280
+And so using domain knowledge, motorbikes have wheels and they have
+
+116
+00:08:11,360 --> 00:08:12,000
+handlebars.
+
+117
+00:08:12,720 --> 00:08:16,480
+Using this knowledge, we were able to create new features that represent the
+
+118
+00:08:16,480 --> 00:08:19,600
+problem space efficiently and increase the accuracy of our model.
+
+119
+00:08:24,000 --> 00:08:28,400
+This is a quote that I love, coming up with features is difficult, time
+
+120
+00:08:28,400 --> 00:08:30,880
+consuming, and required expert's knowledge.
+
+121
+00:08:30,880 --> 00:08:33,360
+Applied machine learning is basically feature engineering.
+
+122
+00:08:34,000 --> 00:08:38,880
+Now, feature engineering is rarely formalized in theory, and sometimes
+
+123
+00:08:38,880 --> 00:08:41,280
+different data scientists will have slightly different opinions on what
+
+124
+00:08:41,280 --> 00:08:42,720
+counts as part of the process and whatnot.
+
+125
+00:08:43,280 --> 00:08:46,240
+For example, some might include some data cleaning steps under feature
+
+126
+00:08:46,240 --> 00:08:47,520
+engineering and some may not.
+
+127
+00:08:48,320 --> 00:08:53,680
+But the bottom line is that there are many ways to tackle any problem and no
+
+128
+00:08:53,680 --> 00:08:56,240
+single way to create features to a given use case.
+
+129
+00:08:58,480 --> 00:08:59,840
+So how do you come up with features?
+
+130
+00:09:02,000 --> 00:09:05,360
+The optimal set of features depends on the domain of the problem, the
+
+131
+00:09:05,360 --> 00:09:08,240
+questions we're trying to answer, the data that is available.
+
+132
+00:09:08,240 --> 00:09:12,240
+So the best approach really is talking to experts, practice, poke around your
+
+133
+00:09:12,240 --> 00:09:16,000
+data, experiment, try different things, iterate on it.
+
+134
+00:09:18,080 --> 00:09:26,240
+For the next part of the talk, I will go over an example and show how you would
+
+135
+00:09:26,240 --> 00:09:30,240
+go about creating some features and training a model on a data set.
+
+136
+00:09:31,680 --> 00:09:33,840
+I'm going to use the Kickstarter data set.
+
+137
+00:09:33,840 --> 00:09:35,440
+It's publicly available on Kaggle.
+
+138
+00:09:35,920 --> 00:09:42,240
+And so Kickstarter is a crowdfunding platform, and this is a collection of a
+
+139
+00:09:42,240 --> 00:09:49,600
+little over 300,000 projects that were set up on the website between 2009 and
+
+140
+00:09:49,600 --> 00:09:50,400
+2018.
+
+141
+00:09:52,000 --> 00:09:56,640
+So in this data set, each row represents one of these projects, and it contains
+
+142
+00:09:56,640 --> 00:10:01,840
+information such as the name, when it was launched, what was the monetary goal,
+
+143
+00:10:01,920 --> 00:10:06,160
+what was the state of the project, at the time of the export, and so on.
+
+144
+00:10:06,160 --> 00:10:07,840
+We have category and a few other things.
+
+145
+00:10:09,040 --> 00:10:12,320
+For the rest of the talk, I'll go over some examples of feature engineering
+
+146
+00:10:12,320 --> 00:10:16,080
+techniques that are commonly used day-to-day and that can be applied to
+
+147
+00:10:16,080 --> 00:10:17,360
+this example.
+
+148
+00:10:18,240 --> 00:10:22,640
+I won't be showing any code just because it's not particularly inspiring, but feel
+
+149
+00:10:22,640 --> 00:10:26,400
+free to reach out to me after the talk and I'll share a link to a notebook if
+
+150
+00:10:26,400 --> 00:10:27,680
+you're interested in it.
+
+151
+00:10:32,000 --> 00:10:37,360
+Step one, the very first thing we need to do is to define a problem.
+
+152
+00:10:37,360 --> 00:10:42,960
+And so in the context of feature engineering, this is really defining our
+
+153
+00:10:42,960 --> 00:10:46,800
+target, prepare it to be passed to our model.
+
+154
+00:10:48,400 --> 00:10:52,080
+In machine learning, the target is what in statistics we call predicted
+
+155
+00:10:52,080 --> 00:10:52,720
+variable.
+
+156
+00:10:52,720 --> 00:10:55,440
+So it's the outcome that we want to predict, and so it's super important that
+
+157
+00:10:55,440 --> 00:10:56,800
+we define it well.
+
+158
+00:10:57,360 --> 00:11:05,440
+The table on the left here shows a count of projects by state, and the first
+
+159
+00:11:05,440 --> 00:11:09,920
+thing we're going to do here is removing the projects that were live at the time
+
+160
+00:11:09,920 --> 00:11:10,640
+of the exports.
+
+161
+00:11:10,640 --> 00:11:12,400
+We don't have ground truth about this.
+
+162
+00:11:12,400 --> 00:11:16,240
+We don't know if they were successful or not, and so we just take them out of
+
+163
+00:11:16,240 --> 00:11:17,440
+the analysis completely.
+
+164
+00:11:18,400 --> 00:11:24,960
+So our task is to define a set of features that we can use to predict if a
+
+165
+00:11:25,920 --> 00:11:30,640
+project is going to be reaching its crowdfunding goal or not.
+
+166
+00:11:30,640 --> 00:11:39,680
+And so we actually transform the state column into a new feature, into a target
+
+167
+00:11:39,680 --> 00:11:42,560
+feature, which is just success or not.
+
+168
+00:11:47,440 --> 00:11:50,240
+The first thing we're going to look at is categorical features.
+
+169
+00:11:50,320 --> 00:11:58,320
+These are features that can take one of a limited set of possible values and
+
+170
+00:11:58,320 --> 00:12:02,160
+assign each unit of observation to a particular group or a particular
+
+171
+00:12:02,160 --> 00:12:05,520
+category based on some qualitative property.
+
+172
+00:12:07,600 --> 00:12:10,560
+You see we have a few in our data set.
+
+173
+00:12:11,840 --> 00:12:16,000
+Categorical features always need processing because learning algorithms
+
+174
+00:12:16,000 --> 00:12:17,840
+can only process numerical values.
+
+175
+00:12:17,840 --> 00:12:21,200
+Most algorithms use linear algebra or some other form of math.
+
+176
+00:12:23,600 --> 00:12:24,880
+That doesn't go well with strings.
+
+177
+00:12:25,440 --> 00:12:26,480
+It only takes numbers.
+
+178
+00:12:27,200 --> 00:12:32,880
+So we'll take a couple of raw features here and manipulate them so that we can
+
+179
+00:12:32,880 --> 00:12:35,840
+use them into a model, but we won't look at all of them.
+
+180
+00:12:38,320 --> 00:12:42,800
+The first and most common way to process categorical variables is one-hot
+
+181
+00:12:42,800 --> 00:12:43,440
+encoding.
+
+182
+00:12:43,440 --> 00:12:50,640
+What that means is that you take each category in your original variable and
+
+183
+00:12:51,920 --> 00:12:58,800
+you create a binary feature for each of the categories in the original data.
+
+184
+00:12:59,520 --> 00:13:07,520
+So if the first record main category was publishing, all of the new binaries will
+
+185
+00:13:07,520 --> 00:13:13,040
+have value zero for this project except for the one related to publishing.
+
+186
+00:13:13,280 --> 00:13:19,120
+So project two and three are in the category film and video and also have
+
+187
+00:13:19,120 --> 00:13:24,240
+zeros all the way except for film and video, the column related to film and
+
+188
+00:13:24,240 --> 00:13:25,920
+video and so on and so forth.
+
+189
+00:13:27,680 --> 00:13:32,880
+This is a super common way to do it and it yields this result, this matrix as a
+
+190
+00:13:32,880 --> 00:13:33,380
+result.
+
+191
+00:13:34,320 --> 00:13:41,200
+So we started with one raw feature and now we have 15 or something like that.
+
+192
+00:13:44,000 --> 00:13:48,400
+For the second example, we'll look at currency and we have the counts of
+
+193
+00:13:48,400 --> 00:13:49,360
+currencies here.
+
+194
+00:13:49,360 --> 00:13:55,120
+So we could probably process it the same way we want hot encoding, but if we look
+
+195
+00:13:55,120 --> 00:13:59,920
+at the distribution of currencies, of projects across currencies, we can see
+
+196
+00:13:59,920 --> 00:14:05,040
+that the vast majority of goals are set in USD.
+
+197
+00:14:05,040 --> 00:14:09,280
+So in the interest of reducing complexity and the number of inputs, we
+
+198
+00:14:09,280 --> 00:14:12,880
+create a single binary feature and group all of the other currencies together.
+
+199
+00:14:12,880 --> 00:14:17,120
+So it's going to become, is it this project's goal set in USD?
+
+200
+00:14:19,520 --> 00:14:27,280
+This is really what we did for the target just before, but there's no reason
+
+201
+00:14:27,280 --> 00:14:31,440
+to not use this technique again, especially because it allows us to keep
+
+202
+00:14:31,440 --> 00:14:34,960
+the number of features down and reduce the complexity of the model.
+
+203
+00:14:34,960 --> 00:14:39,920
+So going back to that concept that better data and formative data is better
+
+204
+00:14:39,920 --> 00:14:40,800
+than more data.
+
+205
+00:14:43,600 --> 00:14:49,200
+Dates and times, time steps are another data type that learning algorithms don't
+
+206
+00:14:49,200 --> 00:14:50,480
+process as is.
+
+207
+00:14:50,480 --> 00:14:54,960
+So there's typically a bit of work to be done in terms of processing temporal
+
+208
+00:14:54,960 --> 00:14:55,440
+features.
+
+209
+00:14:57,440 --> 00:15:02,160
+This can be as simple as extracting time features like the time of the day or
+
+210
+00:15:02,160 --> 00:15:07,280
+the time of the month or doing something more elaborated like working with time
+
+211
+00:15:07,280 --> 00:15:12,480
+deltas or creating time series features, looking at the trends, looking at cycles
+
+212
+00:15:12,480 --> 00:15:14,080
+or anything else that you can think of.
+
+213
+00:15:16,240 --> 00:15:18,800
+For these examples, I've made some simple assumptions.
+
+214
+00:15:18,800 --> 00:15:23,440
+So this is where you really kind of embedding the domain knowledge.
+
+215
+00:15:23,440 --> 00:15:26,800
+And to be fair, I don't really have a lot of domain knowledge, but I'm making
+
+216
+00:15:26,800 --> 00:15:28,000
+some assumptions here.
+
+217
+00:15:28,000 --> 00:15:34,640
+One is the time of the day and the weekday may affect how visible the project is in
+
+218
+00:15:34,640 --> 00:15:35,200
+first place.
+
+219
+00:15:35,200 --> 00:15:39,120
+And so that might affect how many people decide to pledge money.
+
+220
+00:15:40,080 --> 00:15:44,880
+And two, the time between launch and the deadline can probably have an influence
+
+221
+00:15:44,880 --> 00:15:45,520
+on the results.
+
+222
+00:15:45,520 --> 00:15:48,000
+So having more time may be more helpful, for example.
+
+223
+00:15:51,120 --> 00:15:59,120
+So I mostly worked with the launched column and extracted the hour of the day
+
+224
+00:15:59,120 --> 00:16:03,760
+and the week the project was launched.
+
+225
+00:16:03,760 --> 00:16:08,880
+I created a single numerical variable for the hour launched and a binary
+
+226
+00:16:08,880 --> 00:16:12,240
+variable for whether it was launched on a weekday or not.
+
+227
+00:16:12,240 --> 00:16:18,240
+So whether it was launched between Monday and Friday or on the weekend.
+
+228
+00:16:20,080 --> 00:16:23,600
+And then I calculated the difference between the launch date and the deadline
+
+229
+00:16:23,600 --> 00:16:24,320
+of the project.
+
+230
+00:16:30,160 --> 00:16:31,680
+Next are numerical features.
+
+231
+00:16:32,960 --> 00:16:34,800
+They are the easiest to manipulate.
+
+232
+00:16:35,440 --> 00:16:39,920
+And like I said before, the reason is standard sets of steps to take or a
+
+233
+00:16:39,920 --> 00:16:40,880
+technique to apply.
+
+234
+00:16:41,600 --> 00:16:43,040
+There's a couple of things to keep in mind.
+
+235
+00:16:44,480 --> 00:16:49,520
+Most algorithms will require that you normalize numerical values before
+
+236
+00:16:49,520 --> 00:16:50,560
+passing them as input.
+
+237
+00:16:51,280 --> 00:16:56,800
+This is so that all numerical variables have the same scale but don't lose the
+
+238
+00:16:56,800 --> 00:16:58,160
+difference between data points.
+
+239
+00:17:00,160 --> 00:17:04,640
+For this example, I'm actually using a random forest classifier in terms of
+
+240
+00:17:04,640 --> 00:17:08,320
+algorithm, which is robust to differences in scale.
+
+241
+00:17:09,120 --> 00:17:13,040
+So we don't actually need to normalize the features before training.
+
+242
+00:17:13,040 --> 00:17:15,360
+But this isn't the case for many algorithms.
+
+243
+00:17:15,360 --> 00:17:17,760
+So keep that in mind if you're working with one.
+
+244
+00:17:19,280 --> 00:17:23,600
+And then another point to remember is that most algorithms cannot handle
+
+245
+00:17:23,600 --> 00:17:24,400
+missing data.
+
+246
+00:17:24,400 --> 00:17:26,800
+So it's good practice to impute them before.
+
+247
+00:17:28,400 --> 00:17:34,000
+There's a whole field of statistics that we don't have the time to go into.
+
+248
+00:17:35,440 --> 00:17:39,120
+But it's good practice to make sure that you don't have missing data.
+
+249
+00:17:39,120 --> 00:17:42,400
+And if you do, fill them in with some sensible value.
+
+250
+00:17:42,400 --> 00:17:44,400
+And you can count that as feature engineering as well.
+
+251
+00:17:46,160 --> 00:17:52,400
+And then finally, you really can get creative with this and experiment with
+
+252
+00:17:52,400 --> 00:17:53,680
+many transformations.
+
+253
+00:17:53,680 --> 00:17:58,320
+So here I decided to create a new feature representing the number of projects
+
+254
+00:17:58,320 --> 00:17:59,920
+launched in the same week.
+
+255
+00:17:59,920 --> 00:18:03,040
+Under the assumption that maybe having a lot of projects coming out at the same
+
+256
+00:18:03,040 --> 00:18:07,680
+time makes it harder for someone to even discover a project that they want to
+
+257
+00:18:08,320 --> 00:18:09,120
+pledge money to.
+
+258
+00:18:13,360 --> 00:18:18,560
+Now we have engineered a few features, and we want to fit them to a learning
+
+259
+00:18:18,560 --> 00:18:22,480
+algorithm to build a predictive model for success of the project.
+
+260
+00:18:24,320 --> 00:18:28,000
+The features we have are related to category.
+
+261
+00:18:28,000 --> 00:18:32,800
+We have one for each category that was originally in the main category column.
+
+262
+00:18:33,760 --> 00:18:40,000
+Then we have is USD, which is a binary referring to the currency, whether the goal of
+
+263
+00:18:40,000 --> 00:18:42,240
+the financial goal is expressed in USD or not.
+
+264
+00:18:43,520 --> 00:18:51,200
+There is the hour the project was launched, whether it was launched on a weekday or not,
+
+265
+00:18:51,200 --> 00:19:00,640
+the days to the deadline, and the seven days count of projects launched in the same week.
+
+266
+00:19:01,200 --> 00:19:08,640
+So I used a random forest classifier, which generally performs well with minimal
+
+267
+00:19:08,640 --> 00:19:13,040
+parameter tuning, and optimization was a little bit beyond the scope of this example.
+
+268
+00:19:13,040 --> 00:19:15,600
+So the accuracy of the model isn't great.
+
+269
+00:19:15,600 --> 00:19:16,640
+It's around 60%.
+
+270
+00:19:17,680 --> 00:19:21,280
+But again, we did no absolutely no optimization.
+
+271
+00:19:21,280 --> 00:19:24,800
+And this is actually just the first pass that we took at feature engineering.
+
+272
+00:19:24,960 --> 00:19:34,240
+A nice thing about random forests, and one of the reasons why I used it, is that it provides
+
+273
+00:19:34,240 --> 00:19:37,440
+a normalized score for each feature importance.
+
+274
+00:19:37,440 --> 00:19:43,200
+So you can see highlighted in green which features had more predictive power.
+
+275
+00:19:44,320 --> 00:19:49,040
+So the features related to music, technology, and theater in terms of category.
+
+276
+00:19:49,680 --> 00:19:53,680
+Knowing whether the category is one of these three can be helpful,
+
+277
+00:19:53,680 --> 00:19:59,040
+or more helpful in predicting whether the project would be successful or not.
+
+278
+00:20:00,240 --> 00:20:05,520
+And then the next two features that were more useful is the goal.
+
+279
+00:20:05,520 --> 00:20:11,120
+So the amount of money that the person or the project was trying to fund,
+
+280
+00:20:11,760 --> 00:20:13,120
+and the dates to the deadline.
+
+281
+00:20:13,120 --> 00:20:17,840
+So the time between launch and when it's supposed to be rubbed up.
+
+282
+00:20:19,040 --> 00:20:23,520
+So typically we'd take this output and iterate onto the process.
+
+283
+00:20:24,480 --> 00:20:29,840
+Use it to inform which features we might be dropping, the ones that maybe are less useful,
+
+284
+00:20:31,200 --> 00:20:34,880
+and maybe iterate over this process a few more times.
+
+285
+00:20:34,880 --> 00:20:37,920
+So we'll drop some, maybe add some more,
+
+286
+00:20:37,920 --> 00:20:42,000
+experiment a little bit more with some of the features or the raw data,
+
+287
+00:20:42,960 --> 00:20:44,320
+and then train and test again.
+
+288
+00:20:45,840 --> 00:20:50,960
+And we do that basically until we're happy about the accuracy of the model.
+
+289
+00:20:54,240 --> 00:20:57,840
+So once again, there is no golden rule to solve feature engineering,
+
+290
+00:20:57,840 --> 00:21:00,800
+and there's no single unified approach that will guarantee
+
+291
+00:21:00,800 --> 00:21:03,200
+the optimal set of features for a given use case.
+
+292
+00:21:04,560 --> 00:21:08,320
+The features that you're going to extract and how you're going to combine them
+
+293
+00:21:08,320 --> 00:21:10,720
+depends on the domain of the problem,
+
+294
+00:21:10,720 --> 00:21:14,960
+the kind of insight you want to produce, and what data is available.
+
+295
+00:21:14,960 --> 00:21:17,920
+So like many other things in data science,
+
+296
+00:21:17,920 --> 00:21:22,880
+this is a fluid, iterative approach that involves a lot of trial and error.
+
+297
+00:21:22,880 --> 00:21:26,080
+Often you will return to revise your features
+
+298
+00:21:26,080 --> 00:21:28,800
+as more data becomes available, as priority shifts,
+
+299
+00:21:29,360 --> 00:21:33,920
+or as the insights that you originally produced with your model
+
+300
+00:21:33,920 --> 00:21:37,360
+seem less accurate or less a little bit off reality.
+
+301
+00:21:39,040 --> 00:21:43,600
+Talking to experts, practice, and experimentations are all excellent ways
+
+302
+00:21:43,600 --> 00:21:48,320
+to understand the problem, develop intuition for what might work for a specific one.
+
+303
+00:21:49,120 --> 00:21:57,040
+And so typically, as you repeat this process over and over,
+
+304
+00:21:57,040 --> 00:22:00,560
+as you work with more data, as you see more different data types,
+
+305
+00:22:00,560 --> 00:22:04,880
+you develop intuition for, oh, this technique might be working well
+
+306
+00:22:04,880 --> 00:22:09,280
+with this specific type of data or this specific problem.
+
+307
+00:22:10,640 --> 00:22:15,760
+So it may look like magic, but it really is about having curiosity
+
+308
+00:22:16,480 --> 00:22:23,120
+and sort of explore the elements that best describe and summarize a problem,
+
+309
+00:22:24,080 --> 00:22:28,160
+and so developing intuition for how to represent them as numbers.
+

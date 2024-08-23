@@ -1,0 +1,1432 @@
+1
+00:00:00,000 --> 00:00:19,440
+Hello, and welcome to PyTexas.
+
+2
+00:00:19,440 --> 00:00:23,760
+Thank you for attending my talk, how to build and deploy your first Python Slackbot on Digital
+
+3
+00:00:23,760 --> 00:00:25,440
+Ocean's app platform.
+
+4
+00:00:25,440 --> 00:00:28,320
+My name is Mason Egger, and I am a developer advocate at Digital Ocean.
+
+5
+00:00:28,560 --> 00:00:31,440
+If you have any questions about this talk or anything in general,
+
+6
+00:00:31,440 --> 00:00:34,480
+feel free to reach out to me on my Twitter at Mason Egger.
+
+7
+00:00:35,040 --> 00:00:39,440
+You can also watch me break all the things if you watch my live stream on Twitch.
+
+8
+00:00:39,440 --> 00:00:42,240
+And if you have any other questions for me that you want to email me,
+
+9
+00:00:42,240 --> 00:00:44,720
+you can always find me at mason at do.co.
+
+10
+00:00:45,760 --> 00:00:50,080
+So as an employee of Digital Ocean, I just want to say that Digital Ocean loves PyTexas.
+
+11
+00:00:50,640 --> 00:00:54,640
+Digital Ocean is proud to be a Keystone sponsor of PyTexas.
+
+12
+00:00:54,640 --> 00:00:56,720
+For those of you that are unaware of Digital Ocean,
+
+13
+00:00:56,720 --> 00:01:01,120
+we are a cloud provider that focuses on simplicity and the developer experience.
+
+14
+00:01:01,120 --> 00:01:03,200
+You may know us from our tutorials.
+
+15
+00:01:03,920 --> 00:01:07,760
+And if you would like, after this presentation and you're new to Digital Ocean,
+
+16
+00:01:07,760 --> 00:01:11,680
+you can try out Digital Ocean and get $100 credit for 60 days
+
+17
+00:01:11,680 --> 00:01:15,440
+by going to the link do.co slash PyTexas 2020.
+
+18
+00:01:16,720 --> 00:01:22,320
+So this talk, what we're going to do is I'm going to build a Slackbot in Python really quickly.
+
+19
+00:01:22,320 --> 00:01:26,480
+It's going to be as fast as I can get a Slackbot going.
+
+20
+00:01:26,560 --> 00:01:30,000
+And then we're going to deploy it to Digital Ocean's app platform.
+
+21
+00:01:30,000 --> 00:01:31,920
+So we're going to build us a Slackbot.
+
+22
+00:01:31,920 --> 00:01:36,400
+We're going to go through all the process of setting up our Slackbot inside of the
+
+23
+00:01:36,400 --> 00:01:40,240
+API and the web UI, getting it installed into our Slack channel and all of that.
+
+24
+00:01:40,240 --> 00:01:42,960
+And then we're going to deploy it to Digital Ocean's app platform
+
+25
+00:01:42,960 --> 00:01:46,160
+and demonstrate the awesomeness of Digital Ocean's latest product.
+
+26
+00:01:46,720 --> 00:01:49,680
+You can find all the code for this presentation on my GitHub
+
+27
+00:01:50,560 --> 00:01:52,960
+after this if you'd like to deploy this yourself.
+
+28
+00:01:52,960 --> 00:01:55,520
+And with that being said, let's go ahead and get coding.
+
+29
+00:01:56,480 --> 00:02:01,360
+We're going to go ahead and start with an empty GitHub repository here, PyTexas-bot.
+
+30
+00:02:01,360 --> 00:02:02,880
+It has nothing but a readme in it.
+
+31
+00:02:02,880 --> 00:02:07,040
+We're going to go ahead and open it up in VS code and create our app.py.
+
+32
+00:02:07,040 --> 00:02:10,800
+But before we get coding, we need to install the proper packages
+
+33
+00:02:10,800 --> 00:02:13,440
+so we can work with Slack and Flask.
+
+34
+00:02:14,880 --> 00:02:18,000
+So the first thing we're going to do is create ourselves a virtual environment
+
+35
+00:02:18,000 --> 00:02:23,040
+called PyTexas with Python-m vn and then put it in our virtual ends directory.
+
+36
+00:02:23,120 --> 00:02:30,400
+And then we're going to activate our virtual environment by doing bin activate.
+
+37
+00:02:32,160 --> 00:02:35,200
+And now that we're in here, let's go ahead and check our version of Python,
+
+38
+00:02:35,200 --> 00:02:37,520
+which we have Python 3.8.5 installed.
+
+39
+00:02:37,520 --> 00:02:42,080
+I typically alias Python to Python 3 in my terminal,
+
+40
+00:02:42,080 --> 00:02:44,160
+so I don't have to constantly be typing Python 3.
+
+41
+00:02:45,280 --> 00:02:49,280
+And with that, let's go ahead and install our dependencies.
+
+42
+00:02:50,240 --> 00:02:55,680
+So we're going to need Flask to actually run our Python bot to receive web requests.
+
+43
+00:02:55,680 --> 00:02:58,160
+And then we're going to want the Slack client,
+
+44
+00:02:58,160 --> 00:03:03,120
+which is a Python library that allows us to interact with our Slack channel and send messages.
+
+45
+00:03:03,120 --> 00:03:06,400
+But we're also going to want the Slack events API
+
+46
+00:03:06,400 --> 00:03:11,200
+so that our Slack bot can listen to events inside of our app and inside of our channel.
+
+47
+00:03:11,200 --> 00:03:14,080
+And when it sees an event, send a message via the client.
+
+48
+00:03:14,080 --> 00:03:15,760
+So we're going to go ahead and install these.
+
+49
+00:03:16,320 --> 00:03:20,800
+And what we need to do now is we need to freeze our requirements file
+
+50
+00:03:21,920 --> 00:03:24,880
+into our requirements.txt.
+
+51
+00:03:24,880 --> 00:03:28,480
+This will be required and installed inside of our app platform app
+
+52
+00:03:28,480 --> 00:03:30,160
+once we deploy it to DigitalOcean.
+
+53
+00:03:31,600 --> 00:03:34,320
+So now we have our requirements, our app.py,
+
+54
+00:03:34,320 --> 00:03:36,720
+and we're ready to go ahead and start writing some code.
+
+55
+00:03:37,360 --> 00:03:41,360
+So we're going to do from Flask import Flask.
+
+56
+00:03:41,440 --> 00:03:45,200
+And we're also going to import a couple of other packages that we're going to need.
+
+57
+00:03:45,200 --> 00:03:49,120
+We're going to go ahead and need OS so we can get some environment variables.
+
+58
+00:03:49,120 --> 00:03:53,040
+We're going to want to import logging because we're going to want to do a little bit of logging.
+
+59
+00:03:53,040 --> 00:03:56,640
+We need to import our Slack library.
+
+60
+00:03:56,640 --> 00:03:59,280
+So from Slack, we're going to import the web client.
+
+61
+00:03:59,280 --> 00:04:05,440
+This web client will allow us to go ahead and send messages to our Slack channel.
+
+62
+00:04:05,440 --> 00:04:09,520
+And then from the Slack, we're going to import the web client.
+
+63
+00:04:09,760 --> 00:04:17,120
+And then from the Slack events API, we're going to import the Slack event adapter.
+
+64
+00:04:17,760 --> 00:04:20,640
+And this will be an adapter that allows us to listen in
+
+65
+00:04:20,640 --> 00:04:23,280
+and get messages and then process them as we need to.
+
+66
+00:04:24,560 --> 00:04:26,320
+And then what we're going to do is we're going to go ahead
+
+67
+00:04:26,320 --> 00:04:28,560
+and initialize our Flask application.
+
+68
+00:04:30,720 --> 00:04:33,360
+It's pretty standard boilerplate Flask application.
+
+69
+00:04:34,000 --> 00:04:36,800
+And then the next thing we need to do is we need to go ahead
+
+70
+00:04:36,800 --> 00:04:41,280
+and set up our Slack events adapter and our Slack web client variables.
+
+71
+00:04:41,280 --> 00:04:44,560
+So that way we have these objects ready to go when we're ready to use them.
+
+72
+00:04:44,560 --> 00:04:48,320
+So what we need to do now is we're just going to do Slack events adapter.
+
+73
+00:04:49,440 --> 00:04:53,520
+And we're just going to make a Slack events adapter object.
+
+74
+00:04:53,520 --> 00:05:00,080
+And this is where we're going to use os.getinv to get a Slack events token
+
+75
+00:05:00,080 --> 00:05:02,000
+that we will pass in as an environment variable.
+
+76
+00:05:02,000 --> 00:05:06,480
+This is basically a key that will allow us to actually listen in on these.
+
+77
+00:05:07,120 --> 00:05:10,400
+And then we also need to pass in our Flask app.
+
+78
+00:05:10,400 --> 00:05:14,320
+So that way it knows how to actually listen in on these things.
+
+79
+00:05:15,600 --> 00:05:19,600
+And then the next thing we need to do is we need to create our Slack web client.
+
+80
+00:05:21,200 --> 00:05:23,360
+And we just create a web client right here.
+
+81
+00:05:23,920 --> 00:05:26,320
+And we're going to be doing another token,
+
+82
+00:05:26,320 --> 00:05:28,960
+but this one is going to be actually another token.
+
+83
+00:05:28,960 --> 00:05:32,160
+This is actually going to be what I'm going to call our Slack bot token.
+
+84
+00:05:32,480 --> 00:05:36,400
+And there's basically two different tokens here that you can use with a Slack bot.
+
+85
+00:05:36,400 --> 00:05:40,080
+There's a typical deploy token, which you'll need for actually doing the messages.
+
+86
+00:05:40,080 --> 00:05:43,600
+And then there's a signing secret, which is the one that we're going to use
+
+87
+00:05:43,600 --> 00:05:46,080
+for our Slack events adapter.
+
+88
+00:05:46,080 --> 00:05:47,440
+And that's how we're going to use those.
+
+89
+00:05:48,160 --> 00:05:52,800
+So now that we have that, let's go ahead and create,
+
+90
+00:05:53,760 --> 00:05:55,760
+just go ahead and get our app ready to go.
+
+91
+00:05:55,760 --> 00:05:57,520
+So ready to run.
+
+92
+00:05:57,520 --> 00:05:59,040
+So ready to run.
+
+93
+00:05:59,040 --> 00:06:03,360
+We're going to do if dunder name, equal equals dunder main.
+
+94
+00:06:05,920 --> 00:06:10,320
+Then we're going to create a logger so we can actually see what's going on.
+
+95
+00:06:11,840 --> 00:06:18,080
+We're going to set the log level to debug.
+
+96
+00:06:22,240 --> 00:06:24,000
+So we will basically be able to see any,
+
+97
+00:06:25,440 --> 00:06:26,960
+basically all the messages that come through.
+
+98
+00:06:26,960 --> 00:06:30,560
+We're going to be able to see you may want to set this to an environment variable.
+
+99
+00:06:30,560 --> 00:06:34,880
+So you can change the logging level from your app through the environment variables instead.
+
+100
+00:06:34,880 --> 00:06:36,560
+But for now, we're just going to set it as debug.
+
+101
+00:06:37,760 --> 00:06:40,240
+We're going to go ahead and add a handler for this.
+
+102
+00:06:44,080 --> 00:06:46,560
+Logging dot stream handler.
+
+103
+00:06:48,560 --> 00:06:51,760
+And we're going to do our app dot run host
+
+104
+00:06:51,760 --> 00:06:59,520
+host that we're going to host it on is going to be 0.0.0.0 because we want to host it externally.
+
+105
+00:06:59,520 --> 00:07:02,640
+And we're going to set it to port 8080.
+
+106
+00:07:02,640 --> 00:07:05,440
+This is the default port that app platform listens on.
+
+107
+00:07:05,440 --> 00:07:07,200
+We can change this as we, if we want,
+
+108
+00:07:07,200 --> 00:07:09,760
+but since it's not hurting us to run it on port 8080,
+
+109
+00:07:09,760 --> 00:07:11,120
+we're going to go ahead and just run it there.
+
+110
+00:07:12,960 --> 00:07:15,360
+So the next thing we need to do is actually write the code
+
+111
+00:07:15,360 --> 00:07:18,560
+that gets our Slack message and performs an action.
+
+112
+00:07:18,640 --> 00:07:23,680
+So we're going to go ahead and create a function called message.
+
+113
+00:07:25,520 --> 00:07:28,480
+And it's going to take in a single argument of payload.
+
+114
+00:07:28,480 --> 00:07:31,840
+This is what's going to be passed in from the Slack events adapter.
+
+115
+00:07:31,840 --> 00:07:34,800
+And it's going to basically pass in the payload of the message for us to analyze.
+
+116
+00:07:36,640 --> 00:07:43,840
+So what we're going to do is we're going to do event equals payload dot get event.
+
+117
+00:07:43,840 --> 00:07:48,000
+And if we don't get an event, let's go ahead and just return an empty dictionary.
+
+118
+00:07:49,520 --> 00:07:52,240
+And let's go ahead and set up our message block.
+
+119
+00:07:52,240 --> 00:07:56,800
+So Slack has a very particular format for sending messages.
+
+120
+00:07:56,800 --> 00:08:02,240
+And it's in a kind of structured JSON format that we can use basically by doing some dictionaries.
+
+121
+00:08:02,240 --> 00:08:04,960
+So what we do is you send these messages via blocks.
+
+122
+00:08:04,960 --> 00:08:07,920
+So we're going to go ahead and create a very simple message block
+
+123
+00:08:07,920 --> 00:08:10,800
+that we can use to send our current message.
+
+124
+00:08:11,600 --> 00:08:15,440
+And basically we need to specify what type of block this is.
+
+125
+00:08:15,440 --> 00:08:17,200
+And this is a section block.
+
+126
+00:08:18,880 --> 00:08:20,720
+And then we need to specify the text.
+
+127
+00:08:21,840 --> 00:08:24,560
+And then where we go here is we have another dictionary in here
+
+128
+00:08:24,560 --> 00:08:29,600
+where we specify the type, which we're going to say is markdown.
+
+129
+00:08:31,120 --> 00:08:32,400
+MRK DWN.
+
+130
+00:08:33,840 --> 00:08:36,000
+And then for the text that we're actually going to send,
+
+131
+00:08:37,040 --> 00:08:42,320
+we're going to go ahead and create this bot to respond to a hello statement.
+
+132
+00:08:42,320 --> 00:08:45,760
+So we're going to say, hello, PyTexas inside of our Slack bot channel
+
+133
+00:08:45,760 --> 00:08:47,520
+and or the channel where the Slack bot is installed.
+
+134
+00:08:47,520 --> 00:08:52,160
+And it's going to respond back with a very Texas saying, which is going to be howdy.
+
+135
+00:08:52,160 --> 00:08:57,040
+And then we're going to do face with cowboy hat emoji
+
+136
+00:08:57,040 --> 00:08:59,200
+because we're Texas and Texas is cowboy hats.
+
+137
+00:09:01,040 --> 00:09:04,400
+So the next thing we're going to do is we're going to set up our text.
+
+138
+00:09:04,400 --> 00:09:07,360
+And what we're going to do is we're going to get our text from our event.
+
+139
+00:09:07,360 --> 00:09:09,280
+So we've gotten the event from the payload.
+
+140
+00:09:09,280 --> 00:09:10,160
+We know what's happening.
+
+141
+00:09:10,160 --> 00:09:13,200
+Now we need to actually see the text that came through this message.
+
+142
+00:09:13,200 --> 00:09:15,360
+And we need to see, we're going to analyze it.
+
+143
+00:09:15,360 --> 00:09:21,520
+There's a lot more things like attributes inside of the payload that you can get,
+
+144
+00:09:21,520 --> 00:09:24,160
+such as user and all of that timestamp.
+
+145
+00:09:24,160 --> 00:09:25,680
+So you don't just have to use it on text.
+
+146
+00:09:25,680 --> 00:09:27,280
+There's a lot of other things you can get here.
+
+147
+00:09:28,880 --> 00:09:33,120
+And then what we're going to do is we're going to see if hello PyTexas
+
+148
+00:09:35,440 --> 00:09:38,880
+is in our text dot lower.
+
+149
+00:09:38,880 --> 00:09:42,240
+Let's go ahead and do lower because we don't really care too much about capitalization here.
+
+150
+00:09:42,560 --> 00:09:45,040
+Then what we're going to do is we're going to use,
+
+151
+00:09:45,040 --> 00:09:48,480
+we're going to get our channel ID and we're going to use this again from the event.
+
+152
+00:09:48,480 --> 00:09:50,160
+We're going to get our channel.
+
+153
+00:09:50,720 --> 00:09:53,360
+So that's why we know which channel to respond back on.
+
+154
+00:09:53,360 --> 00:09:55,360
+And then we're going to craft our message.
+
+155
+00:09:55,360 --> 00:09:57,360
+So we have our message block, which is ready,
+
+156
+00:09:57,360 --> 00:10:02,080
+but we still need a little bit more inside of that inside of our message to tell it where to go.
+
+157
+00:10:02,080 --> 00:10:06,640
+So we go ahead and craft our message, which is set to, let's say our channel
+
+158
+00:10:08,880 --> 00:10:10,640
+is set to our channel ID.
+
+159
+00:10:10,640 --> 00:10:17,760
+And our blocks, we're going to go ahead and set to an array with message block in it as a single element.
+
+160
+00:10:17,760 --> 00:10:19,360
+So you could send multiple blocks.
+
+161
+00:10:19,360 --> 00:10:22,560
+We've created one message block, but if you wanted to send multiple things,
+
+162
+00:10:22,560 --> 00:10:26,880
+you can send multiple message blocks and it kind of adds this little separation to it.
+
+163
+00:10:28,160 --> 00:10:35,440
+And then the last thing we're going to do is we're going to say slack web client dot chat post message.
+
+164
+00:10:35,600 --> 00:10:41,760
+And we're going to unpack our message here in our parameters.
+
+165
+00:10:43,200 --> 00:10:45,520
+And we've got one more thing to do.
+
+166
+00:10:45,520 --> 00:10:46,800
+So we've set up all of this.
+
+167
+00:10:46,800 --> 00:10:50,480
+But the only thing we haven't done is we haven't used our slack events adapter
+
+168
+00:10:50,480 --> 00:10:55,760
+to actually see what's going on, to listen to what's to the messages that are coming through.
+
+169
+00:10:55,760 --> 00:10:58,720
+So we're going to just use a really nice decorator that they've given to us
+
+170
+00:10:59,520 --> 00:11:01,520
+for a slots of slack events adapter.
+
+171
+00:11:01,520 --> 00:11:04,880
+And we want to trigger this when we, when we detect a message.
+
+172
+00:11:05,600 --> 00:11:08,240
+So this is actually pretty much it.
+
+173
+00:11:08,240 --> 00:11:11,200
+We're going to go ahead and save it and then black reformats it for me.
+
+174
+00:11:12,640 --> 00:11:15,280
+And this is pretty much a very basic slack app
+
+175
+00:11:15,280 --> 00:11:20,880
+that uses our events adapter and web client to basically using the events adapter.
+
+176
+00:11:20,880 --> 00:11:23,920
+We scan all incoming messages inside of our slack channel.
+
+177
+00:11:23,920 --> 00:11:29,600
+And then what we do is we detect if hello, pi Texas is in the text.
+
+178
+00:11:29,600 --> 00:11:34,240
+If it is, then our slack is bought is going to send a little cute message back saying howdy.
+
+179
+00:11:34,320 --> 00:11:36,160
+And it's going to be good.
+
+180
+00:11:36,160 --> 00:11:39,520
+And this is what I would consider a very minimalistic, very basic
+
+181
+00:11:41,360 --> 00:11:43,840
+slack bot could be a nice little greeting bot for you.
+
+182
+00:11:43,840 --> 00:11:45,680
+You can change it to do whatever you want.
+
+183
+00:11:45,680 --> 00:11:48,800
+I will actually post in the description.
+
+184
+00:11:48,800 --> 00:11:52,080
+There is a digital ocean tutorial on how to do a much more complicated bot.
+
+185
+00:11:52,080 --> 00:11:55,200
+And I will make sure that we post that in the description later.
+
+186
+00:11:56,080 --> 00:11:58,000
+So now that we have all of this done,
+
+187
+00:11:58,640 --> 00:12:04,800
+um, let's go ahead and commit this and deploy it to digital oceans app platform.
+
+188
+00:12:04,800 --> 00:12:08,480
+And then once we've got it deployed, then we're going to go ahead and set,
+
+189
+00:12:08,480 --> 00:12:12,320
+do all of the setup on the slack side.
+
+190
+00:12:12,320 --> 00:12:14,880
+So that way our slack bot is registered and then we're going to be ready to go.
+
+191
+00:12:15,920 --> 00:12:18,960
+One quick thing before we continue and push our code.
+
+192
+00:12:18,960 --> 00:12:20,960
+I did notice that we have a bug in the code.
+
+193
+00:12:20,960 --> 00:12:27,120
+We need to come up here and add slack events to our slack events adapter.
+
+194
+00:12:28,080 --> 00:12:28,480
+Creation.
+
+195
+00:12:28,480 --> 00:12:33,040
+So essentially without this, we would not have actually had a route for it to say,
+
+196
+00:12:33,040 --> 00:12:34,800
+this is where to send slack events.
+
+197
+00:12:34,800 --> 00:12:38,560
+So basically the way that this object creation works is you get a token,
+
+198
+00:12:38,560 --> 00:12:42,400
+you get a route that you're going to route to and you associate it with a flask app.
+
+199
+00:12:42,400 --> 00:12:44,560
+So luckily we caught this before we pushed.
+
+200
+00:12:44,560 --> 00:12:47,120
+But even if we did, you know, we would make the change,
+
+201
+00:12:47,120 --> 00:12:48,800
+push up the code automatically deploy.
+
+202
+00:12:48,800 --> 00:12:52,000
+It wouldn't be that big of an issue, but I'm happy that I caught it now.
+
+203
+00:12:52,240 --> 00:12:59,040
+So we do a get status and we see that we have dot VS code app dot PY and requirements.
+
+204
+00:12:59,040 --> 00:13:03,040
+So we're going to get add app dot PY and requirements dot TXT.
+
+205
+00:13:04,560 --> 00:13:08,560
+Going to go ahead and do a git commit and say in it commit.
+
+206
+00:13:09,440 --> 00:13:11,040
+And now we just do a push.
+
+207
+00:13:14,640 --> 00:13:18,240
+And now our code is live on our GitHub page.
+
+208
+00:13:18,240 --> 00:13:20,800
+So if we come over back here to GitHub, we are ready to go.
+
+209
+00:13:20,800 --> 00:13:21,840
+And we have our app.
+
+210
+00:13:23,200 --> 00:13:26,480
+So I actually made a mistake in my previous thing.
+
+211
+00:13:26,480 --> 00:13:32,080
+Before we deploy this, we actually need to do a couple of steps in the slack API.
+
+212
+00:13:32,080 --> 00:13:34,480
+So what we're going to do now is we're going to go to the slack API
+
+213
+00:13:34,480 --> 00:13:36,320
+and we're going to go ahead and create our app.
+
+214
+00:13:37,840 --> 00:13:43,680
+I'm going to call this PY Texas bot and I'm going to install this in my personal one.
+
+215
+00:13:43,680 --> 00:13:45,760
+It's called Gallifrey because I'm a Doctor Who nerd.
+
+216
+00:13:45,920 --> 00:13:50,160
+And then the next thing we need to do is we need to give our bot some basic permissions.
+
+217
+00:13:51,120 --> 00:13:56,480
+We need to add an OAuth scope here and we're going to go ahead and give it the chat write permissions.
+
+218
+00:13:58,240 --> 00:14:01,280
+And then we're going to go ahead and install our app to our workspace.
+
+219
+00:14:07,680 --> 00:14:09,200
+We go ahead and allow this.
+
+220
+00:14:10,240 --> 00:14:12,960
+And now we have our OAuth scope.
+
+221
+00:14:13,760 --> 00:14:16,720
+And now we have our OAuth access token.
+
+222
+00:14:16,720 --> 00:14:19,280
+So this is our first token that we need.
+
+223
+00:14:19,280 --> 00:14:21,200
+So we're going to go ahead and copy this.
+
+224
+00:14:21,200 --> 00:14:23,760
+And I'm actually just going to come up real quick here.
+
+225
+00:14:24,400 --> 00:14:27,280
+I'm going to dump it in the read me real quick and we'll come back and get it later.
+
+226
+00:14:27,280 --> 00:14:28,800
+So that is the first token that we need.
+
+227
+00:14:30,000 --> 00:14:33,600
+And now we need to get the signing secret for our events API.
+
+228
+00:14:33,600 --> 00:14:36,640
+So that way we can actually read the messages that are coming in.
+
+229
+00:14:36,640 --> 00:14:39,680
+So slack will encrypt these with the secret and we need to get them.
+
+230
+00:14:39,680 --> 00:14:42,800
+So we get those by clicking on the basic information tab
+
+231
+00:14:43,680 --> 00:14:47,920
+and then scrolling down here to the signing secret, clicking show and copying this.
+
+232
+00:14:47,920 --> 00:14:51,760
+Now I'm going to go ahead and just put this again in my read me.
+
+233
+00:14:51,760 --> 00:14:53,360
+Make sure you don't commit this.
+
+234
+00:14:53,360 --> 00:14:55,600
+Do not commit these in there and I'm not going to.
+
+235
+00:14:55,600 --> 00:15:00,960
+But now we have both of our tokens and we're able to deploy to app platform and be ready to go.
+
+236
+00:15:02,160 --> 00:15:06,160
+So now let's go ahead and deploy our app to app platform from the digital ocean panel.
+
+237
+00:15:06,160 --> 00:15:09,040
+You can see that there's a new icon over here for apps.
+
+238
+00:15:09,040 --> 00:15:13,040
+So we're going to go ahead and click on that and we're going to click on create app.
+
+239
+00:15:14,880 --> 00:15:18,080
+And the first thing we need to do is configure our GitHub to actually allow
+
+240
+00:15:18,080 --> 00:15:19,520
+us to be able to deploy this app.
+
+241
+00:15:19,520 --> 00:15:23,760
+So I click on my personal user and then I click select repositories
+
+242
+00:15:25,600 --> 00:15:28,240
+and I select the pie Texas app and I save that.
+
+243
+00:15:32,160 --> 00:15:35,840
+And now we are able to deploy our application.
+
+244
+00:15:35,840 --> 00:15:38,080
+So we go ahead and deploy our pie Texas bot.
+
+245
+00:15:39,600 --> 00:15:42,400
+We're going to deploy it into the New York region.
+
+246
+00:15:42,400 --> 00:15:45,760
+This page automatically detects the region that is closest to you
+
+247
+00:15:46,720 --> 00:15:48,560
+and figures out which one it is.
+
+248
+00:15:48,560 --> 00:15:52,000
+And then we're going to deploy from our main branch and anytime we
+
+249
+00:15:52,000 --> 00:15:54,320
+push to the main branch or merge into the main branch,
+
+250
+00:15:54,320 --> 00:15:56,800
+it's automatically going to auto deploy our bot.
+
+251
+00:15:59,600 --> 00:16:01,920
+So now it's basically getting the code and analyzing it.
+
+252
+00:16:01,920 --> 00:16:04,160
+It's detected that it's a Python web service.
+
+253
+00:16:04,160 --> 00:16:06,720
+We're going to go ahead and add a couple of environment variables.
+
+254
+00:16:06,720 --> 00:16:10,640
+We're going to add our slack bot token variable,
+
+255
+00:16:12,080 --> 00:16:17,120
+which is this XOXB token that we have.
+
+256
+00:16:17,840 --> 00:16:20,400
+And this token, as we said earlier,
+
+257
+00:16:20,400 --> 00:16:24,880
+will allow us to actually send messages on our slack bots behalf.
+
+258
+00:16:24,880 --> 00:16:27,120
+We can go ahead over here and click encrypt.
+
+259
+00:16:27,120 --> 00:16:30,320
+And now we can't change that token anymore.
+
+260
+00:16:30,320 --> 00:16:31,520
+No one can read it.
+
+261
+00:16:31,520 --> 00:16:33,840
+And if anybody wants to actually change it,
+
+262
+00:16:33,840 --> 00:16:36,080
+they have to delete that environment variable and re add it.
+
+263
+00:16:36,080 --> 00:16:38,160
+You can't just change it or copy it.
+
+264
+00:16:38,160 --> 00:16:39,760
+There's no way to get the data out of here.
+
+265
+00:16:41,280 --> 00:16:43,840
+So the next thing we need is our events token.
+
+266
+00:16:43,840 --> 00:16:48,000
+And this token is what basically is going to allow us to listen to events
+
+267
+00:16:48,000 --> 00:16:49,600
+and decrypt them from slack.
+
+268
+00:16:49,600 --> 00:16:52,560
+So we paste our token in here and we encrypt it.
+
+269
+00:16:53,440 --> 00:16:56,400
+We're going to go ahead and just run this with Python app.py.
+
+270
+00:16:56,400 --> 00:17:03,920
+We could use something like G unicorn to actually deploy that with like
+
+271
+00:17:03,920 --> 00:17:04,960
+deploy it through a whiskey and stuff.
+
+272
+00:17:04,960 --> 00:17:06,880
+But since this is a very basic app,
+
+273
+00:17:06,880 --> 00:17:08,400
+I'm not really going to feel the need to do that.
+
+274
+00:17:08,400 --> 00:17:10,080
+So I'm going to go ahead and click next.
+
+275
+00:17:11,360 --> 00:17:13,120
+I do not want to save the slack bot token.
+
+276
+00:17:13,120 --> 00:17:13,620
+Thank you.
+
+277
+00:17:15,520 --> 00:17:19,120
+And here we select our plans for apps that actually require compute.
+
+278
+00:17:19,120 --> 00:17:20,960
+You would select a basic plan.
+
+279
+00:17:20,960 --> 00:17:26,400
+We can determine how much RAM and CPU we want to get it.
+
+280
+00:17:26,400 --> 00:17:29,200
+If we go to the pro plan, we can scale horizontally
+
+281
+00:17:29,200 --> 00:17:30,960
+and add a lot of containers if we needed to.
+
+282
+00:17:31,680 --> 00:17:34,000
+But from here, we basically just launch our basic app.
+
+283
+00:17:38,240 --> 00:17:42,400
+And now we just wait for our app to go.
+
+284
+00:17:42,400 --> 00:17:46,960
+And then once it comes up, we will see the URL
+
+285
+00:17:46,960 --> 00:17:48,960
+and we will test it to make sure that it works really quick
+
+286
+00:17:48,960 --> 00:17:50,560
+or that it's at least responding.
+
+287
+00:17:50,560 --> 00:17:51,600
+And then we'll go from there.
+
+288
+00:17:51,600 --> 00:17:54,160
+So yeah, now we just wait for our app deploy.
+
+289
+00:17:54,160 --> 00:17:58,160
+We can view our logs, the deployment logs in real time
+
+290
+00:17:58,160 --> 00:17:59,920
+as it's installing everything for us.
+
+291
+00:18:01,040 --> 00:18:02,880
+But yeah, now we just wait a couple minutes
+
+292
+00:18:02,880 --> 00:18:05,920
+and our app will deploy and then we'll be ready.
+
+293
+00:18:06,960 --> 00:18:08,720
+While we wait on our app to deploy,
+
+294
+00:18:08,720 --> 00:18:12,480
+let's go ahead and install our app into our slack channel.
+
+295
+00:18:12,480 --> 00:18:16,320
+So we basically just come down over here to the PyTex's bot
+
+296
+00:18:17,600 --> 00:18:20,960
+and we click more and we're going to add this app to a channel.
+
+297
+00:18:21,760 --> 00:18:24,480
+And we're going to add this bot to our PyTex's bot channel.
+
+298
+00:18:26,080 --> 00:18:27,520
+And now when we come back over here,
+
+299
+00:18:27,520 --> 00:18:29,680
+we can see that the PyTex's bot has joined.
+
+300
+00:18:29,680 --> 00:18:32,240
+So once the app is ready, we'll already have it installed
+
+301
+00:18:32,240 --> 00:18:37,360
+and we'll be able to test it as soon as it's ready.
+
+302
+00:18:44,320 --> 00:18:46,400
+Okay, our app has successfully deployed.
+
+303
+00:18:46,400 --> 00:18:48,560
+So if we come up here and we click on this link,
+
+304
+00:18:49,280 --> 00:18:50,640
+we will take us to our app.
+
+305
+00:18:50,640 --> 00:18:52,720
+Now, since we had nothing at the root index,
+
+306
+00:18:52,720 --> 00:18:54,800
+we're obviously going to get a 404 here.
+
+307
+00:18:54,800 --> 00:18:57,840
+But if we type in slash slack slash events,
+
+308
+00:18:57,840 --> 00:18:59,760
+we will get this cute little message that says,
+
+309
+00:18:59,760 --> 00:19:01,680
+these are not the slack bots you are looking for.
+
+310
+00:19:02,320 --> 00:19:06,560
+And this is basically a way of verifying that our endpoint did respond
+
+311
+00:19:06,560 --> 00:19:10,000
+and it's responding as we would intended with the slack way
+
+312
+00:19:10,000 --> 00:19:12,160
+because this isn't a properly sent message.
+
+313
+00:19:13,040 --> 00:19:15,920
+Now that our app is successfully deployed, we can grab this URL.
+
+314
+00:19:16,880 --> 00:19:20,400
+And now we can actually subscribe our bot to some event subscriptions
+
+315
+00:19:20,400 --> 00:19:24,240
+by clicking on the event subscription link over here and enabling them.
+
+316
+00:19:24,320 --> 00:19:28,400
+Then we send it our request API, our URL,
+
+317
+00:19:29,040 --> 00:19:30,240
+and it will come up and say,
+
+318
+00:19:30,240 --> 00:19:33,120
+hey, we verify that this actually is working, which is great.
+
+319
+00:19:33,920 --> 00:19:36,720
+Now, all we need to do is subscribe our bot to some events
+
+320
+00:19:36,720 --> 00:19:40,000
+and we want to subscribe it to message dot channels.
+
+321
+00:19:40,000 --> 00:19:43,440
+So that way we can actually listen to the messages from the channel
+
+322
+00:19:43,440 --> 00:19:45,040
+and click save changes.
+
+323
+00:19:45,040 --> 00:19:46,640
+And because we have now made this change,
+
+324
+00:19:46,640 --> 00:19:48,400
+we now have to reinstall our app.
+
+325
+00:19:48,400 --> 00:19:50,320
+So we just come up here and we click reinstall.
+
+326
+00:19:51,040 --> 00:19:53,360
+It asks us to confirm again and we're like,
+
+327
+00:19:53,360 --> 00:19:54,560
+yes, we're okay with this.
+
+328
+00:19:55,280 --> 00:19:58,400
+And now our app has been reinstalled.
+
+329
+00:20:00,400 --> 00:20:03,840
+And if we come over here and we bring this back
+
+330
+00:20:03,840 --> 00:20:06,640
+and we type, hello, pie Texas.
+
+331
+00:20:09,680 --> 00:20:13,040
+Our pie Texas bot responds with howdy and a little cowboy hat
+
+332
+00:20:13,040 --> 00:20:15,120
+and everything is running and ready to go.
+
+333
+00:20:16,880 --> 00:20:20,640
+I do want to point out that as you saw from our GitHub repository,
+
+334
+00:20:21,600 --> 00:20:24,400
+DigitalOcean's app platform is a fully functioning PaaS.
+
+335
+00:20:24,400 --> 00:20:26,960
+We dealt with no server code whatsoever.
+
+336
+00:20:26,960 --> 00:20:32,480
+I simply uploaded a Flask API and we were ready to go.
+
+337
+00:20:32,480 --> 00:20:35,520
+And that's kind of the magic of DigitalOcean's app platform.
+
+338
+00:20:35,520 --> 00:20:37,120
+I hope all of you will try it out
+
+339
+00:20:37,120 --> 00:20:39,520
+or you'd like to just try out DigitalOcean for the first time.
+
+340
+00:20:39,520 --> 00:20:45,040
+Do.co slash pie Texas 2020 will get you a hundred dollars credit for that.
+
+341
+00:20:45,920 --> 00:20:48,880
+We do have free static site offerings through this
+
+342
+00:20:48,880 --> 00:20:51,920
+and the apps are roughly the same price as our droplets are.
+
+343
+00:20:51,920 --> 00:20:53,520
+So I think it's a pretty good deal.
+
+344
+00:20:54,160 --> 00:20:58,160
+But yeah, I hope that everybody will get a chance to try out our app platform
+
+345
+00:20:58,160 --> 00:21:00,320
+and thank you everyone for attending.
+
+346
+00:21:01,120 --> 00:21:03,200
+Thank you pie Texas for putting on this conference.
+
+347
+00:21:03,200 --> 00:21:05,360
+It's always a pleasure to be a sponsor
+
+348
+00:21:05,360 --> 00:21:08,720
+and I hope everyone will enjoy the rest of the conference.
+
+349
+00:21:08,720 --> 00:21:12,880
+We have a lot of really good talks lined up and thank you again.
+
+350
+00:21:12,880 --> 00:21:13,760
+Enjoy the conference.
+
+351
+00:21:14,640 --> 00:21:16,160
+One last thing before I go.
+
+352
+00:21:16,160 --> 00:21:20,080
+Don't forget to sign up for DigitalOcean's first ever global community conference
+
+353
+00:21:20,080 --> 00:21:22,400
+at DigitalOcean.com slash deploy.
+
+354
+00:21:22,400 --> 00:21:24,320
+It'll be held on November 10th through 11th
+
+355
+00:21:24,320 --> 00:21:26,880
+and will be a 24 hour community experience.
+
+356
+00:21:26,880 --> 00:21:29,760
+I'll be speaking and a lot of my other colleagues will as well.
+
+357
+00:21:29,760 --> 00:21:31,280
+I hope to see you there.
+
+358
+00:21:46,160 --> 00:21:46,320
+you
+

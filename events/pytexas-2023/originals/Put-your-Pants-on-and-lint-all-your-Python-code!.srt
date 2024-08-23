@@ -1,0 +1,788 @@
+1
+00:00:00,000 --> 00:00:09,720
+I'm excited to be here with you in this welcoming community and awesome city of Austin.
+
+2
+00:00:09,720 --> 00:00:21,760
+I came all the way from Paris, France, to talk about pylint.
+
+3
+00:00:21,760 --> 00:00:28,160
+So these days, pylint doesn't sound really sexy, and I'm going to try to make it a little
+
+4
+00:00:28,160 --> 00:00:34,680
+bit sexier and faster with pants.
+
+5
+00:00:34,680 --> 00:00:42,040
+But first, a little bit about the company I work for.
+
+6
+00:00:42,040 --> 00:00:44,680
+The company is called Doctrine.
+
+7
+00:00:44,680 --> 00:00:49,460
+We do legal intelligence platform.
+
+8
+00:00:49,460 --> 00:00:55,480
+So basically we do pretty much everything that's related to laws in France and provide
+
+9
+00:00:55,480 --> 00:01:00,200
+a lot of services around that.
+
+10
+00:01:00,200 --> 00:01:06,920
+The main domain is legal, and we get data from all over the place and different kinds
+
+11
+00:01:06,920 --> 00:01:08,100
+of sources.
+
+12
+00:01:08,100 --> 00:01:17,200
+Many institutions in France, they all format the data completely differently, so it's a
+
+13
+00:01:17,200 --> 00:01:18,200
+big mess.
+
+14
+00:01:19,200 --> 00:01:30,760
+This morning we were talking about the medical stuff and the data, how messy it is, how big
+
+15
+00:01:30,760 --> 00:01:32,680
+nightmare it can be.
+
+16
+00:01:32,680 --> 00:01:36,300
+Well, legal system is pretty much the same.
+
+17
+00:01:36,300 --> 00:01:43,160
+This is French content, mainly, and this shouldn't be an issue, but I don't know.
+
+18
+00:01:43,160 --> 00:01:53,400
+In France, I think we do not know simple is better than complex, so this plus the fact
+
+19
+00:01:53,400 --> 00:02:02,320
+that we have a lot of code per developer in that company, we end up generating code that's
+
+20
+00:02:02,320 --> 00:02:08,760
+overly complex, and me included, I mean, we need something to control it and to make it
+
+21
+00:02:08,760 --> 00:02:12,760
+more mutualized and generalizable.
+
+22
+00:02:12,760 --> 00:02:26,920
+All right, so if I want to have data that's completely tested, that's correctly interpreted
+
+23
+00:02:26,920 --> 00:02:37,200
+and correctly used by all the consumers, we've implemented a lot of tests, a lot of documentation.
+
+24
+00:02:37,200 --> 00:02:43,600
+Pretty much everything is typed, so we enabled pretty much all the tools that we can find
+
+25
+00:02:43,600 --> 00:02:53,680
+on the market, but still, sometimes when we do a review on a PR, I'm like, what I'm going
+
+26
+00:02:53,680 --> 00:03:01,320
+to do, why is this code formatted like this, why are we not using this pattern over this
+
+27
+00:03:01,320 --> 00:03:05,800
+one, and we don't understand each other.
+
+28
+00:03:05,800 --> 00:03:12,520
+We generate complex code, and it's become very hard to maintain and to review.
+
+29
+00:03:12,520 --> 00:03:22,880
+So I wanted to introduce a bit more patterns in linting and customizable stuff, and we
+
+30
+00:03:22,880 --> 00:03:27,400
+went with Pylint.
+
+31
+00:03:27,400 --> 00:03:36,600
+So Pylint can be written in four things I've listed, I think.
+
+32
+00:03:36,600 --> 00:03:44,200
+First is a static code analysis, so it reads the code, it doesn't run it, unlike we can
+
+33
+00:03:44,200 --> 00:03:49,080
+do while we're testing, we need to instantiate things and stuff.
+
+34
+00:03:49,080 --> 00:03:52,360
+In that case, when linting, it's not needed.
+
+35
+00:03:52,840 --> 00:04:00,800
+Pylint brings an internal engine that allows great flexibility, and I'm going to come back
+
+36
+00:04:00,800 --> 00:04:07,520
+on that one, because that's the key for us to generate all the linting capabilities that
+
+37
+00:04:07,520 --> 00:04:09,720
+we added.
+
+38
+00:04:09,720 --> 00:04:18,680
+It's not a formatter, so unlike Black or iSort or Ruff, it doesn't do, it doesn't replace
+
+39
+00:04:18,680 --> 00:04:22,280
+your code in place, it doesn't fix your code.
+
+40
+00:04:22,360 --> 00:04:28,040
+It just tells you, this is wrong, this is not the right pattern, you should use that,
+
+41
+00:04:28,040 --> 00:04:30,440
+et cetera.
+
+42
+00:04:30,440 --> 00:04:41,320
+And maybe a conclusion on Pylint, something, a quote that I found on the PyPI page for
+
+43
+00:04:41,320 --> 00:04:46,640
+Pylint, inference is the killer feature that keeps us using Pylint in our project, despite
+
+44
+00:04:46,640 --> 00:04:49,400
+how painfully slow it is.
+
+45
+00:04:49,400 --> 00:04:58,200
+So even Pylint is publishing that on their PyPI page, so I guess this is really slow.
+
+46
+00:04:58,200 --> 00:05:04,600
+And when you start using Pylint, or you've been using it maybe for a while, what you
+
+47
+00:05:04,600 --> 00:05:12,360
+get these days is, all right, start using Ruff instead, get rid of Pylint, this is too
+
+48
+00:05:12,360 --> 00:05:16,600
+slow, this is too old, make everything under Ruff.
+
+49
+00:05:16,760 --> 00:05:24,600
+Well, we were talking about the internal capabilities of Pylint and some of the great features that
+
+50
+00:05:24,600 --> 00:05:28,600
+we can use to generate custom stuff.
+
+51
+00:05:28,600 --> 00:05:35,640
+And this is exactly why, well, I'm using Ruff for pretty much everything, but for everything
+
+52
+00:05:35,640 --> 00:05:42,120
+that's customizable, I kept Pylint.
+
+53
+00:05:42,120 --> 00:05:49,240
+And I generated custom rules, custom limiting rules in Pylint.
+
+54
+00:05:49,240 --> 00:05:53,560
+So what are those and why would I need those?
+
+55
+00:05:53,560 --> 00:06:05,160
+Well, first, you may have some internal company rules, like things that should be applied
+
+56
+00:06:05,160 --> 00:06:07,240
+to every code you generate.
+
+57
+00:06:07,240 --> 00:06:13,800
+So like naming conventions, format conventions, or whatever internal convention you have in
+
+58
+00:06:13,800 --> 00:06:15,320
+your company.
+
+59
+00:06:15,320 --> 00:06:22,120
+We do have some, the naming conventions, for instance, because a lot of the data we're
+
+60
+00:06:22,120 --> 00:06:24,680
+handling is tricky.
+
+61
+00:06:24,680 --> 00:06:32,680
+I mean, in the legal system in France, most of the words, that's my native language, but
+
+62
+00:06:32,680 --> 00:06:37,240
+most of the words, I don't even understand it, they are new for me.
+
+63
+00:06:37,240 --> 00:06:43,560
+So imagine when you're generating code out of that, if you want to pass that, that's
+
+64
+00:06:43,560 --> 00:06:45,640
+a nightmare.
+
+65
+00:06:45,640 --> 00:06:58,200
+So we've got a lot of naming conventions and maybe some package conventions.
+
+66
+00:06:58,680 --> 00:07:02,120
+And sometimes you want to just, I don't know, restrict the use of that function or this
+
+67
+00:07:02,120 --> 00:07:09,080
+function in that place, or use it that way but not that way.
+
+68
+00:07:09,080 --> 00:07:14,760
+And at some point, you want to avoid things to be published to productions.
+
+69
+00:07:14,760 --> 00:07:25,720
+So what you can do to do that is to fail the CI, and if you fail tests, if you fail typing,
+
+70
+00:07:25,720 --> 00:07:31,560
+maybe if you fail linting, then you fail the CI.
+
+71
+00:07:31,560 --> 00:07:38,600
+And when you're reviewing a lot of PRs every day, a lot of code, maybe sometimes you have
+
+72
+00:07:38,600 --> 00:07:49,560
+some things that you repeat every day, sometimes to the same people, and it's not that we are
+
+73
+00:07:49,560 --> 00:07:52,600
+not understanding what we should do.
+
+74
+00:07:52,600 --> 00:08:01,000
+It's just that there's so much we need to carry in each PR and so much that we can,
+
+75
+00:08:01,000 --> 00:08:06,360
+that we should tell all the developers to do at each time.
+
+76
+00:08:06,360 --> 00:08:12,440
+Well at some point, you want to be able to optimize all of that because that's less burden
+
+77
+00:08:12,440 --> 00:08:19,800
+for the reviewer and probably less stress for the developer as well.
+
+78
+00:08:20,120 --> 00:08:24,920
+What you get at some point is that you get faster code reviews.
+
+79
+00:08:24,920 --> 00:08:35,000
+I mean, if the PR already passed a very strict CI, then the review got a lot easier.
+
+80
+00:08:35,000 --> 00:08:47,160
+So custom rules based in PyLint, they can be based on three kinds of checkers.
+
+81
+00:08:47,160 --> 00:08:55,400
+So basically, the finer you get in the interpretation, the slower you get in the process.
+
+82
+00:08:55,400 --> 00:09:02,920
+So keep in mind that I already said that PyLint is slow, and now I'm just saying that I'm
+
+83
+00:09:02,920 --> 00:09:09,160
+going to add some stuff that make PyLint even slower.
+
+84
+00:09:09,160 --> 00:09:16,920
+Because from experience, if you want to publish some rules, some company rules or linting
+
+85
+00:09:16,920 --> 00:09:23,320
+and stuff that you cannot do with the base configuration from PyLint, well, you're going
+
+86
+00:09:23,320 --> 00:09:33,480
+to end up building some really complex stuff with AST or, I don't know, really fine interpretation.
+
+87
+00:09:35,960 --> 00:09:43,240
+So I'm going to show you a quick example, and I thought this example was really done
+
+88
+00:09:43,240 --> 00:09:51,720
+at some point, and I just wanted to illustrate how I could forbid the usage of UTC now from
+
+89
+00:09:51,720 --> 00:10:01,720
+that time in our code. So I'm going to use the token checker from PyLint, implement whatever I
+
+90
+00:10:01,720 --> 00:10:11,560
+need from the base checker and the high token checker interface. And this sounds done at some
+
+91
+00:10:11,560 --> 00:10:23,160
+point. But when I flew in here from Paris, and I had to go to London, and there was some delay
+
+92
+00:10:23,160 --> 00:10:31,560
+on the flight from Paris to London, and arrived in London, since they are not in the UE anymore,
+
+93
+00:10:32,440 --> 00:10:41,080
+we had to go through customs again. And we got delayed, like, a lot, and arrived at security
+
+94
+00:10:41,880 --> 00:10:49,960
+on my boarding pass, I had a flight for 11.30, and the security guy was like,
+
+95
+00:10:49,960 --> 00:10:55,720
+okay, so you need to speed up, just cut the line and go directly to that checkpoint.
+
+96
+00:10:56,280 --> 00:11:05,400
+And the people right behind me, they were like, my flight is at 12.30, and so they had to go
+
+97
+00:11:05,480 --> 00:11:11,240
+in the line, because there was one extra hour after. But we were all taking the same flight.
+
+98
+00:11:11,960 --> 00:11:18,120
+It's just the different companies that generated the boarding passes, they got
+
+99
+00:11:18,120 --> 00:11:25,400
+messed up with the time zones, because daylight savings was, the change was last weekend,
+
+100
+00:11:25,400 --> 00:11:33,720
+and some of us got the, I don't know, I don't know how it could happen in 2023, but still,
+
+101
+00:11:34,280 --> 00:11:43,480
+it happens. All right, so the second step, how you identify the error in the checker,
+
+102
+00:11:44,440 --> 00:11:50,520
+and this is exactly what you need when you want to ignore an error with Pilint or
+
+103
+00:11:51,160 --> 00:12:03,400
+Flake8 or any related stuff. Okay, and the magic of the checker. So basically, I'm going to have
+
+104
+00:12:04,360 --> 00:12:11,160
+a list of tokens. So those tokens, the token info type is the built-in type from Python,
+
+105
+00:12:11,160 --> 00:12:19,720
+so you could check it out right away. It's really simple to use. And then I got the magic. So
+
+106
+00:12:19,720 --> 00:12:27,240
+if I'm calling something that's UTC now, just raise the message with exactly the file, the
+
+107
+00:12:27,240 --> 00:12:39,880
+line start, and the column. That's that easy. All right, so that's the event that we're sending
+
+108
+00:12:39,880 --> 00:12:49,560
+to Pilint. So what happens exactly when I run Pilint? So I'm going to run the common Pilint
+
+109
+00:12:49,560 --> 00:12:55,880
+something, something being like my whole repository, just a folder, maybe just a module.
+
+110
+00:12:56,920 --> 00:13:04,840
+It takes whatever custom checker I made, so the first-party plugins. It also loads the
+
+111
+00:13:05,560 --> 00:13:11,880
+potential third-party plugins that I added, and then it loads the code that I want to run
+
+112
+00:13:11,880 --> 00:13:22,920
+the linter against, and it runs the linter. So on the left side, you have what the code that
+
+113
+00:13:22,920 --> 00:13:29,560
+you're maintaining yourself. They're not supposed to be in the same runtime, meaning they're not
+
+114
+00:13:29,560 --> 00:13:36,760
+supposed to import each other. So there's a high chance they are not located in the same repository.
+
+115
+00:13:37,720 --> 00:13:43,720
+They could be at some point, and I'm going to illustrate that. But if they're not in the same
+
+116
+00:13:43,720 --> 00:13:52,200
+repository, that means that if you made a mistake in your checkers, or you forgot something, you
+
+117
+00:13:52,200 --> 00:14:00,200
+want to add a new one, or whatever, you have to go through a new code, new release, new potential
+
+118
+00:14:00,360 --> 00:14:10,600
+CI, et cetera, and then reload, replay again, and back and forth, because you might have forgot
+
+119
+00:14:10,600 --> 00:14:22,920
+something again. And that's exactly where PENTS will come into play. And I can even illustrate it
+
+120
+00:14:23,000 --> 00:14:45,400
+with the T-shirt. Yeah. That's going to look sexier after. Okay. All right. So what does PENTS have
+
+121
+00:14:45,400 --> 00:14:56,120
+to bring? From the theory user perspective of PENTS, I'm going to show you what I will gain and
+
+122
+00:14:58,040 --> 00:15:06,760
+what it does to my CI and my monorepo. All right. So first, PENTS is a build system.
+
+123
+00:15:07,720 --> 00:15:15,640
+It doesn't do all the magic, but pretty much. It manages your repository and brings a lot of
+
+124
+00:15:15,640 --> 00:15:25,800
+CI tools with it. So Pylint comes with it, for instance. And the code that's going through CI
+
+125
+00:15:26,760 --> 00:15:36,760
+will be magically, for now, split into subgroups. And the CI can be optimized with these subgroups
+
+126
+00:15:36,760 --> 00:15:47,000
+of files. As a build system, it can manage several projects. And several projects into
+
+127
+00:15:47,000 --> 00:15:51,960
+one single repository. And that's a cool thing, because as I was saying before,
+
+128
+00:15:51,960 --> 00:16:00,040
+I had my two projects located in two separate repositories. And I had to republish and do
+
+129
+00:16:01,080 --> 00:16:10,040
+all the things that I need to, in order to be able to play again all the checkers. So now,
+
+130
+00:16:10,040 --> 00:16:20,040
+it's all located in the same place. So I can skip all those painful steps. And in the end,
+
+131
+00:16:20,120 --> 00:16:27,720
+in the end, it's a monorepository. So you might want to add other projects. And since we're
+
+132
+00:16:27,720 --> 00:16:36,360
+talking about generalization, mutualization, well, that's perfect, because I'm going to
+
+133
+00:16:36,360 --> 00:16:43,720
+mutualize a lot of rules and a lot of conventions into that single monorepository
+
+134
+00:16:44,600 --> 00:16:51,400
+that carries several projects. And going forward with that,
+
+135
+00:16:53,240 --> 00:16:59,960
+you could add all your repository into this one and apply exactly all those rules.
+
+136
+00:17:02,040 --> 00:17:09,080
+It also comes with a lot of optimizations under the hood. It has a tremendous cache.
+
+137
+00:17:10,040 --> 00:17:18,200
+It can build executables out of your code. Whatever script you made, it can generate an
+
+138
+00:17:18,200 --> 00:17:28,920
+executable. And it has a very acute knowledge of your structure, of your repository structure.
+
+139
+00:17:28,920 --> 00:17:37,000
+And I think it knows your code better than you do. So back to the illustration before,
+
+140
+00:17:37,720 --> 00:17:43,000
+now, it could look like this. So I have pants in the middle that manages everything.
+
+141
+00:17:44,280 --> 00:17:51,960
+It will load whatever is related to Pylint. So all the first part of polygons, the third
+
+142
+00:17:51,960 --> 00:18:00,520
+party ones, the configuration, et cetera, it will generate a runner for me. And all of this
+
+143
+00:18:00,520 --> 00:18:05,560
+is like one single command. I don't need to know exactly what's under the hood, but
+
+144
+00:18:06,280 --> 00:18:13,000
+I know that's one single command, and that's easy to do. And like I was saying, it splits the
+
+145
+00:18:14,440 --> 00:18:23,480
+my code that I want to link into smaller groups and will run in parallel this runner that got
+
+146
+00:18:23,480 --> 00:18:33,880
+generated against all these subgroups. And I was mentioning before, it comes with tremendous cache
+
+147
+00:18:34,520 --> 00:18:45,400
+and now my setup can look like this. So basically, the runner would be generated only once
+
+148
+00:18:45,400 --> 00:18:53,880
+because all of the spaces above pants, like Pylint, the checkers and everything, they got
+
+149
+00:18:53,880 --> 00:19:05,240
+generated once. They were used to generate a runner. The runner is now cached, and I don't
+
+150
+00:19:05,240 --> 00:19:12,280
+need to worry about rebuilding it because I'm not planning on changing right now all the custom
+
+151
+00:19:12,280 --> 00:19:22,440
+checkers. So I will not generate any changes that will trigger the cache. And
+
+152
+00:19:24,520 --> 00:19:34,680
+it's the same for the code I want to link. I mean, there's only one group of files that I'm
+
+153
+00:19:34,680 --> 00:19:42,200
+changing, not all the stack. So I want to focus on those files only and apply the linter only on
+
+154
+00:19:42,200 --> 00:19:51,960
+those files. And that's exactly what pants can do. So now instead of running over all the stack,
+
+155
+00:19:52,520 --> 00:20:04,280
+we get to target exactly what has been changed. In fact, pants stores the results of the previous
+
+156
+00:20:04,280 --> 00:20:12,920
+iterations when it got changed. So at some point, the cache got set, and now we can still get the
+
+157
+00:20:13,800 --> 00:20:26,040
+results out of this cache. And so back, I think, four months ago, I've set up a repo with all of
+
+158
+00:20:26,040 --> 00:20:38,040
+these pieces. We are migrating a lot of code into that, and the results were extremely satisfying.
+
+159
+00:20:38,840 --> 00:20:49,720
+So on that repo, applying PyLint takes about 35, 40 seconds. And now I've got a
+
+160
+00:20:50,920 --> 00:20:59,480
+small illustration of the time it takes. So I just wrapped everything I need in the
+
+161
+00:21:00,200 --> 00:21:11,320
+make lint command, and that's it. It takes about, maybe it's faster. Yeah, it's about five seconds.
+
+162
+00:21:11,320 --> 00:21:17,960
+So it's a lot better than the 35 to 40 seconds I had before with just PyLint.
+
+163
+00:21:18,280 --> 00:21:30,920
+So if I want to sum up what pants brings with this setup with PyLint, well, I got my custom
+
+164
+00:21:30,920 --> 00:21:40,920
+checkers. At some point, I thought it was not the best option because it makes PyLint even slower.
+
+165
+00:21:40,920 --> 00:21:48,360
+But still, we got them in the CI, which makes the review, like I was saying, faster because I know
+
+166
+00:21:48,360 --> 00:21:58,680
+that everything that I encoded into checkers is automatically checked. We do spend less time, and
+
+167
+00:21:58,760 --> 00:22:08,120
+we do avoid all the back and forth that we had with developers before.
+
+168
+00:22:13,160 --> 00:22:23,480
+If I quote a talk from yesterday, now we've got something like a democracy between the reviewers,
+
+169
+00:22:23,480 --> 00:22:31,960
+because we have no reviewers, but fewer specialists, because all the specialized rules,
+
+170
+00:22:31,960 --> 00:22:41,960
+they all got encoded into checkers. So there's no need for human to remember and apply this rule.
+
+171
+00:22:41,960 --> 00:22:50,840
+It's automatic. The linting time, thanks to pants, is almost constant, and I'm going to
+
+172
+00:22:50,840 --> 00:23:01,160
+show you an illustration. Since the linter is faster, we get faster feedback directly
+
+173
+00:23:02,200 --> 00:23:10,680
+from either the CI or feedback you can have when running in local on your machine.
+
+174
+00:23:11,480 --> 00:23:21,400
+I was saying I've set up this on a monorepository like four months ago, and so you can see in blue
+
+175
+00:23:21,400 --> 00:23:32,920
+the evolution of lines count in the repo. It's still, I guess, low. We reached 25k, approximately.
+
+176
+00:23:33,800 --> 00:23:42,360
+In these four months, we tripled the line count, but we got a constant linting time. You can see a
+
+177
+00:23:42,360 --> 00:23:52,280
+few peaks, because as I was saying, the cache relies on the checkers, whatever they are, from
+
+178
+00:23:52,280 --> 00:23:59,400
+first party or third party, the configuration, and etc. But I had to add some other
+
+179
+00:23:59,880 --> 00:24:07,800
+I had to add some other custom checkers through time, and you can see the peaks where the cache
+
+180
+00:24:07,800 --> 00:24:17,560
+is not valid anymore, and you get to regenerate it. I guess we have an average of eight seconds
+
+181
+00:24:18,360 --> 00:24:26,440
+for the linting, which is a lot faster than the 40 seconds I had before. So I'm really happy
+
+182
+00:24:26,440 --> 00:24:38,280
+with that setting, and we will probably add a lot of code in that repository. I
+
+183
+00:24:39,480 --> 00:24:48,120
+expect to grow at least 50 to 100 times this repository, and I hope the linting time is
+
+184
+00:24:48,120 --> 00:24:57,080
+going to stay under, let's say, 20 seconds. I don't see how it should grow at some point,
+
+185
+00:24:57,080 --> 00:25:05,880
+because it is fairly constant, and as it checks only the added code through the PR,
+
+186
+00:25:06,920 --> 00:25:17,480
+it shouldn't go any higher than that. All right, that's the end for me. I hope you liked it,
+
+187
+00:25:17,480 --> 00:25:25,400
+and if you have any questions, feel free to reach out, and before I let you have some questions,
+
+188
+00:25:26,600 --> 00:25:33,880
+I'd like to give a big thank to the Pence community. You can find two maintainers over there.
+
+189
+00:25:35,080 --> 00:25:41,880
+I got a lot of help from them for setting all of that, and the great results,
+
+190
+00:25:43,000 --> 00:25:44,920
+they are also from the community.
+
+191
+00:25:47,480 --> 00:25:48,120
+Any questions?
+
+192
+00:25:53,800 --> 00:25:54,300
+Yes.
+
+193
+00:25:59,880 --> 00:26:10,360
+Because this is just the beginning, so I'm expected to merge five to six other repositories,
+
+194
+00:26:10,360 --> 00:26:22,360
+and we're supposed to reach at least two to 300,000 lines, at least. I mean, at some point,
+
+195
+00:26:22,360 --> 00:26:30,280
+the goal of that monorepo is also to mutualize things, so we should be
+
+196
+00:26:32,520 --> 00:26:37,240
+ending somewhere lower than the sum of all these repositories.
+
+197
+00:26:40,360 --> 00:26:52,840
+All right, thank you very much to everybody.
+

@@ -1,0 +1,884 @@
+1
+00:00:00,000 --> 00:00:10,100
+Thank you. All right. So hopefully everybody's enjoying the conference so far. We're almost
+
+2
+00:00:10,100 --> 00:00:16,260
+done. Hopefully everybody, you know, had a good lunch. We'll see if everybody stays awake
+
+3
+00:00:16,260 --> 00:00:22,660
+after this talk. I know, you know, building software is super exciting and everything.
+
+4
+00:00:22,660 --> 00:00:29,180
+But my name is Chris Morrow. I'm a staff software developer here in Austin, Texas. I work at
+
+5
+00:00:29,180 --> 00:00:36,660
+a company called Q2 and or the pandemic. I was working on some open source software called
+
+6
+00:00:36,660 --> 00:00:43,620
+Build Magic. So I'm here to talk to you about it today. So we'll go over some issues with
+
+7
+00:00:43,620 --> 00:00:50,100
+building software, what Build Magic is and what it can do for you, some common build
+
+8
+00:00:50,100 --> 00:00:57,980
+problems and then go over some examples. So, okay, if you're here, you're probably interested
+
+9
+00:00:57,980 --> 00:01:05,300
+in writing software or you do this professionally, right? But we don't think a lot about building
+
+10
+00:01:05,300 --> 00:01:12,980
+software. That's boring, right? And often it's extra stuff that we have to do in addition
+
+11
+00:01:12,980 --> 00:01:20,380
+to writing our code. So let's go through a little example here. So we have a software
+
+12
+00:01:21,140 --> 00:01:29,660
+developer. His name is Brian. So Brian likes Python. And he works on a side project where
+
+13
+00:01:29,660 --> 00:01:36,420
+he creates a little Python application that saves him time and also saves the company
+
+14
+00:01:36,420 --> 00:01:45,420
+money. So this is great. And other devs on his team want to use it. So Alex is on his
+
+15
+00:01:45,420 --> 00:01:52,300
+team. She is also a Pythonista. And Brian can simply just send it to Alex and everything
+
+16
+00:01:52,300 --> 00:01:59,900
+just works. So Brian's getting more recognition for this within the company. And then Brian's
+
+17
+00:01:59,900 --> 00:02:08,140
+boss's boss, Ellie, wants to use Brian's app. Well, Ellie's not as technical and she doesn't
+
+18
+00:02:08,140 --> 00:02:14,140
+want to install Python. And she is using Windows compared to the rest of the team, which is
+
+19
+00:02:14,140 --> 00:02:21,620
+on Macs. So Brian's thinking about how do I solve this problem? So he reads about something
+
+20
+00:02:21,620 --> 00:02:27,660
+called Py2EXE. He's like, oh, okay, let's give this a shot. So first thing he realizes,
+
+21
+00:02:27,660 --> 00:02:34,860
+though, is that Py2EXE only runs on Windows. So he goes to the IT department and gets a
+
+22
+00:02:34,860 --> 00:02:41,660
+Windows laptop and is like, all right, let's do this. Then he realizes, okay, well, now
+
+23
+00:02:41,660 --> 00:02:51,180
+I need MSVCR90.DLL and I can only get that from Visual Studio or this Microsoft Visual
+
+24
+00:02:51,180 --> 00:02:57,020
+C++ redistributable. And he's wondering what is the newest thing here because a lot of
+
+25
+00:02:57,020 --> 00:03:06,580
+this info is old. So Brian decides to install Visual Studio and manages to get this to work.
+
+26
+00:03:06,580 --> 00:03:14,300
+It spits out a directory that has his Python application now as a Windows executable along
+
+27
+00:03:14,300 --> 00:03:21,140
+with some other files. He sends it to Ellie. It works. Everybody's happy. So the thing,
+
+28
+00:03:21,140 --> 00:03:27,860
+though, is this is all dependent on a laptop. And now the whole company wants to use this.
+
+29
+00:03:27,860 --> 00:03:33,740
+So Brian goes and automates this with GitHub actions and then uploads all the artifacts
+
+30
+00:03:33,740 --> 00:03:42,380
+to Artifactory. All right. So what are our takeaways from this? So we can, by looking
+
+31
+00:03:42,380 --> 00:03:52,420
+at this, we can see builds can quickly become complex. Also, in this example, Brian had
+
+32
+00:03:52,420 --> 00:04:01,900
+to build for multiple platforms and create separate artifacts for those platforms. But
+
+33
+00:04:01,940 --> 00:04:06,900
+also, I think something we don't consider that often is that build processes evolve
+
+34
+00:04:06,900 --> 00:04:17,100
+over time. So keeping all of these things in mind, I developed BuildMagic in late 2020.
+
+35
+00:04:17,100 --> 00:04:22,940
+And based off of some things I was doing at the time, and I describe it as an unopinionated
+
+36
+00:04:23,420 --> 00:04:36,180
+automation tool. Also, one of the key facts here is it ideally should be producing reproducible
+
+37
+00:04:36,180 --> 00:04:46,940
+and portable build jobs. So it's doing this through abstracting away where the commands
+
+38
+00:04:46,940 --> 00:04:54,020
+run from the underlying environment. And I'll talk some more about how that works.
+
+39
+00:04:54,020 --> 00:05:01,660
+So another key feature here is that each command you automate runs in its own shell process.
+
+40
+00:05:01,660 --> 00:05:04,980
+You can run everything from the CLI if you really want, but if you want to batch stuff
+
+41
+00:05:04,980 --> 00:05:14,140
+together, there's a simple approachable YAML format for doing that. And it runs on Windows,
+
+42
+00:05:14,140 --> 00:05:22,620
+Mac, and Linux. I've tested it on all three. And it is written 100% in Python. Okay, so a
+
+43
+00:05:22,620 --> 00:05:29,180
+little bit about the structure here. Whenever you run commands in BuildMagic, everything is
+
+44
+00:05:29,180 --> 00:05:37,900
+bundled together into a job. And a job is composed of multiple stages. A stage is what
+
+45
+00:05:38,220 --> 00:05:45,660
+runs commands and has this concept of a command runner and has optional set up and tear down
+
+46
+00:05:45,660 --> 00:05:54,860
+methods. So what are these command runners? Well, this was kind of the key feature that I was
+
+47
+00:05:54,860 --> 00:05:59,740
+thinking about when I wrote this that separates it out from a lot of other build utilities out
+
+48
+00:05:59,740 --> 00:06:06,780
+there. So these command runners add a layer of abstraction that separates the commands that you
+
+49
+00:06:06,780 --> 00:06:14,140
+want to run from where they actually run. So currently, there's four of these command runners,
+
+50
+00:06:14,140 --> 00:06:23,740
+the default being just run on the host machine. Also, there is a remote runner, which uses open
+
+51
+00:06:23,740 --> 00:06:31,980
+SSH and public-private key authentication. It, you know, theoretically could use password-based
+
+52
+00:06:31,980 --> 00:06:45,420
+authentication. I just chose not to support it. There is the Docker runner. So you can specify
+
+53
+00:06:45,420 --> 00:06:52,620
+a Docker image that you want to run all your commands inside and BuildMagic handles binding
+
+54
+00:06:52,620 --> 00:07:00,380
+the volume and then doing Docker run and then tearing it down when it's done. And then last,
+
+55
+00:07:00,380 --> 00:07:05,260
+you can run all your commands inside a virtual machine using Vagrant if people still use Vagrant.
+
+56
+00:07:07,260 --> 00:07:14,380
+So you there just specify the path to a Vagrant file and BuildMagic will
+
+57
+00:07:14,380 --> 00:07:21,580
+run Vagrant up and then Vagrant destroy for you. So, okay, this is kind of what it looks like.
+
+58
+00:07:21,580 --> 00:07:25,980
+Hopefully, that looks okay up there. Yeah, it doesn't look too bad. All right. So on the command
+
+59
+00:07:25,980 --> 00:07:32,700
+line, you run BuildMagic. In this case, I've used the verbose option and then just a simple command,
+
+60
+00:07:32,700 --> 00:07:38,940
+echo hello world. And you can see I've got a timestamp of when I ran it. I can see the command
+
+61
+00:07:38,940 --> 00:07:48,140
+that was executed. And I even get the output from the standard out of that command. So, okay,
+
+62
+00:07:48,140 --> 00:07:54,860
+this is fine. But you know, it's just one simple thing, right? What if I want to batch a whole
+
+63
+00:07:54,860 --> 00:08:02,700
+bunch of stuff to run? So the way we do that is what I'm just generically calling config files
+
+64
+00:08:02,700 --> 00:08:12,220
+right now. So I know like Helm has Helm charts and Ansible has playbooks. I haven't come up with
+
+65
+00:08:12,220 --> 00:08:17,900
+a clever name. I didn't want to call them like spells or like a spell book or anything like that.
+
+66
+00:08:17,900 --> 00:08:23,260
+So we're going with the magic theme. So for now, they're just called config files. If honestly,
+
+67
+00:08:23,340 --> 00:08:29,020
+if you can think of like a clever name, just email me and I might use it. So,
+
+68
+00:08:30,220 --> 00:08:35,900
+okay. So we can batch stuff together and even run multiple stages using these config files.
+
+69
+00:08:36,860 --> 00:08:43,740
+And it's just YAML. You can list out multiple stages. You can optionally give a name.
+
+70
+00:08:44,620 --> 00:08:49,340
+In this case, I've said I want to use the Docker runner and I want to run it inside an Alpine
+
+71
+00:08:49,340 --> 00:08:56,620
+container. And I run two commands. Both of these are used for building a Python package.
+
+72
+00:08:58,060 --> 00:09:07,100
+And then the second one will actually upload it to PyPI. So there are two keys before that,
+
+73
+00:09:07,100 --> 00:09:17,260
+this build and release. So unlike some other systems like GitLab CI or Ansible,
+
+74
+00:09:18,220 --> 00:09:23,500
+these directives don't impart any actual meaning. They're purely,
+
+75
+00:09:27,180 --> 00:09:32,220
+what is it? They're there for documentation purposes, for readability. So even though it
+
+76
+00:09:32,220 --> 00:09:36,940
+says build on there, that doesn't actually mean anything. You can put something else there and
+
+77
+00:09:36,940 --> 00:09:41,260
+it doesn't change what actually does. That's why I say that this is unopinionated, right?
+
+78
+00:09:41,900 --> 00:09:49,340
+Build magic doesn't care what you're doing. You just tell it what to do and what environment to
+
+79
+00:09:49,340 --> 00:09:57,340
+run it in. So let's look at some common problems here. So problem one, developers on a team aren't
+
+80
+00:09:57,340 --> 00:10:05,020
+always using the same operating system, hardware, version of Python, version of Go, et cetera, right?
+
+81
+00:10:05,980 --> 00:10:11,260
+So I'm a big proponent of software teams should use what they're comfortable using and what
+
+82
+00:10:11,260 --> 00:10:17,500
+they're most efficient in. But this creates a problem of when everybody's using different
+
+83
+00:10:17,500 --> 00:10:24,940
+operating systems, it gets hard to all work on the same thing. So that's where this concept of
+
+84
+00:10:24,940 --> 00:10:32,140
+command runners and abstraction came from. Because to address this, if you start thinking about,
+
+85
+00:10:32,220 --> 00:10:39,500
+well, I'll run my commands inside Docker and then use build magic to automate all that,
+
+86
+00:10:39,500 --> 00:10:44,940
+then I don't have to worry about, well, okay, this person is on a Windows laptop,
+
+87
+00:10:44,940 --> 00:10:50,300
+so I don't necessarily need to or I need to consider do they have all the same packages
+
+88
+00:10:50,300 --> 00:10:56,300
+installed? Do they have the same version? If it's all there inside a Docker container, then
+
+89
+00:10:56,620 --> 00:11:02,780
+we're good in that sense. So kind of what this looks like whenever you run it, though,
+
+90
+00:11:03,900 --> 00:11:07,980
+you can see some examples here of the different runners. These are all running Echo Hello World,
+
+91
+00:11:08,620 --> 00:11:13,100
+but this shows you kind of what it looks like whenever you run it using the remote runner,
+
+92
+00:11:13,100 --> 00:11:21,580
+the Docker runner, Vagrant, you get the idea. All right, so problem two, the build process is
+
+93
+00:11:21,580 --> 00:11:27,500
+often automated with shell scripts or extra makefile targets, which are brittle and not
+
+94
+00:11:27,500 --> 00:11:32,780
+portable. Okay, so that's kind of a bold statement, right? And I'm kind of opinionated here. Like I
+
+95
+00:11:32,780 --> 00:11:42,300
+know it's big, you know, usually people are doing build automation with shell scripts and make files.
+
+96
+00:11:43,100 --> 00:11:48,140
+And I'm not talking about like, you know, compiling my C or C++ program with a makefile,
+
+97
+00:11:48,940 --> 00:11:55,580
+please do that. I'm talking more about like, let's build a Docker image using a makefile,
+
+98
+00:11:55,580 --> 00:12:03,420
+or let's call like npm test npm build inside a makefile. That kind of thing is more of what
+
+99
+00:12:03,420 --> 00:12:09,100
+I'm talking about here. So let's look at an example here. So on the left, I've got a shell script,
+
+100
+00:12:09,100 --> 00:12:15,500
+on the right, makefile, and they both do the exact same thing. I'm taking the string hello,
+
+101
+00:12:15,500 --> 00:12:23,260
+writing it to file 1.txt, the string world, writing it to file 2.txt. Then I archive them
+
+102
+00:12:23,260 --> 00:12:34,300
+using tar. And then I print, created my files.tar.gz and then remove the files. Okay, so that's pretty
+
+103
+00:12:34,300 --> 00:12:40,780
+simple. But, you know, if you're, you know, if you're looking carefully, you might notice there's a
+
+104
+00:12:40,780 --> 00:12:48,540
+mistake up here. So the tar command is used incorrectly here. The arguments and the
+
+105
+00:12:49,500 --> 00:12:53,180
+the name of the archive file are switched. So when I run this, I get errors.
+
+106
+00:12:54,860 --> 00:13:03,340
+So with the shell script, I get an error from tar. But after that, I still see it says created
+
+107
+00:13:03,420 --> 00:13:11,100
+my files.tar.gz. It didn't do that because tar failed. So this is kind of a problem with shell
+
+108
+00:13:11,100 --> 00:13:19,340
+scripts is that even though a command failed, it continued to run afterwards. And that's not always
+
+109
+00:13:19,900 --> 00:13:25,100
+what you want to do. Oftentimes, you want to just stop whenever you encounter a problem.
+
+110
+00:13:25,900 --> 00:13:31,580
+And there's ways to do this in shell scripts. You have to build up some conditional expressions
+
+111
+00:13:31,580 --> 00:13:37,500
+to check for status code. Or you could, you know, use like I think it's set dash E maybe.
+
+112
+00:13:38,220 --> 00:13:44,460
+I could be wrong about that to kind of enforce the more strict execution. But then, you know,
+
+113
+00:13:44,460 --> 00:13:49,980
+it's not as, you know, not so much of a simple thing anymore. So with the make file,
+
+114
+00:13:51,260 --> 00:13:58,300
+whenever we run this, the make file stops when it encounters the error. But the problem there is
+
+115
+00:13:59,020 --> 00:14:08,460
+I am removing the files in another make file target. So by doing that, that never runs and
+
+116
+00:14:08,460 --> 00:14:16,140
+produces a side effect. Now, even though it failed, I still have these files left over
+
+117
+00:14:16,940 --> 00:14:24,940
+in the file system. So build magic handles this a little differently. So this is the equivalent
+
+118
+00:14:25,820 --> 00:14:32,780
+using build magic. I use something here called an action. And this is the cleanup action. So
+
+119
+00:14:32,780 --> 00:14:41,500
+what happens is whenever I specify this, build magic will scan the current working directory
+
+120
+00:14:42,060 --> 00:14:48,940
+and know all the directories, all the files that are there. And then after it finishes running the
+
+121
+00:14:48,940 --> 00:14:55,180
+stage, it looks at what new files are there and then removes any new files, new directories.
+
+122
+00:14:56,780 --> 00:15:03,900
+So when I run this, hit the error again, just like with the others. But the big difference here is
+
+123
+00:15:03,900 --> 00:15:13,260
+that it did execution stopped when it encountered the error. And it also removed file one dot txt
+
+124
+00:15:13,260 --> 00:15:19,580
+and file two dot txt because I used that cleanup action. So this is nice because
+
+125
+00:15:20,860 --> 00:15:25,420
+it becomes repeatable and it's not producing side effects whenever it runs.
+
+126
+00:15:27,740 --> 00:15:33,740
+All right. So probably a lot of you are thinking, like, why would I use this whenever we have,
+
+127
+00:15:33,740 --> 00:15:41,740
+you know, CI CD, right? Because CI CD does a lot of this stuff for us. Well, one common problem
+
+128
+00:15:41,740 --> 00:15:52,780
+there is, you know, as great as GitHub actions and GitLab CI is, if you are automating in there,
+
+129
+00:15:52,780 --> 00:15:58,060
+all of these are cloud based. So if you get something wrong and you encounter an error,
+
+130
+00:15:58,860 --> 00:16:06,140
+then you have to debug that and then start the pipeline again. And so then you could
+
+131
+00:16:06,140 --> 00:16:12,700
+get into this loop of error, debug, retry over and over again because you can't do this locally.
+
+132
+00:16:15,180 --> 00:16:20,860
+So really, too, like if you're working for a company where they have a dedicated DevOps team,
+
+133
+00:16:20,860 --> 00:16:27,340
+you might want to separate the concerns, too, of building the software from running the CI pipeline.
+
+134
+00:16:27,340 --> 00:16:39,180
+So here I have a GitLab CI file where what it does is it downloads BuildMagic, installs it,
+
+135
+00:16:39,180 --> 00:16:47,020
+and then runs it. So in this case, the application I'm building, just called My App, runs
+
+136
+00:16:49,100 --> 00:16:52,780
+entirely inside BuildMagic and then the pipeline doesn't care what's going on.
+
+137
+00:16:52,780 --> 00:16:59,020
+You know, that's the developer's concern to address that. So now we've separated the concerns
+
+138
+00:16:59,020 --> 00:17:07,180
+there and we're handling those things separately. Okay. So let's look at some examples of using
+
+139
+00:17:07,180 --> 00:17:15,020
+this thing. So we can build a Python package using BuildMagic. In fact, this config file
+
+140
+00:17:15,020 --> 00:17:20,940
+is the one that I actually use to build and distribute BuildMagic. So it builds itself.
+
+141
+00:17:21,580 --> 00:17:28,460
+So it starts off by running Flake 8. It runs unit tests. And then if all that's passing,
+
+142
+00:17:29,100 --> 00:17:36,780
+it will build the documentation, upload it to GitHub pages.
+
+143
+00:17:39,420 --> 00:17:47,900
+And then last, it builds the wield file and then uploads that to PyPI. So, you know,
+
+144
+00:17:47,900 --> 00:17:53,900
+before I used to have a shell script that did all this. Now I just run BuildMagic dash C and
+
+145
+00:17:53,900 --> 00:17:59,420
+then the name of the file is release.yaml. And that's it. You know, I still use GitHub actions
+
+146
+00:17:59,420 --> 00:18:10,060
+for running unit tests for Python 3, 6, 7, 8, 9, 10, and checking code quality and coverage
+
+147
+00:18:10,060 --> 00:18:15,580
+and that sort of thing. But this is the process for actually just uploading to PyPI when I'm
+
+148
+00:18:15,580 --> 00:18:23,820
+ready to push a release. So example two, this is something that I had to do when I was working
+
+149
+00:18:23,820 --> 00:18:32,060
+at a startup or it's based off of it. So I was responsible for maintaining open API specification
+
+150
+00:18:32,700 --> 00:18:42,140
+for RESTful API that we owned. And, you know, if anybody's familiar with swagger or open API,
+
+151
+00:18:42,140 --> 00:18:48,540
+it produces these docs for you that, you know, they don't look bad. I can show you what it looks
+
+152
+00:18:48,540 --> 00:18:56,220
+like here real quick. So you'll get a page that looks kind of like this. And, you know, you can
+
+153
+00:18:57,020 --> 00:19:02,220
+drop down on this. You can see, you know, an example request body, example responses,
+
+154
+00:19:02,780 --> 00:19:13,580
+and you get the idea. So the thing is my boss doesn't like that. He didn't like the way it looked
+
+155
+00:19:13,580 --> 00:19:20,300
+and liked the look of this other thing that I found out was called Slate, which is based in Ruby.
+
+156
+00:19:21,100 --> 00:19:27,340
+So, you know, now I have to figure out, okay, how do I convert from open API to Slate because I
+
+157
+00:19:27,340 --> 00:19:34,620
+don't want to write all the Slate docs from scratch. So there's a utility called Wittershins
+
+158
+00:19:35,180 --> 00:19:42,860
+that will handle the conversion, but it is an NPM package. And so I was like, I don't want to
+
+159
+00:19:42,860 --> 00:19:51,020
+install all of this stuff just for doing this, right? So what I'm doing here is I build
+
+160
+00:19:51,980 --> 00:19:59,020
+Docker images for Wittershins, for all of the Slate setup, everything I need. And that's what
+
+161
+00:19:59,020 --> 00:20:07,260
+I do in this first stage here is build my Docker images. And in the second stage, you know,
+
+162
+00:20:07,260 --> 00:20:15,500
+I just run the command to pull down the docs. And then because it actually gets pulled down as
+
+163
+00:20:16,460 --> 00:20:21,900
+oh, well, what it's doing is it gets pulled down all in one line. So I reformat it so it's at least
+
+164
+00:20:21,900 --> 00:20:31,820
+nice looking JSON. The third stage is when I run Wittershins. So, you know, that Docker image is
+
+165
+00:20:31,820 --> 00:20:38,940
+running NPM and stuff. And that converts it to a markdown file that Slate likes,
+
+166
+00:20:39,740 --> 00:20:47,020
+which then I need to pass it to Slate. And Slate is very particular about how the file system
+
+167
+00:20:47,020 --> 00:20:51,900
+is laid out and the names of files. But you can see here, you know, I'm able to take care of that
+
+168
+00:20:51,900 --> 00:21:00,060
+in just a few steps. And, you know, then I build my docs and get that back out. And, you know,
+
+169
+00:21:00,060 --> 00:21:04,780
+all this happened in multiple Docker containers. But in the end, you know, I'm able to get,
+
+170
+00:21:04,780 --> 00:21:12,460
+you know, just an index.html that looks like this. Make it a little bit bigger. All right. So this
+
+171
+00:21:12,460 --> 00:21:17,820
+is the exact same docs now just, you know, produced using Slate. You know, I can come down here and
+
+172
+00:21:17,820 --> 00:21:23,100
+I can see stuff. But, you know, one thing that's nice is I get the code snippets over here on the
+
+173
+00:21:23,100 --> 00:21:28,460
+side. So if I look at that, let's look at Python. You know, it's using requests to do a lot of this.
+
+174
+00:21:28,620 --> 00:21:35,660
+It's using requests to do a lot of this. So, you know, that's cool. And, yeah, I just did all that
+
+175
+00:21:35,660 --> 00:21:45,740
+with build magic just a few days ago. So all right. Last example. So for a little while,
+
+176
+00:21:46,860 --> 00:21:55,580
+I did some data science and data engineering work. And this example is an ML pipeline. So
+
+177
+00:21:55,580 --> 00:22:03,500
+if anybody has used, like, Apache Beam or if you've heard or used Metaflow or MLflow. Anybody
+
+178
+00:22:03,500 --> 00:22:09,260
+here an ML engineer? All right. Okay. Okay. If you use. Okay. So you kind of know what I'm talking
+
+179
+00:22:09,260 --> 00:22:15,180
+about here, then. You know, one issue I've seen with those tools, especially, like, I think it's
+
+180
+00:22:15,180 --> 00:22:22,620
+MLflow, you kind of have to build up all the code for the pipeline around the work the data
+
+181
+00:22:22,620 --> 00:22:28,380
+scientists are doing. So you're, like, training the model in the same file where you're doing the
+
+182
+00:22:28,380 --> 00:22:34,060
+pipeline, right? And so I was thinking, you know, about this. And I was like, well, you know,
+
+183
+00:22:34,060 --> 00:22:42,060
+with build magic, actually, I can separate the concerns there. And this is nice because I can,
+
+184
+00:22:42,700 --> 00:22:48,700
+you know, separately work on ETL, cleaning data, feature extraction, training the model,
+
+185
+00:22:48,700 --> 00:22:53,660
+and then deploying all separately from one another. And so I can have a data scientist
+
+186
+00:22:53,660 --> 00:23:00,860
+do their part. I can have data engineer worry just about ETL. And then, you know, have DevOps
+
+187
+00:23:00,860 --> 00:23:05,180
+or an ML engineer or somebody just worry about deployment, right? And then automate all of this
+
+188
+00:23:05,180 --> 00:23:09,900
+with build magic. So that's, you know, this is a very just, you know, simple example here. But
+
+189
+00:23:09,900 --> 00:23:15,660
+that's kind of what I'm doing here. So the first thing it does in this first stage is it downloads
+
+190
+00:23:15,660 --> 00:23:25,980
+the wine quality data set and then calls ETL.py. So in this case, ETL.py, all it's doing is it's
+
+191
+00:23:25,980 --> 00:23:34,540
+converting a CSV file to a feather file using PyArrow. And in the second stage is where I train
+
+192
+00:23:34,540 --> 00:23:42,540
+my model. So that's all handled inside train.py. And I pass it some input arguments, give it my
+
+193
+00:23:42,540 --> 00:23:50,540
+file name, I give it some parameters for the model, which is based in scikit-learn. And then
+
+194
+00:23:50,540 --> 00:23:59,740
+I get a pickle file out. And just to try it out, like, I GPG sign the model. So it's signed and
+
+195
+00:23:59,740 --> 00:24:04,540
+encrypted. So I guess in theory, you know, if you're uploading it to another machine, then at least,
+
+196
+00:24:04,540 --> 00:24:09,980
+you know, it's, you know, where it came from. So all that kind of being said, you know, there's a
+
+197
+00:24:09,980 --> 00:24:16,620
+different syntax going on here, right? So you might see, you know, I've got things like file name
+
+198
+00:24:16,620 --> 00:24:23,020
+and like these double curly braces. So there's kind of a templating notation here going on with
+
+199
+00:24:23,020 --> 00:24:31,100
+something I call runtime variables, where when I run build magic on the command line, I can specify,
+
+200
+00:24:32,220 --> 00:24:37,660
+you know, the name that I've templated out and then the variable that I want to substitute in at
+
+201
+00:24:37,660 --> 00:24:44,940
+runtime. So every time I run this, I, you know, I specify a new file name. And, you know, in the
+
+202
+00:24:44,940 --> 00:24:51,020
+command up here, I'm setting the date time. So that way, I have a timestamp of every time I'm
+
+203
+00:24:51,020 --> 00:25:00,140
+running this thing. So then, you know, the last stage here, I am removing the existing model.
+
+204
+00:25:00,940 --> 00:25:09,500
+And then copying over the new one, I verify it and decrypt it and then restart my server. So my
+
+205
+00:25:09,500 --> 00:25:15,740
+web server is just a fast API server that just is also running scikit-learn and then serves up my
+
+206
+00:25:15,740 --> 00:25:22,700
+model. So nice and easy. And I've separated the concerns of everybody involved along the way. So
+
+207
+00:25:23,660 --> 00:25:34,540
+that being said, you know, some takeaways from this that I hope you have got from this is that,
+
+208
+00:25:34,540 --> 00:25:41,900
+you know, build magic is going to help you automate tasks. And it's doing this by abstracting,
+
+209
+00:25:41,900 --> 00:25:48,540
+you know, the command execution from the underlying host machine. And hopefully it does this in a
+
+210
+00:25:48,540 --> 00:25:58,060
+better way than what you get with shell scripts and make files. So also, importantly, you know,
+
+211
+00:25:58,060 --> 00:26:02,540
+this is designed in a way that it can evolve along with you and help you work the way that
+
+212
+00:26:02,540 --> 00:26:09,660
+you want to work. So that being said, you know, build magic still, it's beta, it's still under
+
+213
+00:26:09,660 --> 00:26:16,220
+active development. I have a feature roadmap that, you know, I'm working on. And I could use some
+
+214
+00:26:16,220 --> 00:26:22,380
+help too. So, you know, if you're interested in open source software or are looking to get involved
+
+215
+00:26:22,380 --> 00:26:27,740
+with open source software and maybe you find this interesting, you know, please reach out. Here's
+
+216
+00:26:27,740 --> 00:26:35,660
+where you can find the project on GitHub, on PyPI. All the examples I showed today are in their own
+
+217
+00:26:35,660 --> 00:26:44,940
+repo called build magic examples. You can find the docs at, I've got kind of this emoji URL.
+
+218
+00:26:44,940 --> 00:26:52,780
+It's the hammersparkelrobot.y.at. So if you want to try that out, I mean, everything I've tried it
+
+219
+00:26:52,780 --> 00:27:02,060
+out on, it works except for LinkedIn. So, and that's not entirely true. It works on LinkedIn,
+
+220
+00:27:02,060 --> 00:27:09,340
+on the web, I think, but not mobile. But anyway, so thank you for putting up with listening to me.
+
+221
+00:27:09,340 --> 00:27:14,460
+And, you know, I can maybe take a few questions if there aren't any real quick.
+

@@ -1,0 +1,228 @@
+1
+00:00:00,000 --> 00:00:11,200
+I'm Owen. I'm an engineer at Elemental, and we're the company behind Dagster, which is
+
+2
+00:00:11,200 --> 00:00:16,120
+an open source Python library for data orchestration. So I imagine there's a lot of people that
+
+3
+00:00:16,120 --> 00:00:19,840
+have never heard of data orchestration, and there's also probably a lot of people that
+
+4
+00:00:19,840 --> 00:00:23,040
+have never heard of orchestration in general, or at least don't have a great idea of what
+
+5
+00:00:23,040 --> 00:00:26,240
+it is. So I'm going to be really ambitious. I'm going to talk really fast, and I'm trying
+
+6
+00:00:26,880 --> 00:00:32,880
+to start from the very beginning. So first, orchestration is, at a high level, just organizing
+
+7
+00:00:32,880 --> 00:00:39,040
+and managing computational tasks. These tasks can be anything. So we can start off by loading
+
+8
+00:00:39,040 --> 00:00:43,000
+some new data into a database, and after that happens, we might want to update some metrics
+
+9
+00:00:43,000 --> 00:00:48,520
+dashboards with that new data. Another example might be having some log file on a disk. We
+
+10
+00:00:48,520 --> 00:00:52,400
+back that up to the cloud, and only once that's done do we want to delete the local copy.
+
+11
+00:00:52,480 --> 00:00:56,600
+If the first task fails, we really don't want to execute the second one. Other nice-to-have
+
+12
+00:00:56,600 --> 00:01:00,320
+features of orchestration would be scheduling, so starting that process at the same time
+
+13
+00:01:00,320 --> 00:01:05,040
+every day. Alerting, if one of those tasks fails, get a Slack message, get a pager duty
+
+14
+00:01:05,040 --> 00:01:09,960
+alert, et cetera. Also having a history of every time these ran would be really valuable.
+
+15
+00:01:09,960 --> 00:01:13,680
+So instead of just having a cron job disappear into the void, we can look at what actually
+
+16
+00:01:13,680 --> 00:01:18,920
+happened two months ago. Data orchestration is really similar, except it's specialized
+
+17
+00:01:18,920 --> 00:01:24,160
+for data tasks, so any task that has something to do with data. So transporting it, transforming
+
+18
+00:01:24,160 --> 00:01:29,800
+it, processing it, et cetera. One special attribute of these data tasks is that it's
+
+19
+00:01:29,800 --> 00:01:34,380
+often very valuable to actually pass data between these tasks. So it's not enough to
+
+20
+00:01:34,380 --> 00:01:39,080
+say that, okay, task one is done, task two, start. You want to have some way of communicating.
+
+21
+00:01:39,080 --> 00:01:42,160
+So you might want to pass some Python object, you might want to pass the contents of a database
+
+22
+00:01:42,880 --> 00:01:49,640
+table, a PySpark data frame, et cetera. Some natural examples, ETLs and ML workflows often
+
+23
+00:01:49,640 --> 00:01:53,600
+really fit into this pattern where you're transforming data and pushing it along a pipeline
+
+24
+00:01:53,600 --> 00:01:58,760
+and transforming it at every step. Before I get into some code, some Daxter-specific
+
+25
+00:01:58,760 --> 00:02:04,760
+terminology for our framework, we have a concept of an op. It's short for operator or operation.
+
+26
+00:02:04,760 --> 00:02:09,800
+It's basically analogous to a data task. Inside an op is just arbitrary Python code, whatever
+
+27
+00:02:09,800 --> 00:02:15,000
+you want. Once you connect ops together, connect their inputs and outputs, you can
+
+28
+00:02:15,000 --> 00:02:19,080
+create a job, and that's a workflow that you might want to execute, either on a schedule,
+
+29
+00:02:19,080 --> 00:02:26,080
+manually, et cetera. So now we can look at some code. This is a stubbed-out ETL pipeline,
+
+30
+00:02:26,480 --> 00:02:31,160
+and you can see we have three functions here, three ops. The first one is extract data.
+
+31
+00:02:31,160 --> 00:02:35,000
+You get data from somewhere, and you return it as a pandas data frame. Again, arbitrary
+
+32
+00:02:35,000 --> 00:02:41,080
+Python. This could be anything. So it could just be a regular Python object, too. We have
+
+33
+00:02:41,080 --> 00:02:46,040
+a transform function, so it takes a data frame, does something to it, maybe it filters it.
+
+34
+00:02:46,040 --> 00:02:49,780
+And then finally, we have a load operation, so it takes that data frame and puts it somewhere.
+
+35
+00:02:49,780 --> 00:02:53,820
+Maybe it stores it back to disk, maybe it stores it in a database, whatever. And now
+
+36
+00:02:53,820 --> 00:02:57,820
+that we've decorated them with this at op, they turn from regular Python functions into
+
+37
+00:02:57,820 --> 00:03:03,920
+ops, and we can turn them in and we can compose them into a job. So here we have a myETL job.
+
+38
+00:03:03,920 --> 00:03:07,400
+We take our transformed data, which is just what happens when you transform your extracted
+
+39
+00:03:07,400 --> 00:03:11,960
+data, and then we load it somewhere. So now if we go to Daggett, which is Dexter's UI
+
+40
+00:03:11,960 --> 00:03:16,800
+tool for visualizing these things, without even running any of this op code, just by
+
+41
+00:03:16,800 --> 00:03:21,160
+reading the contents of the job, we already get a graphical representation of what this
+
+42
+00:03:21,160 --> 00:03:28,160
+looks like. And you see we've actually slurped up those typings, or type annotations, and
+
+43
+00:03:28,920 --> 00:03:34,880
+use that to help inform the graph. We can also look at a history of every run that has
+
+44
+00:03:34,880 --> 00:03:40,080
+ever happened, if it's succeeded or failed. And with any instance of those runs, we get
+
+45
+00:03:40,080 --> 00:03:44,360
+a really detailed look at a timeline of all the events that happened, lots of automatically
+
+46
+00:03:44,360 --> 00:03:49,880
+generated structured metadata. Obviously, that's a really high-level overview, can't
+
+47
+00:03:49,880 --> 00:03:54,220
+go over all the features, but some honorable mentions is historically it's really hard
+
+48
+00:03:54,220 --> 00:03:58,220
+to test data pipelines, because you don't really want to touch your production database
+
+49
+00:03:58,220 --> 00:04:03,220
+in a test. So Dexter is designed around making it really easy to mock out certain parts of
+
+50
+00:04:03,220 --> 00:04:09,100
+your jobs. So for example, you can have a database resource in prod that touches actual
+
+51
+00:04:09,100 --> 00:04:14,540
+database, in your test it's just a mock thing. Another thing is a lot of times these data
+
+52
+00:04:14,540 --> 00:04:19,860
+tasks are designed to create something called, what we call a data asset, which is some persisted
+
+53
+00:04:19,860 --> 00:04:24,020
+object that stays outside the lifetime of the pipeline run. So for example, a database
+
+54
+00:04:24,020 --> 00:04:29,540
+table or something on disk, etc. So the asset catalog makes it really easy to connect those
+
+55
+00:04:29,540 --> 00:04:34,340
+assets to the computation that computed them and track them over time. So in conclusion,
+
+56
+00:04:34,340 --> 00:04:37,940
+Dexter is a tool to help develop, test, and monitor trusted data assets. If that sounds
+
+57
+00:04:37,940 --> 00:04:41,740
+cool to you, and you want to learn more, talk to us on Slack, I'm at Owen.
+

@@ -1,0 +1,1180 @@
+1
+00:00:00,000 --> 00:00:14,440
+All right. Thank you. Can everyone hear me okay? All good? Okay. Great. So hello, everyone.
+
+2
+00:00:14,440 --> 00:00:19,920
+Thank you for being here. I'm really super grateful for this opportunity. So I'll be
+
+3
+00:00:19,920 --> 00:00:26,220
+talking about containers today. So there were, like, a couple of talks about containers already.
+
+4
+00:00:26,220 --> 00:00:31,260
+You'll learn something new. So that's my goal. So how many of you use Docker regularly for
+
+5
+00:00:31,260 --> 00:00:36,780
+containerization and everything? Okay. Quite a few. So by the end of this talk, I hope
+
+6
+00:00:36,780 --> 00:00:41,780
+you have a better intuition about building more efficient containers. And, you know,
+
+7
+00:00:41,780 --> 00:00:46,660
+for your Python apps, you know, specifically. Okay. So the way it will go is that I will
+
+8
+00:00:46,660 --> 00:00:52,620
+cover I will actually go over a sample Python application, which I built. Okay. Go through
+
+9
+00:00:52,620 --> 00:00:57,100
+the base Docker file for it. And then we'll try to improve it over time and see how we
+
+10
+00:00:57,100 --> 00:01:02,940
+improve the numbers, improve the, you know, image size and the build times. Okay? So let's
+
+11
+00:01:02,940 --> 00:01:09,700
+get started. I'm so glad the sun is out. So, yeah, hopefully we'll have a better energy.
+
+12
+00:01:09,700 --> 00:01:18,220
+Okay. So a little bit about me. So I got introduced to Python in, you know, 2013. That was mostly
+
+13
+00:01:18,220 --> 00:01:23,780
+about the data science and aspect of things. So currently I work at the star family at Intuit,
+
+14
+00:01:23,780 --> 00:01:31,260
+where I lead AI ops efforts there. I love RPG games, by the way, especially in, you know,
+
+15
+00:01:31,260 --> 00:01:38,980
+PS5. Any last of us fans, hopefully. Yeah. So I love it. And hopefully I want to become a yoga
+
+16
+00:01:38,980 --> 00:01:45,300
+instructor in the near future. So, you know, fingers crossed for that. So without any further ado,
+
+17
+00:01:45,300 --> 00:01:52,060
+let's talk about the motivation behind why are we really talking about images and containers. So
+
+18
+00:01:52,060 --> 00:01:56,700
+we all know that, you know, shipping applications and productions using Docker is kind of like a go
+
+19
+00:01:56,700 --> 00:02:01,780
+to right now, especially when you use something like, you know, Kubernetes with it, right?
+
+20
+00:02:01,780 --> 00:02:08,660
+Another good thing is that building an image for a Python application is actually, you know,
+
+21
+00:02:08,660 --> 00:02:12,780
+pretty straightforward. It's not that hard to, you know, set it up and, you know, get something
+
+22
+00:02:12,780 --> 00:02:20,380
+running. The tricky part is to really optimize it for your application for, you know, faster
+
+23
+00:02:20,380 --> 00:02:29,020
+build time and, you know, smaller image size. So we'll go into all of that soon. And this is
+
+24
+00:02:29,020 --> 00:02:35,660
+even more complicated when you have something which has a non-Python dependency. So maybe
+
+25
+00:02:35,660 --> 00:02:43,900
+something like a C extension, C++ or Rust. Okay. So let's go over a little bit about the basics,
+
+26
+00:02:43,900 --> 00:02:48,100
+about what is a container. We'll just skim through it. I'm sure, like, many people know about it.
+
+27
+00:02:48,100 --> 00:02:54,900
+So a container is basically, you know, it's about packaging the application with all of its files,
+
+28
+00:02:54,900 --> 00:03:04,580
+configs and dependencies and run that in isolation. Okay? So that's all it is, right? But what about
+
+29
+00:03:04,580 --> 00:03:10,580
+an image? So an image, so the way I like to think of it is the image is like an instruction template.
+
+30
+00:03:10,580 --> 00:03:15,860
+Okay? It's an instruction. It's actually a set of instructions on how to run this whole container.
+
+31
+00:03:15,860 --> 00:03:21,980
+So it has different layers that depend on top of another ones where we can add, remove, you know,
+
+32
+00:03:21,980 --> 00:03:28,900
+run, you know, run things, all of that. And it's written in a file called Dockerfile. And the
+
+33
+00:03:28,900 --> 00:03:34,380
+benefits are, you know, portability. So it is very portable, which means that you can, you know,
+
+34
+00:03:34,380 --> 00:03:38,060
+just, you know, copy from, you know, one machine to another with a different architecture. You
+
+35
+00:03:38,060 --> 00:03:43,220
+might have to change a little bit, but otherwise it's pretty portable. Isolation, because you're
+
+36
+00:03:43,220 --> 00:03:48,340
+able to isolate your application from any other system processes. Then you have scalability,
+
+37
+00:03:48,340 --> 00:03:54,460
+of course, you know, especially combined with something like Kubernetes. It's very, very
+
+38
+00:03:54,460 --> 00:03:59,460
+scalable. Now, it's also deterministic, so it's reproducible, right? Well, at least it's supposed
+
+39
+00:03:59,460 --> 00:04:04,860
+to be. You know, we'll see in a second that, you know, sometimes, you know, there are some
+
+40
+00:04:04,860 --> 00:04:10,060
+gotchas there, right? And it's very lightweight compared to a traditional virtual machine, right?
+
+41
+00:04:10,060 --> 00:04:16,220
+Because it's just, you know, simple, you know, Linux VM, which is running, you know, in isolation.
+
+42
+00:04:16,220 --> 00:04:20,340
+So in compared to a traditional virtual machine where you have a full-fledged OS running is very,
+
+43
+00:04:20,340 --> 00:04:26,900
+very lightweight. Okay. So why should we really care about making better images? Like,
+
+44
+00:04:26,900 --> 00:04:32,820
+why are we really here, right? So the main thing that we need to, you know, think about is that
+
+45
+00:04:32,820 --> 00:04:39,660
+if our images are not really efficient, that will lead to slower build times. And slower build times
+
+46
+00:04:39,660 --> 00:04:46,740
+will affect the way developers, you know, ship things to production. So it will decrease the
+
+47
+00:04:46,740 --> 00:04:51,860
+developer productivity, okay? And as well as it's very difficult to fail fast, which means you have
+
+48
+00:04:51,860 --> 00:04:57,980
+to wait for your code to really build in order to really test what is going on and if things are
+
+49
+00:04:57,980 --> 00:05:05,460
+running or not. Then there's the obvious thing, which is the larger image sizes. So if we have a
+
+50
+00:05:05,460 --> 00:05:11,020
+really huge image, it will require more storage, it will have longer download times, and if you
+
+51
+00:05:11,020 --> 00:05:15,860
+have a CI series set up, it will really take a long time for that image to get, you know, pushed
+
+52
+00:05:15,860 --> 00:05:22,620
+as well. And of course, there are some security risks as well. If you're not careful, for example,
+
+53
+00:05:22,620 --> 00:05:28,380
+you're using a very outdated base image with, you know, let's say a very older version of Debian or
+
+54
+00:05:28,380 --> 00:05:33,860
+something, then you will have some security risks as well. And of course, if you're really not
+
+55
+00:05:33,860 --> 00:05:40,540
+careful, there could be a performance overhead as well. Okay. And by the way, this is very easy to
+
+56
+00:05:40,540 --> 00:05:48,340
+make this mistake about the large images there. So when we talk about efficiency, right, how do
+
+57
+00:05:48,340 --> 00:05:54,740
+we really measure it? So for this talk, I'm going to focus on four different metrics, okay? So we'll
+
+58
+00:05:54,740 --> 00:06:00,300
+go over them. The first is the biggest one, which is the uncompressed image size. Many times when
+
+59
+00:06:00,300 --> 00:06:05,700
+you see, you know, like in many of the portals like, you know, Quay or maybe some, you know,
+
+60
+00:06:05,700 --> 00:06:09,580
+Docker, right, you will see the compressed image size, but we're talking about the uncompressed
+
+61
+00:06:09,580 --> 00:06:15,020
+image size. So that is the one that is the most important, okay? So this is our biggest metric.
+
+62
+00:06:15,020 --> 00:06:20,660
+Then we have the initial very first build time. So this is the one where we have no caching. Imagine
+
+63
+00:06:20,660 --> 00:06:25,740
+that you're building an application, right? And you are just building it for the very first time.
+
+64
+00:06:25,740 --> 00:06:31,580
+So you don't have any caching whatsoever. Then the rebuild time after a code change. So of course,
+
+65
+00:06:31,580 --> 00:06:37,460
+you're developing, right? So you will have some code changes. So how does the rebuild time work
+
+66
+00:06:37,540 --> 00:06:42,780
+after any kind of a code change? Okay. And the rebuild time after dependency change. So let's
+
+67
+00:06:42,780 --> 00:06:47,380
+say you install a new package or you deleted some package. How does that affect? So we'll focus on
+
+68
+00:06:47,380 --> 00:06:54,060
+these four metrics and we'll see how that goes. So our example application, this is what I built.
+
+69
+00:06:54,060 --> 00:06:59,100
+And by the way, this is all there on GitHub. So we'll give you the link later on. So it's a fast
+
+70
+00:06:59,100 --> 00:07:06,660
+API based machine learning application which runs on or which uses the very famous MNIST dataset.
+
+71
+00:07:06,980 --> 00:07:13,140
+MNIST is the handwriting digit recognition. So I just trained a very simple convolution neural
+
+72
+00:07:13,140 --> 00:07:20,100
+network in PyTorch. But the main thing is that I included a very simple C++ extension. So this
+
+73
+00:07:20,100 --> 00:07:28,060
+small extension will make the image building a little bit more spicy. Okay? So this is how
+
+74
+00:07:28,060 --> 00:07:34,980
+our C++ extension looks like. Okay? So on the right, you have our classify image function which
+
+75
+00:07:34,980 --> 00:07:42,260
+basically does take the image. So take the digit. Maybe it's four or five. It takes the image,
+
+76
+00:07:42,260 --> 00:07:48,580
+converts that to a tensor. It loads the model and then runs it through the prediction. Okay?
+
+77
+00:07:48,580 --> 00:07:54,540
+But the output that we get from the model is actually a soft max output which is a fancy way
+
+78
+00:07:54,540 --> 00:08:01,540
+of saying that there are ten digits. So you have ten different outputs, each of them summing up to
+
+79
+00:08:01,540 --> 00:08:06,300
+probability distribution, and you want to take the one which gives you the maximum probability.
+
+80
+00:08:06,300 --> 00:08:11,940
+So in this case, we'll have to use the argmax function. Now, instead of using the usual torch
+
+81
+00:08:11,940 --> 00:08:18,220
+dot argmax, I'm going to use my own extension where I wrote this in C++, and it does the same
+
+82
+00:08:18,220 --> 00:08:23,580
+thing. Okay? It just adds a little bit more complexity there. Okay? So we're good here.
+
+83
+00:08:23,580 --> 00:08:33,460
+So let's get started with building our first Dockerfile. Okay. So I would say the full
+
+84
+00:08:33,460 --> 00:08:39,940
+directory structure looks like this. So we have a Dockerignore file, right, which is very important,
+
+85
+00:08:39,940 --> 00:08:44,620
+which is similar to gitignore, and it's very important so that you don't copy some unwanted
+
+86
+00:08:44,620 --> 00:08:49,540
+dependencies or unwanted files or caches, right? So you have Dockerignore. You have our Dockerfile.
+
+87
+00:08:49,580 --> 00:08:55,620
+We have the artifact, which is our model. We have the extension directory. This is where I actually
+
+88
+00:08:55,620 --> 00:09:02,980
+store the argmax.c++ file, and then I have the setup.py to build that extension. Then I have
+
+89
+00:09:02,980 --> 00:09:11,260
+some project and then some requirements files, and then I have my source code, right? So all
+
+90
+00:09:11,260 --> 00:09:17,740
+is good there, and I have my requirements.txt as well. I have hard constraints in the requirements
+
+91
+00:09:17,740 --> 00:09:23,340
+file for deterministic behavior, right? That's what we want, so which is good. By the way,
+
+92
+00:09:23,340 --> 00:09:26,980
+this approach that I'm going to take is just one of the approaches. You can do it in multiple ways,
+
+93
+00:09:26,980 --> 00:09:32,900
+but hopefully it will make things clear on what to focus on. Okay? So this is our initial Dockerfile.
+
+94
+00:09:32,900 --> 00:09:40,460
+So I'll just go over it very quickly, actually, since we are short of time. So the first line,
+
+95
+00:09:40,460 --> 00:09:47,500
+we are basically basing from a base image, which is the Python 3.12 in a bookworm. Bookworm is the
+
+96
+00:09:47,500 --> 00:09:53,740
+latest Debian version. We set up some environment variables where we say the default timeout and we
+
+97
+00:09:53,740 --> 00:09:59,620
+disable the version check because that will just increase the build time. Then we are in the app
+
+98
+00:09:59,620 --> 00:10:04,860
+work directory. We copy the source files. We copy the requirements and the extension folder, and we
+
+99
+00:10:04,860 --> 00:10:11,540
+then install the dependencies. Okay? In the end, we have the command for actually running that fast
+
+100
+00:10:11,540 --> 00:10:17,340
+API application. Okay? So we are actually doing a lot of good things here. So we have a Docker
+
+101
+00:10:17,340 --> 00:10:23,700
+ignore file, right? We are actually basing from a very good image. Okay? This is the latest Python,
+
+102
+00:10:23,700 --> 00:10:30,500
+the stable version, at least. Well, as far as I know. Okay? And then the bookworm, which is the
+
+103
+00:10:30,500 --> 00:10:35,820
+latest stable Debian version. Okay? And we are also freezing the required packages, which is very
+
+104
+00:10:35,820 --> 00:10:45,020
+good. Okay? But the best part, it works. So this thing works. Okay? So it's great. And this is our
+
+105
+00:10:45,020 --> 00:10:48,860
+performance. So we talked about the four different metrics that we'll go over. So this is our
+
+106
+00:10:48,860 --> 00:10:54,460
+performance here. So the image size is a whopping 1.85 gigs. Okay? That's pretty big. So that is
+
+107
+00:10:54,460 --> 00:11:00,100
+something we have to really work on. The build time, it's about a minute. So it takes this much
+
+108
+00:11:00,100 --> 00:11:05,900
+time to build it. The first time, which is why it's without a cache, right? Then we have the
+
+109
+00:11:05,900 --> 00:11:11,700
+rebuild time without any changes you make. Now, this is where Docker is very powerful, because
+
+110
+00:11:11,700 --> 00:11:17,740
+it can really cache things up, so you don't have to spend any more time if you are just rebuilding
+
+111
+00:11:17,740 --> 00:11:23,140
+the same thing. Okay? So it's just three seconds. Then rebuild time with code change, it still takes
+
+112
+00:11:23,140 --> 00:11:28,180
+a minute. So every time you make a code change, it will take a minute for this to be built again.
+
+113
+00:11:28,500 --> 00:11:33,060
+And this is where we need to fix next, right? Then we have the rebuild time with dependency
+
+114
+00:11:33,060 --> 00:11:39,700
+change. So any time you add a package, anything, so it will also require something. So it will also
+
+115
+00:11:39,700 --> 00:11:46,020
+need a minute of change there, right? So in all of this, what do you think is the slowest step
+
+116
+00:11:46,020 --> 00:11:53,780
+of the whole process? Yeah, exactly. So it's the installation. So these installation is actually
+
+117
+00:11:53,780 --> 00:12:01,060
+the biggest, it's the slowest step of the whole process, right? So the bad thing is that the
+
+118
+00:12:01,060 --> 00:12:07,780
+image size is about 1.85 gigs. Now, builds are actually non-deterministic here, and I'll come to
+
+119
+00:12:07,780 --> 00:12:14,260
+that just in the next optimization. But the first thing that we need to really fix is that dependencies
+
+120
+00:12:14,260 --> 00:12:22,100
+are reinstalled for every code change. Okay? Which is bad. We really need to fix this, right? So what
+
+121
+00:12:22,100 --> 00:12:31,140
+do we do? We just change the order of operations. So instead of installing, instead of actually
+
+122
+00:12:31,140 --> 00:12:38,580
+copying the whole source code into the app source, we just copy the requirements file first. We copy
+
+123
+00:12:38,580 --> 00:12:46,420
+that, and then we install the dependencies. Now, the cool thing here is that now, any time we change
+
+124
+00:12:46,420 --> 00:12:52,660
+anything in the source code, it will not get reinstalled again, right? So the requirements
+
+125
+00:12:52,660 --> 00:12:57,780
+would not get reinstalled again at all, because everything above that is actually cached. That's
+
+126
+00:12:57,780 --> 00:13:02,900
+how Docker layer caching works. So if there's any change at this point, at this point when we
+
+127
+00:13:02,900 --> 00:13:08,820
+actually copy the source files, all the previous layers are actually cached. So we should be very
+
+128
+00:13:08,820 --> 00:13:18,420
+quick there. So, yeah, so we know this. And then if you look at the change in the performance,
+
+129
+00:13:18,420 --> 00:13:24,500
+it's huge. It's huge, right? So we can actually rebuild with any code change in less than three
+
+130
+00:13:24,500 --> 00:13:33,620
+seconds. That's amazing. Okay. But the bad thing is that, well, we did not do anything to improve
+
+131
+00:13:33,620 --> 00:13:38,580
+the size of the image, right? We just changed the order. And then builds are still non-deterministic.
+
+132
+00:13:39,220 --> 00:13:45,860
+Now, why do I say that? Now, the whole point of Dockers or the containers and images is to
+
+133
+00:13:45,860 --> 00:13:51,860
+make things reproducible, okay? But this is a non-deterministic behavior. And the reason is,
+
+134
+00:13:52,660 --> 00:13:58,100
+I guess many of you know it, it's basically due to the concept of transitive dependencies, right?
+
+135
+00:13:59,060 --> 00:14:04,740
+If you recall earlier, we did have constraints on the requirements file. We did have that. But
+
+136
+00:14:05,300 --> 00:14:10,980
+transitive dependencies basically mean dependency of a dependency. So I might have a hard constraint
+
+137
+00:14:10,980 --> 00:14:16,260
+on a package A saying that this is the version that I need, okay? Really hard constraint. But
+
+138
+00:14:16,260 --> 00:14:21,220
+that package A might have some loose constraints in package B, okay? And so on. So this could
+
+139
+00:14:21,300 --> 00:14:28,980
+actually go on a long time, right? So this is where we need to fix it. Okay. So which lets us
+
+140
+00:14:28,980 --> 00:14:36,100
+to the next optimization, which is we actually pin the dependencies, right? So now we use, you know,
+
+141
+00:14:36,100 --> 00:14:41,620
+some tool. So in some packaging tool, it could be, you know, poetry. It could be in PDM, Hatch,
+
+142
+00:14:41,620 --> 00:14:48,420
+in PIP tools. Just pardon me if I missed something. But really, anything would work, okay?
+
+143
+00:14:48,420 --> 00:14:53,220
+So I use poetry here to export the log file to a requirements file. So you see the requirements
+
+144
+00:14:53,220 --> 00:14:58,660
+exported.txt. This is basically the exported requirements from the log file used by poetry.
+
+145
+00:14:58,660 --> 00:15:03,700
+But you could really use anything. Now, the second thing that I've done is separate the dev and the
+
+146
+00:15:03,700 --> 00:15:08,660
+main dependencies, okay? Now, that is pretty important. Because if you recall, I had some
+
+147
+00:15:08,660 --> 00:15:13,380
+dependency like, you know, torch, torch vision, all of that, you know, which are required. But
+
+148
+00:15:13,380 --> 00:15:18,180
+I also had something like pi test and black. Now, those are basically dev dependencies,
+
+149
+00:15:18,180 --> 00:15:24,660
+right? You don't need them. So we separated that out. And then I also disabled the PIP cache.
+
+150
+00:15:24,660 --> 00:15:29,140
+Because you don't need really caching inside the image building process, right?
+
+151
+00:15:31,460 --> 00:15:38,900
+So we did some improvements here, right? So the image size has reduced. It's still big,
+
+152
+00:15:38,900 --> 00:15:43,620
+but it's still better, right? So the build time has reduced, and then the rebuild time also has
+
+153
+00:15:43,620 --> 00:15:51,060
+reduced, right? So this is good. So we are going somewhere, right? But the bad thing is,
+
+154
+00:15:51,780 --> 00:15:58,340
+the size is still big. So it's about 1.7 gigs. And yes, so we are going to tackle this, right?
+
+155
+00:15:58,340 --> 00:16:07,220
+So let's tackle the elephant in the room first. Okay. So a very easy fix could be
+
+156
+00:16:08,020 --> 00:16:12,580
+use a smaller base image, right? So if the base image is very big, then, of course,
+
+157
+00:16:12,580 --> 00:16:18,420
+the whole image size will be big. Now, we were using the old image, which was, you know, Python
+
+158
+00:16:18,420 --> 00:16:23,140
+3.12 in Bookworm, right? But the problem with that image is that it actually ships with many
+
+159
+00:16:23,140 --> 00:16:28,980
+things which we really don't need in production. So things like Git, Curl, you know, all of those
+
+160
+00:16:28,980 --> 00:16:34,020
+things. Like, unless you need it, you don't need to install them, right? So let's use a slim image.
+
+161
+00:16:34,020 --> 00:16:39,220
+Now, this one does not have all of those additional functionalities. So let's use that, right?
+
+162
+00:16:40,580 --> 00:16:48,900
+So that should do it, right? Just use a smaller base image. But life is not that simple, okay?
+
+163
+00:16:50,020 --> 00:16:58,820
+So the problem is that we did not install any compiler to install the C++ dependencies, okay?
+
+164
+00:16:58,820 --> 00:17:05,700
+So we'll really get a nasty error, and we have all seen those errors, I think, right? So that's
+
+165
+00:17:05,700 --> 00:17:12,740
+the ugly part. This will actually lead to an error because we don't have the compiler to
+
+166
+00:17:13,380 --> 00:17:21,780
+install the C++ dependency, right? So we do something else. We now install the compiler.
+
+167
+00:17:21,780 --> 00:17:28,580
+So here I run, you know, AppGit update, and I can, you know, AppGit install the G++ compiler.
+
+168
+00:17:29,540 --> 00:17:35,300
+And like a good engineer, I also remove it in the end. So that should be fine, right? I install it,
+
+169
+00:17:35,300 --> 00:17:38,580
+I install the compiler, I install the dependencies, then I don't need it, so I remove it.
+
+170
+00:17:39,380 --> 00:17:46,660
+So let's take a look at the performance. So, by the way, this actually gives a lower base image
+
+171
+00:17:46,660 --> 00:17:52,420
+download time as well, since the slim image is actually much smaller. So if you look at the
+
+172
+00:17:52,420 --> 00:17:59,700
+performance, it's actually a drastic improvement. We went from 1.7 to 1.12, okay? Now the build time
+
+173
+00:17:59,700 --> 00:18:05,620
+got increased. I'm sure you can point that out, like, how will that happen? That's because we are
+
+174
+00:18:05,620 --> 00:18:10,900
+now forced to install the compiler as well. So every time we have to run this AppGit update,
+
+175
+00:18:10,900 --> 00:18:16,740
+and also the AppGit install G++, right? So this should be good, right? So
+
+176
+00:18:18,820 --> 00:18:25,940
+I think this is where life gets easy, right? But the problem is,
+
+177
+00:18:26,820 --> 00:18:32,100
+are we really removing the compiler in the right way? Okay. And this is where things get really
+
+178
+00:18:32,100 --> 00:18:37,700
+tricky with Docker files. So the way the layering works is that layers are appended on top of each
+
+179
+00:18:37,700 --> 00:18:43,380
+other. So here you can see that even though we are removing G++ in the end, we are not really
+
+180
+00:18:43,380 --> 00:18:48,340
+removing it from the previous layers, and we need all the layers to actually get the final image.
+
+181
+00:18:49,140 --> 00:18:54,500
+So the compiler needs to be fetched even though it won't be accessed in our final image,
+
+182
+00:18:56,100 --> 00:19:00,100
+due to this purge command, right? So we are not really removing the G++ compiler in the
+
+183
+00:19:00,100 --> 00:19:06,980
+right way here, okay? So what do we do? We now combine the layers. So let's combine the layers,
+
+184
+00:19:07,300 --> 00:19:14,580
+so in one run command, now we have AppGit update, install, install the requirements,
+
+185
+00:19:15,140 --> 00:19:20,900
+we run the setup, and we also remove the compiler, right? So let's see how the performance looks like
+
+186
+00:19:20,900 --> 00:19:26,900
+now, right? We did improve a lot. So the image size is now less than one gig. The build time
+
+187
+00:19:26,900 --> 00:19:34,660
+has been improved, and the rebuild time is actually increased a little bit. And here's
+
+188
+00:19:34,660 --> 00:19:39,460
+the trade-off, right? It will always do the slow AppGit update in the compiler installs whenever
+
+189
+00:19:39,460 --> 00:19:44,500
+there's a change in the dependencies, because remember, we have combined everything into one
+
+190
+00:19:44,500 --> 00:19:52,820
+layer, right? So there has to be that trade-off, okay? All right. So the not so good part, as I
+
+191
+00:19:52,820 --> 00:19:57,860
+said, was that any change in dependencies will trigger all five of those run commands, okay?
+
+192
+00:19:58,500 --> 00:20:05,940
+So where can we go next? Or do you think is that it? Well, not so. Because Docker supports
+
+193
+00:20:05,940 --> 00:20:10,820
+something called the multi-stage builds where you have a builder and a runner stage. So the builder
+
+194
+00:20:10,820 --> 00:20:16,340
+makes sure that you install all the dependencies and the runner just runs the application. Now,
+
+195
+00:20:16,340 --> 00:20:21,940
+in a compiled language, it's pretty easy. So if you have a C++ code, let's say you have your file,
+
+196
+00:20:22,020 --> 00:20:29,860
+so in your builder stage, you just install the compiler, compile the file, you get the executable,
+
+197
+00:20:29,860 --> 00:20:35,700
+you copy the executable to the runner image, and then you're done. But here in Python, we have to
+
+198
+00:20:35,700 --> 00:20:40,260
+copy the whole interpreter environment, right? But how do we do that? We are not using any kind
+
+199
+00:20:40,260 --> 00:20:44,900
+of virtual environment or something, right? Because if you use the global Python package or
+
+200
+00:20:44,900 --> 00:20:49,940
+the environment, it actually installs it in multiple different places, okay? So there's one
+
+201
+00:20:49,940 --> 00:20:55,060
+way to fix it, which is either do a user-based install or use a virtual environment, okay?
+
+202
+00:20:55,700 --> 00:21:02,420
+So we are going to use a virtual environment here, okay? So if you look at here, we actually
+
+203
+00:21:02,420 --> 00:21:06,420
+are installing in a virtual environment, and then we are copying the requirements as before,
+
+204
+00:21:06,420 --> 00:21:11,780
+and we are installing all the requirements and then just installing the dependencies
+
+205
+00:21:11,780 --> 00:21:16,500
+in the environment, okay? Then in the runner stage, what we are doing is we are just copying
+
+206
+00:21:16,500 --> 00:21:23,860
+that virtual environment in our path, right? And finally, we copy the source, and then we're good,
+
+207
+00:21:24,740 --> 00:21:29,780
+okay? So there are very good things going on here, right? Because dependencies are installed in a
+
+208
+00:21:29,780 --> 00:21:35,940
+virtual environment, the builder takes care of installing the dependencies, which is needed,
+
+209
+00:21:35,940 --> 00:21:40,980
+and then the runner is only responsible for running the application. Now, another good point
+
+210
+00:21:40,980 --> 00:21:46,500
+about this is the builder can no longer require to be a slim image, right? It can be a non-slim
+
+211
+00:21:46,500 --> 00:21:53,220
+image, so it's never running in production, so we can afford to use the bigger base image there,
+
+212
+00:21:53,220 --> 00:21:59,300
+right? So the performance looks like this. So we reduced the image size even further,
+
+213
+00:21:59,300 --> 00:22:06,260
+our build time got increased by a lot, and our rebuild time as well, okay? And that is only because
+
+214
+00:22:06,260 --> 00:22:12,100
+that we use from that slim version to the actual bigger version there, and we don't have to
+
+215
+00:22:12,900 --> 00:22:19,540
+mirror run all of those five run commands together, okay? So maybe a nitpick
+
+216
+00:22:20,660 --> 00:22:26,900
+is that your packages are downloaded every single time this install, this pip install layer gets
+
+217
+00:22:26,900 --> 00:22:31,700
+triggered. So imagine that you're installing, you're actually building, so every time there
+
+218
+00:22:32,500 --> 00:22:36,660
+is a dependency change, you're actually downloading the packages from the internet. Maybe we can do
+
+219
+00:22:36,660 --> 00:22:44,020
+something about that. Which takes us to our last optimization, which is cache mount. Now,
+
+220
+00:22:44,020 --> 00:22:50,660
+cache mount is a newer feature in the Docker build kit. I mean, relatively new. So it basically
+
+221
+00:22:50,660 --> 00:22:57,540
+enables us to use a persistent package cache to be used during builds. This can be very, very
+
+222
+00:22:57,540 --> 00:23:04,020
+useful for, you know, packaging, like, for maybe, like, any kind of package manager, actually.
+
+223
+00:23:04,740 --> 00:23:10,340
+Like, you know, something like apt-get or pip or npm. So here we're using the mount cache for
+
+224
+00:23:10,340 --> 00:23:16,100
+the pip cache, right? So here you can see that I mount it, and then I install all of the dependencies
+
+225
+00:23:16,100 --> 00:23:20,900
+again. But the good thing is that we don't have to download all packages every time from the web,
+
+226
+00:23:20,900 --> 00:23:29,300
+but only when a new package has been added, right? Okay. So that's good. And now the performance
+
+227
+00:23:29,300 --> 00:23:33,780
+looks something like this. We have the image size. Image size is still the same, but the re-build
+
+228
+00:23:33,780 --> 00:23:39,220
+time has decreased a lot, and the re-build time with any dependency change has decreased, and
+
+229
+00:23:39,220 --> 00:23:44,020
+that's only because of that we don't have to download any packages every time from the web.
+
+230
+00:23:44,020 --> 00:23:53,860
+Okay. All right. So to recap, we, you know, we started with 1.85, you know, 1.85 gigs, right?
+
+231
+00:23:53,860 --> 00:23:58,580
+That's pretty huge. And most of them are actually coming from the Torch library. Okay. So anytime
+
+232
+00:23:58,580 --> 00:24:03,380
+you have a big machine learning library dependency, this is bound to happen, okay?
+
+233
+00:24:05,060 --> 00:24:11,860
+And then so we did a 56% improvement in image size, and that's pretty huge, I think.
+
+234
+00:24:11,860 --> 00:24:18,580
+Then we also did a 30% improvement in the re-build time with dependency change, okay? So that's
+
+235
+00:24:18,580 --> 00:24:25,380
+also very good because dependencies can change a lot of times, so that is very great. But of course,
+
+236
+00:24:25,380 --> 00:24:29,460
+just by doing that simple layer ordering, we improved the re-build time with code change by
+
+237
+00:24:29,460 --> 00:24:34,260
+98%. And that's something that, you know, people overlook, like, in quite a bit. I've seen that.
+
+238
+00:24:35,380 --> 00:24:40,660
+Okay. So there are some other best practices I really want people to follow because this will
+
+239
+00:24:40,660 --> 00:24:46,820
+really help, you know, in their own way. Always use a Python-specific Docker-ignore file. So we
+
+240
+00:24:46,820 --> 00:24:51,220
+have Python-specific Git-ignore files as well, and we also have Docker-ignore files on the same,
+
+241
+00:24:52,100 --> 00:24:55,940
+like, on the same level. So use a language-specific one. It will really help you there.
+
+242
+00:24:57,620 --> 00:25:02,100
+And always separate dev and prod dependencies. You don't need, you don't need, like, a full
+
+243
+00:25:02,100 --> 00:25:07,620
+fledge of dependency tree in your prod environment. Just use what we really need there, okay?
+
+244
+00:25:07,620 --> 00:25:13,380
+Okay. And always use the latest Debian, you know, Ubuntu or Red Hat distribution to base
+
+245
+00:25:13,380 --> 00:25:18,500
+from. This will actually prevent a lot of security vulnerabilities as well, and you will also get the
+
+246
+00:25:18,500 --> 00:25:25,780
+latest improvement in speed and memory management and all of that. And also, try to avoid specifying
+
+247
+00:25:25,780 --> 00:25:30,020
+the Python patch version, like, from the base image. So, I mean, something like it's very easy
+
+248
+00:25:30,020 --> 00:25:36,340
+to do, like, 3.1, 12.2 in Bookworm, okay? Now, what that will do is that will actually bind you
+
+249
+00:25:36,420 --> 00:25:41,460
+to only, like, only that version. You won't get the patch updates. So, you know, something like
+
+250
+00:25:41,460 --> 00:25:46,740
+3.1 to Bookworm will just make sure that when, you know, 3.12.3 comes back, it will actually
+
+251
+00:25:46,740 --> 00:25:54,500
+download that one, okay? And this is very ML-specific. I would say I would highly encourage
+
+252
+00:25:54,500 --> 00:26:02,180
+you to use a CPU-specific versus a GPU-specific image. So what happens is usually when I've seen
+
+253
+00:26:02,180 --> 00:26:09,700
+in my company and in my work is that you need GPU for training, but you normally don't need it for,
+
+254
+00:26:09,700 --> 00:26:15,300
+like, inference or for, you know, predictions like in production. So, I mean, something like
+
+255
+00:26:15,300 --> 00:26:19,860
+that, you know, specifically will actually reduce the size of the image by quite a bit,
+
+256
+00:26:19,860 --> 00:26:24,900
+because Torch actually, like, supports CPU-specific and GPU-specific images as well,
+
+257
+00:26:25,620 --> 00:26:33,460
+or just the, you know, just the wheels as well. So that would be all. I have the code here. I will
+
+258
+00:26:33,460 --> 00:26:39,380
+actually upload everything in a byte tonight. So hopefully if you have any, like, any questions,
+
+259
+00:26:39,380 --> 00:26:45,380
+anything, just, you know, feel free to ping me there. Well, we have lots of questions. Thank you.
+
+260
+00:26:46,260 --> 00:26:54,100
+Thank you, Avik. All right. We have lots of questions. You got people excited. I learned
+
+261
+00:26:54,100 --> 00:27:00,260
+some stuff from this. So this is great. So off the top, if you would unplug so they can set
+
+262
+00:27:00,260 --> 00:27:07,060
+Andy up. Keep the mic. There we go. All right. Come this way with me. All right. So first off,
+
+263
+00:27:07,060 --> 00:27:11,060
+do you track the size and image build time metrics in your CICD flows?
+
+264
+00:27:11,060 --> 00:27:13,620
+And do you have any advice on how teams could start doing that?
+
+265
+00:27:14,660 --> 00:27:19,460
+Yeah. Yeah. So I do really, and I've started this practice because otherwise it can get out of hand.
+
+266
+00:27:20,100 --> 00:27:27,860
+Okay. So the way I do it is so there is a time functionality in like in bash. So you can use
+
+267
+00:27:27,860 --> 00:27:33,220
+time and then build the image and you can, you know, like put different arguments. So like,
+
+268
+00:27:33,220 --> 00:27:37,860
+for example, I give no cash. No cash means that you're building it for the first time. Okay. Then
+
+269
+00:27:37,860 --> 00:27:42,900
+I just do an echo, like echo some change, echo some dependency change. Okay. And then build the
+
+270
+00:27:42,900 --> 00:27:47,460
+image again. That will actually give me, you know, what is the actual time taken like for that.
+
+271
+00:27:47,460 --> 00:27:52,260
+Yeah. Yeah. That makes sense. Awesome. So it's all just kind of manually in your, okay.
+
+272
+00:27:54,020 --> 00:27:57,940
+Any features of Docker that you find not being used as often as they should,
+
+273
+00:27:57,940 --> 00:28:01,380
+like Docker ignore file, excluding files, anything else like that?
+
+274
+00:28:02,100 --> 00:28:07,220
+Yeah. I think this build cache is something that I've hardly seen, right? Something like this,
+
+275
+00:28:07,220 --> 00:28:13,300
+you know, run cache, which is a newer, newer thing, newer thing for Docker. It can be really
+
+276
+00:28:13,300 --> 00:28:18,580
+helpful for Debian based images. As I said, Red Hat based as well. You know, like especially for
+
+277
+00:28:18,580 --> 00:28:24,020
+Python, I think, like to build the dependencies very, very quick. Given PIP and downloading is
+
+278
+00:28:24,020 --> 00:28:28,740
+as slow as it is. Yeah. Especially where you don't have a good internet connection. It really,
+
+279
+00:28:28,740 --> 00:28:32,580
+it really bothers. Oh yeah. No, I was making notes while you're talking and that's when I'm
+
+280
+00:28:32,580 --> 00:28:38,820
+bringing back to mess with on Monday. So any reason to choose Python Bookworm versus Bullseye or
+
+281
+00:28:38,820 --> 00:28:44,580
+Alpine? That's the most stable version right now. I think that's the like LTS version. So I was
+
+282
+00:28:44,580 --> 00:28:49,940
+using Bullseye before. So maybe I think, you know, two years or 1.5 years before I was using,
+
+283
+00:28:50,900 --> 00:28:55,940
+you know, Bullseye and then, you know, Bookworm came. So we, we upgraded it. We have to do it.
+
+284
+00:28:55,940 --> 00:29:00,340
+Otherwise, you know, companies flagged, you know, some security vulnerabilities on all the time.
+
+285
+00:29:00,340 --> 00:29:06,660
+Yeah, that makes sense. Have you looked at the use of distro-less images as well as new tooling
+
+286
+00:29:06,660 --> 00:29:12,580
+like Rye, UV, kind of some of those newer pieces to help speed up the, to reduce the footprint
+
+287
+00:29:12,580 --> 00:29:17,620
+and speed up build times? For some package managers and everything? Yeah. So as part of
+
+288
+00:29:17,620 --> 00:29:24,340
+speeding up your Docker build using Rye or UV or some of the new kind of faster tooling around.
+
+289
+00:29:24,340 --> 00:29:30,980
+Yeah. So I think those, so those tools will, so we'll actually see how that turns out. So right
+
+290
+00:29:30,980 --> 00:29:37,860
+now we use, you know, Poetry, PDM, Hatch, but when those tools actually support other, like other,
+
+291
+00:29:37,860 --> 00:29:42,980
+and, you know, better functionalities, we will start using them. Okay. That's for sure. Makes
+
+292
+00:29:42,980 --> 00:29:47,540
+sense. I'm going to give you one more question and then we'll, we'll hand it off to our next group.
+
+293
+00:29:48,500 --> 00:29:56,500
+Do you use VS Code dev containers for local dev? I do not. So I use something called Nix, Nix.dev.
+
+294
+00:29:56,820 --> 00:30:01,140
+Okay. That, that I use for like deterministic behavior, especially for data science projects
+
+295
+00:30:01,140 --> 00:30:06,420
+and something that really helps, but I'll try that out. Cool. Awesome. Thanks again, Avik.
+

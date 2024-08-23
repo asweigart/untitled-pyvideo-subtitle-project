@@ -1,0 +1,1972 @@
+1
+00:00:00,000 --> 00:00:09,020
+So this talk is titled Duck Typing Meta-Classes and Recursion Building a Deep Collection Type.
+
+2
+00:00:09,020 --> 00:00:12,140
+What a mouthful, right?
+
+3
+00:00:12,140 --> 00:00:17,940
+So this is going to touch on some things a lot of developers find kind of intimidating
+
+4
+00:00:17,940 --> 00:00:22,420
+or scary to various degrees, but they're all in the language for a reason.
+
+5
+00:00:22,420 --> 00:00:25,580
+They can be used to great effect sometimes.
+
+6
+00:00:26,540 --> 00:00:33,500
+I'll also say at the outset too that part of the mission of the library that I made for all this
+
+7
+00:00:33,500 --> 00:00:36,540
+is to generalize something.
+
+8
+00:00:36,540 --> 00:00:43,660
+And if you're working for a company or doing a job, you probably most often don't want to generalize your code.
+
+9
+00:00:43,660 --> 00:00:50,300
+You want to be narrowly scoped to what you're trying to do because generalizing is hard.
+
+10
+00:00:50,380 --> 00:00:55,260
+You take your five-point ticket and get it done in a month because you generalized it,
+
+11
+00:00:55,260 --> 00:00:57,900
+your boss probably isn't going to be very happy.
+
+12
+00:00:57,900 --> 00:01:01,660
+So there's a time and a place for it.
+
+13
+00:01:01,660 --> 00:01:08,780
+You might encounter it sometimes at your work, but it's encountered very often in library writing,
+
+14
+00:01:08,780 --> 00:01:13,020
+all the libraries that you're used to and familiar with with TIPS.
+
+15
+00:01:13,020 --> 00:01:21,980
+So the thing that we're trying to generalize now is handling large or cumbersome data,
+
+16
+00:01:21,980 --> 00:01:27,100
+things that are deeply nested and maybe we know what they are, maybe we don't.
+
+17
+00:01:27,100 --> 00:01:35,020
+We encounter stuff like this all the time in APIs and infrastructures code, in data science.
+
+18
+00:01:35,020 --> 00:01:40,460
+Sometimes applications have internal structures and it's not just DICs and lists.
+
+19
+00:01:40,460 --> 00:01:45,900
+Sometimes there's tuples in there or double-ended queues, DECs, whatever you have.
+
+20
+00:01:46,860 --> 00:01:50,540
+But handling stuff like this is really common.
+
+21
+00:01:51,340 --> 00:01:53,500
+So we're going to quickly go over a little bit of prior art.
+
+22
+00:01:54,220 --> 00:01:58,620
+So there is this library that was made several years ago called DottieDict.
+
+23
+00:01:59,340 --> 00:02:00,940
+DottieDict did a couple cool things.
+
+24
+00:02:02,380 --> 00:02:06,460
+You can pass it your dictionary and create a new object.
+
+25
+00:02:07,340 --> 00:02:22,540
+And then you can start drilling down into the data in your object by dot chaining.
+
+26
+00:02:25,820 --> 00:02:27,340
+That is pretty cool.
+
+27
+00:02:28,460 --> 00:02:32,940
+It's just a little bit of syntactic trigger though for this, right?
+
+28
+00:02:33,500 --> 00:02:35,020
+It's like a type.
+
+29
+00:02:36,460 --> 00:02:41,900
+That's basically the same thing.
+
+30
+00:02:41,900 --> 00:02:47,260
+There's not a ton going on there that's really novel, a little bit.
+
+31
+00:02:49,420 --> 00:02:50,860
+So it's fun enough.
+
+32
+00:02:50,860 --> 00:02:54,220
+Maybe if that's your preference, you get a kick out of DottieDict.
+
+33
+00:02:54,220 --> 00:02:57,740
+But there's some issues with what DottieDict can handle.
+
+34
+00:02:57,740 --> 00:03:01,100
+So if we look at our structure we had up here,
+
+35
+00:03:01,180 --> 00:03:06,540
+we had company employees contact info.
+
+36
+00:03:06,540 --> 00:03:09,340
+So there's some fields with dots in them.
+
+37
+00:03:09,340 --> 00:03:11,820
+And we're using dots as a separator in this path.
+
+38
+00:03:11,820 --> 00:03:19,340
+So when we try to do the same thing, it fails because company dot company doesn't exist.
+
+39
+00:03:19,340 --> 00:03:21,340
+We need company dot company name.
+
+40
+00:03:23,420 --> 00:03:26,540
+So DottieDict has a solution for this.
+
+41
+00:03:28,060 --> 00:03:29,740
+They've got a separator object.
+
+42
+00:03:30,540 --> 00:03:33,820
+I'm separating our field here in the function that you can pass.
+
+43
+00:03:35,180 --> 00:03:35,820
+Oh, wait.
+
+44
+00:03:35,820 --> 00:03:36,620
+No, they don't.
+
+45
+00:03:37,580 --> 00:03:43,820
+Originally we made this DottieDict from a function they gave us.
+
+46
+00:03:43,820 --> 00:03:47,980
+But we need a different API to use a separator.
+
+47
+00:03:49,340 --> 00:03:51,020
+I think that's a bit of a limitation.
+
+48
+00:03:51,020 --> 00:03:55,100
+That's not a very friendly API to expose to people.
+
+49
+00:03:55,900 --> 00:03:57,420
+But it does work.
+
+50
+00:03:58,220 --> 00:04:02,220
+So we can give it a different separator.
+
+51
+00:04:02,220 --> 00:04:05,100
+And now we get our company name out of this nested dict.
+
+52
+00:04:05,820 --> 00:04:06,320
+Cool.
+
+53
+00:04:07,260 --> 00:04:08,620
+Let's try something a little bit different.
+
+54
+00:04:09,340 --> 00:04:13,180
+Let's start with something that is a list off the bat.
+
+55
+00:04:13,740 --> 00:04:16,060
+It still contains dicts and lists.
+
+56
+00:04:20,860 --> 00:04:25,900
+And I quickly copy that over and make a DottieDict version of that.
+
+57
+00:04:26,860 --> 00:04:27,660
+And we can't.
+
+58
+00:04:27,660 --> 00:04:29,420
+DottieDict needs a dict.
+
+59
+00:04:30,300 --> 00:04:32,540
+So there's a few limitations in this prior art.
+
+60
+00:04:33,500 --> 00:04:37,180
+Then came along Python Benedict.
+
+61
+00:04:37,180 --> 00:04:41,180
+I first encountered Python Benedict very recently, actually.
+
+62
+00:04:41,180 --> 00:04:44,060
+They announced themselves on Reddit and the Python subreddit.
+
+63
+00:04:44,060 --> 00:04:45,100
+So I took a look at them.
+
+64
+00:04:46,060 --> 00:04:49,020
+And they were doing some of the things that I wanted to see done.
+
+65
+00:04:49,580 --> 00:04:50,620
+Wanted to see have done.
+
+66
+00:04:50,620 --> 00:05:00,780
+So we try to make a Benedict dictionary out of this thing, too.
+
+67
+00:05:00,780 --> 00:05:03,020
+But it fails right off the bat for a similar reason.
+
+68
+00:05:03,020 --> 00:05:05,180
+There's this company.name thing.
+
+69
+00:05:05,180 --> 00:05:08,060
+But Benedict is at least eagerly erroring on it,
+
+70
+00:05:08,060 --> 00:05:09,500
+saying we don't know how to handle that.
+
+71
+00:05:10,540 --> 00:05:12,780
+So we pass it a separator again.
+
+72
+00:05:14,060 --> 00:05:14,940
+Okay, great.
+
+73
+00:05:15,660 --> 00:05:23,420
+And now we can still access something in it in this path-like way.
+
+74
+00:05:23,420 --> 00:05:27,260
+But they're using a forward slash separator now instead of a dot.
+
+75
+00:05:28,780 --> 00:05:30,220
+Okay, good enough.
+
+76
+00:05:31,820 --> 00:05:33,820
+Let's do a little test, though.
+
+77
+00:05:33,820 --> 00:05:36,620
+Let's find something else interesting about these.
+
+78
+00:05:37,180 --> 00:05:44,460
+We can try to find out the type of the DottieDict thing that we got.
+
+79
+00:05:44,460 --> 00:05:45,980
+And it's not actually a dictionary.
+
+80
+00:05:45,980 --> 00:05:47,020
+It's its own thing.
+
+81
+00:05:47,020 --> 00:05:49,260
+So if you're trying to work with dictionaries,
+
+82
+00:05:49,820 --> 00:05:51,660
+and you want to be able to use is instance
+
+83
+00:05:51,660 --> 00:05:53,820
+to know that you have a dict somewhere in your code,
+
+84
+00:05:53,820 --> 00:05:56,620
+DottieDict actually doesn't pass that test.
+
+85
+00:05:56,620 --> 00:05:57,580
+You don't have a dict.
+
+86
+00:05:59,580 --> 00:06:01,260
+It could be a little annoying.
+
+87
+00:06:02,860 --> 00:06:04,380
+Benedict succeeds here.
+
+88
+00:06:05,420 --> 00:06:07,180
+Benedict is a dict.
+
+89
+00:06:07,180 --> 00:06:07,980
+Great.
+
+90
+00:06:07,980 --> 00:06:08,780
+That could be useful.
+
+91
+00:06:08,780 --> 00:06:14,780
+And Benedict has another power.
+
+92
+00:06:14,780 --> 00:06:19,100
+You can search into your nested dict to find something.
+
+93
+00:06:19,100 --> 00:06:22,620
+And part of the deal here is we have a big cumbersome data structure,
+
+94
+00:06:22,620 --> 00:06:25,020
+and we either don't understand it.
+
+95
+00:06:25,020 --> 00:06:26,860
+We don't want to have to stare at it forever.
+
+96
+00:06:26,860 --> 00:06:28,380
+Maybe we kind of do understand it,
+
+97
+00:06:28,380 --> 00:06:29,980
+but we don't want to type the whole thing out.
+
+98
+00:06:29,980 --> 00:06:31,100
+We want a little shorthand.
+
+99
+00:06:31,660 --> 00:06:33,180
+So Benedict helps us out.
+
+100
+00:06:33,180 --> 00:06:39,100
+Oh, but again, there are some issues with Benedict.
+
+101
+00:06:40,460 --> 00:06:43,660
+Again, you can't pass a list to something
+
+102
+00:06:43,660 --> 00:06:45,020
+and have it become a dict.
+
+103
+00:06:46,300 --> 00:06:47,100
+It's not in the name.
+
+104
+00:06:49,580 --> 00:06:51,580
+So there's some issues.
+
+105
+00:06:51,580 --> 00:06:52,460
+What do we really want?
+
+106
+00:06:54,300 --> 00:06:56,140
+We want something that can handle any type.
+
+107
+00:06:56,140 --> 00:06:58,300
+We want to be able to take a nested structure.
+
+108
+00:06:58,300 --> 00:06:59,580
+We don't care what type it is.
+
+109
+00:06:59,660 --> 00:07:03,180
+And we want to be able to have certain handy features
+
+110
+00:07:03,180 --> 00:07:06,460
+attached to that structure that enable us to introspect
+
+111
+00:07:06,460 --> 00:07:07,740
+and traverse that structure.
+
+112
+00:07:08,620 --> 00:07:11,100
+But we also want to preserve typing.
+
+113
+00:07:11,100 --> 00:07:13,660
+If I start with a dict, I want it to act like a dict.
+
+114
+00:07:13,660 --> 00:07:15,980
+If I start with a tuple, I want it to act like a tuple.
+
+115
+00:07:17,180 --> 00:07:18,460
+This instance should work.
+
+116
+00:07:24,380 --> 00:07:27,660
+So I kind of want a subclass, basically, is what it sounds like.
+
+117
+00:07:27,660 --> 00:07:29,660
+I want something where I can subclass dict,
+
+118
+00:07:30,220 --> 00:07:32,700
+have it be this deep thing and act like a dict.
+
+119
+00:07:32,700 --> 00:07:35,500
+But I also want to be able to subclass list and tuple
+
+120
+00:07:35,500 --> 00:07:37,740
+and retain all the typing that comes with all of that.
+
+121
+00:07:39,580 --> 00:07:40,860
+And I want better traversal.
+
+122
+00:07:42,220 --> 00:07:44,540
+I don't really like having to deal with this separator thing.
+
+123
+00:07:45,180 --> 00:07:48,460
+This bit right here is kind of handy.
+
+124
+00:07:50,700 --> 00:07:52,780
+Depending on how you like to type things,
+
+125
+00:07:52,780 --> 00:07:56,380
+you may prefer to traverse a structure like this.
+
+126
+00:07:57,020 --> 00:07:58,140
+It's not too different.
+
+127
+00:07:58,940 --> 00:08:01,660
+But if I pass it an iterable,
+
+128
+00:08:03,180 --> 00:08:05,660
+that looks more natural to me as a Python developer.
+
+129
+00:08:06,380 --> 00:08:09,900
+And it's easier and more natural to construct.
+
+130
+00:08:09,900 --> 00:08:13,820
+So maybe I can actually programmatically create these paths
+
+131
+00:08:13,820 --> 00:08:15,100
+and dig down into it.
+
+132
+00:08:16,860 --> 00:08:18,620
+Now, if I really want a goal,
+
+133
+00:08:19,260 --> 00:08:22,140
+what I want is pattern matching in the structure
+
+134
+00:08:22,140 --> 00:08:24,540
+to traverse it programmatically.
+
+135
+00:08:24,540 --> 00:08:26,540
+Again, I don't need to know what the structure is.
+
+136
+00:08:26,540 --> 00:08:28,780
+I just want a thing that's inside it.
+
+137
+00:08:29,660 --> 00:08:31,580
+Think about the talk two talks ago.
+
+138
+00:08:31,580 --> 00:08:33,340
+We had all this health data.
+
+139
+00:08:33,340 --> 00:08:34,540
+It looked nasty, right?
+
+140
+00:08:34,540 --> 00:08:37,820
+I don't need to understand what all is contained in all of that.
+
+141
+00:08:37,820 --> 00:08:40,540
+I just want to be able to dig in and get what I want.
+
+142
+00:08:42,860 --> 00:08:44,460
+That'll have a little bit of an issue
+
+143
+00:08:44,460 --> 00:08:45,900
+if I have pattern matching like that.
+
+144
+00:08:45,900 --> 00:08:46,940
+Because what if the object,
+
+145
+00:08:46,940 --> 00:08:49,900
+what if the field contains asterisks or something like that?
+
+146
+00:08:49,900 --> 00:08:51,340
+So I still need a little bit of support.
+
+147
+00:08:51,980 --> 00:08:53,420
+But it's got a better default.
+
+148
+00:08:55,500 --> 00:08:59,260
+Okay, so now we're going to get into how we do all this.
+
+149
+00:09:00,460 --> 00:09:02,620
+There's a few things we can try.
+
+150
+00:09:04,220 --> 00:09:08,060
+So this is a class factory made from a function.
+
+151
+00:09:09,500 --> 00:09:12,540
+Show of hands, whoever has indented class before
+
+152
+00:09:13,260 --> 00:09:16,140
+in real code that lived, a few.
+
+153
+00:09:16,860 --> 00:09:19,500
+I'm actually kind of surprised by how many raise their hands,
+
+154
+00:09:19,500 --> 00:09:21,420
+but still most people know, right?
+
+155
+00:09:21,980 --> 00:09:24,540
+It's not a thing you commonly need to do.
+
+156
+00:09:25,260 --> 00:09:27,100
+And it's got some real benefit.
+
+157
+00:09:28,540 --> 00:09:35,820
+With it, we can create an object out of this list,
+
+158
+00:09:36,860 --> 00:09:37,820
+get something new.
+
+159
+00:09:38,860 --> 00:09:41,740
+We've got this deep collection object we're creating
+
+160
+00:09:41,740 --> 00:09:44,220
+and it is in fact a list instance.
+
+161
+00:09:45,180 --> 00:09:48,300
+And we can pass it a dictionary as well
+
+162
+00:09:48,300 --> 00:09:50,300
+and we'll get back a dictionary instance.
+
+163
+00:09:50,940 --> 00:09:53,260
+So we've got dynamic inheritance here.
+
+164
+00:09:54,860 --> 00:09:57,740
+Again, you don't normally want to do this,
+
+165
+00:09:58,780 --> 00:10:01,180
+but sometimes you really want to leverage
+
+166
+00:10:01,180 --> 00:10:03,420
+some of the strengths that Python has naturally.
+
+167
+00:10:03,420 --> 00:10:05,420
+Python is a very dynamic language.
+
+168
+00:10:05,980 --> 00:10:09,420
+I love type-inning, static typing,
+
+169
+00:10:09,420 --> 00:10:12,380
+when you can get it in Python is fantastic.
+
+170
+00:10:12,380 --> 00:10:14,940
+But some things are naturally dynamic
+
+171
+00:10:14,940 --> 00:10:17,500
+and if you leverage that, you can get a lot out of it.
+
+172
+00:10:18,140 --> 00:10:21,900
+So there's a problem here with this class factory.
+
+173
+00:10:23,100 --> 00:10:25,740
+This class isn't really exposed to you.
+
+174
+00:10:26,540 --> 00:10:28,940
+You can't get it back without creating an instance,
+
+175
+00:10:28,940 --> 00:10:30,780
+which means you can't subclass it
+
+176
+00:10:31,260 --> 00:10:33,980
+and you can't directly access the class
+
+177
+00:10:33,980 --> 00:10:37,820
+to add on your own methods and pass that along the chain.
+
+178
+00:10:39,580 --> 00:10:44,380
+So how do we get a class without a factory function
+
+179
+00:10:44,380 --> 00:10:47,020
+without a factory function made from a...
+
+180
+00:10:47,820 --> 00:10:51,580
+How do you get a factory function class without the function?
+
+181
+00:10:52,300 --> 00:10:54,620
+The answer is you use a metaclass.
+
+182
+00:10:57,020 --> 00:10:59,980
+Again, I think metaclasses are pretty uncommonly used.
+
+183
+00:11:00,940 --> 00:11:04,780
+A quick refresher, a metaclass is the class of a class.
+
+184
+00:11:05,740 --> 00:11:10,060
+So if we have just standard old class here,
+
+185
+00:11:10,060 --> 00:11:13,660
+it's instantiated just by typing that class foo pass.
+
+186
+00:11:14,060 --> 00:11:15,660
+The class exists in the namespace.
+
+187
+00:11:16,380 --> 00:11:24,700
+If we instantiate the class, we say these parentheses here
+
+188
+00:11:24,700 --> 00:11:27,020
+create an object out of the class.
+
+189
+00:11:28,300 --> 00:11:32,540
+So you have a class, you instantiate it to get the object.
+
+190
+00:11:33,100 --> 00:11:35,660
+But Python is hiding from you a little bit.
+
+191
+00:11:35,660 --> 00:11:37,340
+That's because you have a class
+
+192
+00:11:37,420 --> 00:11:39,900
+but Python is hiding from you a little bit
+
+193
+00:11:39,900 --> 00:11:44,780
+the fact that even just writing this, you're instantiating the class.
+
+194
+00:11:46,460 --> 00:11:50,380
+So if you have a metaclass, you can create how that's done.
+
+195
+00:11:52,140 --> 00:11:56,700
+So if I type class foo again, class foo,
+
+196
+00:11:56,700 --> 00:12:08,620
+class bar, metaclass equals foo,
+
+197
+00:12:11,660 --> 00:12:13,980
+pass and get rid of that thing right there.
+
+198
+00:12:20,700 --> 00:12:23,660
+Create a little in it dunder.
+
+199
+00:12:24,460 --> 00:12:28,140
+And for these purposes, we don't care what happens here.
+
+200
+00:12:39,980 --> 00:12:41,660
+All right, we get in it.
+
+201
+00:12:42,860 --> 00:12:45,900
+I didn't instantiate anything in the normal way.
+
+202
+00:12:45,900 --> 00:12:50,380
+All I did was tell Python the bar uses foo as a metaclass
+
+203
+00:12:50,380 --> 00:12:51,820
+and the in it function was called.
+
+204
+00:12:52,780 --> 00:12:54,940
+So, okay, that's kind of how metaclasses work.
+
+205
+00:12:55,580 --> 00:12:59,660
+You saw again a couple of talks ago the call dunder method
+
+206
+00:13:02,220 --> 00:13:03,660
+that is this right here.
+
+207
+00:13:04,460 --> 00:13:14,860
+In a normal class, if we go up just a bit again to this,
+
+208
+00:13:16,060 --> 00:13:19,740
+we can instantiate a class like so.
+
+209
+00:13:20,700 --> 00:13:23,580
+And then if I put parentheses on that again,
+
+210
+00:13:23,580 --> 00:13:26,300
+that would call the call dunder method.
+
+211
+00:13:26,300 --> 00:13:30,060
+So on the metaclass, this is the same thing that's called
+
+212
+00:13:30,060 --> 00:13:32,460
+when you instantiate a class in the first place.
+
+213
+00:13:33,980 --> 00:13:35,420
+If you can wrap your heads around that.
+
+214
+00:13:35,980 --> 00:13:39,820
+It's a little bit of recursion just baked into what's going on
+
+215
+00:13:39,820 --> 00:13:41,260
+with metaclasses inherently.
+
+216
+00:13:42,460 --> 00:13:47,340
+So if this is invoking call directly,
+
+217
+00:13:47,340 --> 00:13:50,700
+that means I can use it to pass in a new object
+
+218
+00:13:51,340 --> 00:13:55,740
+and the metaclass can dynamically create my class
+
+219
+00:13:55,740 --> 00:13:59,020
+with the object I gave it as a type.
+
+220
+00:14:00,380 --> 00:14:02,140
+So that's what's going on here.
+
+221
+00:14:03,100 --> 00:14:05,100
+I'm collecting args and quarks and call
+
+222
+00:14:05,820 --> 00:14:09,020
+and I'm extracting the thing I'm passing in
+
+223
+00:14:09,900 --> 00:14:13,100
+as the base object I'm building from.
+
+224
+00:14:13,100 --> 00:14:14,460
+It could be a dict or a list.
+
+225
+00:14:15,180 --> 00:14:17,820
+I'm getting the type of that thing, dict or list.
+
+226
+00:14:18,380 --> 00:14:21,900
+Then I'm using the type function to create a new class.
+
+227
+00:14:23,180 --> 00:14:26,140
+Use type sometimes to type check things
+
+228
+00:14:26,140 --> 00:14:29,260
+but the three argument form creates a new type.
+
+229
+00:14:30,540 --> 00:14:31,660
+So we create the new type.
+
+230
+00:14:33,900 --> 00:14:37,900
+We call new on it and then in it in order
+
+231
+00:14:37,900 --> 00:14:40,140
+and then return the instance of that new type.
+
+232
+00:14:41,100 --> 00:14:45,420
+It's kind of complicated but this will work here
+
+233
+00:14:45,420 --> 00:14:49,340
+and then finally when I'm in the type that uses the metaclass,
+
+234
+00:14:50,220 --> 00:14:54,540
+I'm going to call in it and pass the original object.
+
+235
+00:14:54,540 --> 00:14:56,780
+So the idea is if I start with a list,
+
+236
+00:14:57,740 --> 00:15:00,380
+I preserve that original list item
+
+237
+00:15:00,380 --> 00:15:03,900
+and use it to populate through the old type.
+
+238
+00:15:06,460 --> 00:15:07,900
+Let's try it out real quick.
+
+239
+00:15:10,140 --> 00:15:19,980
+Okay.
+
+240
+00:15:21,100 --> 00:15:33,980
+Now let's see here.
+
+241
+00:15:41,100 --> 00:15:47,980
+Okay, so this looks like a list so far.
+
+242
+00:15:54,780 --> 00:15:55,900
+It is in fact a list.
+
+243
+00:15:56,780 --> 00:15:58,860
+Great, that is what we wanted
+
+244
+00:15:58,860 --> 00:16:01,980
+and I can do the same thing with a dict.
+
+245
+00:16:10,140 --> 00:16:12,460
+Okay, cool.
+
+246
+00:16:12,460 --> 00:16:16,780
+So now all the methods, thank you.
+
+247
+00:16:18,940 --> 00:16:21,820
+So now all the methods that list and dict normally have
+
+248
+00:16:21,820 --> 00:16:23,340
+should just come along for free.
+
+249
+00:16:23,340 --> 00:16:24,780
+We don't need to build any of it
+
+250
+00:16:26,700 --> 00:16:28,700
+and it doesn't matter what kind of object
+
+251
+00:16:28,700 --> 00:16:30,940
+someone's going to create a deep collection with.
+
+252
+00:16:30,940 --> 00:16:32,220
+We're going to mimic it.
+
+253
+00:16:32,220 --> 00:16:34,540
+We're going to bring everything along for free.
+
+254
+00:16:34,540 --> 00:16:37,340
+This is a big step in generalization.
+
+255
+00:16:37,980 --> 00:16:39,900
+We're not done quite yet.
+
+256
+00:16:40,700 --> 00:16:45,340
+Because there's a little problem with tuples.
+
+257
+00:16:47,180 --> 00:16:48,380
+What's wrong with tuples?
+
+258
+00:16:49,020 --> 00:16:51,580
+Tuples are an immutable data type.
+
+259
+00:16:51,580 --> 00:16:55,980
+So passing in the object in the init doesn't work.
+
+260
+00:16:56,540 --> 00:17:00,300
+You need to pass it in up here when we call dunder new.
+
+261
+00:17:01,420 --> 00:17:03,500
+Easy enough, we've got it.
+
+262
+00:17:04,300 --> 00:17:07,500
+So we just amend our new bit right here
+
+263
+00:17:07,500 --> 00:17:08,700
+so we can pass that in.
+
+264
+00:17:09,340 --> 00:17:12,220
+And then we wrap the super call in a try accept.
+
+265
+00:17:12,220 --> 00:17:14,940
+Because we still need the super call some of the time
+
+266
+00:17:14,940 --> 00:17:17,900
+when we're dealing with a immutable object.
+
+267
+00:17:17,900 --> 00:17:20,140
+Just not the immutable ones like tuples.
+
+268
+00:17:21,500 --> 00:17:24,700
+So let's modify this a little bit more.
+
+269
+00:17:30,700 --> 00:17:32,300
+Let's try that tuple again.
+
+270
+00:17:33,660 --> 00:17:34,940
+Great, okay.
+
+271
+00:17:39,340 --> 00:17:41,340
+It's a tuple.
+
+272
+00:17:42,140 --> 00:17:44,780
+Okay, so now I'm dynamically inheriting.
+
+273
+00:17:44,780 --> 00:17:47,740
+But I'm not really doing much that's interesting with this yet.
+
+274
+00:17:48,620 --> 00:17:52,540
+What I really want for that pathing feature
+
+275
+00:17:52,540 --> 00:17:53,500
+that I was talking about before
+
+276
+00:17:53,500 --> 00:17:56,700
+is I want to have special get methods.
+
+277
+00:17:56,700 --> 00:17:58,140
+Get items, set item.
+
+278
+00:17:58,700 --> 00:18:01,740
+I want to attach a paths to key method.
+
+279
+00:18:01,740 --> 00:18:03,180
+A paths to value method.
+
+280
+00:18:03,180 --> 00:18:05,420
+And all the values for a particular key.
+
+281
+00:18:06,460 --> 00:18:07,580
+We'll get to all that in time.
+
+282
+00:18:07,580 --> 00:18:08,860
+I'm not going to go through every little bit.
+
+283
+00:18:10,060 --> 00:18:13,420
+But this is where the even more recursion comes into play
+
+284
+00:18:13,420 --> 00:18:14,700
+and a lot of duck typing.
+
+285
+00:18:15,580 --> 00:18:19,340
+So this is a little snippet.
+
+286
+00:18:20,700 --> 00:18:21,260
+See if I can.
+
+287
+00:18:22,540 --> 00:18:24,860
+Yeah, I'm going to have to scroll a little bit here.
+
+288
+00:18:24,860 --> 00:18:29,420
+So there's a paths to key function here at the bottom
+
+289
+00:18:29,980 --> 00:18:30,940
+that we're going to use.
+
+290
+00:18:30,940 --> 00:18:32,620
+And I'm cutting out a lot of logic here.
+
+291
+00:18:32,620 --> 00:18:35,980
+But you see there's a quick test for if the key is itself path like.
+
+292
+00:18:36,540 --> 00:18:37,900
+Like is the key a list?
+
+293
+00:18:38,620 --> 00:18:40,220
+Or if it's simple like a string.
+
+294
+00:18:42,220 --> 00:18:45,500
+And then there's calls to separate functions
+
+295
+00:18:45,500 --> 00:18:49,340
+called paths to path like key and paths to simple key.
+
+296
+00:18:50,220 --> 00:18:54,620
+And we have one of those abbreviated here.
+
+297
+00:18:55,740 --> 00:18:59,740
+So the duck typing comes in a little bit here.
+
+298
+00:18:59,740 --> 00:19:02,460
+We're checking if something thinks it's a dict.
+
+299
+00:19:02,460 --> 00:19:03,340
+Okay, great.
+
+300
+00:19:04,300 --> 00:19:07,660
+And then we iterate through all the keys and items of the dict.
+
+301
+00:19:07,660 --> 00:19:09,900
+And if it's not a dict, it's probably a list.
+
+302
+00:19:09,900 --> 00:19:11,100
+So we'll do that.
+
+303
+00:19:11,100 --> 00:19:14,060
+But if we're checking is instance, we're going to need
+
+304
+00:19:14,060 --> 00:19:15,900
+whoever knows how many if statements.
+
+305
+00:19:16,940 --> 00:19:19,100
+So it's not like really duck typing.
+
+306
+00:19:19,100 --> 00:19:22,140
+What's really duck typing is to just try it.
+
+307
+00:19:23,100 --> 00:19:26,700
+Just try to access dot items and see if it works.
+
+308
+00:19:26,700 --> 00:19:28,540
+If it does, fantastic.
+
+309
+00:19:29,260 --> 00:19:31,740
+Recurse, go further down the tree.
+
+310
+00:19:31,820 --> 00:19:36,700
+Because like what Al Swigert said yesterday is like
+
+311
+00:19:36,700 --> 00:19:38,060
+recursion is horrible, right?
+
+312
+00:19:38,620 --> 00:19:40,220
+We don't want to use recursion ever.
+
+313
+00:19:41,180 --> 00:19:44,220
+Except one real good case, which is tree traversal.
+
+314
+00:19:45,260 --> 00:19:47,100
+And that's what we're doing right here.
+
+315
+00:19:47,100 --> 00:19:51,020
+We've got this structure of whatever geometry, whatever type.
+
+316
+00:19:51,020 --> 00:19:52,220
+We don't know where anything is.
+
+317
+00:19:52,220 --> 00:19:55,020
+We need to do a search through a tree.
+
+318
+00:19:55,020 --> 00:19:57,820
+So recursion is the natural fit here actually.
+
+319
+00:19:59,340 --> 00:20:01,340
+And we're using yields and yield from.
+
+320
+00:20:01,340 --> 00:20:03,660
+So we can make this all generator like.
+
+321
+00:20:03,660 --> 00:20:06,540
+Because we don't know how long it's going to take.
+
+322
+00:20:06,540 --> 00:20:08,860
+We don't know how big the structure is, how deep it is.
+
+323
+00:20:09,980 --> 00:20:13,020
+And we don't necessarily want all the things at once anyway.
+
+324
+00:20:13,020 --> 00:20:16,540
+If we do, we can just put the generator inside a list call.
+
+325
+00:20:17,580 --> 00:20:22,780
+But anyway, we have a try and accept here to be really duck typey.
+
+326
+00:20:23,740 --> 00:20:25,020
+See if it's dict like.
+
+327
+00:20:25,980 --> 00:20:27,580
+If it's not, okay.
+
+328
+00:20:27,580 --> 00:20:31,580
+See if it's iterable anyway, like a list or a tuple.
+
+329
+00:20:32,780 --> 00:20:35,420
+And get everything out of this that you can.
+
+330
+00:20:37,740 --> 00:20:39,500
+Pause for a second and reiterate.
+
+331
+00:20:40,140 --> 00:20:42,380
+Generalizing is hard, right?
+
+332
+00:20:42,940 --> 00:20:45,660
+If you know the structure that you're dealing with.
+
+333
+00:20:45,660 --> 00:20:47,660
+And it's well defined.
+
+334
+00:20:48,300 --> 00:20:49,660
+You don't necessarily need all of this.
+
+335
+00:20:50,540 --> 00:20:54,700
+You don't need a lot of try and accepts around duck typing.
+
+336
+00:20:54,700 --> 00:20:56,940
+If you know the types that you're working with.
+
+337
+00:20:57,020 --> 00:20:57,900
+Don't do all of that.
+
+338
+00:20:58,700 --> 00:21:01,020
+This is going to take you a lot more time to figure out.
+
+339
+00:21:01,660 --> 00:21:04,620
+But there's good reason that I'm doing it.
+
+340
+00:21:04,620 --> 00:21:07,740
+Which is I wanted to provide a library that other people could use.
+
+341
+00:21:07,740 --> 00:21:11,180
+Libraries should be generalized fairly often.
+
+342
+00:21:12,620 --> 00:21:16,940
+And if recursion and metaclasses scare you, it might be comforting to know that they're
+
+343
+00:21:17,660 --> 00:21:19,980
+pretty common in a lot of the libraries you're familiar with.
+
+344
+00:21:20,940 --> 00:21:24,780
+Most day job Python programmers don't write metaclasses.
+
+345
+00:21:25,420 --> 00:21:26,940
+But it's in Pydantic.
+
+346
+00:21:26,940 --> 00:21:29,180
+They're using a great metaclass or two.
+
+347
+00:21:29,180 --> 00:21:30,860
+Django uses metaclasses.
+
+348
+00:21:30,860 --> 00:21:32,700
+SQLAlchemy uses metaclasses.
+
+349
+00:21:33,260 --> 00:21:37,740
+Some of the best Python libraries we know get some of their functionality.
+
+350
+00:21:37,740 --> 00:21:42,460
+Out of the fact that they're leveraging these deeper uncommonly used tools.
+
+351
+00:21:43,660 --> 00:21:46,620
+Python has a lot of power.
+
+352
+00:21:46,620 --> 00:21:49,740
+Most people don't need and shouldn't try to use.
+
+353
+00:21:49,740 --> 00:21:50,940
+Unless they've got a good reason.
+
+354
+00:21:51,580 --> 00:21:53,020
+I think this is a pretty good reason.
+
+355
+00:21:53,900 --> 00:21:57,820
+We talked about in another previous talk the Zen of Python.
+
+356
+00:21:57,820 --> 00:21:59,820
+One of them is simple is better than complex.
+
+357
+00:22:00,620 --> 00:22:01,340
+Totally agree.
+
+358
+00:22:02,380 --> 00:22:05,020
+But what does that really mean to a normal developer?
+
+359
+00:22:05,820 --> 00:22:09,740
+They're using libraries like Pydantic and Flask to make things simple.
+
+360
+00:22:10,540 --> 00:22:14,060
+But that doesn't mean the code inside Pydantic and Flask is simple.
+
+361
+00:22:14,060 --> 00:22:18,060
+Flack has a pretty complicated stack handling mechanism.
+
+362
+00:22:18,060 --> 00:22:20,620
+Pydantic is really complicated internally.
+
+363
+00:22:21,340 --> 00:22:23,340
+So that's what we're choosing to do often.
+
+364
+00:22:23,340 --> 00:22:26,380
+Is we're hiding complexity when it's necessary.
+
+365
+00:22:26,380 --> 00:22:29,180
+And leveraging it to get us a lot of powerful tools.
+
+366
+00:22:30,620 --> 00:22:33,820
+So yeah, simple is better than complex.
+
+367
+00:22:33,820 --> 00:22:34,300
+Definitely.
+
+368
+00:22:34,300 --> 00:22:36,300
+And that's part of why I'm doing this.
+
+369
+00:22:36,300 --> 00:22:39,820
+So if you have cumbersome data, you can use it simply.
+
+370
+00:22:40,780 --> 00:22:43,260
+You don't need to know how this library was built.
+
+371
+00:22:43,260 --> 00:22:44,620
+But it makes for a fun talk.
+
+372
+00:22:44,860 --> 00:22:47,820
+So, okay, so generalizing is hard, but it's possible.
+
+373
+00:22:48,780 --> 00:22:50,780
+So I've done some of this.
+
+374
+00:22:50,780 --> 00:22:53,180
+These are excerpts from the library that I wrote.
+
+375
+00:22:54,220 --> 00:22:56,220
+Let's see if it can actually do something.
+
+376
+00:22:58,220 --> 00:23:03,660
+So the real thing, I'm not going to scroll through the few hundred lines of Python that it is.
+
+377
+00:23:04,460 --> 00:23:07,660
+But I will prove that it actually does work.
+
+378
+00:23:09,260 --> 00:23:12,620
+So we had, again, remember that in the previous talk,
+
+379
+00:23:12,620 --> 00:23:19,020
+so we had, again, remember that data object.
+
+380
+00:23:20,300 --> 00:23:21,740
+It was this thing up here.
+
+381
+00:23:23,340 --> 00:23:26,300
+The IPython is condensing it a bit for me, but that's what it is.
+
+382
+00:23:27,100 --> 00:23:31,580
+And I access double star here to go down any number of levels to find company name.
+
+383
+00:23:31,580 --> 00:23:33,100
+And I got out a company name.
+
+384
+00:23:34,220 --> 00:23:34,540
+Great.
+
+385
+00:23:35,260 --> 00:23:36,860
+Okay, let's try a few other things.
+
+386
+00:23:36,860 --> 00:23:38,140
+There was zip codes in there.
+
+387
+00:23:38,860 --> 00:23:40,780
+Let's find all the zip codes.
+
+388
+00:23:40,780 --> 00:23:45,340
+And I don't need to know exactly what the name of the key was.
+
+389
+00:23:46,460 --> 00:23:47,820
+It's got a zip in there somewhere.
+
+390
+00:23:47,820 --> 00:23:50,780
+So I surrounded by more asterixes, more globbing.
+
+391
+00:23:50,780 --> 00:23:52,620
+And I get out all the zip codes.
+
+392
+00:23:55,020 --> 00:23:56,060
+I think that's pretty cool.
+
+393
+00:23:57,500 --> 00:24:00,860
+There's a handy function in there that'll dedupe these things for you.
+
+394
+00:24:03,980 --> 00:24:05,500
+I miscopied something.
+
+395
+00:24:06,700 --> 00:24:09,260
+Well, I'll figure that one out later.
+
+396
+00:24:09,260 --> 00:24:14,700
+But there is a dedoping function that even works for things that are not hashable.
+
+397
+00:24:17,820 --> 00:24:22,220
+There's all these things often presented to you as generators.
+
+398
+00:24:22,220 --> 00:24:26,140
+And again, you can just get your values out by calling list on this.
+
+399
+00:24:28,940 --> 00:24:35,420
+And these are then all the paths to the zip code field in our structure.
+
+400
+00:24:35,420 --> 00:24:37,180
+So that can be really handy.
+
+401
+00:24:37,180 --> 00:24:41,340
+And because they're a normal list, that's pretty easy to iterate over and modify if you want.
+
+402
+00:24:41,340 --> 00:24:46,140
+So if you're trying to translate that path into something else useful elsewhere in the same
+
+403
+00:24:46,140 --> 00:24:53,820
+structure or a similar structure, you can see I've had to do stuff like this several times for clients.
+
+404
+00:24:57,420 --> 00:25:01,340
+And then you can get back the values because those paths work.
+
+405
+00:25:01,660 --> 00:25:05,740
+Now, so that's the end of that little bit of the talk.
+
+406
+00:25:05,740 --> 00:25:07,420
+But I think I've got a couple of minutes left.
+
+407
+00:25:07,420 --> 00:25:09,900
+So I'm going to show something a little interesting.
+
+408
+00:25:09,900 --> 00:25:11,500
+One more bit of the library.
+
+409
+00:25:13,660 --> 00:25:16,300
+See if I can just explode this.
+
+410
+00:25:17,340 --> 00:25:23,980
+So Josh Cannon, I think in a lightning talk, you said you mentioned get adder.
+
+411
+00:25:23,980 --> 00:25:25,260
+Everybody uses get adder.
+
+412
+00:25:25,260 --> 00:25:27,260
+No one uses get attribute.
+
+413
+00:25:27,260 --> 00:25:29,980
+Get attribute is a little bit of a different thing.
+
+414
+00:25:30,540 --> 00:25:33,340
+Get attribute is its twin brother, its evil twin.
+
+415
+00:25:34,220 --> 00:25:39,420
+So the difference between those two Dunder methods is that get adder is lazy.
+
+416
+00:25:39,420 --> 00:25:41,020
+And get attribute is eager.
+
+417
+00:25:41,740 --> 00:25:46,940
+So when you're subclassing something, you want to use get adder if you want to check if a method
+
+418
+00:25:46,940 --> 00:25:49,500
+exists and then give a fallback for if it doesn't.
+
+419
+00:25:50,220 --> 00:25:53,580
+Get attribute seizes the first opportunity, though.
+
+420
+00:25:53,580 --> 00:26:00,380
+So one fun part in this code base that I can show off is that get attribute here
+
+421
+00:26:01,500 --> 00:26:06,780
+intercepts every method call and checks to see if that method exists on the parent class.
+
+422
+00:26:07,340 --> 00:26:14,220
+And if it does, decorate it so that we can check and make sure that that parent class method
+
+423
+00:26:14,220 --> 00:26:17,500
+did or did not mutate the underlying structure
+
+424
+00:26:17,500 --> 00:26:22,460
+and then sync it with the deep collection class that we've got.
+
+425
+00:26:22,460 --> 00:26:24,620
+So like list.append.
+
+426
+00:26:24,620 --> 00:26:27,100
+If you use list.append, you're going to add to the list.
+
+427
+00:26:27,100 --> 00:26:30,220
+Well, you can add to a deep collection list too, sure.
+
+428
+00:26:31,180 --> 00:26:34,620
+But we need to keep track of what that change is.
+
+429
+00:26:34,620 --> 00:26:42,220
+So we again call this insure post call sync method.
+
+430
+00:26:42,220 --> 00:26:47,820
+And that is a decorator, not with the at syntax because decorators are functions.
+
+431
+00:26:48,460 --> 00:26:51,740
+We're just calling it right up here.
+
+432
+00:26:52,700 --> 00:26:56,220
+So that if our underlying structure changes, we keep it in sync.
+
+433
+00:26:57,580 --> 00:27:02,460
+Sounds simple enough, but this is a complicated bit of code.
+
+434
+00:27:02,460 --> 00:27:04,140
+You can go and noodle over later if you want.
+
+435
+00:27:04,140 --> 00:27:05,420
+Took me a little bit to figure out.
+
+436
+00:27:08,380 --> 00:27:09,980
+So that's basically it.
+
+437
+00:27:09,980 --> 00:27:12,940
+And through fiddling with my laptop trying to get it on the screen,
+
+438
+00:27:12,940 --> 00:27:14,940
+I forgot the introduction to all of this.
+
+439
+00:27:15,820 --> 00:27:22,300
+So real quickly, I guess, you know some of this already because we just went over it.
+
+440
+00:27:22,460 --> 00:27:27,900
+But I hoped that some of what you would get out of this depends a bit on your experience level.
+
+441
+00:27:27,900 --> 00:27:31,180
+There's some complicated stuff in here, but a new person can get something.
+
+442
+00:27:31,820 --> 00:27:34,940
+Hopefully even the experienced among you saw something interesting.
+
+443
+00:27:40,140 --> 00:27:45,740
+And me, why you can pay any attention to me and you think I know anything about all this.
+
+444
+00:27:45,740 --> 00:27:49,100
+I've been a Python developer and consultant for over a decade.
+
+445
+00:27:49,100 --> 00:27:50,860
+I've got quite a bit of experience.
+
+446
+00:27:51,500 --> 00:27:55,740
+I run a company that does Python and DevOps consultation.
+
+447
+00:27:56,380 --> 00:27:58,140
+And I'm an open source contributor.
+
+448
+00:27:58,140 --> 00:28:01,020
+I've contributed to and maintained a few projects.
+
+449
+00:28:01,820 --> 00:28:08,060
+So I'm not scared of diving into that general world and that library world.
+
+450
+00:28:08,060 --> 00:28:09,420
+That's where I like to be.
+
+451
+00:28:09,420 --> 00:28:11,660
+I enjoy building things people can use.
+
+452
+00:28:14,460 --> 00:28:16,140
+That is my talk.
+
+453
+00:28:16,140 --> 00:28:18,140
+Does anybody have any questions about all this wild stuff?
+
+454
+00:28:21,740 --> 00:28:29,420
+Yeah, so this is a real library you can pip install and use.
+
+455
+00:28:29,420 --> 00:28:31,820
+And I'm basically announcing it today.
+
+456
+00:28:33,020 --> 00:28:35,100
+And it's ready to use.
+
+457
+00:28:40,300 --> 00:28:42,300
+It is very well tested.
+
+458
+00:28:42,300 --> 00:28:48,140
+And I aim to have it exhaustively test all the built-in types and collection types.
+
+459
+00:28:48,140 --> 00:28:51,580
+So that you have no doubt that it actually works across the board.
+
+460
+00:28:51,580 --> 00:28:53,740
+And it handles some third-party types.
+
+461
+00:28:53,740 --> 00:28:56,460
+Like you can make a dot edict, a deep collection even.
+
+462
+00:28:58,860 --> 00:29:01,340
+It is called deep collections.
+
+463
+00:29:01,340 --> 00:29:02,540
+It's on PyPI.
+
+464
+00:29:02,540 --> 00:29:03,340
+Search for it there.
+
+465
+00:29:03,900 --> 00:29:08,380
+From there, there'll be a link to the repository if you want to check out how the code actually works.
+
+466
+00:29:18,780 --> 00:29:23,500
+Can you say again the library name?
+
+467
+00:29:26,780 --> 00:29:28,140
+I haven't run across that one.
+
+468
+00:29:28,140 --> 00:29:30,060
+I tried searching for other similar things.
+
+469
+00:29:31,820 --> 00:29:35,500
+James path is an older one that's pretty similar to diedict.
+
+470
+00:29:35,500 --> 00:29:38,140
+But it has searching features.
+
+471
+00:29:38,140 --> 00:29:40,300
+Deep path is another one that has searching features.
+
+472
+00:29:41,340 --> 00:29:45,100
+You can basically do everything in those that you can over in here.
+
+473
+00:29:46,060 --> 00:29:50,300
+But with some of the extra niceties that people didn't consider before.
+
+474
+00:29:50,300 --> 00:29:52,060
+Like all this type stuff.
+
+475
+00:29:57,340 --> 00:30:01,420
+The processing speed in my library is not the focus.
+
+476
+00:30:01,420 --> 00:30:02,460
+It's developer speed.
+
+477
+00:30:02,460 --> 00:30:04,540
+It's making things easy for you to figure out.
+
+478
+00:30:04,540 --> 00:30:10,060
+But if you want speed, a lot of the features here are exposed as functions too.
+
+479
+00:30:10,060 --> 00:30:11,820
+So you don't even need this class stuff.
+
+480
+00:30:11,820 --> 00:30:14,460
+You can just search for the thing in the dikt and be done with it.
+
+481
+00:30:15,340 --> 00:30:18,860
+So I'll look at that one later and try and figure out what differences may exist.
+
+482
+00:30:20,620 --> 00:30:21,180
+Other question?
+
+483
+00:30:27,420 --> 00:30:28,220
+It does.
+
+484
+00:30:29,500 --> 00:30:34,460
+So the default is glob syntaxing.
+
+485
+00:30:34,460 --> 00:30:38,220
+And we use python standard library fn match for that.
+
+486
+00:30:40,380 --> 00:30:44,220
+And it's got the double wild card for traversing any number of steps.
+
+487
+00:30:44,860 --> 00:30:48,140
+It matches keys and dicks and indices and lists.
+
+488
+00:30:48,940 --> 00:30:52,140
+But you can substitute out that pattern matching for regex.
+
+489
+00:30:52,700 --> 00:30:56,060
+Or a different custom matching algorithm that you write.
+
+490
+00:30:57,260 --> 00:30:57,900
+So yes.
+
+491
+00:31:00,780 --> 00:31:01,820
+Any other questions?
+
+492
+00:31:04,940 --> 00:31:05,260
+All right.
+
+493
+00:31:05,260 --> 00:31:11,340
+That's my talk.
+

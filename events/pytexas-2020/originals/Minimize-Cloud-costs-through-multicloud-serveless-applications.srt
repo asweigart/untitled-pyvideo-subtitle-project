@@ -1,0 +1,760 @@
+1
+00:00:00,000 --> 00:00:23,680
+Hello, my name is Aaron Sandalani Magoro. I'm from Johannesburg, South Africa. I'm quite
+
+2
+00:00:23,680 --> 00:00:29,960
+delighted to be here today and thank you in advance for listening to my talk.
+
+3
+00:00:29,960 --> 00:00:34,920
+Just a bit of background about myself. I'm a cloud architect, predominantly working with
+
+4
+00:00:34,920 --> 00:00:42,560
+Amazon Web Services, Google Cloud Platform, and Microsoft Azure. I've been in the IT space
+
+5
+00:00:42,560 --> 00:00:51,360
+for about 15 years. I come mainly from a software engineering background. I am a founder, implementer,
+
+6
+00:00:51,360 --> 00:00:59,320
+and director of mycloudresume.com. Mycloudresume.com is a professional resume builder and international
+
+7
+00:00:59,320 --> 00:01:04,440
+recruitment aggregation platform. I'm here today to talk to you about minimizing
+
+8
+00:01:04,440 --> 00:01:12,160
+cloud costs. Well, we all know cloud can get very expensive super fast, especially for
+
+9
+00:01:12,160 --> 00:01:20,760
+startups. So the natural approach to mitigating these high costs has usually been to utilize
+
+10
+00:01:20,760 --> 00:01:27,760
+serverless compute offerings by cloud providers in the form of functions as a service. I'm
+
+11
+00:01:27,800 --> 00:01:35,480
+talking about offerings such as Lambda, in the case of AWS Cloud Functions for GCP, and
+
+12
+00:01:35,480 --> 00:01:43,160
+Azure Functions for Azure. These first offerings are quite attractive for many of us with a
+
+13
+00:01:43,160 --> 00:01:49,840
+software engineering background because, well, they let you focus on the code, mainly without
+
+14
+00:01:49,840 --> 00:01:57,240
+worrying about hosting environments. You don't need to worry about setting up the runtime
+
+15
+00:01:57,800 --> 00:02:05,160
+operating system, server, your code will run on, how your function will scale, under load,
+
+16
+00:02:05,160 --> 00:02:14,360
+networking, etc. You basically just code it and you run it. On top of that, it can be
+
+17
+00:02:14,360 --> 00:02:21,000
+considerably cheaper as well. A big emphasis there on the word can because, yes, it can
+
+18
+00:02:21,080 --> 00:02:29,320
+get very expensive as well, but it usually is cheaper under common use cases. Each major
+
+19
+00:02:29,320 --> 00:02:34,760
+cloud provider offers a considerable number of invocations with a perpetual free tier
+
+20
+00:02:34,760 --> 00:02:42,040
+offering each month. As shown in the table, each cloud provider offers at least a million
+
+21
+00:02:42,040 --> 00:02:50,120
+free invocations and 400,000 gigabyte second compute time each month. As you can see,
+
+22
+00:02:50,920 --> 00:02:56,360
+these free offerings may be enough for development to high production use workloads,
+
+23
+00:02:56,360 --> 00:03:01,640
+but they definitely wouldn't suffice for a light scale, highly consumed application.
+
+24
+00:03:02,520 --> 00:03:09,160
+If you were to run maybe your first API, let's say as a back end for a globally utilized web
+
+25
+00:03:09,160 --> 00:03:15,560
+application, you would easily run out of free tier within about three days, then you must start
+
+26
+00:03:15,560 --> 00:03:22,200
+paying. It can really get expensive there on. I actually heard of an instance where someone
+
+27
+00:03:22,200 --> 00:03:27,880
+deployed one of these first services and set up a billing alarm to notify them when they reached
+
+28
+00:03:27,880 --> 00:03:34,600
+$200. They were actually not even expecting to get to that high an amount since they were running a
+
+29
+00:03:34,600 --> 00:03:41,800
+low usage app, but to their surprise, just a few minutes after deploying the function while driving
+
+30
+00:03:41,800 --> 00:03:47,480
+back home, they received a notification from the billing alarm stating that they had exceeded the
+
+31
+00:03:47,480 --> 00:03:56,360
+$200. What this meant was that the free tier one million hits and 400,000 gigabyte second had been
+
+32
+00:03:56,360 --> 00:04:05,000
+exceeded, plus another $200 on top of that. Impossible, they thought. There's no way this low
+
+33
+00:04:05,000 --> 00:04:13,160
+volume application has consumed so much within an hour. So they continued driving, got home a while
+
+34
+00:04:13,160 --> 00:04:21,960
+later, walked in, said hi to everyone, had supper, then thought to go check on the deployed function.
+
+35
+00:04:22,120 --> 00:04:29,480
+What they saw was shocking. A whopping $900 had been consumed within a space of three hours.
+
+36
+00:04:30,440 --> 00:04:37,480
+Just imagine, I don't know about you, but I think this kind of amount on one's credit card statement
+
+37
+00:04:37,480 --> 00:04:44,360
+for a POC is enough to make a grown man cry. Funny thing is, this issue was caused by a bug
+
+38
+00:04:44,360 --> 00:04:51,080
+in another application. There was a bug in another system which integrated with the first function,
+
+39
+00:04:51,640 --> 00:04:57,320
+the bug kept executing the function in an infinite loop, spawning millions of threads in a three hour
+
+40
+00:04:57,320 --> 00:05:06,040
+period. So, when I heard this story, I thought to myself, there must be a way of firstly, ensuring
+
+41
+00:05:06,040 --> 00:05:13,400
+that your function doesn't consume real money once it surpasses the free tier cap. And second,
+
+42
+00:05:13,880 --> 00:05:21,160
+second, that there must be an organized way of spinning up another similar service in a different
+
+43
+00:05:21,160 --> 00:05:28,360
+account, or even from another cloud provider, where you can continue getting more free tier usage.
+
+44
+00:05:29,240 --> 00:05:35,960
+Okay, so now we're going to go through a solution I've been working on. This particular solution
+
+45
+00:05:36,040 --> 00:05:44,040
+actually allows you to have free tier usage for your serverless compute functions which you
+
+46
+00:05:44,040 --> 00:05:52,680
+design, technically perpetually, without ever having to worry about, you know, going out of free
+
+47
+00:05:52,680 --> 00:06:01,080
+tier and having to pay for your usage. I'm going to give you an example of a service. Let's take,
+
+48
+00:06:01,080 --> 00:06:10,200
+for example, a use case where in you go create a function which basically converts units,
+
+49
+00:06:10,200 --> 00:06:16,760
+let's say you've got a metric unit which you need to convert to an imperial counterpart.
+
+50
+00:06:19,000 --> 00:06:25,320
+You would go create the function as you would normally do. Let's say you decide you want to
+
+51
+00:06:25,320 --> 00:06:32,760
+start with Lambda, you go write your Lambda logic, you go deploy it in a particular account
+
+52
+00:06:32,760 --> 00:06:41,960
+within AWS. It can be in any language which you choose. You just need to ensure that
+
+53
+00:06:41,960 --> 00:06:48,920
+that language, the runtime of the language is supported across all cloud providers which you
+
+54
+00:06:48,920 --> 00:06:55,960
+want to use. For instance, if you need a particular number of hits per month,
+
+55
+00:06:55,960 --> 00:07:03,960
+let's say you only need a million, you wouldn't have use for something like this. But as soon
+
+56
+00:07:03,960 --> 00:07:10,360
+as you start needing more than what the free tier needs, let's say you need three, four million,
+
+57
+00:07:10,840 --> 00:07:21,000
+you just need to have as many accounts in your cloud vendor space to basically go and fulfill
+
+58
+00:07:21,000 --> 00:07:28,680
+those hits or those invocations which are given under free tier. In this instance,
+
+59
+00:07:28,680 --> 00:07:38,680
+let's say you need about three million hits a month, you can go and deploy your Lambda function
+
+60
+00:07:39,640 --> 00:07:46,840
+within a cloud account and have a second cloud account as well where you have the same function
+
+61
+00:07:46,840 --> 00:07:54,040
+deployed. You could decide you don't want to put all your eggs in one basket. You could decide that
+
+62
+00:07:54,040 --> 00:08:01,960
+you want your function deployed in Azure as well. You can take the same code and go deploy it in
+
+63
+00:08:01,960 --> 00:08:11,080
+Azure. You can do the same for Google Cloud Platform. You can basically have as many accounts
+
+64
+00:08:11,080 --> 00:08:17,960
+as you want within as many cloud vendors as you want who actually support serverless compute.
+
+65
+00:08:20,280 --> 00:08:31,240
+You may be asking yourself now how does this environment know when it's out of free tier
+
+66
+00:08:31,240 --> 00:08:39,160
+and how does it know when to pass on control or to pass on every service call to the next
+
+67
+00:08:39,160 --> 00:08:47,320
+environment or to the next account. That's where the solution comes in. I've created this
+
+68
+00:08:47,320 --> 00:08:54,920
+particular service which you see here. I call it the coordinator service. It's called the coordinator
+
+69
+00:08:54,920 --> 00:09:03,880
+because it basically coordinates calls based on which particular account still has free tier usage
+
+70
+00:09:03,880 --> 00:09:13,160
+available to it. What the coordinator service does is that it's got or rather what the coordinator
+
+71
+00:09:13,160 --> 00:09:21,720
+service makes use of is a configuration table which is a basic database table. Within the table,
+
+72
+00:09:21,720 --> 00:09:32,360
+you have things like endpoints. You'll have a list of items which contains
+
+73
+00:09:33,240 --> 00:09:41,320
+endpoints for each cloud account. If you need a particular service in this account,
+
+74
+00:09:41,320 --> 00:09:48,120
+it will have the endpoint for it. It will also list other endpoints which are within other accounts
+
+75
+00:09:48,120 --> 00:09:57,160
+and within other cloud vendors. Against each endpoint, it will also list how many hits you
+
+76
+00:09:57,160 --> 00:10:04,520
+are allowed on a monthly basis. Let's say in the case of Azure, you've got a million invocations
+
+77
+00:10:04,520 --> 00:10:11,480
+you can make per account under free tier. It will list that against that particular endpoint for
+
+78
+00:10:11,480 --> 00:10:19,880
+that account. Then, for let's say Google Cloud, you know you've got two million. You'll have
+
+79
+00:10:19,880 --> 00:10:27,720
+the endpoint and two million hits as a maximum allowed for that account per month. It also keeps
+
+80
+00:10:27,720 --> 00:10:37,720
+track of how many invocations or hits have been done against that particular cloud account so far
+
+81
+00:10:37,720 --> 00:10:43,800
+for this month. Again, in the example of Amazon, let's say you have only had a
+
+82
+00:10:45,160 --> 00:10:49,320
+hundred thousand. It will list it against that particular endpoint.
+
+83
+00:10:51,560 --> 00:10:58,520
+When this particular service or when the coordinator service is started up,
+
+84
+00:10:58,520 --> 00:11:05,080
+it loads the configuration and the state of how many invocations have been done against
+
+85
+00:11:05,160 --> 00:11:15,640
+a particular endpoint. It keeps that in mind or in track as you invoke each one.
+
+86
+00:11:17,640 --> 00:11:26,200
+It's got a basic configuration screen which basically saves data to this database
+
+87
+00:11:26,920 --> 00:11:33,240
+around what endpoints you'll be using, the limits and so forth. Nothing too complex,
+
+88
+00:11:33,240 --> 00:11:40,520
+it's just a basic configuration screen which you make use of. Let's go back to our use case.
+
+89
+00:11:41,400 --> 00:11:50,360
+Let's say you've got a web front end where people go in or your users go in and convert,
+
+90
+00:11:51,080 --> 00:11:59,000
+let's say miles to kilometers. What they would do is they would enter the number eight miles and
+
+91
+00:11:59,000 --> 00:12:04,760
+then choose the unit which they're converting from and then the unit they are converting to.
+
+92
+00:12:05,960 --> 00:12:15,400
+What your website does is instead of going and calling the backing service or the first service
+
+93
+00:12:15,400 --> 00:12:23,880
+directly, it now goes through the coordinator service with the whole payload and all the
+
+94
+00:12:23,880 --> 00:12:33,720
+parameters and so forth. When the coordinator service receives that call, it then checks
+
+95
+00:12:33,720 --> 00:12:42,520
+against its configuration and current state what endpoint still has availability when it comes to
+
+96
+00:12:42,520 --> 00:12:51,400
+free tier usage and then it directs the call to that particular service within a particular account.
+
+97
+00:12:52,360 --> 00:12:57,720
+It will continue doing that for your users until that particular endpoint reaches
+
+98
+00:12:58,920 --> 00:13:04,920
+its limit or its capacity when it comes to the number of invocations you can make.
+
+99
+00:13:06,680 --> 00:13:13,960
+After then, it will then decommission that endpoint, save it as decommissioned until the
+
+100
+00:13:13,960 --> 00:13:19,960
+end of the month and then continues on the next endpoint. It could be within the same cloud
+
+101
+00:13:19,960 --> 00:13:27,720
+provider which will be in a different cloud account obviously because your free tier usage
+
+102
+00:13:27,720 --> 00:13:34,920
+is per account and it will continue until it runs out and then according to how you've set it up,
+
+103
+00:13:34,920 --> 00:13:40,840
+it could move to another third account within the same cloud provider, fourth account, fifth account
+
+104
+00:13:41,800 --> 00:13:50,600
+and so forth or jump over to another cloud provider and continue doing its work as if
+
+105
+00:13:51,240 --> 00:13:59,080
+nothing has changed in the background. This is quite useful because now you don't actually
+
+106
+00:13:59,720 --> 00:14:07,400
+run out of free tier and start paying. You continue using your service until your free tier runs out
+
+107
+00:14:07,400 --> 00:14:14,200
+and then it moves you to another one which is still in free tier. You obviously can plug in
+
+108
+00:14:14,200 --> 00:14:24,120
+different sources or you can plug in different user interfaces to your service as you would
+
+109
+00:14:24,120 --> 00:14:32,600
+if you were going directly. That's basically how this solution works. The coordinator service
+
+110
+00:14:32,600 --> 00:14:39,960
+basically coordinates all your calls from the front end or from the calling service
+
+111
+00:14:39,960 --> 00:14:47,640
+to your different first functions and eliminates any spillage in case you run out of free tier.
+
+112
+00:14:49,000 --> 00:14:54,680
+Now we're going to go through the code for the solution. I'm going to show you the code for
+
+113
+00:14:54,680 --> 00:15:01,480
+this coordinator service we've been talking about. Just a bit of a disclaimer there before
+
+114
+00:15:01,480 --> 00:15:07,720
+we start with the code. I am not a Python developer. I'm from a C sharp background
+
+115
+00:15:07,720 --> 00:15:15,160
+mainly in JavaScript. So don't be surprised when you see a few Kelly brackets every now and then.
+
+116
+00:15:16,520 --> 00:15:23,480
+It is the C sharp developer in me trying to come out. But let's give it a shot. I'm sure you will
+
+117
+00:15:23,480 --> 00:15:30,360
+see what I'm trying to achieve and you will get the idea of what the service does and how it does
+
+118
+00:15:30,360 --> 00:15:39,880
+it. So we can basically start with some imports. These are all the imports that we need to get
+
+119
+00:15:39,880 --> 00:15:47,880
+this working. They should all come standard with your Python installation except for this one over
+
+120
+00:15:47,880 --> 00:15:58,440
+here. I had to do a separate import and install for this using a package manager. But that should
+
+121
+00:15:58,440 --> 00:16:08,360
+be it as far as imports. We are going to start now with a class. This class is a representation
+
+122
+00:16:08,360 --> 00:16:15,080
+of a config item within the database which I showed you. So this class
+
+123
+00:16:18,200 --> 00:16:22,760
+I call an API instance class.
+
+124
+00:16:22,760 --> 00:16:32,040
+This is basically a config item in the database which represents an API instance, which you can
+
+125
+00:16:32,040 --> 00:16:43,080
+call. So let's just initialize that or give it an initialization of properties which are needed.
+
+126
+00:16:43,080 --> 00:16:51,800
+Cool. So properties which we need there are going to be as follows. We're going to have the name.
+
+127
+00:16:52,760 --> 00:17:01,560
+We're going to have the URL of that endpoint. And we're going to have the
+
+128
+00:17:02,120 --> 00:17:12,840
+call count. So this is basically the name which you will use to identify what API or what instance of
+
+129
+00:17:12,840 --> 00:17:22,200
+the API you're calling. So this is basically the name which you will use to identify what API or
+
+130
+00:17:22,680 --> 00:17:36,520
+what instance of the API you're calling. The URL to that API instance and how many times you can call it
+
+131
+00:17:36,520 --> 00:17:43,640
+in free tier. Then we can just assign those properties here.
+
+132
+00:17:43,640 --> 00:17:53,960
+Cool. That should be it. So one API instance will basically have a name, a URL to the endpoint,
+
+133
+00:17:54,680 --> 00:18:02,440
+and a maximum call count. The current call count is a number which you increment every time you
+
+134
+00:18:02,440 --> 00:18:10,680
+call that API instance. So as soon as you get to this maximum call count, you can call it.
+
+135
+00:18:10,680 --> 00:18:18,760
+As soon as you get to this maximum call count, it decommissions this particular API instance,
+
+136
+00:18:18,760 --> 00:18:27,080
+and then it goes and grabs the next one and starts executing that endpoint until it reaches its max.
+
+137
+00:18:28,600 --> 00:18:35,880
+Okay. So what would happen is when this application or when this service loads,
+
+138
+00:18:35,880 --> 00:18:45,880
+it would go grab a list of API instances from the database and then sort of hydrate an array of API
+
+139
+00:18:45,880 --> 00:18:57,800
+instances which I'm going to put here. So that's an array of API instances. Just as a demo for today,
+
+140
+00:18:57,880 --> 00:19:10,520
+I am going to copy a list of API instances which I have hard coded together for the sake of this demo.
+
+141
+00:19:11,160 --> 00:19:19,720
+So you will see here what this piece of code is doing is basically appending an API instance as
+
+142
+00:19:19,720 --> 00:19:27,560
+you would have it in the database or pre-configured in the database. So the name of that
+
+143
+00:19:27,560 --> 00:19:40,120
+API instance, the URL to the endpoint, and then what is the maximum call count you have per
+
+144
+00:19:41,640 --> 00:19:51,080
+endpoint. So I've got these four here just for the demo. And we should be set to go as far as
+
+145
+00:19:51,080 --> 00:20:01,640
+config and basic supporting classes. Oh, except for we will need to keep track of what is the
+
+146
+00:20:01,640 --> 00:20:09,720
+current API instance we're working with. So I've got here a variable with the current API instance.
+
+147
+00:20:10,520 --> 00:20:17,800
+Initializing it to the very first one, but you'll see as we go, we will have the ability to
+
+148
+00:20:17,800 --> 00:20:25,960
+basically go and change it. That's if it has reached its maximum call count.
+
+149
+00:20:28,120 --> 00:20:32,680
+So the implementation is going to be in a class.
+
+150
+00:20:35,800 --> 00:20:46,040
+We're going to call this class redirect. What this class will do is basically redirect calls
+
+151
+00:20:46,040 --> 00:20:53,400
+as it receives them. Sorry about the noise. Somebody is flying over my house. I guess
+
+152
+00:20:53,960 --> 00:21:02,200
+it comes with a new way of working. So this class redirects any call which comes into the
+
+153
+00:21:02,200 --> 00:21:10,840
+coordinator service. So you will get a call, for instance, going into a particular endpoint.
+
+154
+00:21:11,240 --> 00:21:18,920
+You would direct it to this coordinator service, which will then redirect it to
+
+155
+00:21:18,920 --> 00:21:31,000
+whatever API endpoint is still within free tier. So I have a method which I created.
+
+156
+00:21:31,720 --> 00:21:41,720
+What this method does is basically keeps track of which API endpoint is still in free tier.
+
+157
+00:21:42,440 --> 00:21:53,160
+So you would call this to basically keep this variable up to date. The current API instance
+
+158
+00:21:53,160 --> 00:22:01,560
+is determined by checking whether it's still in free tier or if it's exhausted its maximum call
+
+159
+00:22:01,560 --> 00:22:10,440
+count. This is the logic here. So if you call these and you still have some calls which you
+
+160
+00:22:10,440 --> 00:22:19,720
+can make in free tier, it will basically just return the same API instance. If not, that's if
+
+161
+00:22:19,720 --> 00:22:26,520
+you have gone above or if you've reached the maximum call count, it goes and iterates through
+
+162
+00:22:27,400 --> 00:22:37,320
+this list of API instances which you have here. And then what it does is it finds the next one
+
+163
+00:22:37,320 --> 00:22:44,840
+which still hasn't reached its maximum call count. And then it will go and basically assign it as a
+
+164
+00:22:44,840 --> 00:22:59,960
+current API instance. So that's what it does. Just before redirecting to a particular API instance,
+
+165
+00:23:01,160 --> 00:23:11,400
+let's say you get a post request into the coordinator service. The do post would then
+
+166
+00:23:11,400 --> 00:23:18,600
+go and get the current API instance. And then after getting the current API instance,
+
+167
+00:23:18,600 --> 00:23:25,320
+it will then redirect to it accordingly. So here's the do post method.
+
+168
+00:23:27,240 --> 00:23:34,360
+It goes in and gets the data from your post. So let's say you're posting from a web front end.
+
+169
+00:23:35,080 --> 00:23:43,800
+It will go get the data which you are posting and then holds it and waits to get an available API
+
+170
+00:23:43,800 --> 00:23:54,760
+endpoint where it should post the data to. It creates a basic HTTP request and then it creates
+
+171
+00:23:54,760 --> 00:24:03,800
+your headers and so forth. And then it does a request now to the current API instance or
+
+172
+00:24:04,280 --> 00:24:12,840
+the latest API instance. And then it will do so and then get the data and then obviously return
+
+173
+00:24:12,840 --> 00:24:21,080
+it to the caller without the caller having to know which endpoint was available at the time and
+
+174
+00:24:21,080 --> 00:24:32,760
+where they called the data from. You just need to also have a set response method.
+
+175
+00:24:33,400 --> 00:24:44,600
+What this does is basically it wraps up your whole HTTP call and basically returns a 200 back to the
+
+176
+00:24:44,600 --> 00:24:51,560
+sender or to the caller and does everything to do with the response headers and so forth
+
+177
+00:24:51,560 --> 00:24:58,680
+and returns the response to the request. So that's it basically. You've got a
+
+178
+00:24:59,640 --> 00:25:11,720
+list of configged API instances. That list then is iterated through every time you do a post,
+
+179
+00:25:11,720 --> 00:25:19,800
+a get, every time you try to call a particular endpoint. And then this functionality here
+
+180
+00:25:19,800 --> 00:25:28,120
+ensures that you get an API point which is still in free tier. And that continues over and over
+
+181
+00:25:28,120 --> 00:25:35,240
+again until you exhaust a particular endpoint and then when you exhaust it, it moves you on to the
+
+182
+00:25:35,240 --> 00:25:44,520
+next instance and then you continue getting your responses in free tier. That's about it.
+
+183
+00:25:44,520 --> 00:25:55,560
+That's how the code works. I'm sure I have forgotten to add something here in the do post. I need to
+
+184
+00:25:56,520 --> 00:26:07,000
+call something. I need to basically call get free endpoint every time
+
+185
+00:26:09,320 --> 00:26:19,160
+I get a post. You can do the same thing for a get. Let's say you need to call an endpoint for get.
+
+186
+00:26:19,160 --> 00:26:26,040
+You just do a get redirected to an endpoint, the current endpoint. And that's it.
+
+187
+00:26:27,800 --> 00:26:33,720
+Well, that's it from me. I hope you found this talk informative and that you find useful ways
+
+188
+00:26:33,720 --> 00:26:39,400
+to implement this solution. If you have any improvement suggestions, questions, or comments
+
+189
+00:26:39,400 --> 00:26:46,840
+in general, feel free to contact me on any of these platforms. I am Aaron Sendilani Magoro from
+
+190
+00:26:46,840 --> 00:26:50,120
+mycloudresume.com and thank you again for listening.
+
