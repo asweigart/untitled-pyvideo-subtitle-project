@@ -5,7 +5,7 @@ This repo collects the work for using Whisper and human-review to create better 
 
 This project builds on these efforts to make accessible, searchable text of these talks available.
 
-We use yt-dlp to download the talk's video, extract the audio, have Whisper produce the initial transcription, use ChatGPT to identify likely problem spots, have a human review the transcription, then hand it to channel owners to include on their videos and to PyVideo.org to make the talks searchable.
+We use yt-dlp to download the talk and extract the audio, use Whisper to produce the initial transcription, use ChatGPT to identify likely errors, use human review for the final transcription, then hand it to over channel owners to include on their videos and to PyVideo.org to make the talks searchable.
 
 
 Contribute
