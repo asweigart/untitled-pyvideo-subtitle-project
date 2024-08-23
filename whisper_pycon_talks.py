@@ -17,7 +17,7 @@ def run_whisper_for_event(pycon_event):
 
         print(f'Transcribing {filename}...')
         result = model.transcribe(filename)
-        whisper.utils.get_writer('srt', '.')(result, 'filename')
+        whisper.utils.get_writer('srt', '.')(result, filename[:-4] + '.srt')
 
     
 

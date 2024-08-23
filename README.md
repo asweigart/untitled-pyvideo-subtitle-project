@@ -5,6 +5,9 @@ This repo collects the work for using Whisper and human-review to create better 
 
 This project builds on these efforts to make accessible, searchable text of these talks available.
 
+We use yt-dlp to download the talk's video, extract the audio, have Whisper produce the initial transcription, use ChatGPT to identify likely problem spots, have a human review the transcription, then hand it to channel owners to include on their videos and to PyVideo.org to make the talks searchable.
+
+
 Contribute
 ==========
 
@@ -40,4 +43,4 @@ The process of creating subtitles for this project:
 - Commit the corrected .srt transcript. (We'll use the existence of this file in the repo as a sign that it is finished. Please don't commit half-finished .srt files.)
 - Send the videos to the YouTube channel owner so they can add them to the video.
 
-In the future, we'll be adding these transcripts to the PyVideo repo so that they can be searchable on that site.
+In the future, we'll be adding these transcripts to the PyVideo repo so that they can be searchable on that site. We'll also create translations of these subtitles to non-English languages.
