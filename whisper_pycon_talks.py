@@ -1,5 +1,8 @@
 import whisper, sys, os, shutil
+import warnings
 from pathlib import Path
+
+warnings.filterwarnings("ignore")
 
 model = whisper.load_model('medium')
 

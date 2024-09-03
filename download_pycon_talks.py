@@ -30,10 +30,10 @@ def download_files_for_event(pycon_event):
             'no_progress': True,
             'format': 'm4a/bestaudio/best',
             'outtmpl': event_title + '.%(ext)s',
-            'postprocessors': [{  # Extract audio using ffmpeg
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'm4a',
-            }]
+            #'postprocessors': [{  # Extract audio using ffmpeg
+            #    'key': 'FFmpegExtractAudio',
+            #    'preferredcodec': 'm4a',
+            #}]
         }
 
         # Make the folders for this event:
@@ -51,6 +51,19 @@ def download_files_for_event(pycon_event):
                 error_code = ydl.download([event_url])
         except Exception as e:
             print(f'ERROR: {e}')
+
+    print('Creating blank human review notes...')
+    for filename in os.listdir(Path(__file__).parent / f'events/{pycon_event}/originals'):
+        if not filename.endswith('.srt'): continue
+
+        # Create a blank file for the human review notes if it doesn't already exist:
+        notes_filename = Path(__file__).parent / f'events/{pycon_event}/human-reviewer-notes/{filename[:-4]}.txt'
+        if notes_filename.exists(): continue
+        with open(notes_filename, 'w') as fp:
+            pass  # Just create a blank file.
+        print(notes_filename, 'created.')
+
+
 
 
 for event in PYCON_EVENTS:
