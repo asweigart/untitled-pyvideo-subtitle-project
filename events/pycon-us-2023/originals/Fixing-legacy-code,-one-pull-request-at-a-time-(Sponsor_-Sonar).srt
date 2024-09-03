@@ -1,0 +1,2784 @@
+1
+00:00:00,000 --> 00:00:03,000
+Does this work?
+
+2
+00:00:03,000 --> 00:00:04,000
+Okay.
+
+3
+00:00:04,000 --> 00:00:05,000
+All right.
+
+4
+00:00:05,000 --> 00:00:06,000
+Hi, everyone.
+
+5
+00:00:06,000 --> 00:00:08,360
+Sorry for the small delay.
+
+6
+00:00:08,360 --> 00:00:14,000
+My name is Guillaume De Ken, and today I'm going to talk about fixing legacy codes one
+
+7
+00:00:14,000 --> 00:00:16,360
+pull request at a time.
+
+8
+00:00:16,360 --> 00:00:17,920
+So sorry.
+
+9
+00:00:17,920 --> 00:00:20,600
+Before I start, a few words about myself.
+
+10
+00:00:20,600 --> 00:00:21,600
+So my name is Guillaume.
+
+11
+00:00:21,600 --> 00:00:27,560
+I come from Belgium, and for the last four years I've been working for Sonar in Geneva,
+
+12
+00:00:28,120 --> 00:00:35,240
+where our goal is to enable developers to write clean code, and we do that through the
+
+13
+00:00:35,240 --> 00:00:39,960
+use of static analysis tools that we develop.
+
+14
+00:00:39,960 --> 00:00:45,360
+And as for myself, I've been working on our static analyzer for Python, which, by the
+
+15
+00:00:45,360 --> 00:00:48,120
+way, is free and open source.
+
+16
+00:00:48,120 --> 00:00:53,000
+So today I'm going to explain a bit the methodology that we promote when dealing not only with
+
+17
+00:00:53,000 --> 00:00:57,400
+legacy code but also with all code projects in general.
+
+18
+00:00:57,400 --> 00:01:03,200
+And I will show a small demo of this using one of our tools, which is Sonar Cloud, and
+
+19
+00:01:03,200 --> 00:01:08,640
+for that I will take an existing Flask application and pretend to develop a new feature for it.
+
+20
+00:01:08,640 --> 00:01:15,120
+This part can be followed interactively if you want, but of course you don't have to.
+
+21
+00:01:15,120 --> 00:01:18,480
+So a few words about what we offer at Sonar.
+
+22
+00:01:18,480 --> 00:01:20,640
+We have three products.
+
+23
+00:01:20,640 --> 00:01:27,800
+The first one is called Sonar Cube, and it's a self-managed static analysis platform to
+
+24
+00:01:27,800 --> 00:01:31,640
+analyze and monitor the health of your code base.
+
+25
+00:01:31,640 --> 00:01:38,400
+It's meant to be self-managed, and it's free and open source with additional page features
+
+26
+00:01:38,400 --> 00:01:39,400
+available.
+
+27
+00:01:39,400 --> 00:01:46,160
+We also have Sonar Cloud, which is essentially a cloud-based version of Sonar Cube, and this
+
+28
+00:01:46,160 --> 00:01:49,200
+one is entirely managed by Sonar Source.
+
+29
+00:01:49,200 --> 00:01:53,880
+It is not open source, but it's still free for open source projects.
+
+30
+00:01:53,880 --> 00:02:01,280
+And because it's operated by Sonar Source, it's easier to set up in your CI-CD workflow
+
+31
+00:02:01,280 --> 00:02:06,480
+for continuous analysis and inspection of your delivery.
+
+32
+00:02:06,480 --> 00:02:10,240
+This is what I will show in this presentation.
+
+33
+00:02:10,240 --> 00:02:15,600
+And finally we have Sonar Lint, which is an IDEA extension that you can use in PyCharm
+
+34
+00:02:15,600 --> 00:02:23,120
+or VS Code to have a similar analysis as the one we provide on the platform.
+
+35
+00:02:23,120 --> 00:02:25,080
+So a quick agenda for me today.
+
+36
+00:02:25,080 --> 00:02:29,460
+So first I will explain the problem that we're trying to solve and explain a bit the methodology
+
+37
+00:02:29,460 --> 00:02:31,360
+that we promote.
+
+38
+00:02:31,360 --> 00:02:39,000
+And then I will be using Sonar Cloud to set up the analysis for our small Flask application.
+
+39
+00:02:39,000 --> 00:02:43,180
+I will use what we call automatic analysis, which is that we don't need to integrate
+
+40
+00:02:43,180 --> 00:02:44,640
+the analysis on the CI.
+
+41
+00:02:44,680 --> 00:02:47,800
+Sonar Cloud will do it itself.
+
+42
+00:02:47,800 --> 00:02:53,360
+I will show that this has some limitations and present a more advanced setup where we
+
+43
+00:02:53,360 --> 00:02:56,980
+do the analysis as part of the CI itself.
+
+44
+00:02:56,980 --> 00:03:03,280
+And finally I will quickly show how you can set up Sonar Lint in the IDE for the same
+
+45
+00:03:03,280 --> 00:03:11,240
+analysis so that you raise the issues and fix them before you commit them and push them.
+
+46
+00:03:11,240 --> 00:03:16,540
+If you want to follow along when I'm doing the demo, the only prerequisite really is
+
+47
+00:03:16,540 --> 00:03:19,720
+to have an account on GitHub and be logged in.
+
+48
+00:03:19,720 --> 00:03:21,640
+I will be using some GitHub actions.
+
+49
+00:03:21,640 --> 00:03:23,080
+You don't really need to know about them.
+
+50
+00:03:23,080 --> 00:03:26,200
+If you do, it's better, of course.
+
+51
+00:03:26,200 --> 00:03:30,320
+And the project that I'm going to use lives in the Sonar's first organization.
+
+52
+00:03:30,320 --> 00:03:33,960
+It's called PyCon-Sonar-Workshop.
+
+53
+00:03:33,960 --> 00:03:37,280
+And I will fork this demo project with all the branches.
+
+54
+00:03:37,320 --> 00:03:39,760
+So if you want to go ahead, feel free.
+
+55
+00:03:39,760 --> 00:03:43,680
+I will come back to this anyway.
+
+56
+00:03:43,680 --> 00:03:47,720
+So quick reminder on CI-CD since I talk about CI-CD workflows.
+
+57
+00:03:47,720 --> 00:03:53,520
+CI-CD is continuous inspection, continuous delivery, or deployment.
+
+58
+00:03:53,520 --> 00:04:03,880
+It's meant to help deliver incremental features in your code base and to deploy them systematically.
+
+59
+00:04:03,880 --> 00:04:07,200
+Of course, one important part of this is to make sure that the code actually works.
+
+60
+00:04:07,200 --> 00:04:12,240
+So we have tests that are running in the CI workflow.
+
+61
+00:04:12,240 --> 00:04:18,680
+We can also have a step to have static analysis running so that you can catch some issues
+
+62
+00:04:18,680 --> 00:04:24,360
+that before any manual review or anything.
+
+63
+00:04:24,360 --> 00:04:26,400
+Now what do I mean by static analysis?
+
+64
+00:04:26,400 --> 00:04:27,480
+Quick reminder as well.
+
+65
+00:04:27,480 --> 00:04:32,720
+I'm talking about analyzing code without executing it.
+
+66
+00:04:32,720 --> 00:04:37,120
+So really looking at the code, finding issues in a systematic way.
+
+67
+00:04:37,120 --> 00:04:40,960
+And the goal of that is to help developers to write clean code.
+
+68
+00:04:40,960 --> 00:04:47,400
+And what we mean by clean code is code that is fit for development and fit for production.
+
+69
+00:04:47,400 --> 00:04:53,760
+So you want it to be fit for development so that it's maintainable, it adheres to standards,
+
+70
+00:04:53,760 --> 00:04:58,800
+you can understand what the code is doing and change it if you need.
+
+71
+00:04:58,800 --> 00:05:04,440
+And fit for production, of course, means that you want the code to behave as you expect
+
+72
+00:05:04,440 --> 00:05:05,440
+with no bugs.
+
+73
+00:05:05,480 --> 00:05:11,120
+It's reliable and it cannot be exploited by malicious actors in any way.
+
+74
+00:05:11,120 --> 00:05:14,160
+So this is what we mean.
+
+75
+00:05:14,160 --> 00:05:25,080
+A small example of this is a, here is a small snippet.
+
+76
+00:05:25,080 --> 00:05:31,520
+Here what we have is a list, a call to list.extend that is assigned to a value.
+
+77
+00:05:31,520 --> 00:05:34,680
+However, list.extend doesn't return anything.
+
+78
+00:05:34,720 --> 00:05:38,840
+It only mutates the list, the receiving list.
+
+79
+00:05:38,840 --> 00:05:44,640
+So this is an obvious mistake that can easily be caught by static analysis.
+
+80
+00:05:44,640 --> 00:05:49,720
+Maybe a reviewer would need some knowledge of the API to catch that.
+
+81
+00:05:49,720 --> 00:05:54,040
+So if you can do it automatically, it's of course better.
+
+82
+00:05:54,040 --> 00:06:01,000
+Now the problem is when dealing with legacy projects is that if you decide to analyze
+
+83
+00:06:01,240 --> 00:06:07,240
+for the first time, if you decide to have static analysis on the first time,
+
+84
+00:06:07,240 --> 00:06:10,120
+you are drawn with a lot of issues.
+
+85
+00:06:11,960 --> 00:06:16,280
+It's supposed to be an image that doesn't load, but there's basically someone
+
+86
+00:06:16,280 --> 00:06:18,280
+drowning.
+
+87
+00:06:18,280 --> 00:06:24,160
+And if you analyze for the first time, you will see a lot of issues in your code
+
+88
+00:06:24,160 --> 00:06:30,600
+and it will be really difficult to deal with it and to fix them all at once.
+
+89
+00:06:30,760 --> 00:06:35,320
+And the main problem, the main question that people will ask from a manager's
+
+90
+00:06:35,320 --> 00:06:39,480
+perspective is of course, where do I find a budget for this?
+
+91
+00:06:39,480 --> 00:06:46,760
+Where do I find the money to actually fix all those issues for this legacy project?
+
+92
+00:06:46,760 --> 00:06:51,520
+Knowing that there is of course a risk of functional regression and bugs that you
+
+93
+00:06:51,520 --> 00:06:53,200
+can introduce so you can break stuff.
+
+94
+00:06:54,360 --> 00:06:58,200
+From a developer point of view, we don't also want to fix all those issues that
+
+95
+00:06:58,200 --> 00:07:01,400
+are caught because we don't have the ownership of that code.
+
+96
+00:07:01,400 --> 00:07:04,960
+It's an old code that we didn't write.
+
+97
+00:07:04,960 --> 00:07:10,600
+And there are a lot of issues and it's frankly quite boring to do.
+
+98
+00:07:10,600 --> 00:07:17,160
+So nobody really wants to fix all the issues that you would find in a legacy
+
+99
+00:07:17,160 --> 00:07:18,560
+project.
+
+100
+00:07:18,560 --> 00:07:20,520
+And yet everybody suffers from the situation.
+
+101
+00:07:20,520 --> 00:07:22,960
+Developments will cost more.
+
+102
+00:07:23,000 --> 00:07:29,480
+Developers will be unhappy to work in a legacy code base.
+
+103
+00:07:29,480 --> 00:07:34,080
+And even if you do manage to fix all the issues that you have, it will be quite
+
+104
+00:07:34,080 --> 00:07:37,480
+difficult to raise the quality standards of your project.
+
+105
+00:07:37,480 --> 00:07:42,880
+So let's imagine you reduce the number of issues caught by the analyzer down to zero.
+
+106
+00:07:42,880 --> 00:07:46,800
+Then you want to enable a new rule or be more strict about code coverage or
+
+107
+00:07:46,800 --> 00:07:48,160
+whatever.
+
+108
+00:07:48,160 --> 00:07:52,320
+You don't want to spend months to fix issues.
+
+109
+00:07:52,320 --> 00:07:58,280
+So the conclusion to that is that fixing all issues without a methodology is not
+
+110
+00:07:58,280 --> 00:07:59,760
+really scalable.
+
+111
+00:07:59,760 --> 00:08:04,440
+You will have too much to do all at once and too much of an upfront investment to
+
+112
+00:08:04,440 --> 00:08:07,960
+do and it's too difficult to keep up with this.
+
+113
+00:08:09,760 --> 00:08:14,360
+Now what we do promote instead is what we call the clean as you code approach.
+
+114
+00:08:14,360 --> 00:08:16,840
+And it's based on two main principle.
+
+115
+00:08:16,840 --> 00:08:21,880
+One is that we do have ownership of the code that we write today and
+
+116
+00:08:21,880 --> 00:08:24,480
+we understand it way better than old code.
+
+117
+00:08:25,560 --> 00:08:32,160
+And if you can guarantee that this new code that we write today is respects a high
+
+118
+00:08:32,160 --> 00:08:39,960
+quality standard, then we will eventually clean our application just by working on
+
+119
+00:08:39,960 --> 00:08:45,960
+it and it will eventually let's say clean itself with no upfront investment.
+
+120
+00:08:46,920 --> 00:08:54,200
+To illustrate that, let's imagine that we have a code base today that has fully
+
+121
+00:08:54,200 --> 00:08:59,560
+legacy code and we assume that only new codes will be added.
+
+122
+00:08:59,560 --> 00:09:02,520
+Of course, adding new code also means removing old codes.
+
+123
+00:09:02,520 --> 00:09:06,040
+It means renewing and refactoring the code.
+
+124
+00:09:07,160 --> 00:09:11,920
+And if after one year we assume that we've renewed 20% of the code base and
+
+125
+00:09:12,680 --> 00:09:17,800
+everything that we added is clean, of course we have 20% clean code.
+
+126
+00:09:17,800 --> 00:09:24,320
+Again, after five years, if we assume that we've rewritten 50% of the application,
+
+127
+00:09:24,320 --> 00:09:29,480
+that's 50% clean code and that's how we will lean towards a more clean
+
+128
+00:09:29,480 --> 00:09:32,120
+code base with no upfront investment.
+
+129
+00:09:33,880 --> 00:09:41,200
+Okay, now I will illustrate this with my small demo.
+
+130
+00:09:41,200 --> 00:09:42,920
+Again, if you want to follow along,
+
+131
+00:09:42,920 --> 00:09:46,320
+the prerequisite is simply to be logged in on a GitHub account.
+
+132
+00:09:46,320 --> 00:09:49,640
+And I will work with this project that is here,
+
+133
+00:09:49,640 --> 00:09:54,880
+so our source by con sonar workshop and I will fork it in a minute.
+
+134
+00:09:57,360 --> 00:10:00,520
+Quick presentation of the application.
+
+135
+00:10:00,520 --> 00:10:05,040
+It's basically a small Pokedex Flask application.
+
+136
+00:10:05,040 --> 00:10:07,600
+So it has only two routes.
+
+137
+00:10:07,640 --> 00:10:12,040
+One will list all the existing Pokemons available.
+
+138
+00:10:12,040 --> 00:10:15,800
+So those small monsters, it doesn't matter if you don't know them.
+
+139
+00:10:17,800 --> 00:10:21,600
+And the second route is subscription route so
+
+140
+00:10:21,600 --> 00:10:25,760
+that users can subscribe to a newsletter, for example.
+
+141
+00:10:25,760 --> 00:10:32,160
+And this is stored in a SQLite database, so very, very simple CRUD-like application.
+
+142
+00:10:32,160 --> 00:10:37,640
+There are problems with some of the display.
+
+143
+00:10:37,640 --> 00:10:39,520
+There's an image here, I will skip it.
+
+144
+00:10:41,280 --> 00:10:44,360
+But this is basically how the applications look like.
+
+145
+00:10:44,360 --> 00:10:45,960
+Again, it doesn't matter too much.
+
+146
+00:10:45,960 --> 00:10:47,320
+I will not actually play with it.
+
+147
+00:10:48,600 --> 00:10:53,920
+But basically the goal here will be to pretend that we want to add a new
+
+148
+00:10:53,920 --> 00:10:57,840
+feature to our application and it's a new route.
+
+149
+00:10:57,840 --> 00:11:03,000
+It's a get basically so that when you click on one of those
+
+150
+00:11:03,000 --> 00:11:08,440
+Pokemons you get brought to a new page with a detailed description.
+
+151
+00:11:09,440 --> 00:11:14,280
+So this is the new feature that we want to add and
+
+152
+00:11:14,280 --> 00:11:17,240
+we'll see how we can check for the quality of this.
+
+153
+00:11:18,320 --> 00:11:25,400
+So now I will move to GitHub where I have my repository that I want to work with.
+
+154
+00:11:25,400 --> 00:11:30,600
+So back into our workshop, I will fork it now.
+
+155
+00:11:31,800 --> 00:11:37,440
+I will fork it in my personal organization.
+
+156
+00:11:37,440 --> 00:11:40,760
+And it's important to not only take the main branch but
+
+157
+00:11:40,760 --> 00:11:44,680
+to take all existing branches because I will play with the existing branches as well.
+
+158
+00:11:45,800 --> 00:11:50,040
+So let me create this fork.
+
+159
+00:11:50,040 --> 00:11:52,520
+It takes a couple of seconds.
+
+160
+00:11:52,520 --> 00:11:56,320
+And here I have it.
+
+161
+00:11:56,320 --> 00:12:00,920
+So I do have a GitHub workflow already in the application.
+
+162
+00:12:00,920 --> 00:12:03,000
+I can show it quickly.
+
+163
+00:12:03,000 --> 00:12:07,440
+It's basically the default GitHub action workflow.
+
+164
+00:12:07,440 --> 00:12:11,840
+It will set up Python 3.10, install some dependencies.
+
+165
+00:12:11,840 --> 00:12:15,320
+It will actually run flakate and py tests by default.
+
+166
+00:12:15,320 --> 00:12:19,480
+So this is what we start with.
+
+167
+00:12:19,520 --> 00:12:23,360
+And because it's a forked repository, this GitHub action is not enabled by default.
+
+168
+00:12:23,360 --> 00:12:30,680
+So I need to go to action and I need to enable the GitHub actions to run.
+
+169
+00:12:30,680 --> 00:12:35,640
+So that when I will open my pull request, it will actually run.
+
+170
+00:12:35,640 --> 00:12:41,480
+And now what I will do is to open a pull request from my feature branch to
+
+171
+00:12:41,480 --> 00:12:42,240
+my main branch.
+
+172
+00:12:42,240 --> 00:12:47,040
+So I go to pull request and I will open a new pull request.
+
+173
+00:12:48,000 --> 00:12:51,040
+Here I need to target my fork, not the upstream.
+
+174
+00:12:51,040 --> 00:12:53,520
+By default it's targeting the upstream.
+
+175
+00:12:53,520 --> 00:12:54,160
+You don't want that.
+
+176
+00:12:55,680 --> 00:12:59,120
+And I will take the add feature branch and
+
+177
+00:12:59,120 --> 00:13:02,600
+I will create a pull request for my main branch.
+
+178
+00:13:02,600 --> 00:13:06,280
+So let me create this.
+
+179
+00:13:06,280 --> 00:13:12,960
+I will go through the changes really quickly here.
+
+180
+00:13:12,960 --> 00:13:17,960
+So what I have is basically a new route for
+
+181
+00:13:17,960 --> 00:13:25,240
+my Flask application which takes a pass parameter and will return a new page.
+
+182
+00:13:26,600 --> 00:13:31,840
+I'm making some changes in a helper that will retrieve the information from
+
+183
+00:13:31,840 --> 00:13:38,160
+the database so it will perform a call to my SQLite database.
+
+184
+00:13:38,160 --> 00:13:40,880
+I have a small helper method to orchestrate that.
+
+185
+00:13:40,880 --> 00:13:44,920
+Some ginger templates, some tests.
+
+186
+00:13:44,920 --> 00:13:50,160
+So it's a fairly straightforward pull request for a new feature.
+
+187
+00:13:50,160 --> 00:13:54,240
+You can pretend it's any new features you want.
+
+188
+00:13:54,240 --> 00:13:56,880
+And here I see, okay, my CI has passed.
+
+189
+00:13:56,880 --> 00:13:58,120
+I could merge it.
+
+190
+00:13:58,120 --> 00:14:00,160
+Of course I will not do that yet.
+
+191
+00:14:01,320 --> 00:14:07,600
+And instead what I will do is to enable Sonar Cloud to analyze this pull request
+
+192
+00:14:07,600 --> 00:14:11,200
+so that we see the issues that we can find in it and
+
+193
+00:14:11,200 --> 00:14:16,160
+how we can apply this clean as you code methodology on it.
+
+194
+00:14:16,160 --> 00:14:21,040
+Because by default if you're using a linter like this,
+
+195
+00:14:21,040 --> 00:14:24,400
+it will analyze the whole code base and maybe that's not what you want.
+
+196
+00:14:25,560 --> 00:14:29,080
+So for this I will go to Sonar Cloud.
+
+197
+00:14:31,000 --> 00:14:36,360
+And there is in the read me the link in first analysis on Sonar Cloud,
+
+198
+00:14:36,360 --> 00:14:40,200
+there is this link, SonarCloud.io sessions new.
+
+199
+00:14:40,200 --> 00:14:45,800
+So I will follow that link and I will onboard my project on Sonar Cloud.
+
+200
+00:14:47,720 --> 00:14:52,040
+So I will be using my GitHub account, of course, and
+
+201
+00:14:52,040 --> 00:14:56,560
+I need to give some permission to the application to set it up.
+
+202
+00:14:58,360 --> 00:15:02,640
+And I will be prompted to analyze a new project.
+
+203
+00:15:02,640 --> 00:15:05,120
+I think if you've never logged in on to Sonar Cloud,
+
+204
+00:15:05,120 --> 00:15:08,640
+you will be asked to create a new organization first.
+
+205
+00:15:08,640 --> 00:15:11,040
+But I will do that in a second, so
+
+206
+00:15:11,040 --> 00:15:13,280
+might have the screens in the different order.
+
+207
+00:15:14,880 --> 00:15:19,720
+So I will import an organization directly from GitHub.
+
+208
+00:15:19,720 --> 00:15:24,520
+I will use my personal account, so you need to install Sonar Cloud for
+
+209
+00:15:24,520 --> 00:15:28,320
+this on your personal account, which I will do.
+
+210
+00:15:29,760 --> 00:15:33,720
+And we need to give visibility for the repositories that we want.
+
+211
+00:15:33,720 --> 00:15:36,000
+You can give to all repositories if you want.
+
+212
+00:15:36,000 --> 00:15:43,320
+I will only give for this workshop project.
+
+213
+00:15:45,000 --> 00:15:47,200
+And I will install Sonar Cloud.
+
+214
+00:15:49,680 --> 00:15:53,440
+Now I'm creating an organization into Sonar Cloud.
+
+215
+00:15:53,440 --> 00:15:56,400
+It already read my information from my GitHub profile, so
+
+216
+00:15:56,400 --> 00:16:01,080
+it prefilled the name, the key of the organization.
+
+217
+00:16:01,080 --> 00:16:02,920
+I can choose my plan.
+
+218
+00:16:03,560 --> 00:16:08,400
+I can choose a free plan since I have an open source project.
+
+219
+00:16:09,600 --> 00:16:11,920
+And I can create my organization like that.
+
+220
+00:16:11,920 --> 00:16:15,280
+And then I can import a project from this organization.
+
+221
+00:16:15,280 --> 00:16:19,240
+So I only gave visibility to the workshop one.
+
+222
+00:16:19,240 --> 00:16:23,040
+This is the one I will select and I will set this up.
+
+223
+00:16:25,520 --> 00:16:28,200
+I know what will happen.
+
+224
+00:16:28,200 --> 00:16:30,680
+So we didn't change anything in our CI, of course.
+
+225
+00:16:30,680 --> 00:16:35,160
+And what will happen is that Sonar Cloud, by default,
+
+226
+00:16:35,160 --> 00:16:38,960
+will automatically analyze the main branch of the project and
+
+227
+00:16:38,960 --> 00:16:42,960
+also all pull requests of that project.
+
+228
+00:16:42,960 --> 00:16:48,440
+And it will compute metrics to make sure that everything works well.
+
+229
+00:16:49,680 --> 00:16:52,200
+So maybe a small recap of what I did so far.
+
+230
+00:16:53,640 --> 00:16:56,640
+Again, this is not displaying very well.
+
+231
+00:16:56,640 --> 00:17:00,960
+So just meant to say that, okay, I forked the project,
+
+232
+00:17:00,960 --> 00:17:03,480
+enabled my GitHub action, opened the pull request.
+
+233
+00:17:04,640 --> 00:17:09,320
+And then I went to Sonar Cloud, imported my organization,
+
+234
+00:17:09,320 --> 00:17:11,360
+analyzed the new project.
+
+235
+00:17:13,000 --> 00:17:16,160
+You cannot see the images, so I will basically skip this.
+
+236
+00:17:19,040 --> 00:17:23,480
+And here I am on the overview of my project where I can see the history
+
+237
+00:17:23,480 --> 00:17:25,000
+of the quality of my project.
+
+238
+00:17:25,000 --> 00:17:29,440
+Of course, there's no history to speak of since I just onboarded this project
+
+239
+00:17:29,440 --> 00:17:31,160
+into Sonar Cloud.
+
+240
+00:17:31,160 --> 00:17:34,440
+I want to still quickly show you what it looks like on a more mature project.
+
+241
+00:17:34,440 --> 00:17:39,080
+So I will open another just to show what we can see and
+
+242
+00:17:39,080 --> 00:17:44,240
+how this clean as you could thing work in real life for us.
+
+243
+00:17:44,240 --> 00:17:49,240
+So this is a project for one of our analyzers for .NET code, actually.
+
+244
+00:17:50,360 --> 00:17:53,280
+And here I can see the full history of this and
+
+245
+00:17:53,280 --> 00:17:56,320
+I can see a graph of the number of issues.
+
+246
+00:17:56,320 --> 00:18:02,160
+And what I want to highlight here is that this is exactly what I was talking about
+
+247
+00:18:02,160 --> 00:18:06,440
+with this clean as you code and this raising quality standards.
+
+248
+00:18:06,440 --> 00:18:08,840
+Which is that here we have the number of issues over time and
+
+249
+00:18:08,840 --> 00:18:12,200
+we can see all those big bumps into the number of issues.
+
+250
+00:18:13,200 --> 00:18:17,640
+Which actually represent moments in time where the team decided to change
+
+251
+00:18:17,640 --> 00:18:20,280
+the quality profile to enable more rules.
+
+252
+00:18:20,280 --> 00:18:24,160
+And basically what they say is that they don't really care about the number of
+
+253
+00:18:24,160 --> 00:18:26,200
+issues that they find.
+
+254
+00:18:26,200 --> 00:18:32,800
+So here we go from, I don't know, 150 to 1,600 issues.
+
+255
+00:18:34,000 --> 00:18:38,560
+And what matters is that over time this number tends to decrease until the next
+
+256
+00:18:38,560 --> 00:18:43,000
+big spike which generally comes from enabling new rules.
+
+257
+00:18:44,240 --> 00:18:48,920
+But generally the tendency is to basically go down with time,
+
+258
+00:18:48,920 --> 00:18:50,440
+one pull request at a time.
+
+259
+00:18:52,040 --> 00:18:55,000
+This is a real project, so of course it's a bit messy here.
+
+260
+00:18:55,000 --> 00:18:59,640
+We have a lot of stuff where the team played with configuration, but
+
+261
+00:18:59,640 --> 00:19:03,280
+still the overall thing remains the same.
+
+262
+00:19:03,280 --> 00:19:08,000
+That issue number tends to decrease over time thanks to this approach.
+
+263
+00:19:09,400 --> 00:19:15,440
+Now coming back to my dashboard here, I have several things that I can see.
+
+264
+00:19:15,440 --> 00:19:19,520
+The first thing is that I can see the quality of my main branch with all the
+
+265
+00:19:19,520 --> 00:19:23,440
+issues that are found on the main branch of the project.
+
+266
+00:19:23,440 --> 00:19:29,320
+I can also see the issues on the new code since the last version if I set up
+
+267
+00:19:29,320 --> 00:19:32,960
+a new code definition which I haven't done here.
+
+268
+00:19:34,640 --> 00:19:38,000
+And what's interesting is that I can go to pull requests and
+
+269
+00:19:38,000 --> 00:19:42,880
+I can go directly to my pull request here that has been analyzed automatically.
+
+270
+00:19:42,880 --> 00:19:48,200
+And here I see the dashboard that relates to this pull request.
+
+271
+00:19:48,200 --> 00:19:54,400
+And this is where we will enforce that only the new code that we add is clean
+
+272
+00:19:55,440 --> 00:20:00,560
+through the concept of what we call a quality gate, which is basically a set of
+
+273
+00:20:00,560 --> 00:20:07,320
+metrics and a set of conditions that we will look at the code for.
+
+274
+00:20:07,320 --> 00:20:12,320
+And if the conditions are satisfied, then the quality gate will be passed.
+
+275
+00:20:12,320 --> 00:20:19,560
+And the pull request can be merged from a quality standpoint.
+
+276
+00:20:19,560 --> 00:20:23,400
+And of course if it's failed, then there are issues to fix.
+
+277
+00:20:25,160 --> 00:20:27,400
+And this is divided into several categories.
+
+278
+00:20:27,400 --> 00:20:29,040
+I will go through them quickly.
+
+279
+00:20:29,040 --> 00:20:34,200
+So first we have the reliability category which relates to bugs.
+
+280
+00:20:34,200 --> 00:20:36,160
+Here of course we don't want bugs, so
+
+281
+00:20:36,160 --> 00:20:40,560
+this category will be failed as soon as there is one bug that is detected.
+
+282
+00:20:41,520 --> 00:20:43,960
+Now let's see an example of those bugs.
+
+283
+00:20:43,960 --> 00:20:50,160
+So we can click on the number to get the filtered view of the bugs that we have.
+
+284
+00:20:51,320 --> 00:20:55,680
+You have the issues that are here.
+
+285
+00:20:55,680 --> 00:21:01,680
+And if we click on them, I can see in context what the issue is.
+
+286
+00:21:01,680 --> 00:21:04,480
+So here it's a fairly simple and straightforward bug.
+
+287
+00:21:04,480 --> 00:21:06,560
+We're trying to raise a string.
+
+288
+00:21:07,520 --> 00:21:10,640
+In Python we should raise exceptions, not string.
+
+289
+00:21:10,640 --> 00:21:12,360
+Otherwise we get the type error.
+
+290
+00:21:12,360 --> 00:21:15,560
+So this is fairly straightforward.
+
+291
+00:21:17,040 --> 00:21:20,440
+You get to interact with the issues if you want.
+
+292
+00:21:20,440 --> 00:21:25,560
+You can actually change the status or report it as a false positive.
+
+293
+00:21:25,560 --> 00:21:29,640
+If you think it doesn't make sense or just say okay, I won't fix this.
+
+294
+00:21:29,640 --> 00:21:35,240
+I intended to do this, which maybe is not the case for a bug, but let's pretend.
+
+295
+00:21:36,240 --> 00:21:39,680
+You can also get a detailed description of the issue so
+
+296
+00:21:39,680 --> 00:21:42,120
+that you understand it a bit better if you don't for
+
+297
+00:21:42,120 --> 00:21:45,840
+more complex issues that might make sense.
+
+298
+00:21:45,840 --> 00:21:48,520
+And yeah.
+
+299
+00:21:49,920 --> 00:21:53,000
+So this is a simple issue that we can find.
+
+300
+00:21:53,000 --> 00:21:59,080
+Now let me move on to another issue here,
+
+301
+00:21:59,080 --> 00:22:02,240
+which involves multiple locations.
+
+302
+00:22:02,240 --> 00:22:07,040
+So in this case, we're calling a function that is called
+
+303
+00:22:07,040 --> 00:22:11,360
+isPikachu with one argument.
+
+304
+00:22:11,360 --> 00:22:15,520
+But in fact, this function is defined to receive two parameters.
+
+305
+00:22:15,520 --> 00:22:17,560
+So of course there's a mismatch.
+
+306
+00:22:17,560 --> 00:22:20,280
+It's again a fairly straightforward issue, but
+
+307
+00:22:20,280 --> 00:22:26,280
+this is just to show that you get this information of issue locations.
+
+308
+00:22:26,280 --> 00:22:31,840
+So that you get the issue in context and the context is provided as well.
+
+309
+00:22:33,240 --> 00:22:38,280
+Now let me move back to the summary to talk a bit more about
+
+310
+00:22:38,280 --> 00:22:41,840
+the security issues that we can find as well in the code.
+
+311
+00:22:43,480 --> 00:22:47,840
+So in this case, what Santa Cloud is doing is called taint analysis.
+
+312
+00:22:47,840 --> 00:22:50,720
+So it's trying to look for
+
+313
+00:22:50,720 --> 00:22:56,080
+data flow between the entry points of the application and
+
+314
+00:22:56,080 --> 00:22:58,200
+the sensitive actions that you could perform.
+
+315
+00:22:58,240 --> 00:23:02,360
+So in this case, for example, reading into a database.
+
+316
+00:23:02,360 --> 00:23:07,480
+And what it's looking for is whether information provided by the user,
+
+317
+00:23:07,480 --> 00:23:13,280
+which is tainted, can actually reach the sensitive points of the application
+
+318
+00:23:13,280 --> 00:23:16,360
+without being sanitized or validated.
+
+319
+00:23:17,520 --> 00:23:19,960
+So let's see an example of this.
+
+320
+00:23:19,960 --> 00:23:21,720
+Here we have two issues.
+
+321
+00:23:21,720 --> 00:23:24,160
+I will select the first one.
+
+322
+00:23:24,160 --> 00:23:28,760
+And it says, change this code to not to construct
+
+323
+00:23:28,760 --> 00:23:31,920
+SQL queries from user controlled data.
+
+324
+00:23:31,920 --> 00:23:40,120
+So here we have the issue that we are executing this SQL statement.
+
+325
+00:23:42,200 --> 00:23:46,960
+And of course, if you're just looking at this line,
+
+326
+00:23:46,960 --> 00:23:49,840
+it might not be clear why there is an issue.
+
+327
+00:23:49,840 --> 00:23:52,520
+So the data flow is actually represented.
+
+328
+00:23:52,800 --> 00:23:55,800
+And we can track it.
+
+329
+00:23:55,800 --> 00:23:59,800
+So we can look at the source here, which is actually the pass parameter that is
+
+330
+00:23:59,800 --> 00:24:02,800
+indeed user controlled and provided by the user.
+
+331
+00:24:03,960 --> 00:24:10,480
+And we can basically track the flow of data from this to the helper method
+
+332
+00:24:10,480 --> 00:24:17,160
+that's, sorry, the helper method that is called here.
+
+333
+00:24:17,160 --> 00:24:22,720
+And then this is the fetch Pokemon method that receives the Pokemon ID as
+
+334
+00:24:22,720 --> 00:24:28,160
+a parameter we call our connection wrapper gets single Pokemon with this value.
+
+335
+00:24:30,240 --> 00:24:33,640
+And here we see that it's again received as a parameter.
+
+336
+00:24:34,680 --> 00:24:37,800
+It's used to construct the statement and execute it directly.
+
+337
+00:24:37,800 --> 00:24:42,680
+So at no point in time have we sanitized the value or
+
+338
+00:24:42,680 --> 00:24:45,440
+checked what data can actually contain.
+
+339
+00:24:45,440 --> 00:24:50,240
+And this is why our cloud will raise a vulnerability issue because in this case
+
+340
+00:24:50,240 --> 00:24:54,680
+you can actually change the SQL statement that will be executed.
+
+341
+00:24:54,680 --> 00:24:57,920
+And this is of course something you don't want to happen.
+
+342
+00:25:01,360 --> 00:25:05,840
+Now the second issue that has been detected here is very similar.
+
+343
+00:25:05,840 --> 00:25:07,000
+I will go through it quickly.
+
+344
+00:25:07,000 --> 00:25:10,400
+So again, we have the same source,
+
+345
+00:25:10,400 --> 00:25:13,200
+the same Pokemon ID that is provided as a parameter.
+
+346
+00:25:13,200 --> 00:25:18,160
+It is sent to this render template method and
+
+347
+00:25:18,160 --> 00:25:26,200
+here it's actually passed in the dictionary for that template.
+
+348
+00:25:26,200 --> 00:25:33,480
+And we see that in the HTML we don't have auto escaping enabled for this example.
+
+349
+00:25:33,480 --> 00:25:39,760
+And because of that we are sensitive to reflected XSS vulnerability.
+
+350
+00:25:39,760 --> 00:25:44,760
+So this is the kind of vulnerabilities that you can find in the code using
+
+351
+00:25:44,760 --> 00:25:45,760
+Summer Cloud.
+
+352
+00:25:45,760 --> 00:25:51,200
+And now finally another category which is maintainability issues.
+
+353
+00:25:51,200 --> 00:25:58,680
+Here it's more about good practice, bad practices, readability, etc.
+
+354
+00:25:58,680 --> 00:26:01,600
+So it might be a bit more opinionated sometimes.
+
+355
+00:26:02,680 --> 00:26:04,840
+Let's see a couple of examples.
+
+356
+00:26:05,800 --> 00:26:10,120
+Here we have a bare except.
+
+357
+00:26:10,120 --> 00:26:14,240
+Generally using bare except is not very recommended in Python.
+
+358
+00:26:14,240 --> 00:26:17,200
+You will catch exceptions that you might not want to catch.
+
+359
+00:26:17,200 --> 00:26:20,080
+So it's better to be explicit.
+
+360
+00:26:21,480 --> 00:26:22,840
+This is one issue.
+
+361
+00:26:23,960 --> 00:26:29,000
+There is another kind of issues which more relates to type checking.
+
+362
+00:26:29,080 --> 00:26:33,760
+So in this case we have a comparison for
+
+363
+00:26:33,760 --> 00:26:39,920
+equality against an integer for this value which has a type int of string.
+
+364
+00:26:39,920 --> 00:26:43,800
+This comparison will never be true if the type int is respected.
+
+365
+00:26:45,080 --> 00:26:48,000
+Here, Summer Cloud is being a bit conservative knowing that type ints are
+
+366
+00:26:48,000 --> 00:26:49,320
+not enforced.
+
+367
+00:26:49,320 --> 00:26:52,920
+So it will raise a code smell for the inconsistency but not a bug.
+
+368
+00:26:52,920 --> 00:26:53,440
+Okay.
+
+369
+00:26:55,080 --> 00:26:59,640
+So sometimes code smells can still be bugs in fact.
+
+370
+00:27:01,200 --> 00:27:06,040
+And finally we have another one which is more stylistic where you can
+
+371
+00:27:07,160 --> 00:27:10,040
+merge two if statements to make code more concise.
+
+372
+00:27:10,040 --> 00:27:15,400
+This is again something that might be a bit more opinionated and
+
+373
+00:27:15,400 --> 00:27:19,720
+in this case saying that you don't want to fix the issues or
+
+374
+00:27:19,720 --> 00:27:25,880
+disabling the role depending on your use case might be interesting.
+
+375
+00:27:28,080 --> 00:27:32,640
+Finally another type of issues that we have is security hotspots.
+
+376
+00:27:32,640 --> 00:27:38,520
+In this case this is about code that is sensitive from a security perspective.
+
+377
+00:27:38,520 --> 00:27:41,800
+But there might not be an actual issue to speak of so
+
+378
+00:27:41,800 --> 00:27:46,200
+it needs to be reviewed and it's more context dependent.
+
+379
+00:27:46,200 --> 00:27:47,480
+So we don't have one.
+
+380
+00:27:47,480 --> 00:27:51,800
+The pull request, there is one in the main branch that I can show,
+
+381
+00:27:51,800 --> 00:27:54,240
+there are two actually I want to show.
+
+382
+00:27:55,600 --> 00:28:00,760
+This one, so for example here we're using a regular expression
+
+383
+00:28:00,760 --> 00:28:04,920
+that is vulnerable to catastrophic backtracking.
+
+384
+00:28:04,920 --> 00:28:10,040
+In this case we're using it with user inputs in our Flask application directly.
+
+385
+00:28:10,040 --> 00:28:14,080
+So it might actually be vulnerable for a denial of service.
+
+386
+00:28:14,080 --> 00:28:17,760
+In some context this might be an acceptable,
+
+387
+00:28:17,760 --> 00:28:20,400
+maybe this regex is not acceptable but
+
+388
+00:28:20,400 --> 00:28:26,040
+a polynomial runtime for regular expression might be acceptable in some cases.
+
+389
+00:28:26,040 --> 00:28:31,720
+So in this case our cloud is again being a bit conservative by saying that this is
+
+390
+00:28:31,720 --> 00:28:34,560
+a hotspot and not a vulnerability or a bug.
+
+391
+00:28:36,080 --> 00:28:37,280
+The same thing goes for
+
+392
+00:28:37,280 --> 00:28:40,520
+using anything that relates to cryptography for example.
+
+393
+00:28:40,520 --> 00:28:42,520
+In some context it's sensitive, in some it's not.
+
+394
+00:28:42,520 --> 00:28:45,400
+So this is what security hotspots are for.
+
+395
+00:28:47,360 --> 00:28:49,800
+Coming back to my pull request,
+
+396
+00:28:49,800 --> 00:28:54,520
+there is something that is missing right now which is coverage information.
+
+397
+00:28:55,560 --> 00:29:00,720
+So as I said, right now the only thing that happened is that
+
+398
+00:29:00,720 --> 00:29:07,160
+Summer Cloud read the data from this GitHub repository and analyzed the code.
+
+399
+00:29:07,160 --> 00:29:11,560
+And this is static analysis, so there is no code execution at all, or
+
+400
+00:29:11,560 --> 00:29:13,160
+at least not the user code.
+
+401
+00:29:14,360 --> 00:29:19,120
+And so it cannot compute things like code coverage information.
+
+402
+00:29:19,120 --> 00:29:22,920
+And for that, actually what you need to do is to compute it yourself and
+
+403
+00:29:22,920 --> 00:29:27,240
+to provide it to the Summer Cloud scan.
+
+404
+00:29:27,240 --> 00:29:32,280
+And this can currently only be done if the Summer Cloud scan happens as part of
+
+405
+00:29:32,280 --> 00:29:34,440
+a CI workflow.
+
+406
+00:29:34,440 --> 00:29:40,520
+And so for that we need to enable a CI based analysis.
+
+407
+00:29:41,680 --> 00:29:48,360
+So this is what I will do now.
+
+408
+00:29:48,360 --> 00:29:53,360
+And for that I need to go to administration and
+
+409
+00:29:53,360 --> 00:29:56,040
+I need to go to analysis methods.
+
+410
+00:29:57,600 --> 00:29:59,480
+And I will need to change my analysis method.
+
+411
+00:29:59,480 --> 00:30:02,520
+So right now we've been using automatic analysis,
+
+412
+00:30:03,720 --> 00:30:07,480
+which is enabled by default, I need to disable this.
+
+413
+00:30:08,000 --> 00:30:11,640
+And what I will do is I will follow the tutorial for
+
+414
+00:30:11,640 --> 00:30:16,280
+GitHub actions because I have a GitHub action already set up, so it's easier.
+
+415
+00:30:16,280 --> 00:30:20,440
+You can use other CI if you want, of course.
+
+416
+00:30:20,440 --> 00:30:23,040
+But I will follow the tutorial for a GitHub action.
+
+417
+00:30:25,040 --> 00:30:30,000
+I need to create a secret to authenticate to Summer Cloud.
+
+418
+00:30:30,000 --> 00:30:32,560
+So I need to do that in my GitHub repository.
+
+419
+00:30:32,560 --> 00:30:35,680
+So I will follow this link here.
+
+420
+00:30:35,680 --> 00:30:37,840
+And I will need to copy and paste those two values.
+
+421
+00:30:37,840 --> 00:30:39,800
+So I'll already copy this one.
+
+422
+00:30:41,520 --> 00:30:44,280
+So I need to go, so I'm in the secrets of my repository.
+
+423
+00:30:44,280 --> 00:30:48,800
+I create a new repository secret.
+
+424
+00:30:48,800 --> 00:30:52,880
+I am pasting the name of the variable.
+
+425
+00:30:54,160 --> 00:30:57,920
+Copy pasting the value here.
+
+426
+00:30:59,640 --> 00:31:03,000
+And I'm adding my secret.
+
+427
+00:31:03,000 --> 00:31:09,400
+So, oops.
+
+428
+00:31:09,400 --> 00:31:12,400
+Back to Summer Cloud.
+
+429
+00:31:13,400 --> 00:31:23,280
+Now what I need to do is to change my build file to integrate the Summer Cloud scan.
+
+430
+00:31:23,280 --> 00:31:28,400
+So there are easy way to do it if you're using a build system like Maven, Gradle,
+
+431
+00:31:28,400 --> 00:31:29,600
+etc.
+
+432
+00:31:29,600 --> 00:31:32,800
+Here for Python, we're not using a specific build system.
+
+433
+00:31:32,800 --> 00:31:36,840
+So I go with the generic tutorial.
+
+434
+00:31:36,840 --> 00:31:45,960
+And what I will have to do is to integrate the Summer Cloud scan to my GitHub workflow.
+
+435
+00:31:45,960 --> 00:31:48,600
+So this is basically this part here.
+
+436
+00:31:48,600 --> 00:31:51,840
+I've already prepared the changes in a pull request that can be used.
+
+437
+00:31:51,840 --> 00:31:54,600
+So I will not actually do it.
+
+438
+00:31:54,600 --> 00:32:01,040
+But this is basically what I need to do to integrate this Summer Cloud scan.
+
+439
+00:32:02,040 --> 00:32:07,840
+The other thing I need to do to enable the CI-based analysis is to create a Sonar project
+
+440
+00:32:07,840 --> 00:32:14,640
+properties file that will contain the properties for the analysis for the code.
+
+441
+00:32:14,640 --> 00:32:20,360
+Since now it happens in the CI, the properties needs to be defined there as well.
+
+442
+00:32:20,360 --> 00:32:24,240
+On automatic analysis, you can do it in the web UI instead.
+
+443
+00:32:24,240 --> 00:32:27,880
+And I will need to copy those informations.
+
+444
+00:32:27,880 --> 00:32:32,920
+They're not in my pull request yet, so I will already copy this.
+
+445
+00:32:32,920 --> 00:32:40,360
+And now I will go back to my repository to make those changes.
+
+446
+00:32:40,360 --> 00:32:44,160
+So for that, I will go back to pull requests again.
+
+447
+00:32:44,160 --> 00:32:49,520
+And here I will cut a few corners because, of course, it would be annoying otherwise.
+
+448
+00:32:49,600 --> 00:32:57,920
+So we'll create a new pull request, again targeting my FORT repository.
+
+449
+00:32:57,920 --> 00:33:03,440
+And I will target my add feature branch so that I change the workflow for my add feature
+
+450
+00:33:03,440 --> 00:33:05,720
+branch.
+
+451
+00:33:05,720 --> 00:33:07,640
+And I see the result of this.
+
+452
+00:33:07,640 --> 00:33:12,800
+Of course, if you want to do it cleanly, you probably want to change the main and then
+
+453
+00:33:12,800 --> 00:33:14,360
+rebase.
+
+454
+00:33:14,360 --> 00:33:17,520
+But I will cut a few corners.
+
+455
+00:33:17,520 --> 00:33:22,760
+So I have my enable CI analysis that I'm looking to.
+
+456
+00:33:22,760 --> 00:33:26,320
+And let's see the changes that this brings.
+
+457
+00:33:26,320 --> 00:33:30,080
+So what I'm doing is I'm creating a new coverage RC file.
+
+458
+00:33:30,080 --> 00:33:41,040
+So that's a configuration for my code coverage tool where I give the source of the code is.
+
+459
+00:33:41,040 --> 00:33:44,920
+I enable branch coverage as well.
+
+460
+00:33:44,960 --> 00:33:51,800
+And I set the relative files flag to true to avoid any mismatch in the file path with
+
+461
+00:33:51,800 --> 00:33:54,400
+SonarCloud.
+
+462
+00:33:54,400 --> 00:33:57,840
+And I'm changing a bit my GitHub action here.
+
+463
+00:33:57,840 --> 00:34:00,840
+So now I'm not running just simply PyTest.
+
+464
+00:34:00,840 --> 00:34:08,520
+I'm running PyTest.gov to compute the coverage information for which I create an XML report.
+
+465
+00:34:08,520 --> 00:34:13,840
+And I use the configuration that is already defined here.
+
+466
+00:34:14,040 --> 00:34:20,520
+And I add this SonarCloud scan after I've computed the coverage.
+
+467
+00:34:20,520 --> 00:34:23,920
+The secret, the GitHub token will be provided automatically.
+
+468
+00:34:23,920 --> 00:34:29,360
+The Sonar token is the one we've created just now.
+
+469
+00:34:29,360 --> 00:34:36,040
+And here I have my project properties that are here with the placeholders.
+
+470
+00:34:36,040 --> 00:34:42,000
+If you want to do this yourself, you need to replace this with your project key and
+
+471
+00:34:42,000 --> 00:34:43,000
+organization key.
+
+472
+00:34:43,000 --> 00:34:45,160
+I pasted mine.
+
+473
+00:34:45,160 --> 00:34:46,960
+I copied mine already.
+
+474
+00:34:46,960 --> 00:34:50,480
+So I will change it here.
+
+475
+00:34:50,480 --> 00:34:53,120
+So I create my pull requests.
+
+476
+00:34:53,120 --> 00:34:57,600
+And I will change it directly from the GitHub UI to make things a bit simpler.
+
+477
+00:34:57,600 --> 00:35:04,000
+So I will just edit this and paste my project information.
+
+478
+00:35:05,000 --> 00:35:17,720
+I can commit this directly and merge this pull request so that my changes are taken
+
+479
+00:35:17,720 --> 00:35:19,120
+into account.
+
+480
+00:35:19,120 --> 00:35:20,400
+All right.
+
+481
+00:35:20,400 --> 00:35:29,080
+So now let me see if you see a bit a small recap of what I did.
+
+482
+00:35:29,080 --> 00:35:38,680
+So I went to administration, analysis method, disabled automatic analysis, created my secret
+
+483
+00:35:38,680 --> 00:35:43,480
+in my GitHub repository.
+
+484
+00:35:43,480 --> 00:35:48,600
+Here we don't see the images again, but I created the coverage RC file, updated the
+
+485
+00:35:48,600 --> 00:35:54,840
+GitHub action, and created the project properties file.
+
+486
+00:35:54,840 --> 00:36:01,480
+And I actually merged the enable CI analysis branch from this.
+
+487
+00:36:01,480 --> 00:36:07,640
+What I can see, so the CI is, of course, running.
+
+488
+00:36:07,640 --> 00:36:14,920
+One thing I can see also that I did not mention is that SoundCloud will also provide a small
+
+489
+00:36:14,920 --> 00:36:21,080
+summary of the issues it found in the pull request itself so that when you open a pull
+
+490
+00:36:21,320 --> 00:36:24,040
+You don't have to go to the web UI.
+
+491
+00:36:24,040 --> 00:36:28,520
+If you don't have issues, you can go directly to the pull request, see the comment and see
+
+492
+00:36:28,520 --> 00:36:37,240
+the issues that you have so that it can be a bit quicker.
+
+493
+00:36:37,240 --> 00:36:42,400
+So this should be running.
+
+494
+00:36:42,400 --> 00:36:44,840
+This is still running.
+
+495
+00:36:44,840 --> 00:36:47,880
+It should not take so long.
+
+496
+00:36:47,880 --> 00:36:55,080
+But now we can see that the SoundCloud scan is part of my CI before it was really done
+
+497
+00:36:55,080 --> 00:37:00,360
+by SoundCloud on its server.
+
+498
+00:37:00,360 --> 00:37:06,200
+Now it's really part of the CI and we really have a bit more control on the analysis.
+
+499
+00:37:06,200 --> 00:37:09,600
+So right now what I'm doing is importing code coverage information.
+
+500
+00:37:09,600 --> 00:37:16,800
+You can import other things like MyPy reports, FlakeH reports, any other linter information
+
+501
+00:37:16,800 --> 00:37:24,320
+that will also be able to import.
+
+502
+00:37:24,320 --> 00:37:33,520
+So if I go back here, so I don't need this anymore, I can go to my pull requests again.
+
+503
+00:37:33,600 --> 00:37:42,240
+Now I see the coverage information that has been computed.
+
+504
+00:37:42,240 --> 00:37:47,280
+What SoundCloud did here is not just take the coverage information and put it here,
+
+505
+00:37:47,280 --> 00:37:53,520
+it actually recomputes it respective to the new code that you wrote.
+
+506
+00:37:53,520 --> 00:37:57,560
+So all the issues that we see here are issues on the new code.
+
+507
+00:37:57,560 --> 00:38:02,880
+And similarly, the value of the coverage that we see here is the coverage on the new code
+
+508
+00:38:02,880 --> 00:38:04,920
+that has been added.
+
+509
+00:38:04,920 --> 00:38:13,120
+So the overall code coverage is estimated here to be 74%, but we see that the coverage
+
+510
+00:38:13,120 --> 00:38:14,820
+on the new code is lower.
+
+511
+00:38:14,820 --> 00:38:20,240
+So that you can really have quite a high threshold on your code coverage thanks to this, because
+
+512
+00:38:20,240 --> 00:38:23,000
+it will not impact the old existing code.
+
+513
+00:38:23,000 --> 00:38:31,680
+So that can help as well if you have a project with very low coverage and you want to get
+
+514
+00:38:31,680 --> 00:38:36,160
+higher coverage but you don't want to spend six months writing tests for it.
+
+515
+00:38:36,160 --> 00:38:42,280
+Again, we can see some details here.
+
+516
+00:38:42,280 --> 00:38:47,600
+If you follow the links, you can see all the information that you would see in a coverage
+
+517
+00:38:47,600 --> 00:38:48,600
+tool.
+
+518
+00:38:48,600 --> 00:38:51,840
+So you see the covered code, what is the new code.
+
+519
+00:38:51,840 --> 00:38:59,800
+You also see coverage on the old code if you're interested in that.
+
+520
+00:39:00,000 --> 00:39:04,640
+And because we have enabled brand coverage, we see what is not covered.
+
+521
+00:39:04,640 --> 00:39:09,160
+So we see here we have quite a few issues, but it's not covered by tests.
+
+522
+00:39:09,160 --> 00:39:16,220
+So we could have expected that and written some tests.
+
+523
+00:39:16,220 --> 00:39:24,200
+So this is all that we can see on the Summer Cloud UI.
+
+524
+00:39:24,200 --> 00:39:31,480
+Now the question is, of course, can we fix those issues a bit faster?
+
+525
+00:39:31,480 --> 00:39:33,680
+Some of those issues are quite simple, actually.
+
+526
+00:39:33,680 --> 00:39:36,080
+We shouldn't probably commit code with them.
+
+527
+00:39:36,080 --> 00:39:43,040
+And this is where Summer Lint comes into place, because the analysis that Summer Cloud performs
+
+528
+00:39:43,040 --> 00:39:45,560
+can also be performed in Summer Lint.
+
+529
+00:39:45,560 --> 00:39:50,200
+You don't get all the issues, like the vulnerabilities that are found will not be found in Summer
+
+530
+00:39:50,200 --> 00:39:59,200
+Lint because they're more complex and require a full analysis to be found.
+
+531
+00:39:59,200 --> 00:40:04,740
+But most issues that can be found can also be found directly in the IDE.
+
+532
+00:40:04,740 --> 00:40:13,040
+So I already prepared my project, or at least a copy of this project, to show how this would
+
+533
+00:40:13,040 --> 00:40:14,040
+work.
+
+534
+00:40:14,040 --> 00:40:16,440
+So here I'm on the main branch, actually.
+
+535
+00:40:16,520 --> 00:40:21,920
+And I can go to Plugins and install Summer Lint.
+
+536
+00:40:21,920 --> 00:40:27,880
+In this case, I already installed it, so I will just enable it.
+
+537
+00:40:27,880 --> 00:40:33,200
+But of course, we can install it.
+
+538
+00:40:33,200 --> 00:40:37,720
+I need to restart my IDE.
+
+539
+00:40:37,720 --> 00:40:39,360
+I'm doing this with PyCharm.
+
+540
+00:40:39,360 --> 00:40:44,440
+Of course, it's basically exactly the same thing in VS Code.
+
+541
+00:40:44,440 --> 00:40:51,960
+And here what I see is that I have this new panel that is from Summer Lint with a recap
+
+542
+00:40:51,960 --> 00:40:56,240
+of the issues that are found in my file.
+
+543
+00:40:56,240 --> 00:41:04,840
+For the issues, I have the description that is available as well, similar to what you
+
+544
+00:41:04,840 --> 00:41:09,640
+can find in Summer Cloud.
+
+545
+00:41:09,640 --> 00:41:15,920
+So you have the description as well if you want more explanation on the issues.
+
+546
+00:41:15,920 --> 00:41:20,240
+Of course, the issues are highlighted.
+
+547
+00:41:20,240 --> 00:41:27,080
+And for some issues, you can also, like in IDEs, have quickfix that are offered.
+
+548
+00:41:27,080 --> 00:41:32,960
+So in this case, we have an exception that is created, but it's not raised.
+
+549
+00:41:32,960 --> 00:41:36,420
+I can trigger a quickfix to just raise it.
+
+550
+00:41:36,420 --> 00:41:43,300
+So this is one of the things that you can do.
+
+551
+00:41:43,300 --> 00:41:44,300
+So yeah.
+
+552
+00:41:44,300 --> 00:41:50,560
+Now let's pretend for a second here I have a pass statement that is flagged as unneeded,
+
+553
+00:41:50,560 --> 00:41:51,560
+of course.
+
+554
+00:41:51,560 --> 00:41:56,420
+Let's pretend for a second that I don't actually want to have an issue here.
+
+555
+00:41:56,420 --> 00:42:02,740
+Maybe you like this pass statement for whatever reason and you just want to silence an issue,
+
+556
+00:42:02,740 --> 00:42:03,740
+basically.
+
+557
+00:42:03,740 --> 00:42:06,340
+There are several ways to do that.
+
+558
+00:42:06,340 --> 00:42:12,140
+One of them is to add a small pragma comment, which is no sonar.
+
+559
+00:42:12,140 --> 00:42:18,220
+It will disable inspection for that line and you will not see the issue.
+
+560
+00:42:18,220 --> 00:42:19,220
+So this is one option.
+
+561
+00:42:19,220 --> 00:42:25,820
+I don't like pragma comments so much myself, so maybe you don't as well.
+
+562
+00:42:25,820 --> 00:42:32,540
+Maybe it's not a very good solution for you to have all those pragma comments in the issues
+
+563
+00:42:32,540 --> 00:42:34,300
+that you don't want to see.
+
+564
+00:42:34,300 --> 00:42:40,020
+Another option would be, of course, to disable the rule directly into sonar lint.
+
+565
+00:42:40,020 --> 00:42:44,940
+But then if you're synchronizing with other people working on the same project, you don't
+
+566
+00:42:44,940 --> 00:42:48,140
+want to have to do this manually.
+
+567
+00:42:48,140 --> 00:42:52,800
+And this is where we have something that is called connected mode between sonar lint and
+
+568
+00:42:52,800 --> 00:43:01,180
+sonar cloud, where you can synchronize issues and quality profiles and issue status between
+
+569
+00:43:01,740 --> 00:43:04,620
+sonar cloud and sonar lint.
+
+570
+00:43:04,620 --> 00:43:08,140
+It also has the added benefit that for some issues that cannot be found in sonar lint,
+
+571
+00:43:08,140 --> 00:43:12,860
+you can still display them in a limited way.
+
+572
+00:43:12,860 --> 00:43:18,500
+This is still rather new, but it's something that we've been working on so that you can
+
+573
+00:43:18,500 --> 00:43:22,500
+still see vulnerabilities in the IDE.
+
+574
+00:43:22,500 --> 00:43:29,420
+And for that, let me go to my other projects that I prepared.
+
+575
+00:43:29,420 --> 00:43:32,380
+And let's pretend I want to silence my past statements here.
+
+576
+00:43:32,380 --> 00:43:35,140
+So I go to my maintainability issues.
+
+577
+00:43:35,140 --> 00:43:38,460
+I go to the issue I want.
+
+578
+00:43:38,460 --> 00:43:43,580
+And I will flag it as won't fix.
+
+579
+00:43:43,580 --> 00:43:47,740
+I'm asked for a comment to why I won't fix this issue.
+
+580
+00:43:47,740 --> 00:43:49,980
+I can put whatever here.
+
+581
+00:43:49,980 --> 00:43:59,220
+Now my issue is silenced from this setup.
+
+582
+00:43:59,220 --> 00:44:06,100
+And now what I can do is connect my sonar lint to my sonar cloud.
+
+583
+00:44:06,100 --> 00:44:15,980
+I can do that by going through this toolbox here and select bind project to sonar cube
+
+584
+00:44:15,980 --> 00:44:17,700
+or sonar cloud.
+
+585
+00:44:17,700 --> 00:44:23,180
+And here I will be asked to configure a connection, which I will do.
+
+586
+00:44:23,180 --> 00:44:25,140
+I will add a new connection.
+
+587
+00:44:25,140 --> 00:44:30,460
+I will call it workshop.
+
+588
+00:44:30,460 --> 00:44:33,900
+And I'm asked for a token again to authenticate with sonar cloud.
+
+589
+00:44:33,900 --> 00:44:39,140
+So I can just follow this to create one.
+
+590
+00:44:39,140 --> 00:44:50,700
+I will create my token here.
+
+591
+00:44:50,700 --> 00:44:54,060
+I will copy it.
+
+592
+00:44:54,060 --> 00:45:01,140
+I will paste it.
+
+593
+00:45:01,140 --> 00:45:03,900
+And now I'm authenticated with sonar cloud.
+
+594
+00:45:03,900 --> 00:45:05,780
+I will select my organization.
+
+595
+00:45:05,780 --> 00:45:08,660
+In this case, it's not on my personal organization.
+
+596
+00:45:08,660 --> 00:45:13,540
+So I select the one that is relevant.
+
+597
+00:45:13,540 --> 00:45:18,780
+And now the connection should be good to go.
+
+598
+00:45:18,780 --> 00:45:22,820
+So I can select it.
+
+599
+00:45:22,860 --> 00:45:27,900
+I need to also choose the project on which I'm synchronizing.
+
+600
+00:45:27,900 --> 00:45:32,180
+So I select the project.
+
+601
+00:45:32,180 --> 00:45:39,380
+And here what it will do also is synchronize the analyzer version between the two, between
+
+602
+00:45:39,380 --> 00:45:45,780
+sonar lint and sonar cloud, because they might not be the same analyzers running.
+
+603
+00:45:45,780 --> 00:45:51,980
+And now I see that this pass statement is not flagged anymore.
+
+604
+00:45:51,980 --> 00:45:52,980
+It's still here.
+
+605
+00:45:52,980 --> 00:45:56,660
+I think I need to just reload the...
+
+606
+00:45:56,660 --> 00:45:57,660
+Okay.
+
+607
+00:45:57,660 --> 00:46:00,860
+Here I see that it's completely disappeared.
+
+608
+00:46:00,860 --> 00:46:05,180
+So my pass statement that I wanted to keep, I get to keep it.
+
+609
+00:46:05,180 --> 00:46:11,980
+And this is how you can silence issues that you don't want or synchronize the rules that
+
+610
+00:46:11,980 --> 00:46:20,260
+are enabled to have a consistent experience between your IDE workflow and your code review
+
+611
+00:46:21,100 --> 00:46:22,100
+process.
+
+612
+00:46:23,820 --> 00:46:24,500
+All right.
+
+613
+00:46:24,500 --> 00:46:28,940
+So this is all that I wanted to share today.
+
+614
+00:46:28,940 --> 00:46:32,700
+So a few words to conclude.
+
+615
+00:46:32,700 --> 00:46:38,740
+So today I presented this clean as you could approach that I believe will help to clean
+
+616
+00:46:38,740 --> 00:46:44,100
+legacy project in a systematic way with no upfront investment and no compromise on quality
+
+617
+00:46:44,180 --> 00:46:50,420
+standards so that you can really have high quality standards on your project.
+
+618
+00:46:50,420 --> 00:46:57,980
+And I think this principle holds even outside of what we do at sonar and what our products
+
+619
+00:46:57,980 --> 00:46:58,980
+are doing.
+
+620
+00:46:58,980 --> 00:47:03,580
+So I think it's a very important mindset in my opinion.
+
+621
+00:47:03,580 --> 00:47:09,420
+And then I showed sonar cloud how you can implement this clean as you could methodology
+
+622
+00:47:09,580 --> 00:47:12,860
+using sonar tools.
+
+623
+00:47:12,860 --> 00:47:18,940
+With sonar cloud as a central place to monitor the health of your code base, automatic analysis,
+
+624
+00:47:18,940 --> 00:47:24,220
+CI based analysis so you can have a better, more complete analysis.
+
+625
+00:47:24,220 --> 00:47:29,020
+And finally, we've seen also how to set up sonar lines.
+
+626
+00:47:29,020 --> 00:47:30,380
+So that's all for me.
+
+627
+00:47:30,380 --> 00:47:32,940
+And I'm open to questions if you have any.
+
+628
+00:47:32,940 --> 00:47:33,940
+Thank you.
+
+629
+00:47:33,940 --> 00:47:35,660
+Thank you very much.
+
+630
+00:47:35,660 --> 00:47:36,340
+Thank you very much.
+
+631
+00:47:36,340 --> 00:47:36,860
+Thank you very much.
+
+632
+00:47:36,860 --> 00:47:38,100
+Thank you very much.
+
+633
+00:47:38,100 --> 00:47:38,620
+Thank you very much.
+
+634
+00:47:38,620 --> 00:47:38,980
+Thank you.
+
+635
+00:47:39,020 --> 00:47:39,420
+Thank you.
+
+636
+00:47:39,420 --> 00:47:39,660
+Thank you.
+
+637
+00:47:39,660 --> 00:47:39,940
+Thank you.
+
+638
+00:47:39,940 --> 00:47:40,340
+Thank you.
+
+639
+00:47:40,340 --> 00:47:40,700
+Thank you.
+
+640
+00:47:40,700 --> 00:47:41,180
+Thank you.
+
+641
+00:47:43,180 --> 00:47:43,860
+Yes.
+
+642
+00:47:43,860 --> 00:47:48,980
+You guys ever thought about like with that coverage report they called that which line
+
+643
+00:47:48,980 --> 00:47:55,140
+in the new code using like an AI to test it?
+
+644
+00:47:55,700 --> 00:47:59,700
+No, by the way, I think there's a microphone is it meant for the questions so that they're
+
+645
+00:47:59,700 --> 00:48:00,700
+recorded?
+
+646
+00:48:02,220 --> 00:48:03,740
+Can I ask you to repeat the question?
+
+647
+00:48:03,740 --> 00:48:05,740
+the question there so that it's a...
+
+648
+00:48:05,740 --> 00:48:16,920
+All right. Is this working? Okay. So my question is with like a coverage report like that that
+
+649
+00:48:16,920 --> 00:48:20,420
+has the specific lines, you know, maybe they're called out for branch coverage or maybe it's
+
+650
+00:48:20,420 --> 00:48:26,700
+just line coverage. Now we have an AI that will suggest a test case for us and write
+
+651
+00:48:26,700 --> 00:48:32,940
+some code, you know, maybe it will be wrong, but you could feed that to some type of prompt
+
+652
+00:48:32,940 --> 00:48:36,580
+and just get suggested tests. Have you guys thought about doing that?
+
+653
+00:48:36,580 --> 00:48:42,620
+That's a great idea. To be honest, I don't think we have considered that idea. So in
+
+654
+00:48:42,620 --> 00:48:47,020
+fact, code coverage is at the border of what we do because we don't compute the coverage
+
+655
+00:48:47,020 --> 00:48:54,180
+ourselves. It's computed by external tools and we import it. Now it's true that there's...
+
+656
+00:48:54,180 --> 00:49:01,020
+There must be a way we can do that. For now, with what relates to AI and machine learning,
+
+657
+00:49:01,020 --> 00:49:06,860
+what we're looking at the most is how to filter out false positives and issues for
+
+658
+00:49:06,860 --> 00:49:13,900
+rules that depends on heuristics a bit more. We're not into generating code ourselves.
+
+659
+00:49:13,900 --> 00:49:26,020
+So this is not something we plan to do. Any other question? Yeah.
+
+660
+00:49:26,820 --> 00:49:31,980
+Just a short question. You demonstrated a little bit earlier silencing some of the issues
+
+661
+00:49:31,980 --> 00:49:37,740
+that Sonar Cloud detected on a particular PR. So if you have like a very high traffic
+
+662
+00:49:37,740 --> 00:49:43,020
+area of your code, is there an easy way to silence that like for all future PRs in that
+
+663
+00:49:43,020 --> 00:49:52,100
+same area or is it a per PR thing? So it is per PR that you will silence the
+
+664
+00:49:52,100 --> 00:49:57,740
+issues. Okay. I'm not sure I understood properly the question. I will answer and you will let
+
+665
+00:49:57,740 --> 00:50:04,140
+me know if I understood well. So what happens when you silence an issue in a pull request
+
+666
+00:50:04,140 --> 00:50:12,100
+and it gets merged? That issue is actually still existing for Sonar Cloud. So it's still recorded
+
+667
+00:50:12,100 --> 00:50:17,620
+as a silenced issue so that it will not be raised on a second pull request that triggers
+
+668
+00:50:17,620 --> 00:50:27,420
+the same rule again. That was my question. Thank you. I want to build on that question.
+
+669
+00:50:27,420 --> 00:50:33,220
+So typically when we run static analysis on big code bases like legacy code bases,
+
+670
+00:50:33,220 --> 00:50:41,300
+we'll get like hundreds or thousands of issues. Like how do we prioritize? Because when you see
+
+671
+00:50:41,300 --> 00:50:49,340
+just thousands of issues, like developers just throw the ball, whatever, and we just silence the tool.
+
+672
+00:50:49,340 --> 00:50:58,500
+Yeah, exactly. So this is the core of the idea behind this clean ASU code is that the number
+
+673
+00:50:58,500 --> 00:51:04,900
+of issues you should see should be proportional to the size of your pull request because the issues
+
+674
+00:51:04,900 --> 00:51:10,380
+that you will see are only the issues on code that is modified by the pull request. So if you
+
+675
+00:51:10,380 --> 00:51:15,540
+have a legacy project with thousands of issues and you create a small pull request on it,
+
+676
+00:51:15,540 --> 00:51:19,500
+you will only see the issues for that small pull request and you will not see the thousands
+
+677
+00:51:19,500 --> 00:51:25,300
+of issues. It will still be there. It will be still on your main code dashboard. And
+
+678
+00:51:25,300 --> 00:51:29,740
+if you want to look for things like vulnerabilities or things that are really critical, you really
+
+679
+00:51:29,740 --> 00:51:36,180
+want to find, you can do that. But on a daily basis, what we say is that you should not
+
+680
+00:51:36,180 --> 00:51:40,220
+focus on that. You should focus on the new code and on making sure the new code is clean.
+
+681
+00:51:40,220 --> 00:51:45,100
+Thank you. You're welcome.
+
+682
+00:51:45,100 --> 00:52:01,620
+For private repositories, what kind of data does Sonar Cloud keep during the analysis and after
+
+683
+00:52:01,620 --> 00:52:03,860
+the analysis in the paid tier?
+
+684
+00:52:03,860 --> 00:52:10,900
+Okay. So I'm not the best person to answer that question with precision, to be honest,
+
+685
+00:52:10,900 --> 00:52:19,380
+because I'm developing the analyzer. I'm not in the data team. I know that one of the data that
+
+686
+00:52:19,380 --> 00:52:26,500
+we can, if asked, look at is when your flag issues are false positives so that they can be
+
+687
+00:52:26,500 --> 00:52:34,780
+investigated. But even that is not available to developers most of the time. So as for the data
+
+688
+00:52:34,780 --> 00:52:42,980
+that is actually collected, I'm sorry that I don't have a precise answer. If you want to know a bit
+
+689
+00:52:42,980 --> 00:52:49,740
+more, maybe you should reach out to the better people to answer this. If you are concerned about
+
+690
+00:52:49,740 --> 00:52:55,980
+this, this is what SonarCube is also about, because SonarCube is free and open source. And even
+
+691
+00:52:55,980 --> 00:53:00,860
+with paid versions, it's on premise, so we have access to zero information.
+
+692
+00:53:00,860 --> 00:53:02,500
+Okay. Thank you very much.
+
+693
+00:53:02,500 --> 00:53:19,820
+All right. If there's no other questions, thank you very much. And one thing I did not mention is
+
+694
+00:53:19,820 --> 00:53:26,860
+that we are sponsoring the event, so we will have a booth in the expo later today and in the next
+
+695
+00:53:26,860 --> 00:53:33,380
+few days. So if you want to know more, feel free to drop by, and we'll be happy to help you there.
+
+696
+00:53:33,380 --> 00:53:34,220
+Thank you.
+

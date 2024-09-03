@@ -1,0 +1,5440 @@
+1
+00:00:00,000 --> 00:00:03,280
+Okay, hi, welcome everyone, good morning.
+
+2
+00:00:03,280 --> 00:00:07,040
+Welcome to my talk about modern typed Python
+
+3
+00:00:07,040 --> 00:00:08,600
+in the machine learning world.
+
+4
+00:00:09,800 --> 00:00:13,020
+I'm Johannes, I'm a machine learning engineer at GNI,
+
+5
+00:00:13,020 --> 00:00:15,340
+working on the Docker A open source project,
+
+6
+00:00:15,340 --> 00:00:17,120
+which will also be part of this talk,
+
+7
+00:00:17,120 --> 00:00:19,880
+and yeah, let's get into it.
+
+8
+00:00:19,880 --> 00:00:22,580
+So the talk will be roughly structured
+
+9
+00:00:22,580 --> 00:00:23,960
+in two different parts.
+
+10
+00:00:23,960 --> 00:00:26,760
+So the first part will be about typing in Python in general.
+
+11
+00:00:26,760 --> 00:00:29,280
+I think most of you should be familiar with this,
+
+12
+00:00:29,280 --> 00:00:31,080
+but I think it's good to give some background
+
+13
+00:00:31,080 --> 00:00:34,480
+and some context for the second half of the talk.
+
+14
+00:00:34,480 --> 00:00:37,560
+And then the second half would be about Python type hints
+
+15
+00:00:37,560 --> 00:00:39,760
+in machine learning applications,
+
+16
+00:00:39,760 --> 00:00:42,520
+and about Docker A, the library I'm working on
+
+17
+00:00:42,520 --> 00:00:45,360
+that's basically trying to solve some of the pain points
+
+18
+00:00:45,360 --> 00:00:48,140
+that are specific to machine learning applications,
+
+19
+00:00:48,140 --> 00:00:51,180
+and does it with the help of Python type hints.
+
+20
+00:00:53,120 --> 00:00:55,540
+But before that, a few words about the company
+
+21
+00:00:55,540 --> 00:00:59,540
+that sent me here, it's GNI AI, from R2020,
+
+22
+00:00:59,540 --> 00:01:03,420
+like machine learning ops and fine tuning company,
+
+23
+00:01:03,420 --> 00:01:07,620
+with about 60 members and spread over the globe.
+
+24
+00:01:07,620 --> 00:01:09,760
+I'm based in the Berlin headquarters
+
+25
+00:01:09,760 --> 00:01:12,580
+and raised quite a bit of money,
+
+26
+00:01:12,580 --> 00:01:16,560
+and yeah, trying to push these tools for ML forward.
+
+27
+00:01:17,820 --> 00:01:18,980
+Okay, with that out of the way,
+
+28
+00:01:18,980 --> 00:01:21,740
+let's get into the technical part of the talk.
+
+29
+00:01:21,740 --> 00:01:23,500
+So the first question is,
+
+30
+00:01:23,500 --> 00:01:26,820
+is Python a typed programming language?
+
+31
+00:01:26,820 --> 00:01:29,820
+And the answer is it is a duct-type language.
+
+32
+00:01:31,340 --> 00:01:32,160
+So what does that mean?
+
+33
+00:01:32,160 --> 00:01:33,860
+So let's take a look at a few code examples.
+
+34
+00:01:33,860 --> 00:01:37,960
+So on one side here, let me pull up my laser pointer.
+
+35
+00:01:39,180 --> 00:01:41,860
+You can see a statically typed language,
+
+36
+00:01:41,860 --> 00:01:44,700
+like Rust, C++, Java, or whatever it may be.
+
+37
+00:01:44,700 --> 00:01:45,820
+And the way those languages work
+
+38
+00:01:45,820 --> 00:01:47,160
+is whenever you have a variable
+
+39
+00:01:47,160 --> 00:01:49,740
+or whenever you pass an argument to a function,
+
+40
+00:01:49,740 --> 00:01:51,300
+you give it a type.
+
+41
+00:01:51,860 --> 00:01:54,100
+You tell the compiler or the interpreter
+
+42
+00:01:54,100 --> 00:01:55,860
+or your colleague that read the code
+
+43
+00:01:55,860 --> 00:01:58,580
+exactly what type a variable will have,
+
+44
+00:01:58,580 --> 00:02:00,300
+and then it runs.
+
+45
+00:02:00,300 --> 00:02:02,440
+And you need to make sure that all of your types
+
+46
+00:02:02,440 --> 00:02:05,020
+fit together and everything is nice and tidy.
+
+47
+00:02:05,020 --> 00:02:07,380
+Python and other duct-type languages,
+
+48
+00:02:07,380 --> 00:02:08,820
+that's a bit different.
+
+49
+00:02:08,820 --> 00:02:11,620
+So if we look at this add function here,
+
+50
+00:02:11,620 --> 00:02:14,620
+you can basically pass whatever you want.
+
+51
+00:02:14,620 --> 00:02:15,460
+Anything goes.
+
+52
+00:02:15,460 --> 00:02:16,900
+Like you just plug something in
+
+53
+00:02:16,900 --> 00:02:18,860
+and then no one will complain.
+
+54
+00:02:19,340 --> 00:02:20,540
+Right.
+
+55
+00:02:20,540 --> 00:02:21,500
+I said anything goes,
+
+56
+00:02:21,500 --> 00:02:24,180
+but of course that's not quite true.
+
+57
+00:02:24,180 --> 00:02:26,580
+Because there's something called the Duck Test.
+
+58
+00:02:26,580 --> 00:02:29,100
+Basically what this says is if it works like a duck
+
+59
+00:02:29,100 --> 00:02:31,940
+and it quarks like a duck, then it must be a duck.
+
+60
+00:02:31,940 --> 00:02:34,620
+So looking at this example again,
+
+61
+00:02:34,620 --> 00:02:37,140
+yes, I can pass whatever I want here,
+
+62
+00:02:37,140 --> 00:02:39,820
+but according to the Duck Test,
+
+63
+00:02:39,820 --> 00:02:41,400
+those two things that I pass
+
+64
+00:02:41,400 --> 00:02:42,700
+must fulfill certain properties.
+
+65
+00:02:42,700 --> 00:02:44,020
+In this case, X and Y,
+
+66
+00:02:44,020 --> 00:02:45,620
+since I want to add them together,
+
+67
+00:02:45,620 --> 00:02:46,780
+I want to form a sum,
+
+68
+00:02:46,780 --> 00:02:48,580
+they both need to be able to be,
+
+69
+00:02:49,260 --> 00:02:50,500
+well, added together or summed up.
+
+70
+00:02:50,500 --> 00:02:52,180
+And then it doesn't matter what type they really have
+
+71
+00:02:52,180 --> 00:02:53,540
+as long as they have this property,
+
+72
+00:02:53,540 --> 00:02:56,140
+as long as they know what the plus sign is,
+
+73
+00:02:56,140 --> 00:02:57,700
+as long as they can work with that,
+
+74
+00:02:57,700 --> 00:02:59,220
+then anything is good.
+
+75
+00:02:59,220 --> 00:03:01,180
+That's basically how duck typing works.
+
+76
+00:03:03,200 --> 00:03:08,200
+So to sum up what duck typing is in the context of Python,
+
+77
+00:03:09,140 --> 00:03:12,260
+I think it's something that makes Python great actually.
+
+78
+00:03:12,260 --> 00:03:14,100
+It's something that makes it very easy
+
+79
+00:03:14,100 --> 00:03:15,180
+to get started with Python,
+
+80
+00:03:15,180 --> 00:03:17,300
+also from people coming from other backgrounds
+
+81
+00:03:17,300 --> 00:03:18,440
+that are not computer science,
+
+82
+00:03:19,280 --> 00:03:20,200
+like engineers, physicists, et cetera,
+
+83
+00:03:20,200 --> 00:03:23,400
+that maybe don't want to delve into typing theory, whatever,
+
+84
+00:03:23,400 --> 00:03:24,640
+they just want the program to work.
+
+85
+00:03:24,640 --> 00:03:26,360
+And it's very nice for that, it's simple,
+
+86
+00:03:26,360 --> 00:03:27,720
+you don't need to think about these types,
+
+87
+00:03:27,720 --> 00:03:29,460
+about these abstractions,
+
+88
+00:03:29,460 --> 00:03:32,680
+as long as two things work together, you're fine.
+
+89
+00:03:32,680 --> 00:03:33,640
+And it's also very concise,
+
+90
+00:03:33,640 --> 00:03:36,200
+because you don't need to specify your types everywhere,
+
+91
+00:03:36,200 --> 00:03:37,040
+wherever you go.
+
+92
+00:03:38,180 --> 00:03:39,880
+But there are also some cons in this.
+
+93
+00:03:39,880 --> 00:03:43,080
+So one thing is it's a bit hard to maintain,
+
+94
+00:03:43,080 --> 00:03:44,840
+because whenever you type something,
+
+95
+00:03:45,800 --> 00:03:47,580
+whenever you write code,
+
+96
+00:03:48,440 --> 00:03:50,880
+and you don't specify a type, then it might work,
+
+97
+00:03:50,880 --> 00:03:52,960
+but then your colleague comes along later,
+
+98
+00:03:52,960 --> 00:03:54,640
+or your future self that has forgotten
+
+99
+00:03:54,640 --> 00:03:55,760
+what you did in the past,
+
+100
+00:03:55,760 --> 00:03:58,040
+then you may not know what the assumptions were
+
+101
+00:03:58,040 --> 00:03:59,420
+that you made at the time.
+
+102
+00:03:59,420 --> 00:04:00,440
+So it's a bit hard to maintain,
+
+103
+00:04:00,440 --> 00:04:02,840
+especially if you work in a team.
+
+104
+00:04:02,840 --> 00:04:07,840
+And another problem is that you tend to fail at runtime
+
+105
+00:04:07,840 --> 00:04:08,960
+and not at compile time.
+
+106
+00:04:08,960 --> 00:04:09,800
+So what does that mean?
+
+107
+00:04:09,800 --> 00:04:12,480
+If you have a statically typed programming language,
+
+108
+00:04:12,480 --> 00:04:14,700
+then where every variable has a type,
+
+109
+00:04:14,700 --> 00:04:17,000
+then already before you run your program,
+
+110
+00:04:17,000 --> 00:04:20,480
+you will know if those types fit together in your program.
+
+111
+00:04:20,480 --> 00:04:22,640
+With a duck typed programming language,
+
+112
+00:04:22,640 --> 00:04:24,520
+or dynamically typed programming language,
+
+113
+00:04:24,520 --> 00:04:25,680
+that's not the case.
+
+114
+00:04:25,680 --> 00:04:28,440
+So what you need to do then is you need to run your program,
+
+115
+00:04:28,440 --> 00:04:31,460
+and then you find out if it works or it doesn't.
+
+116
+00:04:31,460 --> 00:04:32,360
+Which is a problem, right?
+
+117
+00:04:32,360 --> 00:04:34,840
+Because you might ship your code, or you might deploy,
+
+118
+00:04:34,840 --> 00:04:38,200
+and then you find out, oh, doesn't work, not ideal.
+
+119
+00:04:38,200 --> 00:04:40,920
+So it's better to fail early and have a type system
+
+120
+00:04:40,920 --> 00:04:42,600
+that tells you right out of the gate,
+
+121
+00:04:42,600 --> 00:04:44,640
+okay, this is not gonna work, don't even try.
+
+122
+00:04:44,640 --> 00:04:46,840
+So that's a bit of a downside of the system.
+
+123
+00:04:47,400 --> 00:04:52,000
+Or to put it in meme form, yeah, dynamic typing
+
+124
+00:04:52,000 --> 00:04:53,560
+lets you sort of do whatever you want,
+
+125
+00:04:53,560 --> 00:04:54,980
+and at first glance it looks good,
+
+126
+00:04:54,980 --> 00:04:58,200
+but at a closer look it of course doesn't make sense.
+
+127
+00:04:58,200 --> 00:05:00,960
+But you can be happy quickly and be like done, awesome.
+
+128
+00:05:00,960 --> 00:05:03,400
+But then you will fail where in static typing,
+
+129
+00:05:03,400 --> 00:05:05,320
+you really need to think about what you're doing
+
+130
+00:05:05,320 --> 00:05:07,840
+and make the jigsaw puzzle work
+
+131
+00:05:07,840 --> 00:05:09,480
+before you ship it to your users.
+
+132
+00:05:10,760 --> 00:05:12,640
+So what about typings, right?
+
+133
+00:05:12,640 --> 00:05:15,200
+As we've seen right now, there aren't really types
+
+134
+00:05:15,200 --> 00:05:16,440
+that you specify in Python.
+
+135
+00:05:16,440 --> 00:05:19,640
+But there are type hints, so no, nothing strict,
+
+136
+00:05:19,640 --> 00:05:21,720
+but you can give hints about your types.
+
+137
+00:05:21,720 --> 00:05:24,840
+So let's take another look at the example we just saw.
+
+138
+00:05:24,840 --> 00:05:27,840
+Again, our statically typed language is over on this side,
+
+139
+00:05:27,840 --> 00:05:30,680
+and here now we see Python with type hints.
+
+140
+00:05:30,680 --> 00:05:32,160
+And we see that this looks very similar
+
+141
+00:05:32,160 --> 00:05:33,800
+to our statically typed language.
+
+142
+00:05:33,800 --> 00:05:37,080
+So every argument that we pass to a function
+
+143
+00:05:37,080 --> 00:05:38,680
+has a type associated with it,
+
+144
+00:05:38,680 --> 00:05:40,920
+and the return of the function also has a type.
+
+145
+00:05:40,920 --> 00:05:42,920
+So this looks basically exactly the same.
+
+146
+00:05:44,360 --> 00:05:46,080
+Yeah, but one thing that I wanna stress again,
+
+147
+00:05:46,400 --> 00:05:47,440
+these are just hints, right?
+
+148
+00:05:47,440 --> 00:05:49,360
+This is out of the box, this is not enforced.
+
+149
+00:05:49,360 --> 00:05:50,880
+This is just something you put there,
+
+150
+00:05:50,880 --> 00:05:54,080
+and then if you pass a string instead of an int,
+
+151
+00:05:54,080 --> 00:05:55,200
+still no one will complain.
+
+152
+00:05:55,200 --> 00:05:57,360
+So this is just like a guide, a hint, yeah.
+
+153
+00:05:58,760 --> 00:06:00,840
+So what is the point of this?
+
+154
+00:06:00,840 --> 00:06:04,260
+Why do we do that if we don't enforce it?
+
+155
+00:06:04,260 --> 00:06:07,280
+So I think the main upside of these hints
+
+156
+00:06:07,280 --> 00:06:08,800
+is about communication, right?
+
+157
+00:06:08,800 --> 00:06:11,440
+You communicate your intent and your assumptions.
+
+158
+00:06:11,440 --> 00:06:15,320
+You communicate with a number of different people or things.
+
+159
+00:06:15,320 --> 00:06:17,280
+So you communicate with your coworkers in a team,
+
+160
+00:06:17,280 --> 00:06:18,120
+for example.
+
+161
+00:06:18,120 --> 00:06:20,760
+So if you write this function and you put this int here,
+
+162
+00:06:20,760 --> 00:06:22,880
+then your coworker that needs to fix your bugs
+
+163
+00:06:22,880 --> 00:06:24,680
+will know that you thought this was gonna be an int.
+
+164
+00:06:24,680 --> 00:06:27,680
+Turns out it's a float or like a string, it's not working.
+
+165
+00:06:28,680 --> 00:06:29,920
+You also talk to your future self.
+
+166
+00:06:29,920 --> 00:06:32,880
+As I said, at least I tend to forget very quickly
+
+167
+00:06:32,880 --> 00:06:35,180
+what I did in the past, and then it's a good crutch for me
+
+168
+00:06:35,180 --> 00:06:38,320
+to write down what I thought was true in the past.
+
+169
+00:06:38,320 --> 00:06:40,400
+And also very important for me at least
+
+170
+00:06:40,400 --> 00:06:42,160
+is that you communicate with your ID.
+
+171
+00:06:42,160 --> 00:06:45,920
+Like you get all kinds of nice code completions and hints
+
+172
+00:06:45,920 --> 00:06:49,160
+that your ID, my case PyCharm, can just spit out for you
+
+173
+00:06:49,160 --> 00:06:50,920
+and it makes my life much easier.
+
+174
+00:06:53,160 --> 00:06:55,800
+And you can find bugs earlier, right, as I said before.
+
+175
+00:06:55,800 --> 00:06:57,220
+You need some additional tooling for that
+
+176
+00:06:57,220 --> 00:06:58,920
+because I said, like these are just hints,
+
+177
+00:06:58,920 --> 00:07:00,480
+so out of the box this is not true,
+
+178
+00:07:00,480 --> 00:07:02,720
+but with additional tooling you can find bugs earlier
+
+179
+00:07:02,720 --> 00:07:04,680
+when your types don't match up.
+
+180
+00:07:04,680 --> 00:07:07,460
+And again, this is still compatible with duck typing.
+
+181
+00:07:07,460 --> 00:07:08,480
+So just hints.
+
+182
+00:07:08,480 --> 00:07:10,120
+If you don't want to do this,
+
+183
+00:07:10,120 --> 00:07:11,600
+if you don't care about static typing,
+
+184
+00:07:11,640 --> 00:07:13,500
+you don't need to, no worry there.
+
+185
+00:07:14,720 --> 00:07:17,540
+So let's look a little bit of how this came to be.
+
+186
+00:07:17,540 --> 00:07:21,440
+How we moved from a language that only has variables
+
+187
+00:07:21,440 --> 00:07:22,780
+and no types associated with it
+
+188
+00:07:22,780 --> 00:07:25,380
+to this hybrid thing with these type hints.
+
+189
+00:07:25,380 --> 00:07:26,400
+How did it happen?
+
+190
+00:07:26,400 --> 00:07:30,400
+So Python 1 was released in 1991 and there were no type hints.
+
+191
+00:07:30,400 --> 00:07:32,900
+It was just pure duck typing in a sense.
+
+192
+00:07:33,800 --> 00:07:37,280
+About 10 years later, Python 2.0 comes along,
+
+193
+00:07:37,280 --> 00:07:39,080
+still no type hints.
+
+194
+00:07:39,960 --> 00:07:43,560
+Python 3.0 comes along, still no type hints.
+
+195
+00:07:43,560 --> 00:07:46,360
+By the way, they used to have a really cool logo back in the day.
+
+196
+00:07:46,360 --> 00:07:48,360
+I wish this was still the Python logo.
+
+197
+00:07:50,800 --> 00:07:52,920
+But people wanted type information, right?
+
+198
+00:07:52,920 --> 00:07:54,260
+Even if Python didn't provide it,
+
+199
+00:07:54,260 --> 00:07:55,880
+but this sort of emerged in the community.
+
+200
+00:07:55,880 --> 00:07:57,600
+And what you would see very often
+
+201
+00:07:57,600 --> 00:07:59,200
+is people doing something like this.
+
+202
+00:07:59,200 --> 00:08:02,500
+So you have your add function again,
+
+203
+00:08:02,500 --> 00:08:05,120
+and people had this need of expressing
+
+204
+00:08:05,120 --> 00:08:06,640
+what they expected in terms of type.
+
+205
+00:08:06,640 --> 00:08:08,640
+So they would just write a doc string
+
+206
+00:08:09,200 --> 00:08:11,000
+and just say, okay, my X should be an int,
+
+207
+00:08:11,000 --> 00:08:13,480
+my Y should be an int, and I'm also returning an int.
+
+208
+00:08:13,480 --> 00:08:14,960
+But of course, this is a bit of a hack.
+
+209
+00:08:14,960 --> 00:08:17,200
+It's not like there couldn't be different conventions
+
+210
+00:08:17,200 --> 00:08:19,680
+of doing it, but this needs sort of a rose.
+
+211
+00:08:19,680 --> 00:08:24,240
+And then basically, Python started to develop
+
+212
+00:08:24,240 --> 00:08:25,740
+more and more this direction.
+
+213
+00:08:25,740 --> 00:08:29,600
+This started with this PEP3107 in 2006,
+
+214
+00:08:29,600 --> 00:08:32,320
+which introduced annotations,
+
+215
+00:08:32,320 --> 00:08:34,360
+which already looks a lot like type hints.
+
+216
+00:08:34,360 --> 00:08:37,800
+So you can now associate stuff with your variables
+
+217
+00:08:37,800 --> 00:08:39,520
+or your inputs into a function.
+
+218
+00:08:39,520 --> 00:08:41,720
+But these are not type hints yet,
+
+219
+00:08:41,720 --> 00:08:46,280
+because what you can do here, according to this PEP,
+
+220
+00:08:46,280 --> 00:08:49,400
+is just put any arbitrary Python expression here.
+
+221
+00:08:49,400 --> 00:08:51,340
+So you can put these strings here,
+
+222
+00:08:51,340 --> 00:08:54,040
+you can put full-on expressions,
+
+223
+00:08:54,040 --> 00:08:55,600
+you can put other stuff.
+
+224
+00:08:55,600 --> 00:08:58,440
+This doesn't need to be types.
+
+225
+00:08:58,440 --> 00:09:01,480
+So it's not type hinting yet, it's just annotations.
+
+226
+00:09:01,480 --> 00:09:02,680
+Yeah, still not typing.
+
+227
+00:09:03,760 --> 00:09:05,360
+Then it took more and more time,
+
+228
+00:09:06,080 --> 00:09:08,720
+as these things tend to do, moving quite slowly.
+
+229
+00:09:08,720 --> 00:09:10,680
+But eight years later, finally,
+
+230
+00:09:10,680 --> 00:09:14,360
+there are type hints introduced with this new PEP484,
+
+231
+00:09:14,360 --> 00:09:19,140
+adding optional static typing to Python, big thing, 2014.
+
+232
+00:09:19,140 --> 00:09:22,760
+And what this did is just formalize some of the conventions
+
+233
+00:09:22,760 --> 00:09:24,560
+that were introduced with these annotations.
+
+234
+00:09:24,560 --> 00:09:28,360
+And one really big thing, it introduced the typing module.
+
+235
+00:09:28,360 --> 00:09:31,520
+So you can now import things like any or optional
+
+236
+00:09:31,520 --> 00:09:34,120
+that let you express information about your types.
+
+237
+00:09:34,120 --> 00:09:36,480
+You can say X is any, I don't know what it is,
+
+238
+00:09:36,480 --> 00:09:37,760
+don't even try, I'm just saying, okay,
+
+239
+00:09:37,760 --> 00:09:39,360
+this can be whatever it wants to be.
+
+240
+00:09:39,360 --> 00:09:41,160
+Or you can have optional, you can say,
+
+241
+00:09:41,160 --> 00:09:44,040
+this can either be a bool or none, because it's optional.
+
+242
+00:09:45,040 --> 00:09:46,840
+So it introduced this way of working
+
+243
+00:09:46,840 --> 00:09:49,760
+and a bunch of conventions so that people would like,
+
+244
+00:09:49,760 --> 00:09:52,000
+yeah, be able to work together across projects,
+
+245
+00:09:52,000 --> 00:09:53,160
+across teams, et cetera.
+
+246
+00:09:54,560 --> 00:09:56,880
+And it drew also more advanced features
+
+247
+00:09:56,880 --> 00:10:00,580
+like type variables and generics, overloading, covariance,
+
+248
+00:10:00,580 --> 00:10:03,180
+but we don't need to get into that in too much detail.
+
+249
+00:10:03,220 --> 00:10:06,660
+And since then, the development of Python,
+
+250
+00:10:06,660 --> 00:10:08,980
+at least the way I see it, has sort of been a story
+
+251
+00:10:08,980 --> 00:10:12,140
+of advancing this typing system of advancing these type hints.
+
+252
+00:10:12,140 --> 00:10:14,700
+As you can see here, there have been, yeah,
+
+253
+00:10:14,700 --> 00:10:16,980
+a lot of peps introduced about types,
+
+254
+00:10:16,980 --> 00:10:18,580
+adding more features, making things clearer.
+
+255
+00:10:18,580 --> 00:10:20,780
+And this is really one of the areas in Python
+
+256
+00:10:20,780 --> 00:10:24,100
+that I think is developing most quickly still to this day,
+
+257
+00:10:24,100 --> 00:10:25,260
+which I think is very exciting.
+
+258
+00:10:25,260 --> 00:10:27,540
+As it says here, we've had 16 typing peps
+
+259
+00:10:27,540 --> 00:10:28,940
+in the last six years, so there's really
+
+260
+00:10:28,940 --> 00:10:31,740
+a lot of development happening here.
+
+261
+00:10:31,740 --> 00:10:36,740
+So let's sum up this brief background about Python.
+
+262
+00:10:36,780 --> 00:10:39,780
+So Python is not statically typed, it's duct-typed.
+
+263
+00:10:39,780 --> 00:10:43,380
+So you do out of the box, don't say what types
+
+264
+00:10:43,380 --> 00:10:47,340
+your variables have, but these type hints sort of entered
+
+265
+00:10:47,340 --> 00:10:50,540
+Python slowly over the last 10 years or so.
+
+266
+00:10:51,500 --> 00:10:53,260
+And Python is adding more and more
+
+267
+00:10:53,260 --> 00:10:55,660
+of these typing-related features all of the time.
+
+268
+00:10:57,260 --> 00:10:59,620
+And with the introduction of these typing features,
+
+269
+00:11:00,500 --> 00:11:03,460
+the Python ecosystem has also started to form
+
+270
+00:11:03,460 --> 00:11:05,820
+around these features and started to really utilize
+
+271
+00:11:05,820 --> 00:11:08,260
+these features in what I think is a really, really nice way.
+
+272
+00:11:08,260 --> 00:11:10,020
+So I'd like to take some time to look at some
+
+273
+00:11:10,020 --> 00:11:14,060
+popular libraries and just to see how typing works there,
+
+274
+00:11:14,060 --> 00:11:16,900
+how it is utilized, and what they do with this idea.
+
+275
+00:11:16,900 --> 00:11:20,620
+So one really popular project is MyPy.
+
+276
+00:11:20,620 --> 00:11:23,700
+And as I said before, type hints allow you to fail early
+
+277
+00:11:23,700 --> 00:11:26,060
+to the fail-late catch bug super early,
+
+278
+00:11:26,060 --> 00:11:27,060
+but you need additional tooling,
+
+279
+00:11:27,060 --> 00:11:28,540
+and this additional tooling is MyPy.
+
+280
+00:11:28,540 --> 00:11:30,500
+So it's a static type checker.
+
+281
+00:11:30,500 --> 00:11:32,700
+It just looks at all of your type hints
+
+282
+00:11:32,700 --> 00:11:34,740
+and then figures out, okay, does it work, does it not work?
+
+283
+00:11:34,740 --> 00:11:35,980
+Do you have a very obvious problem
+
+284
+00:11:35,980 --> 00:11:38,380
+that you should not ship to your users?
+
+285
+00:11:38,380 --> 00:11:41,540
+So basically what MyPy does, it transforms you
+
+286
+00:11:41,540 --> 00:11:44,420
+from this guy to this guy.
+
+287
+00:11:44,420 --> 00:11:46,300
+And if that's something that you want to do,
+
+288
+00:11:46,300 --> 00:11:48,420
+it's up to you, of course, but I think it's very useful
+
+289
+00:11:48,420 --> 00:11:52,660
+and use it in my project and makes my life much easier.
+
+290
+00:11:54,260 --> 00:11:57,300
+Another thing is runtime type checkers.
+
+291
+00:11:57,300 --> 00:12:01,740
+So instead of checking your types and your code
+
+292
+00:12:01,740 --> 00:12:03,620
+before you run it, you do it at runtime.
+
+293
+00:12:03,620 --> 00:12:06,700
+So whenever something doesn't match, you fail.
+
+294
+00:12:06,700 --> 00:12:09,660
+And don't even try to do these duck typing things
+
+295
+00:12:09,660 --> 00:12:11,260
+of just making it work somehow.
+
+296
+00:12:11,260 --> 00:12:14,140
+One popular project here is BearType.
+
+297
+00:12:14,140 --> 00:12:14,980
+Yeah.
+
+298
+00:12:16,580 --> 00:12:20,780
+Okay, now let's move to a different kind of library almost.
+
+299
+00:12:20,780 --> 00:12:23,020
+So the two we just saw were just really like tooling
+
+300
+00:12:23,020 --> 00:12:26,340
+for types, but in the last years,
+
+301
+00:12:26,340 --> 00:12:28,140
+there's also been this emergence of libraries
+
+302
+00:12:28,140 --> 00:12:30,540
+that just use types in a really nice way
+
+303
+00:12:30,540 --> 00:12:31,820
+to communicate with the users
+
+304
+00:12:31,820 --> 00:12:34,860
+and that creates really nice APIs for Python developers.
+
+305
+00:12:34,860 --> 00:12:36,940
+And one of those is PyDentic,
+
+306
+00:12:36,940 --> 00:12:38,980
+just to understand the audience a little bit,
+
+307
+00:12:38,980 --> 00:12:41,700
+who here uses PyDentic or at least knows about it?
+
+308
+00:12:42,620 --> 00:12:45,000
+Okay, quite a few, all right.
+
+309
+00:12:45,000 --> 00:12:46,780
+So I'd like to take a little bit of time
+
+310
+00:12:46,780 --> 00:12:48,420
+to look at this in a bit more detail
+
+311
+00:12:48,420 --> 00:12:51,380
+because it will come up again in the second half
+
+312
+00:12:51,380 --> 00:12:54,420
+of the talk when I will be talking about Docker.
+
+313
+00:12:54,460 --> 00:12:57,140
+So PyDentic, oh let's stay here for a second,
+
+314
+00:12:57,140 --> 00:12:59,940
+lets you do data validation using type-ins.
+
+315
+00:12:59,940 --> 00:13:02,140
+So you create models of your data
+
+316
+00:13:02,140 --> 00:13:04,100
+and then PyDentic looks at the types
+
+317
+00:13:04,100 --> 00:13:06,420
+that you assign to your model
+
+318
+00:13:06,420 --> 00:13:08,900
+to do data validation, data parsing, et cetera.
+
+319
+00:13:08,900 --> 00:13:11,420
+So let's take a look at what that looks like.
+
+320
+00:13:11,420 --> 00:13:13,540
+So say you are building a web app
+
+321
+00:13:13,540 --> 00:13:15,480
+or just parsing any other kind of data
+
+322
+00:13:15,480 --> 00:13:17,620
+from a hard drive or whatever.
+
+323
+00:13:17,620 --> 00:13:20,500
+And you have like, you wanna parse this data
+
+324
+00:13:20,500 --> 00:13:22,940
+into a certain model, into a certain object
+
+325
+00:13:22,940 --> 00:13:23,960
+that you wanna work with.
+
+326
+00:13:23,960 --> 00:13:25,760
+So in this case, we might have a user
+
+327
+00:13:25,760 --> 00:13:28,160
+and then we can say, okay, our user has an ID,
+
+328
+00:13:28,160 --> 00:13:31,680
+a name, sign up TS and a list of friends.
+
+329
+00:13:31,680 --> 00:13:33,800
+And then what PyDentic lets you do
+
+330
+00:13:33,800 --> 00:13:37,120
+is you assign type-ins to all of these
+
+331
+00:13:37,120 --> 00:13:39,320
+or you optionally can infer them as well.
+
+332
+00:13:39,320 --> 00:13:41,980
+And what PyDentic does, it takes those seriously in a way.
+
+333
+00:13:41,980 --> 00:13:44,360
+So at runtime, it looks at the type-ins
+
+334
+00:13:44,360 --> 00:13:48,560
+and then parses the data for you according to those type-ins.
+
+335
+00:13:48,560 --> 00:13:52,040
+So when you try to instantiate a user,
+
+336
+00:13:52,040 --> 00:13:54,720
+you can parse in an ID and the name,
+
+337
+00:13:54,720 --> 00:13:56,760
+it will take the default for all the other ones
+
+338
+00:13:56,760 --> 00:13:59,240
+and then it will check at runtime, does it make sense?
+
+339
+00:13:59,240 --> 00:14:01,520
+So I specified for name, or like the default is a string,
+
+340
+00:14:01,520 --> 00:14:03,240
+so PyDentic says, okay, this needs to be a string,
+
+341
+00:14:03,240 --> 00:14:06,420
+I parse a string, my name, Johannes, and it works.
+
+342
+00:14:06,420 --> 00:14:09,320
+For the ID, I said it needs to be an int,
+
+343
+00:14:09,320 --> 00:14:11,320
+but what I'm doing is I'm parsing a string.
+
+344
+00:14:11,320 --> 00:14:14,380
+So that should be a problem, one would think,
+
+345
+00:14:14,380 --> 00:14:16,960
+but what PyDentic lets you do is it automatically
+
+346
+00:14:16,960 --> 00:14:19,680
+coerces the type into what you specified.
+
+347
+00:14:19,680 --> 00:14:22,520
+So if you create this user with the wrong type here,
+
+348
+00:14:22,520 --> 00:14:24,880
+string instead of int, and then print it,
+
+349
+00:14:24,880 --> 00:14:27,120
+we see that PyDentic just converted it
+
+350
+00:14:27,120 --> 00:14:29,200
+to an int under the hood, which is very nice.
+
+351
+00:14:29,200 --> 00:14:31,600
+So you just sort of specify what you want
+
+352
+00:14:31,600 --> 00:14:34,900
+and then PyDentic does the best to take any kind of,
+
+353
+00:14:34,900 --> 00:14:36,840
+does its best to take any kind of data
+
+354
+00:14:36,840 --> 00:14:38,160
+and coerce it into what you want.
+
+355
+00:14:38,160 --> 00:14:41,360
+So you can see ID became an int here,
+
+356
+00:14:41,360 --> 00:14:43,760
+my name is still Johannes, and you can also see
+
+357
+00:14:43,760 --> 00:14:44,860
+that I don't have any friends,
+
+358
+00:14:44,860 --> 00:14:47,000
+but that's a different problem.
+
+359
+00:14:47,800 --> 00:14:52,800
+Okay, then another project that's super popular right now
+
+360
+00:14:52,800 --> 00:14:54,800
+is FastAPI, maybe again the question,
+
+361
+00:14:54,800 --> 00:14:56,400
+who's using it already?
+
+362
+00:14:56,400 --> 00:14:59,200
+Yeah, a lot of people, just as I thought.
+
+363
+00:14:59,200 --> 00:15:01,720
+So FastAPI takes a very similar approach,
+
+364
+00:15:01,720 --> 00:15:04,360
+very similar ideas, but it's a web framework
+
+365
+00:15:04,360 --> 00:15:07,400
+for building APIs, and it's actually based on PyDentic.
+
+366
+00:15:07,400 --> 00:15:09,040
+So again, let's take a little bit of a closer look
+
+367
+00:15:09,040 --> 00:15:10,880
+at this as well, because it will be relevant
+
+368
+00:15:10,880 --> 00:15:13,680
+in the second half of the talk as well.
+
+369
+00:15:13,680 --> 00:15:17,680
+So in FastAPI, what you do is you take these models
+
+370
+00:15:17,680 --> 00:15:21,280
+from PyDentic and you use them to define your API
+
+371
+00:15:21,280 --> 00:15:24,320
+that you serve over the web, to communicate to the users
+
+372
+00:15:24,320 --> 00:15:26,160
+of your API what they should send you.
+
+373
+00:15:26,160 --> 00:15:29,400
+And then PyDentic will take that data and parse it
+
+374
+00:15:29,400 --> 00:15:32,200
+and you use it in your web service, as we saw before.
+
+375
+00:15:32,200 --> 00:15:35,680
+So here, for example, I'm creating a FastAPI app,
+
+376
+00:15:35,680 --> 00:15:39,440
+which will be served, I have a function here
+
+377
+00:15:39,440 --> 00:15:43,840
+that represents my API, and again, I have a model
+
+378
+00:15:43,840 --> 00:15:46,200
+from PyDentic, this is a PyDentic-based model,
+
+379
+00:15:46,200 --> 00:15:51,200
+and this just specifies the input of my web API.
+
+380
+00:15:51,420 --> 00:15:54,200
+So like an item should be this item class.
+
+381
+00:15:54,200 --> 00:15:56,200
+And then when the user sends some request
+
+382
+00:15:56,200 --> 00:15:58,680
+and I receive some JSON data or whatever,
+
+383
+00:15:59,960 --> 00:16:03,960
+PyDentic will take that in and parse it into this item
+
+384
+00:16:03,960 --> 00:16:06,360
+that I've specified, which is really handy.
+
+385
+00:16:06,360 --> 00:16:09,720
+And again, it takes this typing notion very seriously
+
+386
+00:16:09,720 --> 00:16:12,320
+at runtime, which is sort of the conceptual leap
+
+387
+00:16:12,320 --> 00:16:14,520
+that PyDentic and FastAPI made, I think.
+
+388
+00:16:15,760 --> 00:16:17,520
+And here just to show the popularity,
+
+389
+00:16:17,520 --> 00:16:20,720
+and this is just not to be mean to Flask,
+
+390
+00:16:20,720 --> 00:16:23,480
+but the point I want to make is that these
+
+391
+00:16:23,480 --> 00:16:26,200
+type-based libraries that use types to create
+
+392
+00:16:26,200 --> 00:16:28,680
+a really nice user experience have really been taken off
+
+393
+00:16:28,680 --> 00:16:29,920
+in the last few years, and you can just see
+
+394
+00:16:29,920 --> 00:16:33,040
+how FastAPI skyrocketed and is catching up
+
+395
+00:16:33,040 --> 00:16:34,240
+with Flask very quickly.
+
+396
+00:16:35,240 --> 00:16:38,360
+Another thing that falls into the same category,
+
+397
+00:16:38,360 --> 00:16:40,880
+we'll not go into that much detail there, is SQL model.
+
+398
+00:16:40,880 --> 00:16:43,160
+So it takes the same idea of taking these types
+
+399
+00:16:43,160 --> 00:16:45,220
+and taking them seriously, specifying models.
+
+400
+00:16:45,220 --> 00:16:48,120
+But in this case, it does it so you can communicate
+
+401
+00:16:48,120 --> 00:16:50,400
+with SQL databases using type-ins.
+
+402
+00:16:50,400 --> 00:16:52,240
+But yeah, also based on PyDentic,
+
+403
+00:16:52,240 --> 00:16:54,240
+also by Sebastian, the creator of FastAPI,
+
+404
+00:16:54,240 --> 00:16:58,120
+similar idea, but to interface with your SQL databases.
+
+405
+00:16:58,120 --> 00:17:00,760
+And TypeR, also a similar idea, takes these type-ins
+
+406
+00:17:00,760 --> 00:17:03,960
+that you specify to just create a CLI application
+
+407
+00:17:04,560 --> 00:17:06,160
+for you, so the function with type-ins,
+
+408
+00:17:06,160 --> 00:17:08,520
+you use TypeR, it will create, based on these type-ins,
+
+409
+00:17:08,520 --> 00:17:11,000
+a CLI that parses everything very nicely,
+
+410
+00:17:11,000 --> 00:17:12,000
+which is super cool.
+
+411
+00:17:13,140 --> 00:17:15,000
+Okay, but what about machine learning?
+
+412
+00:17:15,000 --> 00:17:18,400
+So far we have seen these really cool libraries,
+
+413
+00:17:18,400 --> 00:17:21,920
+but they're not really machine learning centric anything.
+
+414
+00:17:21,920 --> 00:17:24,640
+And my talk is supposed to be about typing
+
+415
+00:17:24,640 --> 00:17:26,960
+in machine learning, so what's going on there?
+
+416
+00:17:27,880 --> 00:17:29,720
+So let's jump into that in one second,
+
+417
+00:17:29,720 --> 00:17:32,160
+but first let's just sum up what we've seen.
+
+418
+00:17:32,160 --> 00:17:34,400
+So we've seen that the typing ecosystem
+
+419
+00:17:34,400 --> 00:17:35,840
+is growing very quickly.
+
+420
+00:17:35,840 --> 00:17:39,240
+We have all of these libraries that take type seriously,
+
+421
+00:17:39,240 --> 00:17:41,680
+that are becoming super popular,
+
+422
+00:17:41,680 --> 00:17:45,880
+because of how nicely they are to use for the user,
+
+423
+00:17:45,880 --> 00:17:48,200
+and how much work they take out of your hands.
+
+424
+00:17:49,640 --> 00:17:51,800
+But the machine learning ecosystem, as I just said,
+
+425
+00:17:51,800 --> 00:17:54,660
+is still lagging behind a little bit, in my opinion.
+
+426
+00:17:55,640 --> 00:17:57,840
+So and this is where we sort of move
+
+427
+00:17:57,840 --> 00:17:59,320
+into the second half of the talk,
+
+428
+00:17:59,320 --> 00:18:01,800
+where we talk more about typing in machine learning,
+
+429
+00:18:02,440 --> 00:18:05,720
+and then about Docoray, the library I'm working on.
+
+430
+00:18:05,720 --> 00:18:08,560
+But before that, let's look at some of the issues
+
+431
+00:18:08,560 --> 00:18:12,720
+that are sort of specific to machine learning application,
+
+432
+00:18:12,720 --> 00:18:14,680
+when it comes to typing.
+
+433
+00:18:14,680 --> 00:18:17,440
+So if we look at the training use case here,
+
+434
+00:18:17,440 --> 00:18:20,160
+we will be looking at the deployment use cases
+
+435
+00:18:20,160 --> 00:18:22,200
+in just a second, but if we look at training,
+
+436
+00:18:22,200 --> 00:18:25,280
+we have a function, maybe a PyTorch model
+
+437
+00:18:25,280 --> 00:18:28,240
+with a forward function, we want to specify with our types,
+
+438
+00:18:28,240 --> 00:18:29,080
+as we've just seen, it's very nice,
+
+439
+00:18:29,080 --> 00:18:31,360
+we want to specify our inputs and our outputs.
+
+440
+00:18:31,400 --> 00:18:32,240
+So what can we do here?
+
+441
+00:18:32,240 --> 00:18:34,240
+So we have our forward function,
+
+442
+00:18:34,240 --> 00:18:36,960
+which does, it says it computes the matrix product,
+
+443
+00:18:36,960 --> 00:18:39,600
+very nice, but what do I want as an input?
+
+444
+00:18:39,600 --> 00:18:42,000
+What do I ask my user to provide as an input,
+
+445
+00:18:42,000 --> 00:18:44,240
+and what will they get in return as an output?
+
+446
+00:18:45,280 --> 00:18:49,560
+With the type hint system that comes with Python
+
+447
+00:18:49,560 --> 00:18:52,240
+and PyTorch, what I can do is I can say,
+
+448
+00:18:52,240 --> 00:18:54,280
+okay, my input should be, the first input
+
+449
+00:18:54,280 --> 00:18:56,280
+should be a Torch tensor, and the second input
+
+450
+00:18:56,280 --> 00:18:58,240
+should be a Torch tensor as well,
+
+451
+00:18:58,240 --> 00:19:01,280
+and the third, the output should also be a Torch tensor,
+
+452
+00:19:02,160 --> 00:19:04,840
+which is nice, I know not to put NumPy arrays in there,
+
+453
+00:19:04,840 --> 00:19:07,720
+but it's not giving me really all the information
+
+454
+00:19:07,720 --> 00:19:10,240
+that I need, because what I'm really interested in
+
+455
+00:19:10,240 --> 00:19:13,200
+is what shapes do I want here?
+
+456
+00:19:13,200 --> 00:19:15,600
+If all of these tensors and matrices flying around
+
+457
+00:19:15,600 --> 00:19:16,800
+in your machine learning code,
+
+458
+00:19:16,800 --> 00:19:19,640
+and it can get really confusing to wrangle them together,
+
+459
+00:19:19,640 --> 00:19:21,040
+see what you can multiply with what,
+
+460
+00:19:21,040 --> 00:19:23,920
+so you need to know what shapes your tensors have.
+
+461
+00:19:23,920 --> 00:19:26,520
+So what you would want, usually, or at least what I want,
+
+462
+00:19:26,520 --> 00:19:27,640
+is something like this, you can say,
+
+463
+00:19:27,640 --> 00:19:30,240
+okay, I have a Torch tensor of a certain shape,
+
+464
+00:19:30,240 --> 00:19:31,880
+and another Torch tensor of other shapes,
+
+465
+00:19:31,880 --> 00:19:35,440
+like one, four, three, so this might be the batch dimension,
+
+466
+00:19:35,440 --> 00:19:36,960
+and then four and three, and here,
+
+467
+00:19:36,960 --> 00:19:40,040
+the batch dimension again, and then shapes three and four,
+
+468
+00:19:40,040 --> 00:19:43,720
+so I know I can do a matrix product of these two,
+
+469
+00:19:43,720 --> 00:19:46,280
+and then the output will have the batch dimension again,
+
+470
+00:19:46,280 --> 00:19:47,440
+and then four by four.
+
+471
+00:19:47,440 --> 00:19:51,200
+So this is nice, I now know that I can combine these.
+
+472
+00:19:51,200 --> 00:19:54,040
+But what I really want is something even more general
+
+473
+00:19:54,040 --> 00:19:56,040
+than this, because it's not really true
+
+474
+00:19:56,040 --> 00:19:59,160
+that my inputs have to have the exact same one, four, three,
+
+475
+00:19:59,160 --> 00:20:02,200
+and one, three, four, it's more general.
+
+476
+00:20:02,200 --> 00:20:05,400
+As long as they can be multiplied together, it works.
+
+477
+00:20:05,400 --> 00:20:06,800
+So I want something like this.
+
+478
+00:20:06,800 --> 00:20:08,040
+I want a Torch tensor where I can say,
+
+479
+00:20:08,040 --> 00:20:10,320
+okay, the first dimension should be the batch,
+
+480
+00:20:10,320 --> 00:20:13,160
+second dimension should be some n, and then some k,
+
+481
+00:20:13,160 --> 00:20:16,160
+and then my second input, batch again,
+
+482
+00:20:16,160 --> 00:20:18,360
+first dimension a k, so this needs to match
+
+483
+00:20:18,360 --> 00:20:20,720
+the last dimension of the first input,
+
+484
+00:20:20,720 --> 00:20:22,840
+and then I have some other dimension m,
+
+485
+00:20:22,840 --> 00:20:24,520
+and then the output will be, okay,
+
+486
+00:20:24,560 --> 00:20:27,320
+the same batch dimension I had in my inputs,
+
+487
+00:20:27,320 --> 00:20:30,520
+the n from here, and the m from here,
+
+488
+00:20:30,520 --> 00:20:31,960
+and then I know exactly what I can put in
+
+489
+00:20:31,960 --> 00:20:33,440
+and what I can get out.
+
+490
+00:20:33,440 --> 00:20:35,440
+This would be really nice to have
+
+491
+00:20:35,440 --> 00:20:38,760
+in machine learning applications and in training use cases.
+
+492
+00:20:38,760 --> 00:20:41,040
+And the good news is that this exists, right?
+
+493
+00:20:41,040 --> 00:20:42,720
+There's a library called JaxTyping,
+
+494
+00:20:42,720 --> 00:20:44,000
+which is a really, really nice library,
+
+495
+00:20:44,000 --> 00:20:46,280
+I encourage you all to check it out.
+
+496
+00:20:46,280 --> 00:20:47,920
+And the name is a little bit deceiving
+
+497
+00:20:47,920 --> 00:20:50,040
+because it's not only meant for Jax,
+
+498
+00:20:50,040 --> 00:20:52,800
+it also works with Torch and TensorFlow
+
+499
+00:20:52,800 --> 00:20:54,280
+and NumPy arrays as well.
+
+500
+00:20:55,160 --> 00:20:56,360
+And what this allows you to do
+
+501
+00:20:56,360 --> 00:20:58,000
+is exactly what I've just shown you,
+
+502
+00:20:58,000 --> 00:21:00,360
+but with a slightly different syntax.
+
+503
+00:21:00,360 --> 00:21:03,320
+So you can say, okay, I want an array
+
+504
+00:21:03,320 --> 00:21:05,520
+of flow type of a certain shape,
+
+505
+00:21:05,520 --> 00:21:07,360
+specify your inputs, your outputs,
+
+506
+00:21:07,360 --> 00:21:09,440
+and that's then exactly what you get.
+
+507
+00:21:09,440 --> 00:21:10,720
+So this is really nice.
+
+508
+00:21:10,720 --> 00:21:14,160
+So the training use case seems well covered in this sense,
+
+509
+00:21:14,160 --> 00:21:15,720
+which is really cool.
+
+510
+00:21:15,720 --> 00:21:17,800
+Okay, then we've done with training,
+
+511
+00:21:17,800 --> 00:21:19,280
+now we wanna move to deployment,
+
+512
+00:21:19,280 --> 00:21:21,440
+we wanna serve our model to the web to our users.
+
+513
+00:21:21,440 --> 00:21:24,600
+So as we've seen in the first half of the talk,
+
+514
+00:21:24,600 --> 00:21:28,520
+the common ecosystem around this looks something like this.
+
+515
+00:21:28,520 --> 00:21:31,840
+You have the type-based ecosystem, I should say.
+
+516
+00:21:31,840 --> 00:21:33,680
+You have Pydentic to specify your models,
+
+517
+00:21:33,680 --> 00:21:35,280
+your fast API to serve them,
+
+518
+00:21:35,280 --> 00:21:38,800
+and then SQL model to store your data in your database.
+
+519
+00:21:38,800 --> 00:21:40,960
+So what your first instinct then would be,
+
+520
+00:21:40,960 --> 00:21:42,200
+okay, I've done my training,
+
+521
+00:21:42,200 --> 00:21:43,680
+I've used JaxTyping, it's really nice,
+
+522
+00:21:43,680 --> 00:21:46,360
+and now I wanna define my APIs.
+
+523
+00:21:46,360 --> 00:21:49,640
+So what you may want to do is you create a model
+
+524
+00:21:49,640 --> 00:21:51,480
+with Pydentic as you've done before,
+
+525
+00:21:51,480 --> 00:21:56,360
+and just take your shape annotated types of your tensors
+
+526
+00:21:56,360 --> 00:21:59,200
+and just put them in your model, and then it won't work.
+
+527
+00:21:59,200 --> 00:22:02,840
+Because JaxTyping and Pydentic sadly
+
+528
+00:22:02,840 --> 00:22:04,380
+don't agree with each other as of right now,
+
+529
+00:22:04,380 --> 00:22:06,600
+so this is a bit of a problem.
+
+530
+00:22:06,600 --> 00:22:10,360
+And just a short aside here, we've seen this problem,
+
+531
+00:22:10,360 --> 00:22:11,920
+and I just wanna make the case that I think
+
+532
+00:22:11,920 --> 00:22:14,840
+that this problem will become increasingly more common
+
+533
+00:22:14,840 --> 00:22:15,680
+as we move forward.
+
+534
+00:22:15,680 --> 00:22:18,600
+Because I think web apps will change quite a bit
+
+535
+00:22:18,600 --> 00:22:20,040
+with the advent of all of these
+
+536
+00:22:20,040 --> 00:22:22,200
+machine learning applications that we see.
+
+537
+00:22:22,200 --> 00:22:25,200
+Just to show a few examples, obviously I'll use ChaiGPT
+
+538
+00:22:25,200 --> 00:22:28,520
+and stable diffusion, Whisper, all of these things,
+
+539
+00:22:28,520 --> 00:22:30,680
+and this is becoming increasingly more prevalent,
+
+540
+00:22:30,680 --> 00:22:32,960
+and more of us will also start serving
+
+541
+00:22:32,960 --> 00:22:34,200
+machine learning models in the future,
+
+542
+00:22:34,200 --> 00:22:36,200
+where we may need some of these features.
+
+543
+00:22:36,200 --> 00:22:38,320
+So these problems that I just showed,
+
+544
+00:22:38,320 --> 00:22:40,280
+and some others that I will show in a second,
+
+545
+00:22:40,280 --> 00:22:44,360
+will become increasingly more common, I think.
+
+546
+00:22:44,360 --> 00:22:46,320
+Yeah, and just to nail it down,
+
+547
+00:22:46,320 --> 00:22:48,320
+what the problem here really is,
+
+548
+00:22:49,040 --> 00:22:51,000
+the problem is that in this era of multimodal AI,
+
+549
+00:22:51,000 --> 00:22:53,560
+where you have texts and images, et cetera,
+
+550
+00:22:53,560 --> 00:22:55,720
+you work with different kinds of data.
+
+551
+00:22:55,720 --> 00:22:57,640
+So what we've just seen is that we commonly work
+
+552
+00:22:57,640 --> 00:22:59,520
+with tensors, that's what your machine learning models
+
+553
+00:22:59,520 --> 00:23:02,360
+understand, what they take in and what they take out.
+
+554
+00:23:02,360 --> 00:23:05,060
+But also, once you serve this to your user,
+
+555
+00:23:05,060 --> 00:23:08,040
+you might want to take in just image data,
+
+556
+00:23:08,040 --> 00:23:10,760
+audio data, videos, 3D meshes,
+
+557
+00:23:10,760 --> 00:23:14,160
+anything that you may transform or return
+
+558
+00:23:14,160 --> 00:23:16,920
+with your multimodal machine learning applications,
+
+559
+00:23:16,920 --> 00:23:18,240
+and this is a bit of a problem,
+
+560
+00:23:18,240 --> 00:23:21,720
+because the current ecosystem is not really set up
+
+561
+00:23:21,720 --> 00:23:24,680
+for these types, for these data types.
+
+562
+00:23:24,680 --> 00:23:26,560
+Because what we currently have is not image,
+
+563
+00:23:26,560 --> 00:23:28,680
+and audio, and tensor, it's like daytime,
+
+564
+00:23:28,680 --> 00:23:30,240
+and URL, and payment card number,
+
+565
+00:23:30,240 --> 00:23:32,360
+which is obviously super nice to have
+
+566
+00:23:32,360 --> 00:23:34,440
+if you're building a sort of traditional web app,
+
+567
+00:23:34,440 --> 00:23:36,520
+but if you're trying to serve a machine learning model,
+
+568
+00:23:36,520 --> 00:23:38,100
+you may need more.
+
+569
+00:23:38,100 --> 00:23:40,760
+So these are some of the problems that crop up here.
+
+570
+00:23:41,640 --> 00:23:44,280
+So as we said, you can't just take your JAX typing
+
+571
+00:23:44,280 --> 00:23:47,040
+annotations and plot them into a pedantic model,
+
+572
+00:23:47,040 --> 00:23:49,520
+and that's not gonna work, unfortunately.
+
+573
+00:23:49,520 --> 00:23:52,940
+So let's see how one could work around this problem.
+
+574
+00:23:52,940 --> 00:23:54,600
+What you could do is instead of,
+
+575
+00:23:55,520 --> 00:23:58,000
+so the problem of one, sending tensors,
+
+576
+00:23:58,000 --> 00:23:59,720
+but also sending multimodal data in general,
+
+577
+00:23:59,720 --> 00:24:01,040
+like images, et cetera.
+
+578
+00:24:01,040 --> 00:24:03,440
+So what you may want to do is instead of expecting,
+
+579
+00:24:03,440 --> 00:24:05,760
+as your input to the API, instead of taking a tensor,
+
+580
+00:24:05,760 --> 00:24:08,840
+or an image, or whatever, you can just ask your users
+
+581
+00:24:08,840 --> 00:24:10,080
+to provide URLs, right?
+
+582
+00:24:10,080 --> 00:24:13,140
+You can ask for image URL, a text URL,
+
+583
+00:24:13,140 --> 00:24:15,380
+whatever the case may be, and this is not a problem.
+
+584
+00:24:15,380 --> 00:24:17,820
+Pedantic and FastAPI, they all support this perfectly.
+
+585
+00:24:17,820 --> 00:24:20,620
+You just get a URL, you load the data, and you're happy.
+
+586
+00:24:20,620 --> 00:24:23,660
+So you create, I call this multimodal document
+
+587
+00:24:23,660 --> 00:24:27,020
+with these URLs in them, you parse it,
+
+588
+00:24:27,020 --> 00:24:31,140
+you create it to FastAPI or whatever, and that's great.
+
+589
+00:24:31,140 --> 00:24:32,940
+But then what happens in the next step?
+
+590
+00:24:32,940 --> 00:24:34,880
+All right, so you now have your URLs,
+
+591
+00:24:34,880 --> 00:24:36,580
+but you need the actual data.
+
+592
+00:24:36,580 --> 00:24:39,700
+And let's imagine you work with something,
+
+593
+00:24:39,740 --> 00:24:43,900
+I don't know, image generation, or audio, or captioning,
+
+594
+00:24:43,900 --> 00:24:46,060
+or like you have different data types there,
+
+595
+00:24:46,060 --> 00:24:48,820
+and once you want to load your URLs,
+
+596
+00:24:48,820 --> 00:24:52,620
+you have a bit of a problem, because how do you do it?
+
+597
+00:24:52,620 --> 00:24:55,580
+Usually, if you want to load an image,
+
+598
+00:24:55,580 --> 00:24:57,980
+you need some library for that, like PIL or something.
+
+599
+00:24:57,980 --> 00:25:00,540
+If you want to load some text, maybe that's a bit easier.
+
+600
+00:25:00,540 --> 00:25:02,560
+If you want to load meshes, you need to know
+
+601
+00:25:02,560 --> 00:25:04,060
+what library to use for that.
+
+602
+00:25:04,060 --> 00:25:06,380
+If you want to load videos, a different library again,
+
+603
+00:25:06,380 --> 00:25:07,680
+and then if you combine those
+
+604
+00:25:07,680 --> 00:25:09,620
+in one machine learning application,
+
+605
+00:25:10,500 --> 00:25:13,260
+then you suddenly have to juggle seven different libraries
+
+606
+00:25:13,260 --> 00:25:14,820
+that you all need to learn the APIs of,
+
+607
+00:25:14,820 --> 00:25:16,380
+and it becomes a bit of a mess.
+
+608
+00:25:16,380 --> 00:25:18,220
+So how do we do this?
+
+609
+00:25:18,220 --> 00:25:19,040
+Not so clear.
+
+610
+00:25:20,980 --> 00:25:22,420
+But let's say you solve that somehow,
+
+611
+00:25:22,420 --> 00:25:26,120
+you learn all the APIs of these data-handing libraries,
+
+612
+00:25:26,120 --> 00:25:28,980
+then you're still not done, unfortunately.
+
+613
+00:25:28,980 --> 00:25:32,340
+So the next questions are, how do you store your data
+
+614
+00:25:32,340 --> 00:25:36,100
+in your web app, and how do you serve your app?
+
+615
+00:25:36,100 --> 00:25:37,980
+And the conventional answers to this,
+
+616
+00:25:37,980 --> 00:25:39,620
+if you love type-based libraries,
+
+617
+00:25:39,620 --> 00:25:42,160
+or as I said, SQL model and Fast API.
+
+618
+00:25:43,300 --> 00:25:45,260
+But again, the question is, are these really
+
+619
+00:25:45,260 --> 00:25:48,380
+the most suitable tools for the job still?
+
+620
+00:25:48,380 --> 00:25:50,640
+And I'm being a bit dramatic with this question,
+
+621
+00:25:50,640 --> 00:25:52,460
+because as it turns out, yes, for many use cases,
+
+622
+00:25:52,460 --> 00:25:55,220
+there's still excellent choices, but not in our cases.
+
+623
+00:25:55,220 --> 00:25:59,140
+I imagine many of you that work with ML and Fast API
+
+624
+00:25:59,140 --> 00:26:00,740
+do serve models over Fast API.
+
+625
+00:26:00,740 --> 00:26:02,400
+Maybe I can get another quick show of hands.
+
+626
+00:26:02,400 --> 00:26:05,940
+Who's serving machine learning models over Fast API?
+
+627
+00:26:05,940 --> 00:26:06,780
+Yeah, a few.
+
+628
+00:26:06,780 --> 00:26:08,500
+Okay, two people, that's something.
+
+629
+00:26:08,500 --> 00:26:11,020
+But many people do it from talking to people anecdotally,
+
+630
+00:26:11,020 --> 00:26:13,340
+and they seem quite happy, but there are some instances
+
+631
+00:26:13,340 --> 00:26:16,220
+where you run into problems doing this.
+
+632
+00:26:16,220 --> 00:26:17,740
+So how do we solve this?
+
+633
+00:26:17,740 --> 00:26:18,580
+What can we do?
+
+634
+00:26:19,660 --> 00:26:22,580
+And the answer, which comes from me
+
+635
+00:26:22,580 --> 00:26:24,540
+in a bit of a biased way, is you can use
+
+636
+00:26:24,540 --> 00:26:26,420
+Docker 8 library I'm working on.
+
+637
+00:26:26,420 --> 00:26:28,620
+So what Docker 8 does is it tries to port
+
+638
+00:26:28,620 --> 00:26:33,620
+this type way of thinking to the machine learning world.
+
+639
+00:26:33,660 --> 00:26:35,140
+So the way you can think of Docker 8
+
+640
+00:26:35,140 --> 00:26:39,060
+is a library for representing, sending, and storing
+
+641
+00:26:39,060 --> 00:26:42,100
+multimodal data for your machine learning applications
+
+642
+00:26:42,100 --> 00:26:45,700
+with this type-focused user interface.
+
+643
+00:26:46,540 --> 00:26:48,500
+So it represents, sends, and stores
+
+644
+00:26:48,500 --> 00:26:50,140
+all kinds of different data types.
+
+645
+00:26:51,940 --> 00:26:54,940
+Another way of looking at it is it can take
+
+646
+00:26:54,940 --> 00:26:57,660
+all kinds of inputs, as I said, audio, video, image, text.
+
+647
+00:26:57,660 --> 00:27:00,100
+It flows through Docker 8, and this is your funnel
+
+648
+00:27:00,100 --> 00:27:03,420
+into all kinds of other things, like computational backends,
+
+649
+00:27:03,420 --> 00:27:05,780
+as I call them, like TensorFlow and PyTorch,
+
+650
+00:27:06,820 --> 00:27:09,380
+vector databases, as we will see in just a second.
+
+651
+00:27:10,300 --> 00:27:13,220
+Okay, so yeah, as I said, this is the library I'm working on.
+
+652
+00:27:13,220 --> 00:27:16,300
+So with an amazing group of contributors,
+
+653
+00:27:16,300 --> 00:27:19,620
+here you can see the main contributors of the library.
+
+654
+00:27:19,620 --> 00:27:22,180
+We have also around 50 community contributors
+
+655
+00:27:22,180 --> 00:27:23,820
+that help us a lot, which is really great,
+
+656
+00:27:23,820 --> 00:27:26,420
+and we are part of the Linux Foundation AI and Data,
+
+657
+00:27:26,420 --> 00:27:27,660
+which I think is really cool.
+
+658
+00:27:27,660 --> 00:27:30,300
+So yeah, I got flown in here by GeneAI,
+
+659
+00:27:30,300 --> 00:27:32,860
+but actually Docker 8 belongs to the Linux Foundation,
+
+660
+00:27:33,500 --> 00:27:37,060
+so we don't really control the project in any real way.
+
+661
+00:27:37,060 --> 00:27:39,260
+It's really an open source project,
+
+662
+00:27:39,260 --> 00:27:40,220
+and it's with Send of the Word,
+
+663
+00:27:40,220 --> 00:27:41,660
+which I think is really cool.
+
+664
+00:27:42,860 --> 00:27:46,020
+Okay, so now the question is, how can we use Docker 8
+
+665
+00:27:46,020 --> 00:27:49,500
+to solve some of these problems that I've just shown?
+
+666
+00:27:49,500 --> 00:27:51,500
+And this is now the part of the talk
+
+667
+00:27:51,500 --> 00:27:52,900
+that makes me a little bit nervous,
+
+668
+00:27:52,900 --> 00:27:55,260
+because we're gonna run some code.
+
+669
+00:27:55,260 --> 00:27:58,820
+I'm not gonna code that much, but I have a notebook here,
+
+670
+00:27:58,820 --> 00:28:01,420
+and I'm just gonna show you some code.
+
+671
+00:28:03,260 --> 00:28:05,140
+And the first thing we're gonna look at
+
+672
+00:28:05,140 --> 00:28:07,940
+is the represent part of Docker 8.
+
+673
+00:28:07,940 --> 00:28:10,100
+So that's represent, store, and send.
+
+674
+00:28:10,100 --> 00:28:11,460
+Let's look at represent.
+
+675
+00:28:11,460 --> 00:28:14,060
+And maybe you don't need to look at my Discord messages,
+
+676
+00:28:14,060 --> 00:28:14,900
+but that's fine.
+
+677
+00:28:14,900 --> 00:28:17,260
+Okay, represent data.
+
+678
+00:28:17,260 --> 00:28:19,140
+So you can think of this as Pydantic
+
+679
+00:28:19,140 --> 00:28:21,420
+with a little bit of a hint of machine learning
+
+680
+00:28:21,420 --> 00:28:23,020
+sprinkled on top.
+
+681
+00:28:23,020 --> 00:28:23,860
+So let's look at the code.
+
+682
+00:28:23,860 --> 00:28:24,820
+What does this look like?
+
+683
+00:28:24,820 --> 00:28:25,660
+Oops.
+
+684
+00:28:26,860 --> 00:28:28,060
+Here it comes.
+
+685
+00:28:28,060 --> 00:28:29,260
+Okay, should be fine.
+
+686
+00:28:29,260 --> 00:28:30,100
+Okay.
+
+687
+00:28:31,100 --> 00:28:32,780
+So let's see if the imports work.
+
+688
+00:28:32,780 --> 00:28:34,540
+First hurdle.
+
+689
+00:28:34,540 --> 00:28:35,660
+Let's take a second.
+
+690
+00:28:36,980 --> 00:28:38,500
+Not looking good.
+
+691
+00:28:38,500 --> 00:28:39,340
+Okay.
+
+692
+00:28:43,220 --> 00:28:44,060
+Oops.
+
+693
+00:28:46,980 --> 00:28:49,660
+Okay, that's not great.
+
+694
+00:28:49,660 --> 00:28:53,660
+Let me see if I can fix this while I talk about
+
+695
+00:28:53,660 --> 00:28:54,900
+some of the aspects in the meantime.
+
+696
+00:28:54,900 --> 00:28:57,020
+So the imports, not too important,
+
+697
+00:28:57,020 --> 00:28:59,140
+but just to give some context,
+
+698
+00:29:00,020 --> 00:29:01,500
+in Docker 8, we have this notion of a base doc,
+
+699
+00:29:01,500 --> 00:29:02,340
+a base document.
+
+700
+00:29:02,340 --> 00:29:06,540
+And this is very similar to the base model in Pydantic,
+
+701
+00:29:06,540 --> 00:29:09,820
+just with a sprinkle of machine learning on top.
+
+702
+00:29:09,820 --> 00:29:12,860
+And then we have a bunch of different types
+
+703
+00:29:12,860 --> 00:29:13,700
+that we provide.
+
+704
+00:29:13,700 --> 00:29:15,060
+So these are like Torch Tensor.
+
+705
+00:29:15,060 --> 00:29:16,980
+And the reason we have our own type for this
+
+706
+00:29:16,980 --> 00:29:20,100
+is that we can have this nice notation of the shapes
+
+707
+00:29:20,100 --> 00:29:21,900
+in the square brackets and work with that.
+
+708
+00:29:21,900 --> 00:29:25,540
+And we have different, yeah, also audio and the array,
+
+709
+00:29:25,540 --> 00:29:26,820
+or audio Torch Tensor.
+
+710
+00:29:26,820 --> 00:29:29,860
+So we have like audio features built into those.
+
+711
+00:29:29,860 --> 00:29:33,180
+And then data specific URLs, as we will see in a second.
+
+712
+00:29:33,180 --> 00:29:34,020
+Let me just.
+
+713
+00:29:34,020 --> 00:29:35,700
+Sorry?
+
+714
+00:29:37,860 --> 00:29:40,820
+We have a length chain integration.
+
+715
+00:29:40,820 --> 00:29:43,380
+It's not like, it's not the full feature set
+
+716
+00:29:43,380 --> 00:29:44,780
+that is integrated.
+
+717
+00:29:44,780 --> 00:29:46,300
+It's more about these vector databases,
+
+718
+00:29:46,300 --> 00:29:47,660
+as we will see in a second.
+
+719
+00:29:50,340 --> 00:29:54,740
+So let me see if I can get Jupiter back up.
+
+720
+00:29:56,820 --> 00:29:57,660
+Let's try.
+
+721
+00:30:08,260 --> 00:30:09,100
+Let's try.
+
+722
+00:30:10,660 --> 00:30:11,500
+Oops, nope.
+
+723
+00:30:18,580 --> 00:30:19,700
+Where did I put my notebook?
+
+724
+00:30:19,700 --> 00:30:20,620
+This is not great.
+
+725
+00:30:26,820 --> 00:30:28,340
+Oh, it's getting better.
+
+726
+00:30:28,340 --> 00:30:29,180
+Do you see it?
+
+727
+00:30:29,180 --> 00:30:30,020
+Can someone help me?
+
+728
+00:30:30,020 --> 00:30:30,860
+Yeah.
+
+729
+00:30:30,860 --> 00:30:31,700
+Stop.
+
+730
+00:30:31,700 --> 00:30:32,540
+Yeah.
+
+731
+00:30:32,540 --> 00:30:33,380
+Stop.
+
+732
+00:30:33,380 --> 00:30:34,380
+Oh, wow.
+
+733
+00:30:34,380 --> 00:30:35,460
+Oh, I see it.
+
+734
+00:30:38,340 --> 00:30:39,340
+It should be here.
+
+735
+00:30:40,500 --> 00:30:41,340
+No?
+
+736
+00:30:43,340 --> 00:30:44,180
+No.
+
+737
+00:30:44,180 --> 00:30:45,020
+No.
+
+738
+00:30:45,020 --> 00:30:45,860
+No.
+
+739
+00:30:45,860 --> 00:30:46,700
+No.
+
+740
+00:30:46,700 --> 00:30:47,540
+No.
+
+741
+00:30:47,540 --> 00:30:48,380
+No.
+
+742
+00:30:48,380 --> 00:30:49,220
+No.
+
+743
+00:30:49,220 --> 00:30:50,060
+No.
+
+744
+00:30:50,060 --> 00:30:50,900
+No.
+
+745
+00:30:50,900 --> 00:30:51,740
+No.
+
+746
+00:30:51,740 --> 00:30:52,580
+No.
+
+747
+00:30:52,580 --> 00:30:53,420
+No.
+
+748
+00:30:53,420 --> 00:30:54,260
+No.
+
+749
+00:30:54,260 --> 00:30:55,100
+No.
+
+750
+00:30:55,100 --> 00:30:55,940
+No.
+
+751
+00:30:55,940 --> 00:30:56,780
+No.
+
+752
+00:30:58,780 --> 00:30:59,620
+No.
+
+753
+00:30:59,620 --> 00:31:00,440
+No.
+
+754
+00:31:00,440 --> 00:31:01,280
+No.
+
+755
+00:31:04,600 --> 00:31:05,420
+No.
+
+756
+00:31:05,420 --> 00:31:06,260
+No.
+
+757
+00:31:20,260 --> 00:31:21,100
+Yes.
+
+758
+00:31:21,100 --> 00:31:22,100
+Thank you.
+
+759
+00:31:22,100 --> 00:31:23,520
+Okay, we are back.
+
+760
+00:31:24,420 --> 00:31:25,500
+Awesome.
+
+761
+00:31:25,500 --> 00:31:28,620
+Okay, this had to happen, but I hope it's okay.
+
+762
+00:31:28,620 --> 00:31:30,140
+I hope I haven't lost any of you.
+
+763
+00:31:30,140 --> 00:31:31,980
+Okay, where did we leave off?
+
+764
+00:31:31,980 --> 00:31:35,060
+Okay, Docker A based doc is like a pedantic model
+
+765
+00:31:35,060 --> 00:31:37,520
+with machine learning sprinkled on top,
+
+766
+00:31:37,520 --> 00:31:40,140
+and we have these machine learning specific data types
+
+767
+00:31:40,140 --> 00:31:43,340
+like Torch Tensors, audio arrays, audio URL,
+
+768
+00:31:43,340 --> 00:31:45,340
+all of this sort of stuff that we will see in a second.
+
+769
+00:31:45,340 --> 00:31:46,820
+So what can we do with this?
+
+770
+00:31:46,820 --> 00:31:48,500
+We can model our data, right?
+
+771
+00:31:48,500 --> 00:31:51,600
+We can say, let's model a podcast.
+
+772
+00:31:51,600 --> 00:31:52,860
+And what this notebook does,
+
+773
+00:31:52,860 --> 00:31:57,060
+it builds like a dummy web app for transcribing podcasts
+
+774
+00:31:57,060 --> 00:31:59,620
+and then also doing vector search,
+
+775
+00:31:59,620 --> 00:32:02,100
+like semantic search on podcasts.
+
+776
+00:32:02,100 --> 00:32:03,540
+So how do we do that?
+
+777
+00:32:03,540 --> 00:32:07,000
+So let's say our podcast has a bunch of different things.
+
+778
+00:32:07,000 --> 00:32:08,620
+It has some audio components,
+
+779
+00:32:08,620 --> 00:32:10,900
+it has some text like the transcript, as I said,
+
+780
+00:32:10,900 --> 00:32:12,320
+and it has an embedding.
+
+781
+00:32:12,320 --> 00:32:14,740
+So for the audio, we might have a URL.
+
+782
+00:32:14,740 --> 00:32:16,340
+This is an audio URL.
+
+783
+00:32:16,340 --> 00:32:18,060
+What it is useful, you will see in a second.
+
+784
+00:32:18,060 --> 00:32:20,940
+We have an audio tensor, which is optional.
+
+785
+00:32:20,940 --> 00:32:23,220
+We can also have a transcript URL.
+
+786
+00:32:23,220 --> 00:32:24,540
+So if I already have a transcript,
+
+787
+00:32:24,540 --> 00:32:27,100
+I can just point to it, the transcript itself,
+
+788
+00:32:27,100 --> 00:32:30,740
+select the string itself, and then an embedding,
+
+789
+00:32:30,740 --> 00:32:34,100
+which is a Torch Tensor of shape, or like dimensionality 512.
+
+790
+00:32:34,100 --> 00:32:35,360
+So again, very nice.
+
+791
+00:32:35,360 --> 00:32:39,540
+You can immediately express what kind of shape
+
+792
+00:32:39,540 --> 00:32:41,140
+your tensors or your embeddings will have.
+
+793
+00:32:41,140 --> 00:32:41,960
+Let's run this.
+
+794
+00:32:43,060 --> 00:32:46,500
+Okay, now we can create such a podcast object
+
+795
+00:32:46,500 --> 00:32:49,100
+in very much the same way you do it with Pydantic.
+
+796
+00:32:49,100 --> 00:32:51,700
+So we could have an audio URL.
+
+797
+00:32:51,700 --> 00:32:53,180
+I chose the Star-Spangled Bandai.
+
+798
+00:32:53,180 --> 00:32:55,620
+It seemed fitting for PyCon US,
+
+799
+00:32:55,620 --> 00:32:58,660
+and it's a transcript URL that we can use.
+
+800
+00:32:58,660 --> 00:33:01,820
+For this case, these are both local files on my machine,
+
+801
+00:33:01,820 --> 00:33:03,700
+but they could also be URLs on the web,
+
+802
+00:33:03,700 --> 00:33:06,860
+and the data handling of Docker A will just use,
+
+803
+00:33:06,860 --> 00:33:10,420
+like it can take local URLs, it can swap URLs,
+
+804
+00:33:10,420 --> 00:33:11,740
+whatever it may be.
+
+805
+00:33:11,740 --> 00:33:14,420
+Then we can instantiate our podcast object
+
+806
+00:33:14,420 --> 00:33:16,860
+with the audio URL and the transcript.
+
+807
+00:33:16,860 --> 00:33:18,020
+Let's do that.
+
+808
+00:33:18,060 --> 00:33:21,380
+And now here comes in some of the cool stuff
+
+809
+00:33:21,380 --> 00:33:23,420
+that we've done, I think.
+
+810
+00:33:23,420 --> 00:33:25,460
+So as we've seen before, if you work with URLs,
+
+811
+00:33:25,460 --> 00:33:27,900
+then at some point you will have to load the data
+
+812
+00:33:27,900 --> 00:33:29,900
+from your URL.
+
+813
+00:33:29,900 --> 00:33:31,540
+And what we can do here,
+
+814
+00:33:31,540 --> 00:33:34,540
+since we have this specialized audio URL
+
+815
+00:33:34,540 --> 00:33:36,420
+and this text URL,
+
+816
+00:33:36,420 --> 00:33:40,940
+we can just call podcast.audiourl.load,
+
+817
+00:33:40,940 --> 00:33:44,080
+and it will just take the URL and load it into a tensor.
+
+818
+00:33:44,960 --> 00:33:46,380
+We can do that same for text.
+
+819
+00:33:46,380 --> 00:33:47,820
+With some URL, you just call .load,
+
+820
+00:33:47,820 --> 00:33:49,820
+and you have your transcript as a string.
+
+821
+00:33:50,940 --> 00:33:52,620
+So we can look at the,
+
+822
+00:33:53,500 --> 00:33:56,220
+I'll run the same cell again, let's run this.
+
+823
+00:33:56,220 --> 00:33:59,340
+Okay, I can look at the podcast, what it looks like.
+
+824
+00:33:59,340 --> 00:34:00,980
+Okay, we have audio URL.
+
+825
+00:34:00,980 --> 00:34:04,660
+This one, we have a tensor, so already loaded in.
+
+826
+00:34:04,660 --> 00:34:06,620
+You can see this is the shape of the tensor,
+
+827
+00:34:06,620 --> 00:34:08,020
+torch, float64.
+
+828
+00:34:08,020 --> 00:34:09,860
+We have a URL to our text,
+
+829
+00:34:09,860 --> 00:34:11,780
+and it loaded in the text as a string.
+
+830
+00:34:11,780 --> 00:34:14,020
+Oh, say, can you see, and so forth.
+
+831
+00:34:14,380 --> 00:34:17,780
+Right, we can look at the tensor here again.
+
+832
+00:34:17,780 --> 00:34:19,700
+Yeah, it's like that there.
+
+833
+00:34:19,700 --> 00:34:22,740
+You can see we loaded this tensor from just the audio URL.
+
+834
+00:34:22,740 --> 00:34:26,540
+You don't need to learn about any audio libraries,
+
+835
+00:34:26,540 --> 00:34:28,320
+anything like that, you just have the data types
+
+836
+00:34:28,320 --> 00:34:30,420
+right there in the query.
+
+837
+00:34:30,420 --> 00:34:32,080
+Okay, so that's pretty cool,
+
+838
+00:34:32,080 --> 00:34:34,900
+but what makes this really suitable for machine learning
+
+839
+00:34:34,900 --> 00:34:37,900
+is that we can represent batches of data.
+
+840
+00:34:37,900 --> 00:34:39,780
+Usually, when you put something
+
+841
+00:34:39,780 --> 00:34:40,620
+through a machine learning model,
+
+842
+00:34:40,620 --> 00:34:43,500
+you just don't just want to put in one data type.
+
+843
+00:34:43,500 --> 00:34:45,620
+You have an entire batch.
+
+844
+00:34:45,620 --> 00:34:48,900
+So what we needed to do is we needed to extend
+
+845
+00:34:48,900 --> 00:34:52,820
+this notion of parenting, of representing your data models.
+
+846
+00:34:52,820 --> 00:34:55,260
+We need to extend that along one dimension.
+
+847
+00:34:55,260 --> 00:34:59,820
+So you can have an entire batch or vector of your models.
+
+848
+00:34:59,820 --> 00:35:01,740
+This is exactly what docvec does.
+
+849
+00:35:01,740 --> 00:35:03,580
+It's a document vector, a vector of documents
+
+850
+00:35:03,580 --> 00:35:06,620
+that you can pass straight into your machine learning model.
+
+851
+00:35:06,620 --> 00:35:08,220
+Let's import some of that.
+
+852
+00:35:08,220 --> 00:35:10,740
+And then we can create a document vector.
+
+853
+00:35:10,740 --> 00:35:15,180
+We pass it a bunch of podcasts that we've just defined,
+
+854
+00:35:15,180 --> 00:35:18,780
+and then we create one batch of podcasts.
+
+855
+00:35:18,780 --> 00:35:23,700
+And you may notice this slightly weird-looking syntax here.
+
+856
+00:35:23,700 --> 00:35:25,340
+So we have the document vector,
+
+857
+00:35:25,340 --> 00:35:27,820
+and then the square brackets of the podcast.
+
+858
+00:35:27,820 --> 00:35:29,740
+And the podcast, just to remind you,
+
+859
+00:35:29,740 --> 00:35:32,880
+is the thing that we just defined as our data model.
+
+860
+00:35:32,880 --> 00:35:35,700
+And usually, you don't see these square brackets
+
+861
+00:35:35,700 --> 00:35:37,100
+in a runtime context.
+
+862
+00:35:37,100 --> 00:35:40,620
+You may have seen them as optional of some type,
+
+863
+00:35:40,620 --> 00:35:42,980
+in your type-in, but it's not really something
+
+864
+00:35:42,980 --> 00:35:45,060
+you usually see at the runtime context.
+
+865
+00:35:45,060 --> 00:35:46,860
+So you might need to get used to the syntax,
+
+866
+00:35:46,860 --> 00:35:48,800
+but I think it's actually really nice.
+
+867
+00:35:48,800 --> 00:35:52,400
+Because what this allows us to do is when we extend our model
+
+868
+00:35:52,400 --> 00:35:55,060
+alongside this one dimension, then we can still access
+
+869
+00:35:55,060 --> 00:35:57,460
+all of our user-defined fields.
+
+870
+00:35:57,460 --> 00:36:01,500
+We had an audio tensor in our podcast here,
+
+871
+00:36:01,500 --> 00:36:03,380
+but if we have a batch, if you have an entire vector,
+
+872
+00:36:03,380 --> 00:36:07,220
+we still wanna access all of our custom-defined properties
+
+873
+00:36:07,220 --> 00:36:08,620
+on that vector.
+
+874
+00:36:08,620 --> 00:36:10,100
+All right, so let's take a look at this.
+
+875
+00:36:10,100 --> 00:36:11,020
+So as I said, we have this vector.
+
+876
+00:36:11,020 --> 00:36:14,380
+We just give it three podcasts.
+
+877
+00:36:14,380 --> 00:36:15,220
+Oh, crap.
+
+878
+00:36:20,560 --> 00:36:21,900
+Okay, this didn't work.
+
+879
+00:36:24,260 --> 00:36:25,100
+Sorry?
+
+880
+00:36:27,980 --> 00:36:29,140
+Yeah, something's wrong.
+
+881
+00:36:35,700 --> 00:36:37,300
+I don't know, ran this morning.
+
+882
+00:36:40,180 --> 00:36:41,020
+Oh, very.
+
+883
+00:36:43,100 --> 00:36:44,300
+Let's just try to rerun.
+
+884
+00:36:46,100 --> 00:36:46,940
+Okay.
+
+885
+00:36:54,260 --> 00:36:55,500
+Oh, seems to have worked now.
+
+886
+00:36:55,500 --> 00:36:58,860
+Okay, I don't know what happened, but not a bug, luckily.
+
+887
+00:36:58,860 --> 00:37:00,980
+Something with running cells out of order, I guess.
+
+888
+00:37:00,980 --> 00:37:03,780
+Okay, we can see now we have like this podvec,
+
+889
+00:37:03,780 --> 00:37:07,220
+a vector of podcasts, and we can still access
+
+890
+00:37:07,220 --> 00:37:10,740
+our audio tensor on this entire vector of podcasts.
+
+891
+00:37:10,740 --> 00:37:13,260
+What we can see here, it actually stacked those up
+
+892
+00:37:13,260 --> 00:37:14,700
+into one big tensor.
+
+893
+00:37:14,700 --> 00:37:16,340
+So it's not like really a list-like thing
+
+894
+00:37:16,340 --> 00:37:18,940
+where each and every tensor would be its own place
+
+895
+00:37:18,940 --> 00:37:20,460
+in memory and that would be scattered around.
+
+896
+00:37:20,460 --> 00:37:23,020
+No, this is actually stacked up into one tensor
+
+897
+00:37:23,020 --> 00:37:25,500
+in sort of like a column-wise manner.
+
+898
+00:37:25,500 --> 00:37:27,460
+So we can look at the audio tensor and at the shape,
+
+899
+00:37:27,460 --> 00:37:29,580
+and we see, okay, it's three of them
+
+900
+00:37:29,580 --> 00:37:31,020
+because we passed three podcasts,
+
+901
+00:37:31,020 --> 00:37:33,940
+select the batch size, and then just the dimensionality
+
+902
+00:37:33,940 --> 00:37:36,100
+of each of those examples.
+
+903
+00:37:37,980 --> 00:37:40,580
+And once we have that, we can process this
+
+904
+00:37:40,580 --> 00:37:41,420
+in a machine learning model.
+
+905
+00:37:41,420 --> 00:37:42,620
+Yes, there's a question.
+
+906
+00:37:42,620 --> 00:37:43,820
+Do you mind the question?
+
+907
+00:37:43,820 --> 00:37:44,660
+Sorry?
+
+908
+00:37:44,660 --> 00:37:46,380
+Do you mind the question?
+
+909
+00:37:46,380 --> 00:37:47,500
+Go ahead.
+
+910
+00:37:47,500 --> 00:37:51,340
+So regarding this square bracket podcast,
+
+911
+00:37:51,340 --> 00:37:52,180
+Yes, this here.
+
+912
+00:37:52,180 --> 00:37:56,700
+All the type of the first argument, for example.
+
+913
+00:37:56,700 --> 00:37:57,540
+Yes.
+
+914
+00:37:57,540 --> 00:37:58,380
+Is this something that's a little, I don't know,
+
+915
+00:37:58,380 --> 00:37:59,420
+maybe template-ing or something,
+
+916
+00:37:59,420 --> 00:38:01,060
+and you can't pass, or you don't have the
+
+917
+00:38:01,060 --> 00:38:04,220
+inspection capabilities, but here you have them?
+
+918
+00:38:04,220 --> 00:38:06,180
+Yeah, so we could have, of course,
+
+919
+00:38:06,180 --> 00:38:09,100
+the question was why do we pass the podcast
+
+920
+00:38:09,100 --> 00:38:10,860
+here in the square brackets instead of just
+
+921
+00:38:10,860 --> 00:38:14,340
+taking it in as the first argument.
+
+922
+00:38:14,340 --> 00:38:15,180
+No, sorry.
+
+923
+00:38:15,180 --> 00:38:16,020
+No?
+
+924
+00:38:16,020 --> 00:38:17,420
+Instead of pulling it from the first argument,
+
+925
+00:38:17,420 --> 00:38:19,900
+so you can just do from the instance that you get
+
+926
+00:38:19,900 --> 00:38:22,220
+and you do other classes from it,
+
+927
+00:38:22,220 --> 00:38:25,060
+you have the actual type.
+
+928
+00:38:25,060 --> 00:38:25,900
+From this here?
+
+929
+00:38:25,900 --> 00:38:26,740
+Yeah.
+
+930
+00:38:26,740 --> 00:38:29,380
+Yeah, we could do that, but there's actually,
+
+931
+00:38:29,380 --> 00:38:30,220
+there's a few reasons.
+
+932
+00:38:30,220 --> 00:38:32,780
+One, we want to be able to use this as a type-in somewhere,
+
+933
+00:38:32,780 --> 00:38:36,140
+so we want to be able to put this in a function
+
+934
+00:38:37,140 --> 00:38:39,540
+or somewhere else to say this is actually what we need,
+
+935
+00:38:39,540 --> 00:38:42,820
+so I think it's nice to have these in the same way,
+
+936
+00:38:42,820 --> 00:38:44,980
+but actually you don't need to do this.
+
+937
+00:38:47,260 --> 00:38:49,740
+If you want this ability of being able to access
+
+938
+00:38:49,740 --> 00:38:51,900
+all of your fields along the entire vector,
+
+939
+00:38:51,900 --> 00:38:54,700
+then you need to tell the vector what it represents,
+
+940
+00:38:54,700 --> 00:38:57,540
+but if you don't need this, then you want to maybe
+
+941
+00:38:57,540 --> 00:39:00,420
+put different models here, like a podcast
+
+942
+00:39:00,420 --> 00:39:02,460
+and a video, for example, and want to put them
+
+943
+00:39:02,460 --> 00:39:04,380
+in the same vector for whatever reason,
+
+944
+00:39:04,380 --> 00:39:05,220
+then you can do that.
+
+945
+00:39:05,220 --> 00:39:08,540
+You just omit this, and then it would still work.
+
+946
+00:39:08,540 --> 00:39:13,060
+If we just look at the first one and then pull out the type,
+
+947
+00:39:13,060 --> 00:39:15,940
+then we make an assumption that it takes a choice
+
+948
+00:39:15,940 --> 00:39:18,060
+out of the user's hand because they may not need
+
+949
+00:39:18,060 --> 00:39:18,900
+or want this.
+
+950
+00:39:18,900 --> 00:39:20,300
+That was the reason behind that.
+
+951
+00:39:21,780 --> 00:39:24,980
+You will later see that we use a similar syntax
+
+952
+00:39:24,980 --> 00:39:29,980
+in other classes where we really can't do anything else,
+
+953
+00:39:30,140 --> 00:39:32,860
+I think, so it also makes sense to keep everything
+
+954
+00:39:32,860 --> 00:39:35,060
+coherent within a similar array.
+
+955
+00:39:35,460 --> 00:39:37,940
+Once we have this vector, we can process our data
+
+956
+00:39:37,940 --> 00:39:40,420
+using a machine learning model.
+
+957
+00:39:40,420 --> 00:39:45,420
+This is just a dummy model, but I think it conveys the idea.
+
+958
+00:39:46,300 --> 00:39:49,420
+What this does, it's just one linear projection,
+
+959
+00:39:49,420 --> 00:39:53,460
+and it takes an audio tensor and produces an embedding.
+
+960
+00:39:53,460 --> 00:39:54,820
+Again, you can see the type pins here,
+
+961
+00:39:54,820 --> 00:39:56,580
+which I think are really nice.
+
+962
+00:39:56,580 --> 00:39:59,900
+You take a torch tensor with a batch and a length,
+
+963
+00:39:59,900 --> 00:40:04,020
+and then you get back an embedding of dimensionality 512
+
+964
+00:40:04,060 --> 00:40:06,140
+for each of your examples.
+
+965
+00:40:06,140 --> 00:40:08,260
+So this was run already, so we don't need to run it again.
+
+966
+00:40:08,260 --> 00:40:13,060
+So we instantiate the model, and then we can pass
+
+967
+00:40:13,060 --> 00:40:14,380
+our audio tensor to the model.
+
+968
+00:40:14,380 --> 00:40:18,140
+We create embeddings and then reassign those embeddings
+
+969
+00:40:18,140 --> 00:40:23,140
+to the pod vector, so like all of our podcasts.
+
+970
+00:40:23,260 --> 00:40:24,900
+Again, here it shows that it's really nice
+
+971
+00:40:24,900 --> 00:40:27,740
+that we extend this pedantic idea along an axis
+
+972
+00:40:27,740 --> 00:40:29,460
+because you don't really need to reason
+
+973
+00:40:29,460 --> 00:40:30,780
+about your examples anymore.
+
+974
+00:40:30,780 --> 00:40:32,220
+You have your schema that you defined,
+
+975
+00:40:32,220 --> 00:40:34,780
+and you can use it along this axis
+
+976
+00:40:34,780 --> 00:40:36,020
+as if it was just one example.
+
+977
+00:40:36,020 --> 00:40:41,020
+You just pass things around, access, assign, no problem.
+
+978
+00:40:42,060 --> 00:40:45,860
+Okay, so that's it for the representation part
+
+979
+00:40:45,860 --> 00:40:47,980
+of the library, I would say.
+
+980
+00:40:47,980 --> 00:40:52,540
+Okay, then the set, there were three pillars of Dock array
+
+981
+00:40:52,540 --> 00:40:55,460
+representing, sending, and storing.
+
+982
+00:40:55,460 --> 00:40:59,300
+So let's now look at the sending part.
+
+983
+00:40:59,300 --> 00:41:00,980
+And what is really nice about Dock array
+
+984
+00:41:00,980 --> 00:41:04,940
+is that it integrates very seamlessly with Fast API.
+
+985
+00:41:06,020 --> 00:41:09,460
+So as I said, we wanna build like a dummy service
+
+986
+00:41:09,460 --> 00:41:13,700
+for transcribing and searching for podcasts over the web.
+
+987
+00:41:13,700 --> 00:41:15,660
+So what we do here is again, some imports,
+
+988
+00:41:15,660 --> 00:41:20,660
+Fast API notably, and then we can process our data here.
+
+989
+00:41:21,540 --> 00:41:23,500
+So we first define an output.
+
+990
+00:41:23,500 --> 00:41:26,900
+We could again, obviously again use the podcast
+
+991
+00:41:26,900 --> 00:41:29,460
+and just return the podcast, but in this case,
+
+992
+00:41:29,460 --> 00:41:34,020
+since we are interested in semantic similarity
+
+993
+00:41:34,020 --> 00:41:36,500
+and transcription, we don't need to return everything.
+
+994
+00:41:36,500 --> 00:41:40,380
+So what we return is just an embedding and a transcript.
+
+995
+00:41:40,380 --> 00:41:41,660
+Okay, this is our output.
+
+996
+00:41:41,660 --> 00:41:45,100
+Then we can create a Fast API app using this.
+
+997
+00:41:45,100 --> 00:41:49,020
+And if you know Fast API, you know that you just
+
+998
+00:41:49,020 --> 00:41:51,220
+put in a Pydantic model as you type in,
+
+999
+00:41:51,220 --> 00:41:55,220
+and it will then use that for your API specification.
+
+1000
+00:41:55,220 --> 00:41:57,460
+And in this case, since everything is fully compatible,
+
+1001
+00:41:57,460 --> 00:42:00,460
+and since every document coming from Dock array
+
+1002
+00:42:00,460 --> 00:42:04,980
+is in fact a Pydantic model, you can just use podcast here
+
+1003
+00:42:04,980 --> 00:42:07,580
+in your type pins and output Dock as your return
+
+1004
+00:42:07,580 --> 00:42:10,640
+and Fast API will just work with it.
+
+1005
+00:42:12,060 --> 00:42:13,780
+So let's take a look at what we're doing here
+
+1006
+00:42:13,780 --> 00:42:14,900
+inside of this app.
+
+1007
+00:42:14,900 --> 00:42:19,120
+So again, the user might send us a podcast.
+
+1008
+00:42:19,120 --> 00:42:21,420
+This might just have a URL and no audit answer yet.
+
+1009
+00:42:21,420 --> 00:42:24,300
+So we load it, we pass it through the model.
+
+1010
+00:42:24,300 --> 00:42:26,620
+We have this dummy transcription model here.
+
+1011
+00:42:26,620 --> 00:42:28,020
+It's not doing anything real right now.
+
+1012
+00:42:28,020 --> 00:42:29,740
+It just says this is the transcript of your podcast,
+
+1013
+00:42:29,740 --> 00:42:30,580
+but you get the idea.
+
+1014
+00:42:30,580 --> 00:42:32,820
+You can call Whisper or whatever you want here
+
+1015
+00:42:32,820 --> 00:42:35,620
+and then put it into the output Dock and return it.
+
+1016
+00:42:37,020 --> 00:42:42,020
+And then we can spawn our web server and run it.
+
+1017
+00:42:42,180 --> 00:42:46,140
+So this was also, oh no, that's not what I wanted to do.
+
+1018
+00:42:48,440 --> 00:42:52,500
+Okay, so now we can actually call this API
+
+1019
+00:42:52,500 --> 00:42:57,240
+and I have this here, paste it in.
+
+1020
+00:42:58,240 --> 00:42:59,580
+Okay, what do we get?
+
+1021
+00:43:00,540 --> 00:43:02,780
+We get an output Dock with an ID.
+
+1022
+00:43:02,780 --> 00:43:03,620
+It has an embedding.
+
+1023
+00:43:03,620 --> 00:43:08,620
+So these are these 512 numbers that represent this podcast
+
+1024
+00:43:08,940 --> 00:43:11,060
+in a sort of semantic way and the transcript.
+
+1025
+00:43:11,060 --> 00:43:12,780
+This is the transcript of your pod.
+
+1026
+00:43:12,780 --> 00:43:14,140
+Okay, so that's cool.
+
+1027
+00:43:15,100 --> 00:43:18,380
+So we can kill this.
+
+1028
+00:43:18,380 --> 00:43:23,380
+All right, so that's how you can send data with Dock array
+
+1029
+00:43:23,380 --> 00:43:26,240
+because it just serializes all of your torch tensors
+
+1030
+00:43:26,240 --> 00:43:28,260
+or your NumPy arrays or like your data
+
+1031
+00:43:28,260 --> 00:43:30,340
+if we take care of all of that.
+
+1032
+00:43:30,340 --> 00:43:32,620
+Then it just slots into FastAPI.
+
+1033
+00:43:32,620 --> 00:43:34,020
+But actually another thing that it can do
+
+1034
+00:43:34,020 --> 00:43:37,900
+is serialize to protobuf and be sent over gRPC.
+
+1035
+00:43:37,900 --> 00:43:40,260
+Then you wouldn't use FastAPI anymore.
+
+1036
+00:43:40,260 --> 00:43:42,940
+Then there's Gina, the library that gave the name
+
+1037
+00:43:42,940 --> 00:43:44,020
+to the company that I work for,
+
+1038
+00:43:44,020 --> 00:43:45,500
+which is sort of a similar thing,
+
+1039
+00:43:45,500 --> 00:43:49,340
+but it works, as I said, works over gRPC with protobuf.
+
+1040
+00:43:49,340 --> 00:43:50,700
+So it should be more efficient.
+
+1041
+00:43:50,700 --> 00:43:52,620
+It also has some features like dynamic batchings.
+
+1042
+00:43:52,620 --> 00:43:55,260
+If you wanna take inputs from multiple users
+
+1043
+00:43:55,260 --> 00:43:57,380
+or from the same user and batch them together
+
+1044
+00:43:57,380 --> 00:43:59,140
+before you pass into the machine learning model,
+
+1045
+00:43:59,140 --> 00:44:00,140
+then Gina can do that for you.
+
+1046
+00:44:00,140 --> 00:44:03,580
+So if you send big tensors around,
+
+1047
+00:44:03,580 --> 00:44:05,420
+then HTTP is quite slow
+
+1048
+00:44:05,420 --> 00:44:07,900
+and you may want to use protobuf over gRPC
+
+1049
+00:44:07,900 --> 00:44:08,740
+to make that faster.
+
+1050
+00:44:08,740 --> 00:44:10,060
+And again, then Dock array
+
+1051
+00:44:10,060 --> 00:44:12,380
+would just slot into that seamlessly.
+
+1052
+00:44:13,380 --> 00:44:16,380
+Okay, so that's for sending data.
+
+1053
+00:44:19,580 --> 00:44:22,700
+And the last thing is storing data.
+
+1054
+00:44:23,620 --> 00:44:28,620
+So as I said before, in this machine learning paradigm,
+
+1055
+00:44:29,340 --> 00:44:32,700
+also for storing data, you might need new tools
+
+1056
+00:44:32,700 --> 00:44:35,460
+and new libraries, new databases.
+
+1057
+00:44:35,460 --> 00:44:38,140
+One example of this is vector databases.
+
+1058
+00:44:38,140 --> 00:44:40,900
+And what vector databases allow you to do
+
+1059
+00:44:40,900 --> 00:44:44,140
+is you store your embeddings or any tensors,
+
+1060
+00:44:44,140 --> 00:44:46,900
+and then you can do very fast similarity search
+
+1061
+00:44:46,900 --> 00:44:48,020
+over those tensors.
+
+1062
+00:44:48,020 --> 00:44:50,540
+So for example, in the app that we're currently building,
+
+1063
+00:44:50,540 --> 00:44:51,700
+I have some podcasts,
+
+1064
+00:44:51,700 --> 00:44:53,540
+and then a user gives me another podcast,
+
+1065
+00:44:53,540 --> 00:44:55,660
+and I wanna find similar podcasts.
+
+1066
+00:44:55,660 --> 00:44:58,740
+One way to do it is pass the audio of the podcast
+
+1067
+00:44:58,740 --> 00:45:01,140
+through a machine learning model that produces a vector.
+
+1068
+00:45:01,140 --> 00:45:02,940
+I store all of these vectors in the database,
+
+1069
+00:45:02,940 --> 00:45:05,500
+and then when the user query comes in, I do the same,
+
+1070
+00:45:05,500 --> 00:45:06,340
+and I have these vectors,
+
+1071
+00:45:06,340 --> 00:45:08,300
+and I compare which in my database
+
+1072
+00:45:08,300 --> 00:45:10,220
+is the most similar vector, and I return it.
+
+1073
+00:45:10,220 --> 00:45:12,700
+This is what these vector databases
+
+1074
+00:45:12,700 --> 00:45:14,660
+let you do very efficiently.
+
+1075
+00:45:14,660 --> 00:45:16,220
+And they're also very useful for things
+
+1076
+00:45:16,220 --> 00:45:19,020
+like giving long-term memory to large language models.
+
+1077
+00:45:19,020 --> 00:45:22,180
+Maybe that's someone mentioned Lang chain before.
+
+1078
+00:45:22,180 --> 00:45:25,460
+It uses these vector databases to sort of enhance
+
+1079
+00:45:25,460 --> 00:45:27,260
+or like increase the,
+
+1080
+00:45:27,260 --> 00:45:29,740
+effectively increase the context size
+
+1081
+00:45:29,740 --> 00:45:31,260
+of a large language model,
+
+1082
+00:45:31,260 --> 00:45:33,140
+again, by storing these embeddings
+
+1083
+00:45:33,140 --> 00:45:36,420
+and then doing similarity search on these embeddings.
+
+1084
+00:45:36,420 --> 00:45:41,020
+So for our web app here,
+
+1085
+00:45:41,020 --> 00:45:44,140
+what we want to do is we want,
+
+1086
+00:45:44,140 --> 00:45:46,460
+whenever someone sends us a podcast,
+
+1087
+00:45:46,460 --> 00:45:47,860
+we want to store it,
+
+1088
+00:45:47,860 --> 00:45:50,300
+or like it's embedding representation
+
+1089
+00:45:50,300 --> 00:45:51,980
+in our vector database,
+
+1090
+00:45:51,980 --> 00:45:54,220
+and then when another user wants to find a similar podcast,
+
+1091
+00:45:54,220 --> 00:45:56,620
+we do a lookup and return the most similar podcast
+
+1092
+00:45:56,620 --> 00:45:57,460
+that we've seen before.
+
+1093
+00:45:57,460 --> 00:45:59,100
+So you could imagine if someone sends in
+
+1094
+00:45:59,100 --> 00:46:01,500
+the same podcast episode,
+
+1095
+00:46:01,500 --> 00:46:02,940
+we don't need to transcribe it again.
+
+1096
+00:46:02,940 --> 00:46:04,660
+We just look, have we seen this before?
+
+1097
+00:46:04,660 --> 00:46:06,380
+Pull it and return it.
+
+1098
+00:46:07,380 --> 00:46:10,580
+So we import here this HNSW document index,
+
+1099
+00:46:10,580 --> 00:46:12,420
+and as you've seen here,
+
+1100
+00:46:12,420 --> 00:46:14,580
+Docore currently supports a bunch
+
+1101
+00:46:14,580 --> 00:46:15,820
+of different vector databases,
+
+1102
+00:46:15,820 --> 00:46:16,740
+all with the same API.
+
+1103
+00:46:16,740 --> 00:46:19,420
+So right now it's Weaviate, QDrant, Elasticsearch,
+
+1104
+00:46:19,420 --> 00:46:24,180
+and HNSWlib, and HNSW is just meant as like a local,
+
+1105
+00:46:24,180 --> 00:46:26,740
+small, like lightweight alternative
+
+1106
+00:46:26,740 --> 00:46:28,860
+if you don't need a full-blown database.
+
+1107
+00:46:28,860 --> 00:46:30,300
+So that's what we're using here,
+
+1108
+00:46:30,300 --> 00:46:32,300
+HNSW document index.
+
+1109
+00:46:32,300 --> 00:46:33,740
+So we can instantiate that,
+
+1110
+00:46:33,740 --> 00:46:36,020
+and again, we have this square bracket notation
+
+1111
+00:46:36,020 --> 00:46:37,180
+with the podcast.
+
+1112
+00:46:37,180 --> 00:46:39,980
+And here, actually we see why we need this information
+
+1113
+00:46:39,980 --> 00:46:42,540
+here right away, because in the database,
+
+1114
+00:46:42,540 --> 00:46:45,300
+we need to have a schema, or like a table,
+
+1115
+00:46:45,300 --> 00:46:49,180
+or yeah, with the columns in our database, et cetera.
+
+1116
+00:46:49,180 --> 00:46:52,700
+So, but you don't want to do that yourself manually.
+
+1117
+00:46:52,700 --> 00:46:53,660
+You don't want to think about,
+
+1118
+00:46:53,660 --> 00:46:56,020
+okay, I have my data model in Docore,
+
+1119
+00:46:56,020 --> 00:46:58,460
+how do I map that to the database?
+
+1120
+00:46:58,460 --> 00:47:00,660
+What column types do I choose?
+
+1121
+00:47:00,660 --> 00:47:02,220
+Maybe to just get started quickly,
+
+1122
+00:47:02,220 --> 00:47:04,100
+want this to just work.
+
+1123
+00:47:04,100 --> 00:47:06,300
+And this is effectively what these document indexes
+
+1124
+00:47:06,300 --> 00:47:07,140
+let you do.
+
+1125
+00:47:07,140 --> 00:47:09,380
+So you just have your HNSW document index,
+
+1126
+00:47:09,380 --> 00:47:11,860
+parameterize it or template it by podcast,
+
+1127
+00:47:11,860 --> 00:47:13,140
+and then it will, in the database,
+
+1128
+00:47:13,140 --> 00:47:15,460
+create the columns accordingly.
+
+1129
+00:47:15,460 --> 00:47:20,100
+And here we pass, basically, a working directory for it,
+
+1130
+00:47:20,100 --> 00:47:24,480
+because as I said, HNSW is just a local library that runs.
+
+1131
+00:47:24,480 --> 00:47:26,060
+If you had QDrant or Weaviate,
+
+1132
+00:47:26,060 --> 00:47:28,500
+you would just give it the host and port of your database,
+
+1133
+00:47:28,500 --> 00:47:30,780
+and it will just hook into your database instance
+
+1134
+00:47:30,780 --> 00:47:31,840
+and work there.
+
+1135
+00:47:31,840 --> 00:47:34,560
+So we can instantiate this here.
+
+1136
+00:47:34,560 --> 00:47:39,440
+So now we have our lookup database for our podcast.
+
+1137
+00:47:39,440 --> 00:47:42,480
+And we can put that together into our web app now.
+
+1138
+00:47:42,480 --> 00:47:45,560
+So I'm creating a new API endpoint
+
+1139
+00:47:45,560 --> 00:47:47,400
+called transcribe and index.
+
+1140
+00:47:47,400 --> 00:47:50,640
+So again, we created transcriptions for our podcast,
+
+1141
+00:47:50,640 --> 00:47:53,280
+but we also store that away in our vector database
+
+1142
+00:47:53,280 --> 00:47:54,720
+for lookups in the future.
+
+1143
+00:47:54,720 --> 00:47:56,200
+So it's the exact same thing,
+
+1144
+00:47:56,200 --> 00:47:57,720
+except for this one line.
+
+1145
+00:47:57,720 --> 00:47:59,360
+This is the new thing here.
+
+1146
+00:47:59,360 --> 00:48:01,480
+Doc index, the document index we just defined,
+
+1147
+00:48:02,120 --> 00:48:03,680
+and then we index our podcast.
+
+1148
+00:48:03,680 --> 00:48:07,480
+And there's a whole lot of other things that you could do
+
+1149
+00:48:07,480 --> 00:48:09,800
+with the vector database, but in the simplest case,
+
+1150
+00:48:09,800 --> 00:48:12,920
+you just wanna store your data away.
+
+1151
+00:48:12,920 --> 00:48:15,720
+And as you can see here, with just two lines of code,
+
+1152
+00:48:15,720 --> 00:48:19,040
+you have a vector database with the proper schema
+
+1153
+00:48:19,040 --> 00:48:23,120
+for your data, and you can index it in there very easily.
+
+1154
+00:48:24,420 --> 00:48:28,920
+So we can run this and start a server again.
+
+1155
+00:48:28,920 --> 00:48:31,800
+So let me see.
+
+1156
+00:48:31,800 --> 00:48:33,600
+Let's again, what we need to do,
+
+1157
+00:48:33,600 --> 00:48:37,200
+we need to send this to a different endpoint.
+
+1158
+00:48:42,600 --> 00:48:46,760
+Transcribe and index.
+
+1159
+00:48:47,720 --> 00:48:49,080
+Boom, same result.
+
+1160
+00:48:49,080 --> 00:48:51,720
+From the user's perspective, it's the same.
+
+1161
+00:48:51,720 --> 00:48:53,880
+But of course, on the server side,
+
+1162
+00:48:53,880 --> 00:48:58,120
+we've now indexed this document in our vector database.
+
+1163
+00:48:58,160 --> 00:49:01,560
+And then I've created another endpoint, find.
+
+1164
+00:49:01,560 --> 00:49:04,040
+So if a user just wants to find a similar podcast
+
+1165
+00:49:04,040 --> 00:49:06,120
+to what they have, they can send their podcast there,
+
+1166
+00:49:06,120 --> 00:49:08,240
+and we will do a lookup in our vector index
+
+1167
+00:49:08,240 --> 00:49:09,520
+to see what we have here.
+
+1168
+00:49:10,360 --> 00:49:12,880
+And here, again, we just create a beddings,
+
+1169
+00:49:12,880 --> 00:49:15,400
+same thing we've done before.
+
+1170
+00:49:15,400 --> 00:49:17,880
+And the important line here is this one.
+
+1171
+00:49:17,880 --> 00:49:19,240
+So we look at our document index,
+
+1172
+00:49:19,240 --> 00:49:21,160
+and we wanna find similar stuff.
+
+1173
+00:49:21,160 --> 00:49:24,160
+So we take the user input, we say, okay,
+
+1174
+00:49:24,160 --> 00:49:26,080
+how do we even want to compare this?
+
+1175
+00:49:26,080 --> 00:49:29,040
+Because now our podcast only has one embedding.
+
+1176
+00:49:29,040 --> 00:49:31,920
+But if we think more generally with multi-modal data,
+
+1177
+00:49:31,920 --> 00:49:33,200
+I might have multiple embeddings.
+
+1178
+00:49:33,200 --> 00:49:34,440
+I might have an embedding for my audio
+
+1179
+00:49:34,440 --> 00:49:36,320
+and for my transcript, for example.
+
+1180
+00:49:36,320 --> 00:49:38,000
+So I can choose where do I search?
+
+1181
+00:49:38,000 --> 00:49:39,360
+What is the basis of comparison
+
+1182
+00:49:39,360 --> 00:49:41,520
+between the user query and the database?
+
+1183
+00:49:41,520 --> 00:49:43,120
+In this case, we say embedding, it's the only thing,
+
+1184
+00:49:43,120 --> 00:49:44,320
+but we specify, okay, embedding,
+
+1185
+00:49:44,320 --> 00:49:47,040
+look at the embedding field of the input and database,
+
+1186
+00:49:47,040 --> 00:49:48,800
+and then you compare and pull out
+
+1187
+00:49:50,240 --> 00:49:51,520
+only one result in this case.
+
+1188
+00:49:51,520 --> 00:49:53,840
+We just want to get the most similar podcast
+
+1189
+00:49:53,840 --> 00:49:55,040
+that we've seen before.
+
+1190
+00:49:55,920 --> 00:49:59,000
+Okay, what can we do now?
+
+1191
+00:49:59,000 --> 00:50:00,760
+Again, what have we done?
+
+1192
+00:50:03,520 --> 00:50:04,360
+Oh, wait.
+
+1193
+00:50:10,760 --> 00:50:12,880
+Something's messed up here a little bit.
+
+1194
+00:50:26,000 --> 00:50:27,560
+That wasn't supposed to happen.
+
+1195
+00:50:35,040 --> 00:50:39,200
+Okay, I've done enough troubleshooting on stage as is.
+
+1196
+00:50:39,200 --> 00:50:42,640
+The idea is you should send your podcast
+
+1197
+00:50:42,640 --> 00:50:45,080
+and get the most similar one back out.
+
+1198
+00:50:45,080 --> 00:50:46,480
+It's something's cursed, I don't know.
+
+1199
+00:50:46,480 --> 00:50:49,000
+I promise I've tried this morning and it worked.
+
+1200
+00:50:49,000 --> 00:50:50,680
+I'm not sure what happened.
+
+1201
+00:50:50,680 --> 00:50:53,360
+Yeah, so that's the third part of the library,
+
+1202
+00:50:53,880 --> 00:50:57,880
+the stored part of storing things in a vector database
+
+1203
+00:50:57,880 --> 00:50:59,360
+for efficient retrieval.
+
+1204
+00:51:01,040 --> 00:51:06,040
+Okay, so let's just sum up these ideas
+
+1205
+00:51:06,200 --> 00:51:07,840
+of typing in the machine learning world
+
+1206
+00:51:07,840 --> 00:51:10,560
+on end of what Dockery is trying to do.
+
+1207
+00:51:10,560 --> 00:51:13,160
+So you can see sort of a progression here.
+
+1208
+00:51:14,800 --> 00:51:17,440
+Before PADENTIK, FastAPI, and SecretModel were a thing,
+
+1209
+00:51:17,440 --> 00:51:19,800
+you sort of did manual validation
+
+1210
+00:51:19,800 --> 00:51:21,240
+because PADENTIK wasn't a thing.
+
+1211
+00:51:21,680 --> 00:51:23,800
+So instead of using FastAPI, you used Flask,
+
+1212
+00:51:23,800 --> 00:51:26,120
+but now you like these types, so you use FastAPI.
+
+1213
+00:51:26,120 --> 00:51:27,840
+And instead of using SecretModel,
+
+1214
+00:51:27,840 --> 00:51:29,400
+you may have used SecretAlchemy.
+
+1215
+00:51:29,400 --> 00:51:30,640
+That's essentially the same thing,
+
+1216
+00:51:30,640 --> 00:51:32,080
+but doesn't have this nice API,
+
+1217
+00:51:32,080 --> 00:51:35,360
+this nice user interface that SecretModel has.
+
+1218
+00:51:35,360 --> 00:51:36,680
+But now if you make another step
+
+1219
+00:51:36,680 --> 00:51:38,720
+and move into the machine learning world
+
+1220
+00:51:38,720 --> 00:51:40,840
+and wanna serve machine learning applications
+
+1221
+00:51:40,840 --> 00:51:42,760
+or just train your models,
+
+1222
+00:51:42,760 --> 00:51:44,400
+then you need to make another step, I think.
+
+1223
+00:51:44,400 --> 00:51:46,080
+And this is what we try to do.
+
+1224
+00:51:46,080 --> 00:51:48,120
+I hope it goes better in general
+
+1225
+00:51:48,120 --> 00:51:50,920
+than it just did during the demo, but I'm confident.
+
+1226
+00:51:51,280 --> 00:51:53,400
+Instead of using PADENTIK, you may want to use Dock array.
+
+1227
+00:51:53,400 --> 00:51:56,640
+So you can have your machine learning centric types.
+
+1228
+00:51:56,640 --> 00:51:58,760
+Instead of using FastAPI, as I said,
+
+1229
+00:51:58,760 --> 00:52:00,400
+it's still a very good tool for many use cases,
+
+1230
+00:52:00,400 --> 00:52:02,320
+but for some use cases, you may want to use GINA
+
+1231
+00:52:02,320 --> 00:52:04,680
+for gRPC and Protobuf.
+
+1232
+00:52:04,680 --> 00:52:06,520
+And instead of using SQL model,
+
+1233
+00:52:06,520 --> 00:52:10,120
+so if you don't work with the SQL database,
+
+1234
+00:52:10,120 --> 00:52:11,720
+but instead with the vector database,
+
+1235
+00:52:11,720 --> 00:52:13,680
+then you may want to use Dock array
+
+1236
+00:52:13,680 --> 00:52:16,000
+to talk to your vector database.
+
+1237
+00:52:16,000 --> 00:52:18,440
+This is sort of the thing that we tried to achieve here.
+
+1238
+00:52:18,440 --> 00:52:20,520
+Okay, that was basically it.
+
+1239
+00:52:21,320 --> 00:52:24,360
+As I said, type hints are entering Python left and right.
+
+1240
+00:52:24,360 --> 00:52:26,800
+I think they are the future for the language,
+
+1241
+00:52:26,800 --> 00:52:29,000
+at least on the user interface side of things.
+
+1242
+00:52:29,000 --> 00:52:31,080
+I think they make for really nice APIs.
+
+1243
+00:52:31,080 --> 00:52:35,560
+That's why we are pushing on the usage in Dock array.
+
+1244
+00:52:35,560 --> 00:52:37,320
+I hope you all give it a try.
+
+1245
+00:52:37,320 --> 00:52:39,640
+You can find it on GitHub, give it a star,
+
+1246
+00:52:39,640 --> 00:52:41,080
+or at least check it out.
+
+1247
+00:52:42,080 --> 00:52:44,080
+Yeah, thanks for your attention.
+
+1248
+00:52:45,160 --> 00:52:46,000
+Thank you.
+
+1249
+00:52:46,160 --> 00:52:49,160
+Yeah, if you have questions, I'm happy to answer.
+
+1250
+00:52:49,160 --> 00:52:50,680
+Yeah, there's one right here.
+
+1251
+00:52:50,680 --> 00:52:53,360
+Can you make these files available online somewhere?
+
+1252
+00:52:53,360 --> 00:52:54,680
+Yes, of course, yeah.
+
+1253
+00:52:56,000 --> 00:52:59,080
+I think I put them in the repo somewhere.
+
+1254
+00:52:59,080 --> 00:53:02,320
+Yeah, so if you look at the repo, they will appear there.
+
+1255
+00:53:04,120 --> 00:53:04,960
+Yes?
+
+1256
+00:53:04,960 --> 00:53:06,840
+So, great presentation.
+
+1257
+00:53:06,840 --> 00:53:09,840
+Still, what would I stand on?
+
+1258
+00:53:11,120 --> 00:53:12,840
+Sorry, could you speak up a little bit?
+
+1259
+00:53:12,840 --> 00:53:13,680
+Can you hear me?
+
+1260
+00:53:13,800 --> 00:53:14,640
+Barely.
+
+1261
+00:53:14,640 --> 00:53:16,040
+I said great presentation.
+
+1262
+00:53:16,040 --> 00:53:16,880
+Thank you.
+
+1263
+00:53:16,880 --> 00:53:18,880
+Still, it's new to the Python world,
+
+1264
+00:53:18,880 --> 00:53:21,880
+but does Dock array support generics?
+
+1265
+00:53:21,880 --> 00:53:23,720
+Sorry, what is happening?
+
+1266
+00:53:23,720 --> 00:53:24,560
+Someone's pointing.
+
+1267
+00:53:24,560 --> 00:53:26,560
+Does Dock array support generics?
+
+1268
+00:53:26,560 --> 00:53:29,560
+Ah, there's a microphone back there.
+
+1269
+00:53:29,560 --> 00:53:32,560
+Okay, so the question was, does Dock array support generics?
+
+1270
+00:53:32,560 --> 00:53:36,040
+I'm not, so in the type hints, you mean?
+
+1271
+00:53:36,040 --> 00:53:36,880
+Yes, yes, yes.
+
+1272
+00:53:36,880 --> 00:53:39,840
+You can do, so because we built on Pydantic,
+
+1273
+00:53:39,840 --> 00:53:42,240
+anything you can do there, you can do on Python.
+
+1274
+00:53:42,280 --> 00:53:45,320
+On Pydantic, anything you can do there, it will just work.
+
+1275
+00:53:45,320 --> 00:53:48,200
+Really, on the, like this model,
+
+1276
+00:53:49,360 --> 00:53:51,280
+base model kind of idea,
+
+1277
+00:53:51,280 --> 00:53:54,000
+we really just add our types on top,
+
+1278
+00:53:54,000 --> 00:53:56,600
+make sure that they are fully compatible with Pydantic,
+
+1279
+00:53:56,600 --> 00:53:59,520
+and Pydantic can take generics and all of that sort of stuff,
+
+1280
+00:53:59,520 --> 00:54:00,960
+so it will just work, yes.
+
+1281
+00:54:04,640 --> 00:54:05,480
+Any more questions?
+
+1282
+00:54:05,480 --> 00:54:06,320
+Yes, here.
+
+1283
+00:54:06,320 --> 00:54:07,160
+More questions?
+
+1284
+00:54:07,160 --> 00:54:08,360
+The microphone is coming.
+
+1285
+00:54:09,360 --> 00:54:10,200
+Okay.
+
+1286
+00:54:11,920 --> 00:54:15,800
+Like my question is about the data typing for images,
+
+1287
+00:54:15,800 --> 00:54:17,080
+text and data.
+
+1288
+00:54:17,080 --> 00:54:20,800
+It works with multimedia files
+
+1289
+00:54:20,800 --> 00:54:24,600
+storing cloud providers like Google Cloud or AWS?
+
+1290
+00:54:26,000 --> 00:54:27,520
+Yes, yes, yes, yes.
+
+1291
+00:54:27,520 --> 00:54:30,120
+As long as it can be reached on the web somehow,
+
+1292
+00:54:30,120 --> 00:54:30,960
+yeah, it works.
+
+1293
+00:54:30,960 --> 00:54:33,200
+Okay, and secondly, for example,
+
+1294
+00:54:33,200 --> 00:54:36,000
+you have a generate method called load,
+
+1295
+00:54:36,960 --> 00:54:38,640
+for example, in the case of images,
+
+1296
+00:54:38,640 --> 00:54:41,080
+you can load using pillow or numpy.
+
+1297
+00:54:42,840 --> 00:54:46,400
+Can you specify the type of how you load the image,
+
+1298
+00:54:46,400 --> 00:54:47,240
+or is not?
+
+1299
+00:54:49,080 --> 00:54:50,720
+The type, what do you mean by the type?
+
+1300
+00:54:50,720 --> 00:54:52,640
+If it's an NDR array or a torch tensor,
+
+1301
+00:54:52,640 --> 00:54:53,480
+is that what you mean?
+
+1302
+00:54:53,480 --> 00:54:54,800
+Yeah.
+
+1303
+00:54:54,800 --> 00:54:57,720
+So under the hood for images specifically,
+
+1304
+00:54:57,720 --> 00:54:59,560
+we load with pillow,
+
+1305
+00:54:59,560 --> 00:55:03,320
+and then what that will give you is a numpy array,
+
+1306
+00:55:03,320 --> 00:55:07,440
+but if in your document, you specify a torch tensor,
+
+1307
+00:55:07,440 --> 00:55:10,200
+and then assign a numpy array to your torch tensor,
+
+1308
+00:55:10,200 --> 00:55:12,000
+that it will convert it automatically.
+
+1309
+00:55:12,000 --> 00:55:14,160
+This is the same idea that we've seen at the beginning,
+
+1310
+00:55:14,160 --> 00:55:17,680
+where in pyDentic, I had this user with an ID,
+
+1311
+00:55:17,680 --> 00:55:19,480
+there was an int, but I passed the string,
+
+1312
+00:55:19,480 --> 00:55:24,360
+and then pyDentic cores the type to integer automatically.
+
+1313
+00:55:24,360 --> 00:55:26,560
+And in the same way, if you use doc array,
+
+1314
+00:55:26,560 --> 00:55:28,920
+and have a torch tensor, and pass an NDR array,
+
+1315
+00:55:28,920 --> 00:55:30,440
+we will just coerce it for you.
+
+1316
+00:55:30,440 --> 00:55:35,280
+Or even if you specify shape 256,
+
+1317
+00:55:35,280 --> 00:55:38,000
+and you pass a thing that's of just shape 512,
+
+1318
+00:55:38,000 --> 00:55:40,280
+then it will automatically reshape the thing,
+
+1319
+00:55:40,280 --> 00:55:41,120
+which I think is really nice.
+
+1320
+00:55:41,120 --> 00:55:44,040
+So you just declaratively say, this is what I want,
+
+1321
+00:55:44,040 --> 00:55:47,120
+and then it will reshape it in the best possible way
+
+1322
+00:55:47,120 --> 00:55:47,960
+to make it work.
+
+1323
+00:55:47,960 --> 00:55:49,400
+Okay, thank you, and congratulations
+
+1324
+00:55:49,400 --> 00:55:50,240
+for the presentation.
+
+1325
+00:55:50,240 --> 00:55:51,080
+Oh, thank you.
+
+1326
+00:55:53,720 --> 00:55:56,920
+Thank you for your presentation, first of all.
+
+1327
+00:55:56,920 --> 00:55:57,760
+I would like to ask,
+
+1328
+00:55:57,760 --> 00:55:59,800
+what about the dependencies for the library?
+
+1329
+00:55:59,800 --> 00:56:02,440
+Because as you showed that,
+
+1330
+00:56:02,440 --> 00:56:05,480
+there's a bunch of different stores that you support, guys.
+
+1331
+00:56:05,480 --> 00:56:07,760
+Does it mean that if I install doc array,
+
+1332
+00:56:07,760 --> 00:56:10,040
+I'll get all the like, elastic search,
+
+1333
+00:56:10,040 --> 00:56:11,800
+and all this stuff, all this kind of jazz?
+
+1334
+00:56:11,800 --> 00:56:14,120
+No, no, God, no, no.
+
+1335
+00:56:14,120 --> 00:56:16,360
+So we have different install options.
+
+1336
+00:56:16,360 --> 00:56:18,360
+I think the base install is quite lean.
+
+1337
+00:56:18,360 --> 00:56:19,560
+I'm not sure exactly what's there,
+
+1338
+00:56:19,560 --> 00:56:22,680
+but NumPy for sure, I think protobuf,
+
+1339
+00:56:22,680 --> 00:56:23,920
+I'm not sure if protobuf is there by default,
+
+1340
+00:56:23,920 --> 00:56:24,920
+but it's not much.
+
+1341
+00:56:24,920 --> 00:56:28,560
+And you sort of decide at install time what you want.
+
+1342
+00:56:28,560 --> 00:56:30,720
+You can say pip install doc array,
+
+1343
+00:56:30,720 --> 00:56:32,080
+square brackets, elastic,
+
+1344
+00:56:32,080 --> 00:56:34,080
+and then it will come with elastic search, yeah.
+
+1345
+00:56:34,080 --> 00:56:34,920
+Okay, thank you.
+
+1346
+00:56:34,920 --> 00:56:35,760
+All right.
+
+1347
+00:56:38,320 --> 00:56:39,760
+Any other questions?
+
+1348
+00:56:41,480 --> 00:56:43,640
+No, okay, then thanks for those questions.
+
+1349
+00:56:43,640 --> 00:56:45,520
+And yeah, if someone wants to come up to me
+
+1350
+00:56:45,520 --> 00:56:47,880
+and talk in person, I'm happy to do so.
+
+1351
+00:56:47,880 --> 00:56:50,480
+And also we have a booth downstairs,
+
+1352
+00:56:50,480 --> 00:56:52,120
+the Gina booth, what's the name?
+
+1353
+00:56:52,120 --> 00:56:52,960
+405.
+
+1354
+00:56:52,960 --> 00:56:55,520
+405, and we're happy to talk to you there.
+
+1355
+00:56:55,520 --> 00:56:57,080
+And we have swag.
+
+1356
+00:56:57,080 --> 00:56:57,920
+All right.
+
+1357
+00:56:58,240 --> 00:56:59,080
+Thank you.
+
+1358
+00:56:59,080 --> 00:56:59,920
+Thank you.
+
+1359
+00:56:59,920 --> 00:57:00,760
+Thank you.
+
+1360
+00:57:00,760 --> 00:57:01,600
+Thank you.
+

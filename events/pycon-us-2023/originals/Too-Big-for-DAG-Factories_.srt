@@ -1,0 +1,1052 @@
+1
+00:00:00,000 --> 00:00:04,480
+And ready. Let's do it.
+
+2
+00:00:04,480 --> 00:00:09,320
+Good afternoon. Our next speaker is Calvin Hingrich Parker. We will be talking about
+
+3
+00:00:09,320 --> 00:00:14,320
+2B for Dice-Hatch-A-B. I'll see you in a while on the website.
+
+4
+00:00:14,320 --> 00:00:21,320
+We're going to do a little bit of audience participation. I'm going to take a 360 picture
+
+5
+00:00:22,360 --> 00:00:29,360
+of you all and I want you to put your hands up on the count of three, alright? One, two,
+
+6
+00:00:30,240 --> 00:00:34,440
+three, four. Nice. I'll send that over social later. You can see yourself in 360 in the
+
+7
+00:00:34,440 --> 00:00:38,760
+talk. That would be awesome. Thank you very much for having me here at Python. This is
+
+8
+00:00:38,760 --> 00:00:45,760
+my 19th Python in a row. And as a first year, I actually gave a lightning talk this morning,
+
+9
+00:00:45,840 --> 00:00:49,520
+which was awesome. My name is Calvin Hingrich Parker. I'm CTO and co-founder of a software
+
+10
+00:00:49,520 --> 00:00:54,520
+consulting agency called Six Feet Up. We do awesome work and this is actually one of the
+
+11
+00:00:54,520 --> 00:00:59,080
+projects, kind of about one of the projects we did called Too Big to Dag Factory. So
+
+12
+00:00:59,080 --> 00:01:06,080
+if you are familiar with Airflow and want to know why you're here, I'll probably uncover
+
+13
+00:01:06,080 --> 00:01:11,080
+it here shortly. But there was a talk related to, kind of a precursor to this talk from
+
+14
+00:01:11,080 --> 00:01:15,080
+the Python about contracts that's on YouTube. If you just go search up Python about contracts
+
+15
+00:01:15,080 --> 00:01:21,480
+2022 and about tags, you'll find it. But for this talk, why do you care? It's because you
+
+16
+00:01:21,480 --> 00:01:25,760
+may be here because you think Airflow might be the wrong tool for you. It doesn't fit
+
+17
+00:01:25,760 --> 00:01:31,760
+your specific use case. Or you may think Airflow can't scale to your needs. I think a lot of
+
+18
+00:01:31,760 --> 00:01:37,760
+you will kind of run into problems with running maybe hundreds or potentially thousands of
+
+19
+00:01:37,760 --> 00:01:44,760
+tags inside of Airflow. I'm going to show you here live in a demo running 10,000 tags
+
+20
+00:01:45,760 --> 00:01:50,760
+on my local lab. So that's what you got in store here. One thing I always like to kick
+
+21
+00:01:50,760 --> 00:01:55,760
+off my talks with is setting an intention. I think the Xenopython is such an excellent
+
+22
+00:01:55,760 --> 00:02:01,760
+Easter egg. If you've not experienced it, make sure you run Python-m this and you'll get the
+
+23
+00:02:01,760 --> 00:02:06,760
+Xenopython right there in your console. I highly recommend you print it out, frame it, put it under
+
+24
+00:02:06,760 --> 00:02:09,760
+your wall in your bathroom so you can read it every day when you brush your teeth. It's a great
+
+25
+00:02:09,760 --> 00:02:16,760
+way to keep up to date on all these amazing tenants. Let's get started then. So for though,
+
+26
+00:02:16,760 --> 00:02:20,760
+I'm just going to do a really, really brief overview of Airflow so I'll run on the same page
+
+27
+00:02:20,760 --> 00:02:27,760
+as far as I'm acknowledging. The DAG is a directed acyclic graph. Those DAGs are just a series
+
+28
+00:02:27,760 --> 00:02:35,760
+of tasks made up of operators, sensors, or task flows. The connections and hooks provide easy
+
+29
+00:02:35,760 --> 00:02:43,760
+access to various APIs. So Airflow out of the box comes with a lot of nice connections and hooks
+
+30
+00:02:43,760 --> 00:02:49,760
+to various systems. So if you're in a data engineering world, it's really very convenient
+
+31
+00:02:49,760 --> 00:02:54,760
+because it's very easy to get set up and rolling and accessing various kinds of data sources and
+
+32
+00:02:54,760 --> 00:03:00,760
+things like that. But you can also think of Airflow as really a glorified problem that can do
+
+33
+00:03:00,760 --> 00:03:06,760
+pretty awesome gymnastics and scheduling and capabilities. From an architecture standpoint,
+
+34
+00:03:06,760 --> 00:03:13,760
+really this is kind of how the layout is. You've got a DAG directory where you will put your DAG
+
+35
+00:03:13,760 --> 00:03:18,760
+files. A DAG file is just Python files. They have got, I'll show an example in the code and then go
+
+36
+00:03:18,760 --> 00:03:24,760
+through the actual demos. Those DAGs get scheduled by the scheduler. You can look and see the status
+
+37
+00:03:24,760 --> 00:03:29,760
+of everything through the web server interface, user interface, and that user interface is reflecting
+
+38
+00:03:29,760 --> 00:03:35,760
+in pretty real time the status of the workers and those workers are then also reporting back into
+
+39
+00:03:35,760 --> 00:03:41,760
+the scheduler which then keeps track of all that metadata in the database. It can be tricky to
+
+40
+00:03:41,760 --> 00:03:47,760
+deploy because there's lots of limited pieces behind all this, but other covers, it's really Django
+
+41
+00:03:47,760 --> 00:03:53,760
+and Postgres and those kinds of standard tools that if you're like an application developer, you may
+
+42
+00:03:53,760 --> 00:03:59,760
+actually be fairly familiar with the things that are going on. Let's actually dive into the actual
+
+43
+00:03:59,760 --> 00:04:05,760
+problem. So here we're going to talk about the real problem which is creating dynamic DAGs. There's
+
+44
+00:04:05,760 --> 00:04:11,760
+multiple ways you can create a DAG inside of Airflow. You have got your standard, like I mentioned
+
+45
+00:04:11,760 --> 00:04:17,760
+before, Python file that declares a DAG class. It has the tests in order and then it distorts the
+
+46
+00:04:17,760 --> 00:04:23,760
+keys and things like that that are in front of the DAG. You can also create DAGs dynamically. So let me
+
+47
+00:04:23,760 --> 00:04:29,760
+show you some examples of what that looks like. I'll kind of walk through a progression of a dynamic,
+
+48
+00:04:29,760 --> 00:04:35,760
+I'll show you a standard DAG, we'll go to a dynamic DAG and then we'll look at the problems with that
+
+49
+00:04:35,760 --> 00:04:39,760
+dynamic DAG and why we're all sitting in the room and not listening to your speech and then we'll talk about
+
+50
+00:04:39,760 --> 00:04:43,760
+the solution to that and some interesting things we've done as part of this problem.
+
+51
+00:04:43,760 --> 00:04:51,760
+We look here. Okay. So if I want to look at, this is actually the tutorial demo DAG from like the Airflow
+
+52
+00:04:55,760 --> 00:05:00,760
+site. So if you've gone through and done the Airflow tutorial, you can see that a DAG, is that a big
+
+53
+00:05:00,760 --> 00:05:05,760
+one for a honesty? I'll try to make that a little bit bigger. Is that good? You all good? Sweet. I see
+
+54
+00:05:05,760 --> 00:05:11,760
+thumbs up. So that's perfect. So here we're creating a DAG class. Those DAGs have tasks like the key
+
+55
+00:05:11,760 --> 00:05:17,760
+ones, the batch operator, so it just fills out the something. The key is also batch operator, it fills out
+
+56
+00:05:17,760 --> 00:05:23,760
+the some kind of hello world about DAGs. You put this file into that DAG directory. This is where the magic
+
+57
+00:05:23,760 --> 00:05:31,760
+comes in is that Airflow is continually scanning that directory for new files or changes for those files so
+
+58
+00:05:31,760 --> 00:05:39,760
+they can import them into the Airflow UI, which looks like this. So when you have this, for example, you've got
+
+59
+00:05:39,760 --> 00:05:47,760
+101 DAGs loaded up in this specific demo and the demo one's not showing here because they're a little bit
+
+60
+00:05:47,760 --> 00:05:53,760
+below it. This is what the Airflow UI itself looks like and I've generated these 100 DAGs based off those
+
+61
+00:05:53,760 --> 00:06:01,760
+configuration files. So it's dynamic in that there's one Python file that's in the DAG folder and it's looping over
+
+62
+00:06:01,760 --> 00:06:09,760
+some data, like in this case JSON configuration files. We define the source of our data. So if we're thinking about an
+
+63
+00:06:09,760 --> 00:06:15,760
+ETL pipeline or doing some kind of data engineering, the source marks, we define those as JSON files
+
+64
+00:06:15,760 --> 00:06:21,760
+individually. Each of those JSON files specifies like the database connection stream, some other metadata about that
+
+65
+00:06:21,760 --> 00:06:25,760
+and we can just run through them and dynamically create DAGs. I'll just come aside and show them to you.
+
+66
+00:06:25,760 --> 00:06:33,760
+So that's all. So that is in the mic. And all these files are in the GitHub and there's a link at the end for those
+
+67
+00:06:33,760 --> 00:06:38,760
+so you can actually download the whole repository and check these files out. So we're looking at the worst case
+
+68
+00:06:38,760 --> 00:06:44,760
+directory. Maybe I gave a little bit too much away with the name of the file but that's what we're standing here.
+
+69
+00:06:44,760 --> 00:06:52,760
+What we've got is a set of files that come up here in this configs directory. They're hashed currently by just some
+
+70
+00:06:52,760 --> 00:06:58,760
+leverage that's a little bit easier to generate. These files are just like a bunch of JSON files with some metadata in them.
+
+71
+00:06:58,760 --> 00:07:03,760
+These are pretty dummy ones just to kind of give you an example of what it would feel if they might actually be like,
+
+72
+00:07:03,760 --> 00:07:10,760
+this is just all generated files to give us a nice little demo because we originally want to get 10,000 DAGs.
+
+73
+00:07:10,760 --> 00:07:20,760
+So the configs are in these directory structures and then the code in the worst case factory is going to look at that config directory.
+
+74
+00:07:20,760 --> 00:07:27,760
+So you can see there's a generic right here. But the actual config files then get looped over right here.
+
+75
+00:07:27,760 --> 00:07:35,760
+So for every config file in that directory structure we're going to loop over and if it's a full or incremental load type
+
+76
+00:07:36,760 --> 00:07:44,760
+so we can support multiple types of load types. That's why there's 50, I'm doing 50 files but there's 101, 100, that's 101 because it's a demo one.
+
+77
+00:07:44,760 --> 00:07:51,760
+There's 100 DAGs generated because of that with full incrementals. And we're going to do something in here that's like
+
+78
+00:07:51,760 --> 00:07:58,760
+simulating what part of this problem is but what actually brings up the problem and why it's actually getting exacerbated even faster when you're using
+
+79
+00:07:58,760 --> 00:08:06,760
+dynamic guides is reducing a bit of sleep. So this is just like if you had an example of a slowish process going on in the runtime of the DAG import,
+
+80
+00:08:09,760 --> 00:08:17,760
+this is where the problems start occurring because any external calls, API calls to third party services looking for configuration information
+
+81
+00:08:17,760 --> 00:08:25,760
+or if you've got inefficient libraries that are parsing the JSON, a lot of these things all can add up including logging, imports,
+
+82
+00:08:26,760 --> 00:08:32,760
+those kinds of things are what cause this problem. Right now I'm showing you 100 DAGs on there and that's what this is doing here.
+
+83
+00:08:32,760 --> 00:08:38,760
+So here we've got for every DAG in that configuration file, this now looks like the tutorial DAG where it's like we're creating a DAG,
+
+84
+00:08:39,760 --> 00:08:45,760
+looping through and creating each of the tasks that are in there and this is all just kind of standard and flowing things.
+
+85
+00:08:46,760 --> 00:08:48,760
+Let me show you now the problem.
+
+86
+00:08:48,760 --> 00:08:54,760
+So I've generated this for 50, so I've moved the auto-generator to 50, we're going to up this to 500.
+
+87
+00:08:56,760 --> 00:08:58,760
+You can hear the little read, pull the evidence.
+
+88
+00:09:05,760 --> 00:09:11,760
+So there's a makefile in the repository that has some nice convenience methods in there for getting us all set up.
+
+89
+00:09:11,760 --> 00:09:17,760
+All it's doing right now is it killed the previous Docker containers, I'm running Docker Compose locally to run the whole cluster of things needed for Airflow
+
+90
+00:09:18,760 --> 00:09:24,760
+and it's regenerated the configuration files so if you actually look at that now you can see if there are hopefully 10 times more
+
+91
+00:09:25,760 --> 00:09:28,760
+configuration files in the instructor structure.
+
+92
+00:09:29,760 --> 00:09:34,760
+There we go. So before there was a handful in there, now there's 80.
+
+93
+00:09:34,760 --> 00:09:39,760
+And if we now go to Airflow and we'll have to log back in because we reset the containers.
+
+94
+00:09:40,760 --> 00:09:47,760
+There we go. So it's taking some time because of that sleep. We've induced some synthesized load in there.
+
+95
+00:09:48,760 --> 00:09:51,760
+Let's see, yeah it's going to work out like this.
+
+96
+00:09:52,760 --> 00:09:55,760
+So you can see how you can see how it's working and it's not really working.
+
+97
+00:09:56,760 --> 00:09:59,760
+So let's go ahead and run that.
+
+98
+00:09:59,760 --> 00:10:02,760
+Let's see, yeah it's going to work out like this.
+
+99
+00:10:03,760 --> 00:10:07,760
+So you can see how it's taking longer to even get loaded.
+
+100
+00:10:08,760 --> 00:10:10,760
+There you go.
+
+101
+00:10:16,760 --> 00:10:19,760
+There are not all that you can get.
+
+102
+00:10:20,760 --> 00:10:25,760
+So it is still running in the background right now, trying to carve through that dynamic guide which is a single Python file
+
+103
+00:10:25,760 --> 00:10:29,760
+and it's got a 30 second loop by default in the configuration Airflow
+
+104
+00:10:30,760 --> 00:10:36,760
+and if your DAG generation starts taking a long, up to 30 seconds, it's just going to keep that loop.
+
+105
+00:10:37,760 --> 00:10:41,760
+And now if you go over to 30 seconds you'll see an error here, it's only killing about 30 seconds.
+
+106
+00:10:42,760 --> 00:10:45,760
+Look at that, a hot second.
+
+107
+00:10:46,760 --> 00:10:49,760
+And overall that's going to show you that configuration.
+
+108
+00:10:49,760 --> 00:10:52,760
+Let me make this bigger so it's not too big.
+
+109
+00:10:55,760 --> 00:11:01,760
+So you see right here, the DAG bag import timeout is set to 30 seconds by default.
+
+110
+00:11:02,760 --> 00:11:06,760
+You may say, well why don't we just increase it, who cares, right?
+
+111
+00:11:07,760 --> 00:11:16,760
+That won't work for numerous reasons, but most of all, if you step out too long, you're going to need to actually scale out some other part of the infrastructure to handle this.
+
+112
+00:11:16,760 --> 00:11:22,760
+Because you're going to need things like more cellar instances, the cellar ID is continually importing these all the time.
+
+113
+00:11:23,760 --> 00:11:34,760
+So the load, the CPU load to handle the same number of DAGs is going up exponentially and that import time is critical since these DAGs are being continually imported by those cellular workers.
+
+114
+00:11:35,760 --> 00:11:41,760
+So if you raise that number too high, you're going to run into other kinds of performance issues that are probably even harder and trickier to debug.
+
+115
+00:11:41,760 --> 00:11:43,760
+Let's step back over here to the DAG.
+
+116
+00:11:44,760 --> 00:11:48,760
+This should be, yes, bingo, demo success, the way we want it.
+
+117
+00:11:49,760 --> 00:12:03,760
+This is what you're going to see when these things start scaling and it's not completely obvious as you read through this small traceback, but you need to look right here, which is the DAG bag timeout after 30 seconds.
+
+118
+00:12:04,760 --> 00:12:07,760
+Please look at the docs to improve your DAG import time.
+
+119
+00:12:07,760 --> 00:12:15,760
+I don't know how helpful the docs actually are in this case because they may not tell you to keep the import time as low, but that's the problem here.
+
+120
+00:12:16,760 --> 00:12:18,760
+This is what has happened at the time it seems.
+
+121
+00:12:19,760 --> 00:12:31,760
+So the next part of this demo, and this is kind of where we're getting to the root cause of said problem, is that we're running into the dangers of runtime dependencies.
+
+122
+00:12:31,760 --> 00:12:42,760
+Anything that happens here at runtime is impeding that load of those DAGs, so the dynamic DAG generation can start to take longer and longer as this DAG's scanning cycle continues.
+
+123
+00:12:43,760 --> 00:12:52,760
+So by the sheer numbers, we're here only looking at attempting to load 1,000 DAGs, so from 100 to 1,000, and it fails miserably.
+
+124
+00:12:52,760 --> 00:13:01,760
+But it could be that there were, as I mentioned before, API calls that happened in the background or even logging that can really be detrimental to the performance of those load builds.
+
+125
+00:13:01,760 --> 00:13:06,760
+So you want to keep that DAG as simple and straightforward as possible.
+
+126
+00:13:07,760 --> 00:13:12,760
+So how can we get around this DAG backing problem? That is like the next bit we're going to talk about here.
+
+127
+00:13:12,760 --> 00:13:23,760
+The next bit we're going to talk about here is we want to go on, I'm going to dive in on the train. It's not fun. That's what we do.
+
+128
+00:13:24,760 --> 00:13:34,760
+We're going to run a new set of codes here, and it'll ask me what it's doing. Make better cases.
+
+129
+00:13:35,760 --> 00:13:49,760
+So instead of having a single Python file, Python module in that DAG directory, which is the one I showed you, the working jitter, the worst-case factory,
+
+130
+00:13:49,760 --> 00:14:00,760
+what happens is this worst-case factory was copied into this DAG directory as we would expect, and then it does the dynamic generation based on those config files.
+
+131
+00:14:00,760 --> 00:14:10,760
+And now what's happened is we no longer have a single Python file in that directory. We actually have copies of them named per the data source,
+
+132
+00:14:10,760 --> 00:14:19,760
+which is going to be processed as far as the run. What you may notice is these are actually exactly identical to one another.
+
+133
+00:14:19,760 --> 00:14:27,760
+There's no difference in these files. What we've done is templated a Python file and just actually created the thing. I'll show you the better one.
+
+134
+00:14:30,760 --> 00:14:40,760
+Okay, go to other cases.
+
+135
+00:14:40,760 --> 00:15:02,760
+Okay. The difference here is this is a little bit very similar. There it is. We look at the config files again, and now we build an entity.
+
+136
+00:15:02,760 --> 00:15:12,760
+So the DAG is basically the same as the file. We're not looping over all the categories of files. What we are doing now is the name of the file is now significant to us.
+
+137
+00:15:12,760 --> 00:15:24,760
+We've copied this dindag from file name.py file over a thousand times into this directory structure. So that's why all those files look identical.
+
+138
+00:15:25,760 --> 00:15:37,760
+It's the exact same file, just with a different name. The name is now significant to this process in that we're going to look for load configuration for data file passing in the name of the file.
+
+139
+00:15:37,760 --> 00:15:47,760
+And based on the name of the file, we now know which configuration file to actually look up and grab so we can get the appropriate configurations for that specific source.
+
+140
+00:15:47,760 --> 00:15:57,760
+Unfortunately, this is probably the hardest part of working with this because it's the faster version.
+
+141
+00:15:57,760 --> 00:16:07,760
+Okay, we have a thousand give or take. That's due to some random seed name collisions in the generation of the file names.
+
+142
+00:16:07,760 --> 00:16:17,760
+So it's generally around the thousand based on the origin of the name. And you see that it loaded on the problem, and we can kick these off.
+
+143
+00:16:17,760 --> 00:16:23,760
+Make this smaller. Here we go.
+
+144
+00:16:23,760 --> 00:16:33,760
+So just run a couple of these to get seeded. There's no man behind the curtain. It's just generally running in thousand bags that are imported.
+
+145
+00:16:33,760 --> 00:16:41,760
+They all come in and do their various jobs. They're scheduled in different ways. That's the general watch-to-experience here.
+
+146
+00:16:42,760 --> 00:16:58,760
+So the key bit here, we're not using the loop so we're not having one file. And we're also eliminated that 10 second or like 0.1 second sleep that has been introduced synthetically into the DAG process as it gets generated.
+
+147
+00:16:59,760 --> 00:17:07,760
+The fit you want to do is anything you can hard code into the file, any calls you would have made to a work service.
+
+148
+00:17:07,760 --> 00:17:14,760
+For example, in this project specifically we're using Azure and Azure App Config along with Data Factory.
+
+149
+00:17:14,760 --> 00:17:23,760
+And so we had Terraform that would put configurations and build Data Factory objects that we needed to know about those things.
+
+150
+00:17:23,760 --> 00:17:32,760
+So our DAGs as they started would actually query the API and look for that specific configuration information to build a piece of all the pieces together in a dynamic fashion.
+
+151
+00:17:32,760 --> 00:17:39,760
+Technically it's not really needed. But really what you need is to have this stuff built in the CI pipeline, which is what we do.
+
+152
+00:17:39,760 --> 00:17:52,760
+So we build this in the CI pipeline. Any data like that we need that's pre-computed from a dynamic element, we insert during that build time and then package up the whole container that we ship into Airflow
+
+153
+00:17:52,760 --> 00:17:58,760
+with all the DAGs that are pre-generated inside it. And so that really speeds up this whole process.
+
+154
+00:17:58,760 --> 00:18:06,760
+Now if we want to actually go from a thousand to ten thousand, we could show that off here as well.
+
+155
+00:18:06,760 --> 00:18:17,760
+Just keep adding zeros.
+
+156
+00:18:17,760 --> 00:18:33,760
+And then you have done it for campאפá successful.
+
+157
+00:18:33,760 --> 00:18:40,240
+We're configuring 10,000, you can't see this scrolling so fast, but there are now 10,000
+
+158
+00:18:40,240 --> 00:18:45,720
+configuration files and there will be 10,000 DAG files generated and placed into those
+
+159
+00:18:45,720 --> 00:18:50,160
+directory structures, the hash directory structure.
+
+160
+00:18:50,160 --> 00:18:51,160
+So it takes a half second.
+
+161
+00:18:51,160 --> 00:18:52,160
+Can I just copy them all?
+
+162
+00:18:52,160 --> 00:18:53,160
+Now it's starting up Airflow.
+
+163
+00:18:53,160 --> 00:18:58,160
+So if we go back over to Airflow, we can see how fast it's actually going to start up.
+
+164
+00:18:58,320 --> 00:19:01,000
+It gives us a half second folder.
+
+165
+00:19:01,000 --> 00:19:03,000
+Airflow to come back online.
+
+166
+00:19:17,680 --> 00:19:19,680
+Okay, thanks.
+
+167
+00:19:28,840 --> 00:19:30,840
+At least the data is still...
+
+168
+00:19:30,840 --> 00:19:32,840
+Be careful, it's still...
+
+169
+00:19:32,840 --> 00:19:34,840
+Should be able to read and improve the 10,000 files.
+
+170
+00:19:51,440 --> 00:19:52,440
+It's almost there.
+
+171
+00:19:52,440 --> 00:19:54,440
+Thank you, response.
+
+172
+00:19:55,440 --> 00:19:59,440
+Okay, so we just loaded that up with 10,000 files now.
+
+173
+00:20:04,440 --> 00:20:09,440
+So in the background it's still loading just like we saw with the dynamic DAG.
+
+174
+00:20:09,440 --> 00:20:15,440
+Obviously 10,000 DAG is still in tremendous amount of DAGs that run in here, but this will,
+
+175
+00:20:15,440 --> 00:20:21,440
+as we can't watch it, you'll see the numbers climbing.
+
+176
+00:20:21,440 --> 00:20:26,440
+So the number of files was as it's just processing through all the actual files on there.
+
+177
+00:20:26,440 --> 00:20:31,440
+Now we've not blocked the whole system from doing anything else, where before when that
+
+178
+00:20:31,440 --> 00:20:36,440
+dynamic DAG was processing there was nothing, no kind of showing us a whole or nothing.
+
+179
+00:20:36,440 --> 00:20:40,440
+Here we can actually start getting the system back online and actually processing the files.
+
+180
+00:20:44,440 --> 00:20:49,440
+So the key bits here is it's really convenient to start with those dynamic DAG structures.
+
+181
+00:20:49,440 --> 00:20:54,440
+As you scale up, you'll have this need to never generate statically.
+
+182
+00:20:54,440 --> 00:20:59,440
+And then I mentioned already that the pre-computing configuration is a major optimization point.
+
+183
+00:20:59,440 --> 00:21:04,440
+Anything you can do to make this process quiet and un-started is really important.
+
+184
+00:21:04,440 --> 00:21:10,440
+And I've not even talked yet about the tasks that are running in the Airflow, so I probably won't even...
+
+185
+00:21:10,440 --> 00:21:15,440
+We won't touch on that much here, but you want to optimize all these tasks to be able to run parallel,
+
+186
+00:21:15,440 --> 00:21:20,440
+because now you've got the ability to scale your workers out without having to scale up the scheduler itself.
+
+187
+00:21:20,440 --> 00:21:23,440
+That part of how it works really well.
+
+188
+00:21:23,440 --> 00:21:26,440
+I'm going to try to get the video to be in the air.
+
+189
+00:21:28,440 --> 00:21:30,440
+I will give you all the links.
+
+190
+00:21:33,440 --> 00:21:40,440
+So on the 60F blog, as opposed to the exact same name, there's this talk called Too Big for DAG Factories.
+
+191
+00:21:40,440 --> 00:21:49,440
+The slides for this are actually in my GitHub, so if you go to github.com.com.hp, you can check out all the slides in there.
+
+192
+00:21:53,440 --> 00:21:55,440
+There's a few more steps and things.
+
+193
+00:21:55,440 --> 00:22:01,440
+Inside the code here for the generation...
+
+194
+00:22:10,440 --> 00:22:17,440
+This is interesting. If I put some data and some numbers in here, you can kind of get a feel for the speed of these things.
+
+195
+00:22:17,440 --> 00:22:24,440
+Like if you look back at the Workspace Factory, there was an import time per running each DAG.
+
+196
+00:22:24,440 --> 00:22:33,440
+So you can see as we got up into a couple thousand DAGs, those video went through the almost 30 seconds depending on what your speed of your machine is.
+
+197
+00:22:33,440 --> 00:22:37,440
+So obviously we need to keep it underneath that 30 seconds for it to work right.
+
+198
+00:22:37,440 --> 00:22:44,440
+If anyone has questions on this, happy to answer anything that you think is running for these kinds of problems.
+
+199
+00:22:44,440 --> 00:22:49,440
+If you want to go to the mic we've got, like about five minutes still, then we can actually take a couple questions.
+
+200
+00:22:50,440 --> 00:22:52,440
+This is a really great talk.
+
+201
+00:22:52,440 --> 00:22:55,440
+I'm a career public information engineer for this project.
+
+202
+00:22:55,440 --> 00:22:59,440
+Could you introduce me to a project you post in there where so many DAGs have been necessary?
+
+203
+00:22:59,440 --> 00:23:09,440
+Sure. So in our case, if you've got a large data warehouse project, and you may have tens of thousands of tables that are coming from all various types of sources,
+
+204
+00:23:09,440 --> 00:23:18,440
+the goal with this project was actually to make the data engineering onboarding process easier and smoother for folks.
+
+205
+00:23:18,440 --> 00:23:26,440
+So if I had a new data source, it came from an Oracle, MySQL, or SQL Server, or a flat file someplace like FTP or anything, file server,
+
+206
+00:23:26,440 --> 00:23:33,440
+then all that metadata goes into that JSON configuration file that I am showing up here in the config directory.
+
+207
+00:23:33,440 --> 00:23:36,440
+So if you look at one of these configs, this is just an example.
+
+208
+00:23:36,440 --> 00:23:39,440
+You have the source. In this case we'll just look at two buckets.
+
+209
+00:23:39,440 --> 00:23:42,440
+There could be a source bucket, a really good destination bucket.
+
+210
+00:23:42,440 --> 00:23:54,440
+Our source could be a database connection string with a description of all the various columns that you want to move over, a description of the target, where the columns might go.
+
+211
+00:23:54,440 --> 00:24:04,440
+In our case, we were actually using Data Factory to do the ingest, and then we did Databricks, Notebooks, so we would actually queue up Databricks jobs.
+
+212
+00:24:04,440 --> 00:24:07,440
+That's what the Airflow really came to play with, orchestrating all of that.
+
+213
+00:24:07,440 --> 00:24:16,440
+So you could manage those SLAs and improve, but it meant that the data engineers could easily onboard these things by not having to write a pipeline code,
+
+214
+00:24:16,440 --> 00:24:20,440
+and they just can write a descriptor of the source market that they want to import.
+
+215
+00:24:20,440 --> 00:24:28,440
+So again, it's a really big data source. A data set is this customer, where they've got to try to write the data they're moving per day.
+
+216
+00:24:28,440 --> 00:24:34,440
+They were starting to run into a problem that the data load time was starting to take almost 24 hours,
+
+217
+00:24:34,440 --> 00:24:38,440
+and so if you get to 24 hours, you're going to start missing SLAs.
+
+218
+00:24:38,440 --> 00:24:49,440
+If they had issues with the load, any of the loads, they were a little bit in the dark before, where now at the Airflow, you can very easily triage and debug the steps, the tasks that are going to die.
+
+219
+00:24:49,440 --> 00:24:54,440
+Where before, they would just kind of rerun the whole thing and kind of help them play.
+
+220
+00:24:54,440 --> 00:25:01,440
+Here, they can actually have a lot better ability to triage and just run from a specific point on instead of the whole thing.
+
+221
+00:25:01,440 --> 00:25:02,440
+Thank you.
+
+222
+00:25:02,440 --> 00:25:04,440
+Thank you. You're welcome.
+
+223
+00:25:06,440 --> 00:25:11,440
+Can you tell us a bit about the infrastructure that you call this just sitting on top of?
+
+224
+00:25:11,440 --> 00:25:24,440
+I use Cloud Composer in my current context, and so I'm wondering if you don't have full control over all the infrastructure components, if the same pattern would yield the same kind of results?
+
+225
+00:25:24,440 --> 00:25:32,440
+I would say it would, and in that case, the actual target environment for Airflow on this one is Kubernetes clusters.
+
+226
+00:25:32,440 --> 00:25:42,440
+So this is running locally with Docker Compose, and as a Compose file, if you want to have a good, nice running local environment, what I'm running here is all local, it's just on my laptop.
+
+227
+00:25:42,440 --> 00:25:48,440
+But I don't really have...what are your constraints? What would the constraints be?
+
+228
+00:25:48,440 --> 00:25:56,440
+I'm not sure if it's a Cloud Composer, if there's some specific constraint where you can't run from any containers, or is there a scaling issue horizontally?
+
+229
+00:25:56,440 --> 00:26:07,440
+So some parts of the configuration are not necessarily within your control because they've got underlying parts that are trying to do well for you instead of you having to reroll.
+
+230
+00:26:07,440 --> 00:26:16,440
+So that can increase the number of workers, but there's just minute details in other places that you just don't have that kind of binary control.
+
+231
+00:26:16,440 --> 00:26:27,440
+We've been running into issues with some of our DAGs. We have about, I think, 120 or something like that, and they take between 20 to 30 minutes to push.
+
+232
+00:26:27,440 --> 00:26:30,440
+And so this is particularly interesting to me.
+
+233
+00:26:30,440 --> 00:26:36,440
+So I would recommend, are you deploying your DAGs as a container, a built container?
+
+234
+00:26:36,440 --> 00:26:37,440
+Yeah.
+
+235
+00:26:37,440 --> 00:26:47,440
+So you've got control there where you can put whatever you want in the DAGs folder and you deploy that container into the environment and whatever CI pipeline or deployment pipeline is doing that part.
+
+236
+00:26:47,440 --> 00:26:48,440
+Yeah.
+
+237
+00:26:48,440 --> 00:26:58,440
+I think if you've got that few DAGs, you really need to look at those import times. Like, yeah, we debug the time, your imports, like we kind of show in the examples here.
+
+238
+00:26:58,440 --> 00:27:05,440
+So you could get a feel for if there's a real trouble offender in there, anything you can do to remove those timings.
+
+239
+00:27:05,440 --> 00:27:13,440
+I don't think you're going to have an issue with the scheduler, and it sounds like you're able to scale up your workers just fine. So this should be an absolutely solvable problem.
+
+240
+00:27:13,440 --> 00:27:14,440
+Sweet. Thank you.
+
+241
+00:27:14,440 --> 00:27:17,440
+You're welcome.
+
+242
+00:27:17,440 --> 00:27:26,440
+We've got time for maybe one more question at two minutes.
+
+243
+00:27:26,440 --> 00:27:32,440
+Have you ever run into a scenario where the bottleneck is actually the database, like the metadata store?
+
+244
+00:27:32,440 --> 00:27:43,440
+So that's getting into a different area. The bottleneck I've highlighted here is really being in the scheduler and the scaling of the infrastructure covers and trying to keep that efficient.
+
+245
+00:27:43,440 --> 00:27:48,440
+When it comes to, it's a database itself that's a bottleneck.
+
+246
+00:27:48,440 --> 00:27:54,440
+Actually, Glenn here is actually one of the people who helped me with this project. Glenn raised his hand. He's going to answer your question too.
+
+247
+00:27:54,440 --> 00:28:01,440
+He did more with some of the database iterations. In our case, we were calling out to DataFactor to do the ingest.
+
+248
+00:28:01,440 --> 00:28:12,440
+We actually weren't using an operator directly from Airflow to talk to the database. We were more like queuing and just doing tasks running, like API calls after the various services telling them,
+
+249
+00:28:12,440 --> 00:28:17,440
+Time for you to go get your data, deliver it to this bucket, and we were kind of hands off at that point.
+
+250
+00:28:17,440 --> 00:28:27,440
+So we were able, I think the issue you thought I'd run into is going to be the fact that any long-running task like that would take up a slot in the number of workers you could have.
+
+251
+00:28:27,440 --> 00:28:32,440
+And the big fix to that was going to be asynchronous tasks.
+
+252
+00:28:32,440 --> 00:28:38,440
+Then you have to make sure you code correctly to take advantage of that asynchronous capability.
+
+253
+00:28:38,440 --> 00:28:45,440
+So how long ago? Is this an older set of dags that have been around for a while? Because I think the very single stuff came out in 2003.
+
+254
+00:28:47,440 --> 00:28:51,440
+Or 2-3-3? I don't know exactly the version.
+
+255
+00:28:51,440 --> 00:28:54,440
+Yeah, that would be the position.
+
+256
+00:28:54,440 --> 00:29:05,440
+And there's also the, I mentioned sensors. It may also be a solution for you to kick off things and then use a sensor to watch, like kind of watch for the results to come in.
+
+257
+00:29:05,440 --> 00:29:12,440
+So you can decouple, like go run into them. You want to avoid holding that slot for a long time.
+
+258
+00:29:13,440 --> 00:29:14,440
+Thank you.
+
+259
+00:29:14,440 --> 00:29:15,440
+You're welcome.
+
+260
+00:29:15,440 --> 00:29:18,440
+Well, I think that's it. We've got 50 seconds. I want to thank you all for being here and coming to talk.
+
+261
+00:29:18,440 --> 00:29:23,440
+If you've got more questions, I guess I'll be on the hallway here for a little bit. I'm also not a hard person to find.
+
+262
+00:29:23,440 --> 00:29:26,440
+And I love talking to people. So I'm happy to answer anything else.
+
+263
+00:29:26,440 --> 00:29:27,440
+Thank you very much.
+

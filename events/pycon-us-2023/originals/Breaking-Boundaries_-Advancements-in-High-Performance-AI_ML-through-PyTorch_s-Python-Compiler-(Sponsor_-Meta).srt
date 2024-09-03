@@ -1,0 +1,944 @@
+1
+00:00:00,000 --> 00:00:13,100
+Hi, everyone. I'm Sam Gross. I'll be talking about PyTorch 2.0 and the compiler in it.
+
+2
+00:00:13,100 --> 00:00:17,800
+This talk was originally prepared by my colleagues Justin and Seraj, two excellent developer
+
+3
+00:00:17,800 --> 00:00:22,500
+advocates at Meta. I will be presenting it because they were unfortunately not able to
+
+4
+00:00:22,500 --> 00:00:26,080
+attend PyCon. The work I'm going to be talking about is
+
+5
+00:00:26,080 --> 00:00:32,360
+largely done by my colleagues at Meta and in the PyTorch community at large.
+
+6
+00:00:32,360 --> 00:00:36,440
+So to start with, how many people here by raise of hands have experience with AI or machine
+
+7
+00:00:36,440 --> 00:00:44,600
+learning? That's a lot. How many of you have used PyTorch? That's a good number.
+
+8
+00:00:44,600 --> 00:00:48,840
+So for those of you not familiar with PyTorch, it's a machine learning framework frequently
+
+9
+00:00:48,840 --> 00:00:53,640
+used for training neural networks. It was originally developed by Facebook AI research
+
+10
+00:00:53,640 --> 00:00:59,360
+in late 2016. It's always been open source and basically from the beginning it's had
+
+11
+00:00:59,360 --> 00:01:08,880
+contributions from both Facebook, now Meta, and collaborators in industry and academia.
+
+12
+00:01:08,880 --> 00:01:14,160
+The project's now under the Linux Foundation, which the intention is to provide sort of
+
+13
+00:01:14,160 --> 00:01:22,880
+neutral governance for it. Yeah. PyTorch has become fairly popular. It's
+
+14
+00:01:22,920 --> 00:01:29,040
+probably the most widely used machine learning framework for AI research. This graph from
+
+15
+00:01:29,040 --> 00:01:38,680
+papers with code shows the number of new papers released with code and by framework used.
+
+16
+00:01:38,680 --> 00:01:45,080
+And that big orange segment in the middle is PyTorch. I think it's worth considering
+
+17
+00:01:45,080 --> 00:01:52,600
+what made PyTorch popular. This is especially important question for PyTorch developers
+
+18
+00:01:52,640 --> 00:01:56,760
+and maintainers because as we change and improve the framework we want to make sure we adhere
+
+19
+00:01:56,760 --> 00:02:02,160
+to the principles that helped it succeed in the first place. I think one of the most important
+
+20
+00:02:02,160 --> 00:02:06,800
+principles at the beginning is that it's Pythonic. This is a bit abstract and hard to define.
+
+21
+00:02:06,800 --> 00:02:13,840
+But one way to put it, I suggest, is that PyTorch is not only written in Python but
+
+22
+00:02:13,840 --> 00:02:18,680
+it allows developers to use it in ways that they might be familiar with from other Python
+
+23
+00:02:18,760 --> 00:02:24,160
+libraries and frameworks. So, for example, a lot of PyTorch's tensor APIs are similar
+
+24
+00:02:24,160 --> 00:02:31,480
+to NumPy's array APIs and PyTorch is interoperable with NumPy and other Python libraries and
+
+25
+00:02:31,480 --> 00:02:39,400
+frameworks. Again, it's a bit abstract. It's hard to measure and hard for us as developers
+
+26
+00:02:39,400 --> 00:02:43,320
+and maintainers to know what exactly it is that we want to maintain. I'll come back to
+
+27
+00:02:43,480 --> 00:02:49,400
+that a bit later in this talk. I think another important reason for PyTorch's popularity
+
+28
+00:02:49,400 --> 00:02:54,840
+is that it tries to achieve a Goldilocks balance between abstracting away low level details
+
+29
+00:02:54,840 --> 00:02:59,280
+that you don't really care about but still providing an API that's rich enough to let
+
+30
+00:02:59,280 --> 00:03:05,480
+you do things that might be slightly off the beaten path. And finally, it's important that
+
+31
+00:03:05,480 --> 00:03:11,480
+PyTorch is performant. So under the hood it uses kernels implemented in C and C++ and
+
+32
+00:03:11,480 --> 00:03:21,480
+CUDA to run on GPUs so that the neural networks that you train and run in PyTorch run efficiently.
+
+33
+00:03:21,480 --> 00:03:26,760
+Coming back to the notion of what makes PyTorch Pythonic, I think a big reason here is that
+
+34
+00:03:26,760 --> 00:03:33,600
+PyTorch really embraces sort of eager dynamic execution. What some people call like an ear
+
+35
+00:03:33,600 --> 00:03:38,560
+mode paradigm. One way to think about this is that every line in a PyTorch program is
+
+36
+00:03:38,560 --> 00:03:45,160
+executed in order with the rest of your Python program and it's mostly executed immediately.
+
+37
+00:03:45,160 --> 00:03:50,200
+The other bit is that it supports dynamic control flow, meaning that your PyTorch neural
+
+38
+00:03:50,200 --> 00:03:55,920
+network models can include if statements, while loops, for loops, all the normal control
+
+39
+00:03:55,920 --> 00:03:59,840
+flow that you'd expect in a Python program. And this stands in contrast a bit to some
+
+40
+00:03:59,840 --> 00:04:06,160
+other frameworks that were developed around the same time in 2015, 16, and 17 that really
+
+41
+00:04:06,200 --> 00:04:11,720
+focused on static data flow graphs. What I mean by that is that they tried to or they
+
+42
+00:04:11,720 --> 00:04:15,920
+do capture representation for your neural network that's independent of the rest of
+
+43
+00:04:15,920 --> 00:04:24,920
+the Python program. One reason that a lot of frameworks embrace this static data flow
+
+44
+00:04:28,160 --> 00:04:32,640
+graph approach is that it provides a lot more visibility for the framework to know what's
+
+45
+00:04:32,640 --> 00:04:38,440
+going on in your neural network model and potentially opportunities for it to optimize
+
+46
+00:04:38,440 --> 00:04:43,320
+the execution, make it run faster and more efficiently. PyTorch, when we started the
+
+47
+00:04:43,320 --> 00:04:50,320
+project, we intentionally did not go for this static data flow graph approach. Most of the
+
+48
+00:04:50,600 --> 00:04:56,660
+original developers on PyTorch had previously worked on Torch 7 and the thing that people
+
+49
+00:04:56,660 --> 00:05:00,080
+kept liking about Torch 7, there were a lot of other problems, but one of the things that
+
+50
+00:05:00,120 --> 00:05:05,320
+people liked was that it was direct, that it was the program that you wrote executed
+
+51
+00:05:05,320 --> 00:05:10,240
+essentially as you wrote it. It was a lot, which makes it easier to debug. So switching
+
+52
+00:05:10,240 --> 00:05:16,280
+back to PyTorch, in the context of PyTorch, the dynamic execution, the eager mode paradigm
+
+53
+00:05:16,280 --> 00:05:20,680
+means that you can use standard Python debugging tools like PDB. You can interoperate with
+
+54
+00:05:20,680 --> 00:05:25,520
+other libraries. And for a lot of developers and researchers, this sort of API feels more
+
+55
+00:05:25,520 --> 00:05:32,520
+direct and easier to use. So again, I think in 2016 and 2017, the prevailing conventional
+
+56
+00:05:33,800 --> 00:05:39,360
+wisdom was that deep learning frameworks needed a static graph because they needed to be able
+
+57
+00:05:39,360 --> 00:05:45,200
+to optimize the performance and potentially capture a program representation to run on
+
+58
+00:05:45,200 --> 00:05:50,960
+upcoming new exciting hardware. And I think this view was both prevalent at Facebook,
+
+59
+00:05:50,960 --> 00:05:57,160
+where I worked and still work at the time, as well as more broadly in industry. But it
+
+60
+00:05:57,160 --> 00:06:01,280
+wasn't universal. There was a bunch of other frameworks like PyTorch, including a number
+
+61
+00:06:01,280 --> 00:06:07,840
+that came before it, that also adopted this or also focused on this dynamic, eager execution,
+
+62
+00:06:07,840 --> 00:06:14,440
+among them Chainer, Torch 7, which we had worked on, and Dynet. Again, I think the reason
+
+63
+00:06:14,440 --> 00:06:21,440
+this prevailing conventional wisdom was prevailing was because people thought that eager mode
+
+64
+00:06:23,160 --> 00:06:29,440
+was slow, that the overhead of executing a Python program for every step of your neural
+
+65
+00:06:29,440 --> 00:06:35,160
+network training or inference would be too much. That one is Python can be slow at times,
+
+66
+00:06:35,160 --> 00:06:42,160
+especially compared to optimized C++ or CUDA kernels running on your GPU. And our hypothesis
+
+67
+00:06:42,320 --> 00:06:48,320
+was basically that this overhead didn't matter, at least not then. One reason we didn't think
+
+68
+00:06:48,320 --> 00:06:53,920
+it mattered was that the most common way to train neural networks at the time, still probably
+
+69
+00:06:53,920 --> 00:07:00,920
+true today, is on GPUs. And for your PyTorch or other programs, the Python aspect of your
+
+70
+00:07:01,960 --> 00:07:06,960
+program can run on the CPU while the vast majority of your computations are running
+
+71
+00:07:07,480 --> 00:07:12,760
+in parallel or concurrently on the GPU. So as long as the Python bits of your program
+
+72
+00:07:12,760 --> 00:07:19,760
+are fast enough to keep the GPU fully occupied, then the Python overhead isn't going to matter.
+
+73
+00:07:20,880 --> 00:07:26,100
+And this was true, I think it was particularly true in 2016, 2017, and for the few years
+
+74
+00:07:26,100 --> 00:07:29,540
+following it. But the problem was that GPUs kept getting faster, and they were getting
+
+75
+00:07:29,540 --> 00:07:36,540
+faster quicker than CPUs were getting faster. So it became pretty clear that eventually
+
+76
+00:07:37,480 --> 00:07:42,240
+the speed up in GPUs would mean that the CPUs weren't fast enough, that this overhead would
+
+77
+00:07:42,240 --> 00:07:47,600
+matter because you couldn't keep the GPUs busy enough. So basically from shortly after
+
+78
+00:07:47,600 --> 00:07:51,440
+the release of the first version of PyTorch, the team started looking into ways to add
+
+79
+00:07:51,440 --> 00:07:56,720
+a compiler to PyTorch while still trying to keep the principles that I think made PyTorch
+
+80
+00:07:56,720 --> 00:08:01,800
+successful and popular. Again, I think the most important principle that made PyTorch
+
+81
+00:08:01,800 --> 00:08:07,640
+successful was that it was easy to use. And this was especially important, I think, for
+
+82
+00:08:07,640 --> 00:08:14,640
+AI researchers because more so than people deploying or running inference or deploying
+
+83
+00:08:16,120 --> 00:08:20,680
+models to correction, AI researchers tended to have much more broader use cases and do
+
+84
+00:08:20,680 --> 00:08:27,680
+things that might be less well supported by a static graph paradigm. Of course, we still
+
+85
+00:08:27,680 --> 00:08:34,680
+want PyTorch to be fast. So the goal was can we build a compiler that prioritizes the
+
+86
+00:08:37,120 --> 00:08:42,560
+user experience, particularly the developer experience of someone using PyTorch. I think
+
+87
+00:08:42,560 --> 00:08:46,680
+a lot of people think of these as opposing goals, the ease of use and performance, and
+
+88
+00:08:46,680 --> 00:08:51,320
+that you're making a tradeoff between the two. And in a lot of cases you are. But we
+
+89
+00:08:51,320 --> 00:08:56,280
+really, for this project to succeed, we need to both have something that is easy to use
+
+90
+00:08:56,280 --> 00:09:01,800
+and performant. And I think in practice there's a lot more, like this, the design space isn't
+
+91
+00:09:01,800 --> 00:09:05,760
+one dimensional. It's not just performance and ease of use. There are other places in
+
+92
+00:09:05,760 --> 00:09:09,440
+this design space, different tradeoffs you can make. And I'll come back to this later
+
+93
+00:09:09,440 --> 00:09:13,760
+in the talk about the different sorts of tradeoffs we made that are not strictly ease of use
+
+94
+00:09:13,760 --> 00:09:20,760
+versus performance. So the PyTorch 2.0 API for the compiler is pretty simpler at the
+
+95
+00:09:21,080 --> 00:09:25,160
+user level. It's just torch.compile model, get back a compiled model that you run which
+
+96
+00:09:25,160 --> 00:09:30,000
+is hopefully faster. Under the hood it's doing a lot more. At a high level it's basically
+
+97
+00:09:30,000 --> 00:09:36,160
+doing three things. The first thing is graph acquisition, meaning it's trying to get representation
+
+98
+00:09:36,160 --> 00:09:42,000
+of your program. And it's doing graph lowering. Given the operations that you write in your
+
+99
+00:09:42,000 --> 00:09:46,360
+PyTorch program, it's trying to decompose those into operations that might be better
+
+100
+00:09:46,360 --> 00:09:51,440
+suited for the compiler to optimize or generate code. And finally it's graph compilation,
+
+101
+00:09:51,440 --> 00:09:58,440
+both the optimization step and generating code that's running on your GPU or on another
+
+102
+00:09:58,440 --> 00:10:05,440
+device. This diagram from Sumit's keynote at PyTorch conference I think illustrates
+
+103
+00:10:08,240 --> 00:10:13,720
+the three steps pretty nicely. So as a developer of PyTorch you write a typical program that's
+
+104
+00:10:13,720 --> 00:10:18,640
+doing a series of operations. In this case it's a neural network convolution followed
+
+105
+00:10:18,640 --> 00:10:25,040
+by a batch normalization operation, finally followed by the rectified linear unit. What
+
+106
+00:10:25,040 --> 00:10:28,000
+these are doesn't matter terribly but the important thing is you're writing a Python
+
+107
+00:10:28,000 --> 00:10:33,420
+program, you have a bunch of these calls into the PyTorch API. The graph acquisition means
+
+108
+00:10:33,420 --> 00:10:38,600
+that it's determining what these calls are and converting it into a data flow graph,
+
+109
+00:10:38,600 --> 00:10:42,880
+meaning that the result of one thing flows into the other. And then it's a representation
+
+110
+00:10:42,880 --> 00:10:47,560
+that the compiler knows how to handle. Some of these operations can be broken up into
+
+111
+00:10:47,560 --> 00:10:52,460
+their constituent bits. So for example the convolution operation in PyTorch is both really
+
+112
+00:10:52,460 --> 00:10:57,560
+a convolution plus an extra addition at the end. And breaking those up might provide more
+
+113
+00:10:57,560 --> 00:11:02,960
+opportunities for the compiler. And finally the last step is basically generating the
+
+114
+00:11:02,960 --> 00:11:09,320
+actual code that will run on your GPU. So again graph acquisition is basically trying
+
+115
+00:11:09,320 --> 00:11:16,320
+to do that capture that static graph representation, the representation that's used from the compiler
+
+116
+00:11:18,080 --> 00:11:22,280
+from your dynamic program. Graph lowering is breaking it apart and graph compilation
+
+117
+00:11:22,280 --> 00:11:28,760
+is both the optimization steps and generating the code for your device. This wasn't the
+
+118
+00:11:28,760 --> 00:11:33,800
+first attempt that the PyTorch team had for adding compiler to PyTorch. We actually, it's
+
+119
+00:11:33,800 --> 00:11:40,080
+the third attempt. The first one was torch.trace which work on this I think started around
+
+120
+00:11:40,080 --> 00:11:46,400
+2017, a few months after the first public release of PyTorch. The way the trace compiler
+
+121
+00:11:46,440 --> 00:11:53,440
+worked was you, well first it had a pretty simple API. Like torch.compile it was you
+
+122
+00:11:54,520 --> 00:12:01,520
+added a torch.jit.trace call around the thing that you wanted to compile along with a special,
+
+123
+00:12:01,520 --> 00:12:08,520
+an input that you represented sort of a standard input to your neural network model. The compiler
+
+124
+00:12:09,520 --> 00:12:16,520
+would execute your model line by line and record or trace each of the PyTorch operations
+
+125
+00:12:18,160 --> 00:12:25,160
+that was required to execute the model. And those operations form a graph. One limitation
+
+126
+00:12:25,480 --> 00:12:31,720
+of this is that it only works if your PyTorch neural network model doesn't depend on the
+
+127
+00:12:32,040 --> 00:12:39,040
+input size. For example, it might be common for an image classification neural network
+
+128
+00:12:39,400 --> 00:12:46,400
+model to only process fixed size images. But other applications, for example, segmentation
+
+129
+00:12:46,480 --> 00:12:51,240
+like figuring out where objects are in the image, detection, same sort of thing, or even
+
+130
+00:12:51,240 --> 00:12:58,240
+some language models have inputs that are varying in size. You might have images that
+
+131
+00:12:58,240 --> 00:13:05,240
+are wider or shorter or bigger and you might want to keep those as the original inputs.
+
+132
+00:13:05,320 --> 00:13:09,440
+And torch.jit.trace didn't handle these wells because it assumed that the input that you
+
+133
+00:13:09,440 --> 00:13:16,440
+provided during compilation was the only shape and type of input that it would see. The second
+
+134
+00:13:17,720 --> 00:13:23,040
+attempt at adding a compiler to PyTorch was torch.script. And torch.script still exists
+
+135
+00:13:23,040 --> 00:13:29,120
+in PyTorch as just torch.jit.trace. But to be clear going forward, we think that developers
+
+136
+00:13:29,120 --> 00:13:36,120
+should prefer the torch.compile in PyTorch 2.0 over either torch.script or torch.jit.trace.
+
+137
+00:13:38,160 --> 00:13:43,960
+Torch.script worked a bit differently. Instead of tracing the execution of your PyTorch program
+
+138
+00:13:43,960 --> 00:13:48,840
+sort of operation by operation, it would statically analyze your program and attempt to extract
+
+139
+00:13:48,880 --> 00:13:55,880
+the graph just from static analysis. The other goal was that although torch.jit.trace ignored
+
+140
+00:13:59,400 --> 00:14:04,040
+all the operations that were not PyTorch operations. So for example, if you had a for loop, it
+
+141
+00:14:04,040 --> 00:14:10,160
+wouldn't really work. Or if you had normal sort of Python operations on lists or dictionaries,
+
+142
+00:14:10,160 --> 00:14:14,660
+those wouldn't be captured by torch.jit.trace. Torch.script made an attempt to capture these
+
+143
+00:14:14,860 --> 00:14:19,360
+operations. But this also meant that torch.script kind of ballooned in scope to be more than
+
+144
+00:14:19,360 --> 00:14:25,000
+just a PyTorch compiler, it also ended up being a Python compiler. And this kind of
+
+145
+00:14:25,000 --> 00:14:28,620
+split the effort of the team. The team ended up focusing a lot on trying to support more
+
+146
+00:14:28,620 --> 00:14:33,860
+and more Python features because it's common for authors of neural network models to use
+
+147
+00:14:33,860 --> 00:14:39,260
+a little bit of Python features here and there. And in practice, it required that people that
+
+148
+00:14:39,260 --> 00:14:44,520
+authored PyTorch models either refactor their code to avoid sort of unsupported Python operations
+
+149
+00:14:44,520 --> 00:14:51,520
+or calls into third party libraries that torch.script couldn't really capture. So Dynamo is our
+
+150
+00:14:52,760 --> 00:14:58,720
+third attempt at a PyTorch compiler. And I think it's been fairly successful. It's also
+
+151
+00:14:58,720 --> 00:15:05,720
+traces like torch.jit.trace but with much better support for I think common operations.
+
+152
+00:15:06,520 --> 00:15:12,000
+And one way it does this is by not really trying to be a compiler for everything. Our
+
+153
+00:15:12,000 --> 00:15:17,280
+previous sort of attempts with torch.jit.trace and torch.script really tried to capture the
+
+154
+00:15:17,280 --> 00:15:23,360
+full program graph for your whole neural network. And one of the reasons for this was one is
+
+155
+00:15:23,360 --> 00:15:28,680
+people I think a lot of people thought that Python in production wasn't practical. Another
+
+156
+00:15:28,680 --> 00:15:35,680
+bit was that I think there was a lot of interest in sort of running these models on devices
+
+157
+00:15:36,680 --> 00:15:43,160
+that weren't just CPUs or GPUs. Either upcoming experimental hardware or TPUs or those sorts
+
+158
+00:15:43,160 --> 00:15:47,320
+of things. And those things might not be able to support Python. So the previous attempts
+
+159
+00:15:47,320 --> 00:15:51,800
+had these big efforts of trying to capture your whole program as a graph. And if it couldn't
+
+160
+00:15:51,800 --> 00:15:55,600
+succeed, well then it just didn't work. And that was a real problem because it meant that
+
+161
+00:15:55,600 --> 00:16:02,240
+users had to change the code. Dynamo relaxes a bit this priority on whole graph capture.
+
+162
+00:16:02,240 --> 00:16:07,080
+So while Dynamo still supports whole graph capture, that's not really a priority. And
+
+163
+00:16:07,080 --> 00:16:13,080
+for the common use case, it supports having essentially breaks in your program. What that
+
+164
+00:16:13,080 --> 00:16:18,400
+means is that if you have some Python operation or call into a third party library that the
+
+165
+00:16:18,400 --> 00:16:23,840
+compiler doesn't really know how to handle. It just handles the first bit as one graph.
+
+166
+00:16:23,840 --> 00:16:30,840
+The rest as sort of a black box Python call. And then the remaining PyTorch model as another
+
+167
+00:16:30,840 --> 00:16:34,480
+graph. So you have this break in the graph and you can't really optimize across it. So
+
+168
+00:16:34,480 --> 00:16:40,880
+potentially you give up some performance, but it means that it has much better compatibility.
+
+169
+00:16:40,880 --> 00:16:47,760
+The other bit is that unlike the original trace attempt, it adds a lot of guards to
+
+170
+00:16:47,760 --> 00:16:51,840
+your code to make sure that when things change, the compiler knows about it and that it can
+
+171
+00:16:51,840 --> 00:16:56,840
+recompile if necessary. So for example, if your input sizes change, the program doesn't
+
+172
+00:16:56,840 --> 00:17:02,400
+just fail. It checks that the inputs change or the shapes change and recompiles the program.
+
+173
+00:17:02,400 --> 00:17:06,360
+So again, you might end up giving up some performance when things aren't quite what
+
+174
+00:17:06,360 --> 00:17:10,720
+the compiler hoped for or expected for in terms of extra recompilations, but you no
+
+175
+00:17:10,720 --> 00:17:16,920
+longer give up, your program no longer breaks completely. The way this works is it uses
+
+176
+00:17:17,440 --> 00:17:27,960
+the frame evaluation API from PEP 523. This is a chart showing, a graph showing sort of
+
+177
+00:17:27,960 --> 00:17:34,400
+the normal evaluation of a Python function. So it involves both a Python code object which
+
+178
+00:17:34,400 --> 00:17:39,520
+contains the byte code for Python and the frame object which contains the dynamic execution
+
+179
+00:17:39,960 --> 00:17:46,960
+and the built-in Python interpreter uses these two things to actually execute your function.
+
+180
+00:17:47,960 --> 00:17:53,400
+Dynamo sticks itself in between these using the frame evaluation API. First, it takes
+
+181
+00:17:53,400 --> 00:18:00,400
+the code object and analyzes that function to try and extract a graph of the useful operations.
+
+182
+00:18:01,520 --> 00:18:07,840
+And the form of the graph is called FX which I think predates Dynamo. There's another compiler.
+
+183
+00:18:07,840 --> 00:18:14,840
+In fact, there's multiple compilers for PyTorch 2.0 depending on what sort of device, GPU
+
+184
+00:18:15,000 --> 00:18:24,000
+or CPU or other types of hardware that you're targeting. And the compiler emits both sorts
+
+185
+00:18:24,000 --> 00:18:31,000
+of the code that's going to be executed on, say, your GPU as well as modifications to
+
+186
+00:18:31,160 --> 00:18:36,960
+the Python code object. And these modifications are basically the guards we talked about.
+
+187
+00:18:36,960 --> 00:18:42,040
+So that if the assumptions that the compiler makes, so for example, if your input changes
+
+188
+00:18:42,040 --> 00:18:47,260
+size or shape or data type, the compiler is able to handle that gracefully by recompiling
+
+189
+00:18:47,260 --> 00:18:52,640
+rather than either breaking or giving you an incorrect result. And then finally, these
+
+190
+00:18:52,640 --> 00:18:57,440
+patched objects are handed back to the normal Python interpreter. So it's able to handle
+
+191
+00:18:57,680 --> 00:19:03,440
+all the sorts of typical Python steps that might be part of your model that aren't really
+
+192
+00:19:03,440 --> 00:19:09,840
+captured by a PyTorch program, excuse me, that aren't really part of the PyTorch API.
+
+193
+00:19:09,840 --> 00:19:15,720
+So that's the PyTorch 2.0 compiler. Not quite. The most important bits that I haven't talked
+
+194
+00:19:15,720 --> 00:19:20,780
+about are all the things that happen after Dynamo. One of these important steps that's
+
+195
+00:19:20,780 --> 00:19:27,780
+part of PyTorch is ahead of time autograd. And what that does is for neural network
+
+196
+00:19:28,180 --> 00:19:35,180
+trainings, excuse me, it computes the PyTorch operations that will be needed to back propagate
+
+197
+00:19:38,220 --> 00:19:43,500
+the loss through your model to actually update the weights in your model. And by doing this
+
+198
+00:19:43,500 --> 00:19:50,500
+ahead of time, it's able to provide more opportunities for the compiler to optimize these kernels
+
+199
+00:19:50,980 --> 00:19:56,220
+avoid duplicate code and that sort of thing. And the other really important bit is Torch
+
+200
+00:19:56,220 --> 00:20:03,220
+Inductor. And this is the part of the compiler that generates the code that runs on your
+
+201
+00:20:04,860 --> 00:20:11,520
+GPU. And Torch Inductor leverages OpenAI's Triton. I think Triton is probably the other
+
+202
+00:20:11,520 --> 00:20:18,060
+really important piece that made this compiler a lot more flexible and easier to develop
+
+203
+00:20:18,060 --> 00:20:22,260
+than previous attempts. One of the challenges with some of the previous attempts, especially
+
+204
+00:20:22,260 --> 00:20:28,460
+Torch script, was that large bits of the compiler were written in C++. In particular, they were
+
+205
+00:20:28,460 --> 00:20:31,980
+kind of messy in the way that they integrated into the rest of PyTorch. So it made it both
+
+206
+00:20:31,980 --> 00:20:36,380
+harder for people who work on PyTorch full time to develop, but also it made it a lot
+
+207
+00:20:36,380 --> 00:20:42,340
+harder for people to contribute. And Torch Inductor is a compiler written in Python,
+
+208
+00:20:42,340 --> 00:20:49,340
+which makes it a lot easier both for full time developers of PyTorch as well as external
+
+209
+00:20:55,660 --> 00:20:59,660
+contributors who might not be as familiar with the code base.
+
+210
+00:20:59,660 --> 00:21:06,660
+Finally, I'd like to talk a bit about the results. Can you hear me? Okay. I'll try to
+
+211
+00:21:07,300 --> 00:21:14,300
+avoid the feedback. So one of the reasons I think that this effort was pretty successful,
+
+212
+00:21:15,900 --> 00:21:21,260
+especially compared to previous efforts, was that early on the PyTorch team collected a
+
+213
+00:21:21,260 --> 00:21:25,900
+comprehensive set of benchmarks, basically 80 models in the wild, and used this both
+
+214
+00:21:25,900 --> 00:21:32,020
+for performance measurements, as well as to make sure that the compiler actually works,
+
+215
+00:21:32,020 --> 00:21:36,340
+that it really supports the code that people are writing in the wild. And I think the results
+
+216
+00:21:36,340 --> 00:21:41,860
+as of a few weeks ago is about 93% of these 80 models work out of the box without any
+
+217
+00:21:41,860 --> 00:21:47,820
+changes. And I think the average speed up on A100 GPU is about 43%. And one thing I
+
+218
+00:21:47,820 --> 00:21:52,980
+want to talk about is that even though PyTorch 2.0, even though it's like a version increment,
+
+219
+00:21:52,980 --> 00:21:57,900
+it's backwards compatible. You don't have to use Torch.compile. Everything else works
+
+220
+00:21:57,900 --> 00:22:01,740
+as it did before. All your programs continue to work. So if you've been using PyTorch,
+
+221
+00:22:01,780 --> 00:22:08,100
+I really encourage you to download PyTorch 2.0, try it out. Try out Torch.compile. Let
+
+222
+00:22:08,100 --> 00:22:13,540
+us know if you run into issues, if it works well. We're really interested in that. I also
+
+223
+00:22:13,540 --> 00:22:18,700
+encourage you to consider contributing to PyTorch. It's open source. A lot of development
+
+224
+00:22:18,700 --> 00:22:25,700
+effort from across the community. And yep, this is the contributing page on the GitHub.
+
+225
+00:22:26,700 --> 00:22:33,700
+Finally, a few other resources. Sumit gave a great keynote at the PyTorch 2.0 conference.
+
+226
+00:22:37,780 --> 00:22:44,780
+And we have an active discourse forum on PyTorch, both for support at discuss.pytorch.org,
+
+227
+00:22:46,260 --> 00:22:53,260
+but also on development of PyTorch itself at dev-discuss.pytorch.org. Thank you. And
+
+228
+00:22:53,260 --> 00:23:00,260
+these are a lot of links to PyTorch. If you have questions, please use the microphone
+
+229
+00:23:00,780 --> 00:23:01,780
+in the center of the room.
+
+230
+00:23:01,780 --> 00:23:08,780
+Okay, I got a question for you about optimizations, which is when you were compiling your codebases,
+
+231
+00:23:14,420 --> 00:23:19,460
+where did you notice in the codebases the biggest bottlenecks were coming up, and how
+
+232
+00:23:19,460 --> 00:23:21,660
+did you try to resolve that?
+
+233
+00:23:21,860 --> 00:23:27,540
+Unfortunately, I don't know. Yeah, although I have worked extensively on PyTorch, I have
+
+234
+00:23:27,540 --> 00:23:34,540
+not worked extensively on the compiler and have only returned to PyTorch recently.
+
+235
+00:23:36,540 --> 00:23:43,540
+That would be a great question to take back to the other team folks.
+
+236
+00:23:43,540 --> 00:23:50,540
+Yep, I will do that. Thanks, everyone.
+

@@ -1,0 +1,1188 @@
+1
+00:00:00,000 --> 00:00:04,000
+Welcome to the second session, to the second talk of the session.
+
+2
+00:00:04,000 --> 00:00:09,000
+Our speaker is Paul Gensler, who will be telling us about working with time zones,
+
+3
+00:00:09,000 --> 00:00:15,000
+everything you wished you didn't need to know, and this is the zone info edition of that talk.
+
+4
+00:00:18,000 --> 00:00:23,000
+Hi. So, some of you may have been here in 2019, and you may be thinking,
+
+5
+00:00:23,000 --> 00:00:28,000
+didn't I already see this talk? And the answer is yes, you probably did basically see this talk,
+
+6
+00:00:28,000 --> 00:00:33,000
+because in 2019 I gave a talk with the same title, and there was a similar talk.
+
+7
+00:00:33,000 --> 00:00:39,000
+The difference is in 2019 I also proposed that we added a new module to the standard library,
+
+8
+00:00:39,000 --> 00:00:45,000
+which is called zone info, and that I repartially absolutely did a whole bunch of the talk that I had just given.
+
+9
+00:00:45,000 --> 00:00:50,000
+So, as a victim of my own success, I'm coming back with a second edition to give you some updates
+
+10
+00:00:50,000 --> 00:00:53,000
+about how the time zone landscape has changed in Python.
+
+11
+00:00:53,000 --> 00:00:56,000
+But we've got a lot to cover, and we have 30 minutes to cover it in,
+
+12
+00:00:56,000 --> 00:00:59,000
+so let's jump right into the basics of time zones.
+
+13
+00:00:59,000 --> 00:01:04,000
+So, we'll start with an easy introduction.
+
+14
+00:01:04,000 --> 00:01:07,000
+There's v2c, you can see it's the reference time zone.
+
+15
+00:01:07,000 --> 00:01:10,000
+It's basically the zero against which all offsets are measured.
+
+16
+00:01:10,000 --> 00:01:14,000
+It's mostly monotonic, which is to say it doesn't have daily saving time,
+
+17
+00:01:14,000 --> 00:01:18,000
+but what it does have is leap seconds, which is quite infuriating,
+
+18
+00:01:18,000 --> 00:01:23,000
+but apparently there are many who stop and do their leap seconds,
+
+19
+00:01:23,000 --> 00:01:30,000
+so hopefully in the glorious future UTC will one day measure one second per every second relaxed,
+
+20
+00:01:30,000 --> 00:01:35,000
+which seems like a big ask for a reference time zone.
+
+21
+00:01:35,000 --> 00:01:39,000
+Another concept that is important to know is the difference between time zones and offsets.
+
+22
+00:01:39,000 --> 00:01:41,000
+So, UTC minus 6 is an offset.
+
+23
+00:01:41,000 --> 00:01:45,000
+That means you add six hours to your local time to get UTC.
+
+24
+00:01:45,000 --> 00:01:51,000
+America's Chicago is a time zone, which is to say it's a set of rules for what offsets apply
+
+25
+00:01:51,000 --> 00:01:55,000
+at what times in different regions.
+
+26
+00:01:55,000 --> 00:01:58,000
+In this case, the region would be the one that includes Chicago,
+
+27
+00:01:58,000 --> 00:02:01,000
+and it's just called that because Chicago is the biggest city in that region.
+
+28
+00:02:01,000 --> 00:02:05,000
+Generally speaking, these America slash Chicago things are not good labels.
+
+29
+00:02:05,000 --> 00:02:07,000
+Don't show them to your users.
+
+30
+00:02:07,000 --> 00:02:13,000
+CST refers to an offset, but it's actually a very highly context dependent abbreviation,
+
+31
+00:02:13,000 --> 00:02:17,000
+so the extension of time, that's UTC minus 6,
+
+32
+00:02:17,000 --> 00:02:22,000
+but if you're in Cuba, CST means UTC minus 5, and in China, it's UTC plus 8.
+
+33
+00:02:22,000 --> 00:02:26,000
+So, a word of advice, never rely on these three-letter abbreviations.
+
+34
+00:02:26,000 --> 00:02:27,000
+Don't try and parse them.
+
+35
+00:02:27,000 --> 00:02:33,000
+Don't even rely on them existing because there are a lot of zones that don't have three-letter abbreviations.
+
+36
+00:02:33,000 --> 00:02:35,000
+Okay, so now we've got the basics done.
+
+37
+00:02:35,000 --> 00:02:39,000
+Let's move on to the mandatory part of any time zone talk,
+
+38
+00:02:39,000 --> 00:02:44,000
+where the presenter sort of tells you all about the weird and scandalous stuff
+
+39
+00:02:44,000 --> 00:02:47,000
+that people get up to with their local timekeeping.
+
+40
+00:02:47,000 --> 00:02:54,000
+So, even into it, you may have a friend who thinks that the world is divided up into 24 equal-sized time zones,
+
+41
+00:02:54,000 --> 00:03:01,000
+and each one is one hour apart, but no, not all time zones are one-hour offsets from UTC.
+
+42
+00:03:01,000 --> 00:03:06,000
+In Australia and in India, there are some that are half-hour increments off.
+
+43
+00:03:06,000 --> 00:03:09,000
+In Nepal, there's one that's a sum multiple of 15 minutes,
+
+44
+00:03:09,000 --> 00:03:16,000
+and historically, like in Liberia before 1970, there are even time zones that are not an integer number of minutes off from UTC.
+
+45
+00:03:16,000 --> 00:03:26,000
+So, you may also think that the only time you're going to see an offset change is during like a daylight saving time transition,
+
+46
+00:03:26,000 --> 00:03:32,000
+or you're only going to see a daylight saving time transition that includes a change in offset,
+
+47
+00:03:32,000 --> 00:03:34,000
+but neither of these things is actually true.
+
+48
+00:03:35,000 --> 00:03:39,000
+So, one example of the second one being false is Portugal.
+
+49
+00:03:39,000 --> 00:03:44,000
+In 1992, they decided they wanted to switch over from Western European time to Central European time,
+
+50
+00:03:44,000 --> 00:03:48,000
+and what they did was they waited until they were going off of daylight saving time,
+
+51
+00:03:48,000 --> 00:03:51,000
+so normally, they would set their clocks back one hour.
+
+52
+00:03:51,000 --> 00:03:55,000
+But since they wanted to move over one zone, they just said,
+
+53
+00:03:55,000 --> 00:03:58,000
+it's no longer daylight saving time, but leave your clocks exactly how they are.
+
+54
+00:03:58,000 --> 00:04:01,000
+It's very convenient for humans, maybe less convenient for programmers,
+
+55
+00:04:01,000 --> 00:04:05,000
+assuming that you'll never have a DST switch without an offset change.
+
+56
+00:04:05,000 --> 00:04:12,000
+As an aside, in 1996, they decided that having a sunset after midnight in the summer is maybe not a great idea,
+
+57
+00:04:12,000 --> 00:04:15,000
+so they did the exact same thing in the opposite direction.
+
+58
+00:04:15,000 --> 00:04:22,000
+They just switched back to Western European time without a change in the base offset.
+
+59
+00:04:22,000 --> 00:04:29,000
+So, okay, now we know that base offsets can change, and that they don't have to do multiples of one hour,
+
+60
+00:04:29,000 --> 00:04:34,000
+but you may think that if you're of a zone, it's either got daylight saving time or it doesn't,
+
+61
+00:04:34,000 --> 00:04:38,000
+and if it does, it's going to be two transitions for you, right? One on, one off.
+
+62
+00:04:38,000 --> 00:04:39,000
+Not so fast.
+
+63
+00:04:39,000 --> 00:04:46,000
+In Morocco, since 2012, but in most years, you've seen a pattern like this,
+
+64
+00:04:46,000 --> 00:04:52,000
+where this is an example in 2012, in April, they went on to daylight saving time,
+
+65
+00:04:52,000 --> 00:04:57,000
+and then a couple months later, in July, they just turned off daylight saving time for like one month,
+
+66
+00:04:57,000 --> 00:05:02,000
+and then they went back on daylight saving time for like another month and a half.
+
+67
+00:05:02,000 --> 00:05:07,000
+And this has also happened, you've seen this pattern in Egypt and in Palestine as well,
+
+68
+00:05:07,000 --> 00:05:13,000
+so you can maybe see the trend here, which is that dear all majority Muslim countries,
+
+69
+00:05:13,000 --> 00:05:16,000
+and this month is Ramadan.
+
+70
+00:05:16,000 --> 00:05:20,000
+So during Ramadan, Muslims are not supposed to eat anything until the sun goes down,
+
+71
+00:05:20,000 --> 00:05:25,000
+so all of a sudden, that extra hour you get after work where it's still sunny is not looking too hot,
+
+72
+00:05:25,000 --> 00:05:28,000
+because you just look at the chicken on the roaster and you're like,
+
+73
+00:05:28,000 --> 00:05:31,000
+I really wish it wasn't daylight saving time.
+
+74
+00:05:31,000 --> 00:05:38,000
+So, okay, now we know there can be all kinds of weird stuff around daylight saving time transitions,
+
+75
+00:05:38,000 --> 00:05:41,000
+but at least we can feel confident that these things always happen at like two in the morning, right?
+
+76
+00:05:41,000 --> 00:05:45,000
+We're never going to see some discontinuity in the middle of the day, right?
+
+77
+00:05:45,000 --> 00:05:48,000
+Alas, even this is not true.
+
+78
+00:05:48,000 --> 00:05:54,000
+In 1994, Kiribati, which is an island nation in the South Pacific,
+
+79
+00:05:54,000 --> 00:05:57,000
+decided that they're very close to an international date line,
+
+80
+00:05:57,000 --> 00:06:02,000
+and they decided they wanted to be on another side of the table, presumably to align with their trading partners or whatever.
+
+81
+00:06:02,000 --> 00:06:08,000
+I don't know the details, but the upside is there was just not a December 31st in 1994.
+
+82
+00:06:08,000 --> 00:06:15,000
+It was December 30th, 1159, one minute later, half a million years, 95.
+
+83
+00:06:15,000 --> 00:06:19,000
+And you may think, okay, well, maybe that's just something that happened in the Fart House before.
+
+84
+00:06:19,000 --> 00:06:23,000
+There was like, you know, computers who had weird assumptions about things.
+
+85
+00:06:23,000 --> 00:06:28,000
+But this has also happened more recently in Samoa in 2011.
+
+86
+00:06:28,000 --> 00:06:33,000
+They skipped January 29th, I guess.
+
+87
+00:06:33,000 --> 00:06:35,000
+It's a kind of weird date change.
+
+88
+00:06:35,000 --> 00:06:38,000
+And historically, some places have gone the other way as well.
+
+89
+00:06:38,000 --> 00:06:43,000
+In Roger and Atul in 1969, there were just two September 30th.
+
+90
+00:06:43,000 --> 00:06:49,000
+So, okay, maybe we could say, all right, look, doing savings time can happen at any time,
+
+91
+00:06:49,000 --> 00:06:51,000
+and they're going to be near and different.
+
+92
+00:06:51,000 --> 00:06:54,000
+And any shortage of gas can happen about offset changes.
+
+93
+00:06:54,000 --> 00:06:56,000
+Well, let me just think of time on one thing.
+
+94
+00:06:56,000 --> 00:07:00,000
+If I know someone's location, I know what time zone I am.
+
+95
+00:07:00,000 --> 00:07:03,000
+But I think you guys can see what this is generally.
+
+96
+00:07:03,000 --> 00:07:08,000
+In China, they decided there would be a great idea for it to be one time zone for the whole country.
+
+97
+00:07:08,000 --> 00:07:12,000
+And normally, this is a country that would span like three or four time zones.
+
+98
+00:07:12,000 --> 00:07:17,000
+But they said, you know what, the whole country is UTC plus eight, which works pretty well in Beijing, from what I gather.
+
+99
+00:07:17,000 --> 00:07:22,000
+But in Xinjiang, which is way over here in the west, this sunrise is at like 4.30 in the morning.
+
+100
+00:07:22,000 --> 00:07:24,000
+And I guess the locals don't love that.
+
+101
+00:07:24,000 --> 00:07:27,000
+So on trains and the post offices and everything run by the government,
+
+102
+00:07:27,000 --> 00:07:32,000
+runs at UTC plus eight, the locals use UTC plus six.
+
+103
+00:07:32,000 --> 00:07:41,000
+And according to Wikipedia, the main difference about whether you choose to use UTC plus eight or UTC plus six
+
+104
+00:07:41,000 --> 00:07:46,000
+is whether you're part of the Uyghur minority who use UTC plus six
+
+105
+00:07:46,000 --> 00:07:47,000
+or the Han majority.
+
+106
+00:07:47,000 --> 00:07:51,000
+So I suppose you could say that it's like a racial time zone.
+
+107
+00:07:51,000 --> 00:07:58,000
+And that if you know someone's location in their ethnicity, you know what their time zone is.
+
+108
+00:07:58,000 --> 00:08:00,000
+All right. So, okay, I scared you.
+
+109
+00:08:00,000 --> 00:08:05,000
+And you might be asking yourself, why do we need to work with time zones at all?
+
+110
+00:08:05,000 --> 00:08:07,000
+Can't we just like use UTC for everything?
+
+111
+00:08:07,000 --> 00:08:15,000
+And the answer is that no, you can't, because UTC is not a natural abstraction for most of the world.
+
+112
+00:08:15,000 --> 00:08:17,000
+It's not a great time zone for most of the world.
+
+113
+00:08:17,000 --> 00:08:20,000
+And also, the world actually does have daylight saving time in it,
+
+114
+00:08:20,000 --> 00:08:24,000
+and people run their schedules based on when the sun is overhead.
+
+115
+00:08:24,000 --> 00:08:29,000
+So in the real world, if you want to do something like generate a bunch of day times
+
+116
+00:08:29,000 --> 00:08:35,000
+that represent close of business in New York, it's very convenient to be able to say,
+
+117
+00:08:35,000 --> 00:08:39,000
+hey, here's this R rule, and I want it to be every day, Monday through Friday at 5 o'clock,
+
+118
+00:08:39,000 --> 00:08:42,000
+and then I'll just attach this New York time zone to it.
+
+119
+00:08:42,000 --> 00:08:46,000
+And you'll get this list of things, and you'll see that seamlessly,
+
+120
+00:08:46,000 --> 00:08:52,000
+your UTC offset changes from minus 5 to minus 4 at some point in your sequence.
+
+121
+00:08:52,000 --> 00:08:58,000
+If you wanted to do this in UTC, you'd be like, oh, okay, we'll close the business for sometimes 10 o'clock UTC,
+
+122
+00:08:58,000 --> 00:09:02,000
+but sometimes it's 9 o'clock UTC, and when does this real transition happen?
+
+123
+00:09:02,000 --> 00:09:07,000
+I don't know, maybe I need a set of rules for when that would happen in the next time zone, right?
+
+124
+00:09:07,000 --> 00:09:13,000
+And I think, okay, well, we really have to work with time zones when we're doing this humans,
+
+125
+00:09:13,000 --> 00:09:17,000
+but can we at least just store everything in UTC? Should we not think about it?
+
+126
+00:09:17,000 --> 00:09:22,000
+And again, I'm sorry to be a bearer of that news, but you can't do that either,
+
+127
+00:09:22,000 --> 00:09:26,000
+because what you care about is the wall time.
+
+128
+00:09:26,000 --> 00:09:30,000
+I'm going to have a meeting in Lebanon at 2 o'clock, right?
+
+129
+00:09:30,000 --> 00:09:35,000
+And everyone's scheduled around 2 o'clock because lunch is at 12 and all these things.
+
+130
+00:09:35,000 --> 00:09:39,000
+If you take that meeting at 2 o'clock, you can store the new database as you can see,
+
+131
+00:09:39,000 --> 00:09:47,000
+and then, as really happens, they change when daily saving time is on like three days notice.
+
+132
+00:09:47,000 --> 00:09:54,000
+All of a sudden, when you try and look up what's the local time for whatever UTC you start,
+
+133
+00:09:54,000 --> 00:09:58,000
+it's now a different value. It's not 2 o'clock, it's 1 o'clock, it's 3 o'clock, or something like that,
+
+134
+00:09:58,000 --> 00:10:01,000
+because the mapping between UTC and local time is not stable.
+
+135
+00:10:01,000 --> 00:10:08,000
+What you need to care about is the abstraction that most closely matches what you're trying to represent.
+
+136
+00:10:08,000 --> 00:10:14,000
+So, okay, now we've established the elections, like, oh, understanding the abstractions you're working with,
+
+137
+00:10:14,000 --> 00:10:19,000
+let's get into how Python's time zone abstractions actually work.
+
+138
+00:10:19,000 --> 00:10:25,000
+So, Python's time zone model is based around this TZN focus. It's an abstract-based class,
+
+139
+00:10:25,000 --> 00:10:32,000
+and the idea is that it represents a set of rules for mapping wall time, the time on the calendar and on the clock,
+
+140
+00:10:32,000 --> 00:10:36,000
+to a series of off-racks that will let you translate to UTC.
+
+141
+00:10:36,000 --> 00:10:39,000
+It has three models, which are all function of the daytime.
+
+142
+00:10:39,000 --> 00:10:44,000
+There's TZN, which gives you that three-letter abbreviation, or on Windows, sometimes it's something longer,
+
+143
+00:10:44,000 --> 00:10:47,000
+but it basically has something human readable.
+
+144
+00:10:47,000 --> 00:10:53,000
+UTC Offset, which does almost all the heavy lifting, that will give you a time delta of your offset to UTC.
+
+145
+00:10:53,000 --> 00:10:58,000
+And then there's this DSD method, which you can use to find out if their java time is in effect or not,
+
+146
+00:10:58,000 --> 00:11:01,000
+and it will also tell you how much the DST is.
+
+147
+00:11:01,000 --> 00:11:06,000
+I will tell you that I have never seen anyone use this in a way that I would not consider a mistake.
+
+148
+00:11:06,000 --> 00:11:13,000
+So, if you're finding yourself calling DSD and it's not just for some compatibility layer reason,
+
+149
+00:11:13,000 --> 00:11:17,000
+you've probably made a mistake, so just don't use that one.
+
+150
+00:11:18,000 --> 00:11:24,000
+Alright, so, historically, that was pretty much what you've got in Python.
+
+151
+00:11:24,000 --> 00:11:31,000
+In Python 2.3, they say, here is an interface, but we don't want to deal with implementing rules for you.
+
+152
+00:11:31,000 --> 00:11:34,000
+You're supposed to always sort of figure out, according to your business logic,
+
+153
+00:11:34,000 --> 00:11:38,000
+what's the best way that it represents time zones, and you're maybe supposed to do something like this, I guess,
+
+154
+00:11:38,000 --> 00:11:43,000
+where you have a class that represents system time and it has its set of rules.
+
+155
+00:11:43,000 --> 00:11:50,000
+But, if you think about it, there are really only three kinds of time zones that the vast majority of people want to look at.
+
+156
+00:11:50,000 --> 00:11:53,000
+One is UTC, or fixed-offense, thereof.
+
+157
+00:11:53,000 --> 00:11:58,000
+The other is local time, which is like whatever time it is on your laptop or something.
+
+158
+00:11:58,000 --> 00:12:06,000
+And the third one is IMA time zone database, which is basically that America, Chicago, America, New York kind of thing.
+
+159
+00:12:06,000 --> 00:12:12,000
+And the first one is actually like super easy, because just, you know, just kind of a fixed time zone, right?
+
+160
+00:12:12,000 --> 00:12:18,000
+So that was added early on in 3.2, but these other two, it turns out to be a little bit trickier.
+
+161
+00:12:18,000 --> 00:12:24,000
+And to explain why, I have to have a little digression and talk about ambiguous times.
+
+162
+00:12:24,000 --> 00:12:29,000
+So ambiguous times are times where the same wall time occurs twice.
+
+163
+00:12:29,000 --> 00:12:37,000
+So like when you set your clock back one hour, right, it'll be 2 o'clock, or like 1.59,
+
+164
+00:12:37,000 --> 00:12:42,000
+and then you go back one hour, and then it's 1.59 again about an hour later, right?
+
+165
+00:12:42,000 --> 00:12:50,000
+And you'll notice that in this list here, I have two 1.30s, and their main difference is the offset, right?
+
+166
+00:12:50,000 --> 00:12:53,000
+That's what differentiates those two times on the timeline.
+
+167
+00:12:53,000 --> 00:13:01,000
+But if you recall, D-time's model is that it has a time zone, like a feasible object,
+
+168
+00:13:01,000 --> 00:13:06,000
+that's taking as a function just the wall time, just the naive portion of the daytime, right?
+
+169
+00:13:06,000 --> 00:13:14,000
+So it's actually impossible to disambiguate these two things, because they're differentiated only by the output of the function, right?
+
+170
+00:13:14,000 --> 00:13:19,000
+And this is a fundamental problem. It's a flaw that existed in PCNF.
+
+171
+00:13:19,000 --> 00:13:25,000
+And then there's the complement of this, which is a lot easier to solve, which is called imaginary times.
+
+172
+00:13:25,000 --> 00:13:28,000
+And these are basically times that don't exist in the given time zone.
+
+173
+00:13:28,000 --> 00:13:35,000
+So it's like when you jump forward one hour, anything that's in that gap, it's still quite ambiguous what the offset should be.
+
+174
+00:13:35,000 --> 00:13:42,000
+So that one's easier to solve, because these things don't exist, rather than existing twice.
+
+175
+00:13:42,000 --> 00:13:44,000
+But you still have to deal with them.
+
+176
+00:13:44,000 --> 00:13:50,000
+But you may be saying to yourself, well, given Pi2G exists for like 10 years, and no one used it very profitably,
+
+177
+00:13:50,000 --> 00:13:55,000
+how did Pi2G solve it? Maybe we can solve it the same way.
+
+178
+00:13:55,000 --> 00:13:57,000
+And Pi2G did have a solution to this.
+
+179
+00:13:57,000 --> 00:14:04,000
+But unfortunately, the thing is that Pi2G's time zone model is actually fundamentally different than daytime's.
+
+180
+00:14:04,000 --> 00:14:16,000
+Because instead of Pi2G giving you time zones that embody a set of rules and then lazily construct time deltas for your offets and things like that,
+
+181
+00:14:16,000 --> 00:14:22,000
+what Pi2G is doing is that its time zones are basically factories for daytime.
+
+182
+00:14:22,000 --> 00:14:28,000
+So what you're supposed to do is you create one of these time zone objects, and then you call the localize method on it,
+
+183
+00:14:28,000 --> 00:14:30,000
+and then you pass it a value daytime.
+
+184
+00:14:30,000 --> 00:14:36,000
+And then what it does is it will eitherly calculate the offset and the TG name and the DST,
+
+185
+00:14:36,000 --> 00:14:40,000
+and then it will create a fixed offset zone and attach that to your daytime.
+
+186
+00:14:40,000 --> 00:14:48,000
+So basically, Pi2G is giving you a separate static offset for each daytime you do.
+
+187
+00:14:48,000 --> 00:14:52,000
+And this lets it handle the ambiguous and imaginary times, right?
+
+188
+00:14:52,000 --> 00:14:57,000
+Because it can then take in as a parameter to its localize something like E of DST,
+
+189
+00:14:57,000 --> 00:15:02,000
+and if you pass it false, and it is ambiguous, then it chooses that there is a daytime side.
+
+190
+00:15:02,000 --> 00:15:05,000
+If you pass it true, it chooses this STD side.
+
+191
+00:15:05,000 --> 00:15:09,000
+And if you pass it non-zero for an error, right?
+
+192
+00:15:09,000 --> 00:15:17,000
+So, and it's able to differentiate between these two because it'll just give you a different object.
+
+193
+00:15:17,000 --> 00:15:19,000
+But there are problems with this, right?
+
+194
+00:15:19,000 --> 00:15:24,000
+For one thing, you actually do need to do that localize step.
+
+195
+00:15:24,000 --> 00:15:29,000
+If you directly attach one of these time zones to your daytime, if you pass it to the constructor,
+
+196
+00:15:29,000 --> 00:15:33,000
+it's going to give you this weird, wrong answer, right?
+
+197
+00:15:33,000 --> 00:15:39,000
+It's going to give you this LNQ's local mean time that some non-integer number of hours away.
+
+198
+00:15:39,000 --> 00:15:44,000
+And then, and a lot of people don't realize this and then they have bugs in their code.
+
+199
+00:15:44,000 --> 00:15:48,000
+Similarly, if you can daytime arithmetic on them, like you add 180 days or something,
+
+200
+00:15:48,000 --> 00:15:51,000
+and now you pass the DST transition,
+
+201
+00:15:51,000 --> 00:15:57,000
+the way daytime is expecting you to do this is it does the calculation and then it attaches the same TZ info to the output.
+
+202
+00:15:57,000 --> 00:16:03,000
+But since these are static and Python 2 has no option to recalculate anything,
+
+203
+00:16:03,000 --> 00:16:07,000
+this means that you have to do something to do that recalculation.
+
+204
+00:16:07,000 --> 00:16:09,000
+So it has this normalize method.
+
+205
+00:16:09,000 --> 00:16:14,000
+And again, a lot of people don't know that you have to do this, and they don't call it normalize, and it causes bugs.
+
+206
+00:16:14,000 --> 00:16:19,000
+So the ergonomics of this are not great, and so that wasn't going to be the solution.
+
+207
+00:16:19,000 --> 00:16:27,000
+The solution that they hit on in Python 3.6 was to just add an extra bit of information to the naive portion of the data,
+
+208
+00:16:27,000 --> 00:16:29,000
+and that's the fold attribute.
+
+209
+00:16:29,000 --> 00:16:32,000
+So the idea is that you have this extra fold attribute,
+
+210
+00:16:32,000 --> 00:16:38,000
+and then you can use it to specify which side of an ambiguous transition you want to be on.
+
+211
+00:16:38,000 --> 00:16:42,000
+And then you can use the info to just read the fold, to detect when it's in this situation,
+
+212
+00:16:42,000 --> 00:16:50,000
+and if it is, it will return different values for those three methods, depending on what the value of fold is.
+
+213
+00:16:50,000 --> 00:16:56,000
+And in this case, the way it works is that fold equals zero is the first instance of the ambiguous time,
+
+214
+00:16:56,000 --> 00:16:59,000
+and fold equals one is the second instance.
+
+215
+00:16:59,000 --> 00:17:04,000
+And that's actually a little bit different than the way Py2D does it, because Py2D is DST.
+
+216
+00:17:04,000 --> 00:17:08,000
+So what they're doing is they're saying, if it was an ambiguous time,
+
+217
+00:17:08,000 --> 00:17:12,000
+you get to select whether you want to be on the DST side or the STD side.
+
+218
+00:17:12,000 --> 00:17:17,000
+What 10495 or the fold attribute is doing is it's saying,
+
+219
+00:17:17,000 --> 00:17:26,000
+okay, if it was an ambiguous time, do we keep the offset that was set up right before the transition or right after the transition?
+
+220
+00:17:26,000 --> 00:17:31,000
+And it turns out this one is a little bit easier to implement, and also it's more well defined,
+
+221
+00:17:31,000 --> 00:17:37,000
+because as we learned earlier, sometimes these transitions happen because of the change in base offset,
+
+222
+00:17:37,000 --> 00:17:41,000
+so you have standard time on both sides or daylight time on both sides,
+
+223
+00:17:41,000 --> 00:17:47,000
+and it's unclear what you would do if you are trying to figure out which one is DST and which one is not.
+
+224
+00:17:47,000 --> 00:17:52,000
+Whereas with fold, it's unambiguous. You just say, what was it before, what is it after,
+
+225
+00:17:52,000 --> 00:17:56,000
+and then shift accordingly what your results are.
+
+226
+00:17:57,000 --> 00:18:02,000
+Okay, so this allows you to start implementing those other contentions I talked about,
+
+227
+00:18:02,000 --> 00:18:04,000
+local time and animation.
+
+228
+00:18:04,000 --> 00:18:12,000
+And it turns out a lot of people don't know this, but we've already had local time support in daytime for quite a while,
+
+229
+00:18:12,000 --> 00:18:16,000
+basically since 3.6, the fold attribute just works,
+
+230
+00:18:16,000 --> 00:18:23,000
+but the thing is it was done sort of sneakily where naive datetimes, which is to say something without a time zone,
+
+231
+00:18:23,000 --> 00:18:29,000
+now represent local time in any situation where you need to convert them to UTC.
+
+232
+00:18:29,000 --> 00:18:33,000
+So you can call it .times.tmp on them, you can call it .as.timezone on them, and it will work.
+
+233
+00:18:33,000 --> 00:18:38,000
+It will just assume that your naive time is the local system time.
+
+234
+00:18:38,000 --> 00:18:44,000
+And I have a blog post in here, why naive times are local times, which explains the full convoluted reasoning,
+
+235
+00:18:44,000 --> 00:18:50,000
+why this is actually probably the best way you can do this instead of having some piece of info up it that represents local time.
+
+236
+00:18:50,000 --> 00:18:57,000
+But the key takeaway here is that there's also this sort of .tikz-like interface here,
+
+237
+00:18:57,000 --> 00:19:03,000
+where if you want to know not just some calculation that happens on local time,
+
+238
+00:19:03,000 --> 00:19:10,000
+but you want to specifically know what the offset is, you can call .as.timezone with no argument or with none as an argument,
+
+239
+00:19:10,000 --> 00:19:17,000
+and it will attach a fixed time zone to the result so that you can query and use it in any UTC offset.
+
+240
+00:19:17,000 --> 00:19:24,000
+But you're not supposed to do math on that kind of thing. You're supposed to do math on the naive time and then call it .as.timezone as necessary.
+
+241
+00:19:24,000 --> 00:19:34,000
+But still, we still didn't have INA time zones at least as of Python 3.8, and the reason for that has to do with the data.
+
+242
+00:19:34,000 --> 00:19:46,000
+So I've mentioned INA a whole bunch of times, and what I'm referring to though is this database that is kind of under the umbrella of the Internet Assigned Numbers Authority,
+
+243
+00:19:46,000 --> 00:19:55,000
+weirdly. And basically this is just a database that you probably all use if you're using any kind of time zone data anywhere.
+
+244
+00:19:55,000 --> 00:20:03,000
+It provides a bunch of historical time zone information going back at least to 1970 and in many places much further back than that.
+
+245
+00:20:03,000 --> 00:20:12,000
+It's public domain. A lot of operating systems ship it. But the key issue is that it has like between 2 and 21 releases per year.
+
+246
+00:20:12,000 --> 00:20:17,000
+So it gets released on average more frequently than there are months that have 30 days in them.
+
+247
+00:20:17,000 --> 00:20:22,000
+So like, isn't that some weird edge case that you're going to have to deal with?
+
+248
+00:20:22,000 --> 00:20:34,000
+And that kind of release cadence doesn't work very well with Python's yearly release cadence, much less with the kind of cadence at which most deployments of Python are upgrading their Python.
+
+249
+00:20:34,000 --> 00:20:39,000
+We don't really want to tie your time zone source to your Python version.
+
+250
+00:20:39,000 --> 00:20:46,000
+So the solution we hit on for this was to basically make this a bring your own data situation.
+
+251
+00:20:46,000 --> 00:20:52,000
+So zone info will look for the Python database on your system if it's available.
+
+252
+00:20:52,000 --> 00:21:00,000
+And there's a whole bunch of, like it knows the well-known deployment locations. There's a whole bunch of ways to customize those if you have it in a non-standard location.
+
+253
+00:21:00,000 --> 00:21:14,000
+And then also if you're on a platform like Windows that doesn't really have a standard place for a deploy this stuff, you can, we've added a PC data packet on a PyPI, which I made sure is up to date.
+
+254
+00:21:14,000 --> 00:21:22,000
+And so if you have a library or something and you know you need PC data and you might have users on Windows, then you can have a dependency on PC data.
+
+255
+00:21:22,000 --> 00:21:28,000
+And that will act as a fallback. So if system data is available, zone info will use that.
+
+256
+00:21:28,000 --> 00:21:33,000
+If it's not available and you have PC data installed, it will pull it from the fallback packet.
+
+257
+00:21:33,000 --> 00:21:46,000
+So the thing is, now that we have zone info, there's, oh sorry.
+
+258
+00:21:46,000 --> 00:21:54,000
+So now basically if you're using any supported version of Python, like you can use zone info.
+
+259
+00:21:54,000 --> 00:22:04,000
+We have a backport that goes back to 3.6. And the way you use this is the same way that the daytime docs will tell you to use time zones.
+
+260
+00:22:04,000 --> 00:22:11,000
+You can just attach it directly to the constructor and it'll localize. You can do dot replace. You can use as time zone. You can do arithmetic.
+
+261
+00:22:11,000 --> 00:22:23,000
+But the thing is, it turns out that all these years everyone's been using Python2z, the nature of Python2z's time zone model has been sort of hiding some of the counter-intuitive semantics that you can use.
+
+262
+00:22:23,000 --> 00:22:39,000
+Semantics that you would normally see in Python D times. And we're seeing more and more bugs where people are just, it turns out D times interface is a little less, is a little more counter-intuitive than you would expect.
+
+263
+00:22:39,000 --> 00:22:47,000
+And to illustrate that, I thought I would bring up this bug report that came into date detail years and years ago, which was very fun to debug.
+
+264
+00:22:47,000 --> 00:23:00,000
+So someone said, okay, this date, March 25th at 1 AM in London, if I create this object and I convert it to a time zone and I convert it back, you know, it's basically like putting UTC in back.
+
+265
+00:23:00,000 --> 00:23:15,000
+But D times don't compare equal. That seems weird, right? And even weirder, if I create a new instance of the London time zone and I compare those, it does compare equal.
+
+266
+00:23:15,000 --> 00:23:28,000
+And even weirder than that, those two things that differentially compare equal to F, they compare equal to each other. So they have this non-transitive relationship, which is very strange, right?
+
+267
+00:23:28,000 --> 00:23:36,000
+And the first thing that I got as to how to debug this was when I realized that this is actually an imaginary time, it didn't exist in London.
+
+268
+00:23:36,000 --> 00:23:46,000
+So Y and Z, they can't represent the original daytime that we passed in, right? It can't be 1 AM because it can't go from UTC to an imaginary daytime.
+
+269
+00:23:46,000 --> 00:23:55,000
+So what's happening is that that gets converted to some real time in UTC and then back to whatever the actual existing time is in London.
+
+270
+00:23:55,000 --> 00:24:03,000
+And then this brings up the question of what does it mean for two daytime to be equal to each other? Because there's actually two very good candidates.
+
+271
+00:24:03,000 --> 00:24:12,000
+One is wall time semantics, where you only compare the part of the dependent, it's the clock in the calendar, right? The night of the first one of the daytime.
+
+272
+00:24:12,000 --> 00:24:18,000
+And in that situation, X should not equal Y or Z, and Y and Z should equal each other, right?
+
+273
+00:24:18,000 --> 00:24:26,000
+The other option is absolute time semantics, where you convert everything in UTC before you do the comparison. In that case, all three of these are equal.
+
+274
+00:24:26,000 --> 00:24:31,000
+But neither of these patterns is what we see in the actual result, right?
+
+275
+00:24:31,000 --> 00:24:46,000
+So the other hint that we need to see to explain why this is happening is that X and Y use the exact same object as their time zone, and X and Z have different objects as their time zone.
+
+276
+00:24:46,000 --> 00:24:55,000
+So the actual semantics of a where daytime and time timex time are that when two daytime are in the same zone, you use wall time semantics.
+
+277
+00:24:55,000 --> 00:25:01,000
+But when they're in different zones, it makes no sense to compare their wall times, right? So you have to convert them to UTC first.
+
+278
+00:25:01,000 --> 00:25:10,000
+And the key here is that you only consider two daytime to be the same zone if they have the same TZ and TZ object, if it's the exact same object.
+
+279
+00:25:10,000 --> 00:25:22,000
+So this solves the mystery, right? Because we have wall time semantics for X equals Y, we have absolute time semantics for X equals Z, and then we have wall time semantics again for Y equals Z, but it wouldn't matter either way.
+
+280
+00:25:22,000 --> 00:25:36,000
+Incidentally, this really informed how zone info was designed because we didn't really want this confusing situation where sometimes you get wall time semantics and sometimes you get absolute time semantics.
+
+281
+00:25:36,000 --> 00:25:42,000
+So zone info is guaranteed to give you the same object every single time if you pass it the same T.
+
+282
+00:25:42,000 --> 00:25:48,000
+So if you pass an American New York to a new constructor or you just pass around an American New York object, it's going to be the same object.
+
+283
+00:25:48,000 --> 00:26:12,000
+You'll always get wall time semantics. And there is an analogous problem with arithmetic, right? Because when you're going over a daily saving time transition, you can either have wall time semantics where you say, just give me the same time tomorrow if you're out in 24 hours, or you could say, give me how much time has elapsed, like absolute time, in UTC.
+
+284
+00:26:12,000 --> 00:26:28,000
+And these may be two different values. And there's a sort of similar dichotomy here where daytime really likes to use wall time semantics. So when you're adding the time delta, it says, oh, that's the same zone operation, so we'll use wall time.
+
+285
+00:26:28,000 --> 00:26:39,000
+And if you're subtracting two date times, if they're in the same zone, we'll use wall time semantics. And if they're in different zones, again, the person makes first use wall time semantics, so we'll switch to absolute time.
+
+286
+00:26:39,000 --> 00:26:52,000
+And I have a blog post that goes into detail about why this isn't as crazy as it sounds. But unfortunately, like most people, we really, really, really don't think that should be the case. They are constantly reporting it as a bug.
+
+287
+00:26:52,000 --> 00:27:10,000
+So what I recommend is that you define some little helper functions like this that just take your operands and convert them to UTC before doing the operations on them. And then you can get absolute time semantics, regardless of whether they're same zone or different zone or whatever.
+
+288
+00:27:10,000 --> 00:27:24,000
+Okay, so I don't want to presume that just because it's in a standard library, you're going to want to use zone info. And also, maybe it's going to be quite a bit of a migration. So I thought I would give you a couple of benefits of why you should use zone info.
+
+289
+00:27:24,000 --> 00:27:42,000
+For one thing, there's kind of a really big bug that's coming up and is already here in some senses with TZ data, because they have a more recent format that allows for transitions which are beyond 32 bits.
+
+290
+00:27:42,000 --> 00:27:56,000
+So after the year 2048, anything that's not updated to the new UTC data format will just not have transitions anymore. So ITZ is in that boat. Data retails for now, but probably will be fixed at some point.
+
+291
+00:27:56,000 --> 00:28:11,000
+But also, this is becoming more of an issue because there's this new Sling format that pushes that deadline back to the past now. So if you have Sling TZ data format, if you're not using zone info, you'll get no transitions in the US.
+
+292
+00:28:11,000 --> 00:28:24,000
+Also, zone info is incredibly fast because it was written in C and these other things are written in Python. So on pretty much every benchmark I could find, zone info is faster. So you don't have to give up any speed.
+
+293
+00:28:24,000 --> 00:28:47,000
+So if you're going to migrate from PyKeyz, if you have any public facing interface that returns PyKeyz zones, you should be aware that is the breaking change that's reached to zone info. Because your users may be expecting you to have a time zone exposed that has localized and normalized methods and whatever PyKeyz specific interface is.
+
+294
+00:28:47,000 --> 00:29:02,000
+So this may be a little bit of a problem for you. To help with that, I've created this third party library PyTZ Deplication Scheme. And the way this works is that it's a mostly backwards compatible implementation of PyTZ's interface.
+
+295
+00:29:02,000 --> 00:29:26,000
+But it's also just a thin wrapper around zone info. So it works just fine like a zone info zone. But it also exposes PyTZ's interface. And if anyone uses any of the PyTZ specific stuff, it raises the duplication one. So the only warning here is that there are some changes in the way arithmetic semantics work here.
+
+296
+00:29:26,000 --> 00:29:50,000
+So I would recommend looking at this migration guide, whether or not you use it. Because it's actually, I've been told it's a quite good migration guide in general for the exact details. But this might be very useful, especially if you have a big code base. You can just swap out all your PyTZ zones for something like this and then start raising errors whenever you see this duplication warning. And then you can start pulling out all the PyTZ specific stuff.
+
+297
+00:29:50,000 --> 00:30:00,000
+Okay, so there's my talk. Hopefully you are more informed about PyTZ zones now. And you can go out there and write some code that works pretty much everywhere around the globe.
+

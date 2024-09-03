@@ -1,0 +1,640 @@
+1
+00:00:00,000 --> 00:00:10,000
+Good afternoon everyone. Today we have with us Kaido Vardhan who is a long time partner
+
+2
+00:00:10,000 --> 00:00:16,000
+in the Cagodemna Pash. He is going to deliver an interesting talk titled A Cancer in India
+
+3
+00:00:16,000 --> 00:00:24,000
+Thank you very much. Thank you.
+
+4
+00:00:24,000 --> 00:00:34,000
+Good afternoon everyone. I am aware I am the last one to do the launch so I will try to keep this on schedule.
+
+5
+00:00:34,000 --> 00:00:40,000
+Yes, I will talk a little bit more about myself. As mentioned I am Andrew Godwin. I currently am a principal engineer working at Ashfamania.
+
+6
+00:00:40,000 --> 00:00:46,000
+I am a former engineer at Ashfamania. We are the main maintainers and provide your air flow services.
+
+7
+00:00:46,000 --> 00:00:54,000
+So that is kind of like my day job. And then for the last too many years, at least in a day, I have been working on gender stuff.
+
+8
+00:00:54,000 --> 00:01:00,000
+So gender and decorations was my first big thing. I am general planners and those things have been my whole reason for being.
+
+9
+00:01:00,000 --> 00:01:08,000
+The more I make this talk I think is I have been working on distributive systems since around 2007, 2008.
+
+10
+00:01:08,000 --> 00:01:18,000
+It has been one of the things we learned to go along. I think a lot of us understand that things are built by experience a lot of the time in this part of the industry.
+
+11
+00:01:18,000 --> 00:01:28,000
+I am going to start this talk with a bold statement. I feel there is not many single statements you can make about building complex distributive systems.
+
+12
+00:01:28,000 --> 00:01:38,000
+But here is my. I believe there are only two good ways to build them. One is to make them sort of event driven by cues and message passing.
+
+13
+00:01:38,000 --> 00:01:44,000
+We will talk about that in a second. And the second one is one that I want to talk about mainly, which is what I call the classification loop.
+
+14
+00:01:44,000 --> 00:01:53,000
+Often also called control loop or similar, which is a different model we will walk through here. And I think anything else is probably not a good idea.
+
+15
+00:01:53,000 --> 00:01:59,000
+But let's first of all talk about what good means. Because there is a very specific meaning of good here.
+
+16
+00:01:59,000 --> 00:02:14,000
+A lot of people as they are building systems, they have to write them quickly. Like you see a lot of framework aims like ah yes, you can turn out pages and pages or screens and screens really fast.
+
+17
+00:02:14,000 --> 00:02:22,000
+That to me is not a measure of good news necessarily. I focus at this point much more on maintainability and reliability.
+
+18
+00:02:22,000 --> 00:02:30,000
+I want the system to not hate me after the AM much more than I want to ship it like a ship five screens this week.
+
+19
+00:02:30,000 --> 00:02:35,000
+Right. I want it to be stable and trustworthy. And to me that is a measure of what a good system is.
+
+20
+00:02:35,000 --> 00:02:41,000
+It is one that lets you move relatively fast, let you innovate within the sphere of company's doing.
+
+21
+00:02:41,000 --> 00:02:50,000
+But also you can deploy it and then you can deploy it at 5pm on a Friday and just go home and be like yeah, it's lovely, it's all great, but you don't worry about it.
+
+22
+00:02:51,000 --> 00:03:05,000
+The second thing here is as well, like we talked about the physical systems, right? I think a lot of people when they hear this phrase, they think yes, it's going to be this gigantic like big company like Google or Facebook sales system.
+
+23
+00:03:05,000 --> 00:03:16,000
+Like there is no other way to build a thing like that. And that's somewhat true, but I would suggest to you there are multiple reasons you have to build a system.
+
+24
+00:03:16,000 --> 00:03:31,000
+A lot of people will claim it is due to that first reason, due to the size, right? Like this is physically incapable of fitting all of this system into you know, let's say more than one as the optimal size of what a ship system is.
+
+25
+00:03:31,000 --> 00:03:38,000
+Sure, there is some companies fall into that bucket. I think a lot more companies follow calm ways of all.
+
+26
+00:03:38,000 --> 00:03:50,000
+And what they are doing is building a system that is distributed because of their team structure, right? Like I'm sure you've all worked on a project where you've got 10 or 20 or 30 engineers all trying to get in one small code base.
+
+27
+00:03:50,000 --> 00:04:06,000
+You do get too many cooks in the kitchen at that point. I think it's a very valid reason, and I was wondering if people would admit this, to build systems and separate components because we have separate teams and manager structures and separate you know, judges of what completion means and that kind of thing.
+
+28
+00:04:06,000 --> 00:04:16,000
+And then beyond that, and it's kind of a similar reason, there's distributed due to federation, where like the different components just don't exist within the same company or organisation.
+
+29
+00:04:16,000 --> 00:04:28,000
+Another example of this we'll talk about later is the Fedifers or MasterDoll. It is by its nature, a set of components not controlled by the same entity. It has to be distributed just due to the way it's run.
+
+30
+00:04:29,000 --> 00:04:49,000
+And in many ways, my interest is in these last two categories. For BigBigScale, that's a whole different architectural engineering challenge. I am not really here to talk about that. There are better people to talk about that. I mostly deal with medium sized systems in these other two categories, and that's the one I want to talk about today.
+
+31
+00:04:50,000 --> 00:05:10,000
+And now, the other thing of course, when I talk about distributed systems, is I'm sure most of you will think of something like this. When you build microservices, the microservices all call each other via a series of increasingly complicated APIs. Maybe using HTTP, maybe you're using GRTC.
+
+32
+00:05:10,000 --> 00:05:33,000
+By the way, you have a graph that looks probably like this, but there's like a hundred boxes at some point with allos going everywhere. This is, I think, one of the worst happens you can do. People talk about not having a single point of failure. The problem is every allo in this diagram is a point of failure. And good luck monitoring, debugging and keeping an eye on every single one of those allos.
+
+33
+00:05:33,000 --> 00:05:57,000
+In my opinion, a system design is mostly defined by failure methods, right? When you look at this diagram, I just see a lot of different failure methods. Because the heavy ease connectedness of it, like often you'll find these are like real time. So like, there are things where you call the other service and you expect a response within let's say two seconds, and it's all built to expect that everything is working perfectly.
+
+34
+00:05:57,000 --> 00:06:26,000
+And it's great when it's working. It's very responsive. The journey's quite quick. It's kind of easy to understand for us sometimes, essentially, because it kind of maps to important functions to summarise and call them. But of course, as soon as you get met with failure, or even worse, you know what, slow down, if there's no one ever really that's for, it really finds itself stuck in a nut. Because let's say the network connection is up, but it's just not quite working for a process of 10 seconds to get a response. That whole system is just stuck in a nut.
+
+35
+00:06:27,000 --> 00:06:48,000
+And that's what's going to come about very very quickly. So, what are the other options? Let's start with, I think, the ones in your column. So I call event driven or message passing. This is generally the one, I've seen a lot of good companies, I think it's actually a very different system, we'll talk about the pros and cons in a second.
+
+36
+00:06:48,000 --> 00:07:17,000
+But the idea is that you kind of have what I described a minute ago with these separate microservices, right? But instead of having them talk to each other directly, you have queues in the way. Everything, if it creates events, and in the midst of the events, comes a queue. There can be one queue, there can be many, this diagram is somewhat contrived. But then the things that look for the events consume a lot of the queue. And none of the components ever talk to each other directly. What this gets to you is the ability for the queue to kind of be that buffer. If the network slows down, it's going to be a buffer.
+
+37
+00:07:18,000 --> 00:07:28,000
+If the network slows down, it's fine, there's a queue in the way. If you need to redeploy one of the services at either end, it's fine, the queue will absorb the difference. It's there to be your persistent layer to do stuff.
+
+38
+00:07:29,000 --> 00:07:46,000
+Now, the one problem here I think is that not a lot of us use queues a lot in our day to day life. I think there's maybe a little bit of deception there for if you write Go, obviously Go has channels of passing Python, hopefully we'll see as well. But those are different.
+
+39
+00:07:46,000 --> 00:08:06,000
+In memory queues, I have a wonderful guarantee that they generally deliver a message exactly once. No network queue delivers a message exactly once. People have claimed it, I've gone to look at these claims, they almost never have that on description, if they do, it's because I didn't post the claims that it doesn't really help in my opinion.
+
+40
+00:08:06,000 --> 00:08:24,000
+So, if you think about queues, if you think about these two different classes of queues, there are the app-mostly queues. These are queues that when the queue or network fails, you will lose messages. So, the classic example of this is something very basic like just sending you the e-packs, right?
+
+41
+00:08:24,000 --> 00:08:37,000
+This is kind of a queue in the US, but you're going to lose messages. And generally you'll find systems like this where, yes, there are basic queues, but they're going to drop messages one time, a thousand, ten thousand, a million, and so on.
+
+42
+00:08:37,000 --> 00:08:52,000
+Then the other classic queues is the at least once queues. These are more interesting, I think, for the systems to run. These are queues where in case of failure you get the message twice or more. And character is one of the most known examples of queues like this.
+
+43
+00:08:52,000 --> 00:09:02,000
+The difference generally is how you acknowledge messages. So, in an at least once queue, you will take the message, consume it, and acknowledge it. And if you fail to acknowledge, somebody else will take the message.
+
+44
+00:09:02,000 --> 00:09:19,000
+And, of course, these two different queues involve different claim elements. Both of them can back up and have backlogs. You know how to go and you're like, I'll choose what I guarantee, because you have to go like you have more consumers, and slash the queue down. Not too bad, generally very easy to deal with, I'd say.
+
+45
+00:09:19,000 --> 00:09:32,000
+And then you have two different failure modes each time. So for at least once queues, you'll get big bugs. Let's say, let's say, it's ten years down, you can wind the queue back and slash forward again and just have the messages come out.
+
+46
+00:09:32,000 --> 00:09:41,000
+And because you're expecting to get the queues, when you fail your queue, but over another chapter it's fine, you're going to pick up the queues, get to those.
+
+47
+00:09:41,000 --> 00:09:51,000
+If you have, like in the most once queue, is it's hard to keep overflows and you start losing messages. But again, you should be building these.
+
+48
+00:09:51,000 --> 00:10:09,000
+The point is though, neither of these is really powerful. A lot of the things you deal with when you build systems around queue structure, you saw, is that queues are good, but you've got to really tightly understand how they work and bake it into the core assumptions of how to write in the code.
+
+49
+00:10:09,000 --> 00:10:16,000
+Now I would generally recommend you use patented once queues, they're nearly always the right choice for most things the average person does.
+
+50
+00:10:16,000 --> 00:10:26,000
+And what that means is if you're doing things that are not like in present, for example, if you are charging someone money, you need a separate thing at the receiving end of the queue to de-de-de-de-defect.
+
+51
+00:10:26,000 --> 00:10:33,000
+Right, be like, oh, we've seen this transaction before, we've already charged this. I've got a whole set of like de-de-de-defect and data fields.
+
+52
+00:10:34,000 --> 00:10:47,000
+So it puts a lot of architects to build well and there are some weird ways you can fail, and it's the best way you can get things to go in de-de-defect, you can end up saving a million dollars twice, charging people money twice, you know, some bad, failing ways in there.
+
+53
+00:10:47,000 --> 00:10:53,000
+But let's talk about what I'm really here to talk about, which is the reference that you actually call control loop.
+
+54
+00:10:53,000 --> 00:10:59,000
+So this is the other kind of way I like to build a system, and it's very different as you can see.
+
+55
+00:10:59,000 --> 00:11:16,000
+Whereas queues have a lot of separate components talking to each other over a series of sort of intermediary data stores, in the reference configuration loop you have a single central point of truth in this disabled database, but it could be any data store, right, it would have to be a relation database.
+
+56
+00:11:16,000 --> 00:11:24,000
+And the idea is you have lots of separate components that will talk to the central data store and all those components are currently stimpers.
+
+57
+00:11:24,000 --> 00:11:33,000
+And all they do is look at this store to see what needs fixing, reference file that has one of the most evaluation loops and come back around again.
+
+58
+00:11:33,000 --> 00:11:43,000
+Let's go for a build a good work example. On the screen is, and I apologize, in Kubernetes maintenance room, a very bad example of what Kubernetes looks like internally.
+
+59
+00:11:43,000 --> 00:11:48,000
+Kubernetes is one of the most famous examples of a reference to the Asian control loop.
+
+60
+00:11:48,000 --> 00:12:03,000
+The way it works is you have all these different components, kube-kubles from the user talks through the database, kube-libs of course, on the nodes talks there, and the pod in the client controllers are actually kind of in one process, but that's a separate concept.
+
+61
+00:12:03,000 --> 00:12:22,000
+This dive into the bronze course in Kubernetes there is actually a separate API server that then talks to the SCD, the database, but you can think of them as the same thing, right, here the API server is kind of acting as the data store interface, there's not really a distinction in my mind.
+
+62
+00:12:22,000 --> 00:12:28,000
+But let's walk through how Kubernetes, for example, can handle new deployments, and I'm afraid we'll go over everything else.
+
+63
+00:12:28,000 --> 00:12:35,000
+If I go to Kubernetes and say I want a new deployment, I'm going to need deployment object in SCD, that's all I do.
+
+64
+00:12:35,000 --> 00:12:48,000
+Then, remember, every other component is going around their own neural reference in the ocean. The deployment controller goes around this loop, it says oh, there's deployment here, this deployment doesn't have any pods on it.
+
+65
+00:12:48,000 --> 00:13:03,000
+And it knows that the correct action to reconcile this is to make a pod for deployment, so it makes the pod for deployment, which that needs an SCD, it's reconciled, its job is done, and it can clear a notice loop and does everything else, and then it's out of the picture.
+
+66
+00:13:03,000 --> 00:13:18,000
+After that, the pod controller goes oh, well now there's a pod, and the pod doesn't have any nodes or something in it, and so its job goes oh yes, well I need to reconcile this, and I know how to reconcile this, I will take the pod and assign it to a node.
+
+67
+00:13:18,000 --> 00:13:23,000
+It does that, puts it in, its job is done, it needs to go around its loop, and it's out of the picture.
+
+68
+00:13:23,000 --> 00:13:35,000
+And finally, Cooper on the node, and they say oh, well I've got a pod, it's fine to me, but it's not running, and so its action to reconcile this is to go down a view and just fill up the pod.
+
+69
+00:13:35,000 --> 00:13:44,000
+Obviously, it's simplified, it's a bit more complex, it's been through the assembly, but you see the idea, right, each component knows about a very small sphere of proof.
+
+70
+00:13:44,000 --> 00:13:57,000
+They all look after one thing, and they do their job with that sphere. At no point does the performing controller really understand that nodes exist, right, it's not really that there's labels and things like that, it's not really part of the same system.
+
+71
+00:13:57,000 --> 00:14:03,000
+All of these different components are just going around their loop, looking at one thing, resolving it, and moving on.
+
+72
+00:14:03,000 --> 00:14:18,000
+And this is kind of a principle-pined reconsideration, the idea you have all these totally set for its focused components, they all do those specific set of actions that you can understand, that you can really predict even, and that you can work on and debug for a reason.
+
+73
+00:14:18,000 --> 00:14:26,000
+Now you might say, angry, but dive round, there's a single central point of failure, the SQL is out, shall you, and I really like that.
+
+74
+00:14:26,000 --> 00:14:40,000
+My reasoning for this is, if you tell me you put my SRE hat on, you've got one thing you have to keep up with all the costs, I'll be like, one? Only one of them? This is fantastic, like always fine, give me all this stuff, right?
+
+75
+00:14:40,000 --> 00:14:55,000
+That's honestly the easiest thing, and if that thing is, you know, a relation database that's trustworthy like Postgres, or even a distributed store like S&D that people understand, it's generally relatively easy thing, like you can set up monitoring, you can make sure it's healthy, but like, looking after one thing,
+
+76
+00:14:55,000 --> 00:15:07,000
+with very high attention, is a very easy thing to do in the modern tech world, there's a lot of tools for this. So if that's sort of, you know, the good part is how to make a sale.
+
+77
+00:15:07,000 --> 00:15:17,000
+Well the interesting thing is, like, if you think about how this is going to work, like there's a couple of things you can do, is that generally you're losing either one of the processes, building the loops, or a network connection using that process to your data store.
+
+78
+00:15:18,000 --> 00:15:27,000
+In the case that that happens then, well, it just slows down stuff, right, like the things moving that part of the base store along isn't going anywhere.
+
+79
+00:15:27,000 --> 00:15:42,000
+And so, yes, it becomes a little bit unavailable almost, but one of the things about security is that if all the stuff in commit has stopped working, you wouldn't immediately notice, because all the parts are still working, right?
+
+80
+00:15:42,000 --> 00:15:59,000
+So if you have a control loop in store for like five seconds, you wouldn't really mind too much in most cases. So they have this nice graceful failure mode where they slow down and they stop, and then obviously you also don't have the relevant piece of the loop back up again.
+
+81
+00:15:59,000 --> 00:16:14,000
+But generally, it's pretty easy to deal with. On the other side it is too, right, like, because those controllers, the things pointing to the base store are stateless, it actually becomes very easy to run more than one copy of them.
+
+82
+00:16:14,000 --> 00:16:24,000
+Like, by its very nature, right, like there's no space inside it, and you can kind of ask if you can deploy a new version for the design, so why not run by 10, 20 copies of it?
+
+83
+00:16:24,000 --> 00:16:37,000
+And in many ways, like this is the secret to the design, right? Like, again, I'm trying to build medium scale systems here, I'm not going to build them at Google, but it's nice to have an architecture that by its design forces really good patterns.
+
+84
+00:16:37,000 --> 00:16:44,000
+I think that's kind of the point of a good architecture in many ways, is to not give it away too much, but give you a good base to build upon.
+
+85
+00:16:44,000 --> 00:16:55,000
+And with a system like this, you can do that. You have that, you make a build with, like, well, you know that each controller has about a single set of, like, tables or even states of tables.
+
+86
+00:16:55,000 --> 00:17:06,000
+We know how to scale them, if you even monitor the performance metrics, and then if you eventually want to go really big, you have got a place where you can carve out and put the queue in if you've got the picture correctly.
+
+87
+00:17:07,000 --> 00:17:17,000
+But let's talk about this in more practical terms here. So the first thing I'd like to look back here is Tappenheim, which is my Activity Hub, Shreddyverse, slash, Macedon server.
+
+88
+00:17:17,000 --> 00:17:32,000
+Now, this has been doing, I think, since about December last year. It's got a reasonable point, right? Like, it's this, you know, it does all the main things expect of, and that's not the mic. It integrates. It does pictures, it does polls, even.
+
+89
+00:17:32,000 --> 00:17:46,000
+But the thing that belies the whole of Macedon, Shreddyverse is what line-cutting means. It is not many of these analysis we might think unless you've done this before, and I think the representation is how badly these are correct.
+
+90
+00:17:46,000 --> 00:17:59,000
+I was going to say, behind this event-driven system, right, remember at the top I said one of the reasons for the two decisions is federation. This is forced on the way this works, right, if you're not familiar.
+
+91
+00:17:59,000 --> 00:18:15,000
+The way Macedon, Shreddyverse works is there's loads of separate servers. People have accounts on those servers, and they can post much like Twitter. And if you follow somebody on a different server, and then that person posts, their server will forward yours to the rest of their page in a single timeline.
+
+92
+00:18:15,000 --> 00:18:31,000
+It's all kind of happening behind the scenes. The very simplified diagram is not everything you'd like to see on the slide here. The client will post it to their server. Their server has the tool that you just own a few or behind.
+
+93
+00:18:31,000 --> 00:18:50,000
+One of the complex things about Shreddyverse is that let's say that you have a user with 100 followers on 100 different servers. You have to make 100 different connections to send that post to everyone. It's called fan-out, usually. It's kind of like taking the post and spreading it to all the followers.
+
+94
+00:18:50,000 --> 00:19:10,000
+Generally you'd have that on a separate system with your own few inside. That fan-out system talks across the internet to the destination server, calls for the inbox, but that inbox can't do things. It's all kind of silly because the image will be like, oh, we have to get the hashtags out of this post and look at the images and download them and thumbnail them and all these activities.
+
+95
+00:19:10,000 --> 00:19:28,000
+So there's another key where you can post this in your own post and eventually they'll be able to avoid it. All of this is very complicated. If you want to hear more about this, I'm going to leave you with the best text today. That's not the point of this particular talk. What I did in this particular talk is I used keys from a lot of that to create new background workers.
+
+96
+00:19:28,000 --> 00:19:44,000
+Obviously there are two things I mentioned here. You need to do the fan-out, you need to press the image post, and there are other things as well. For example, you need to go and set the user profiles occasionally to make sure that the changes that you miss messages for come through.
+
+97
+00:19:44,000 --> 00:19:57,000
+Takehari actually pings other servers every day or so to make sure they're still up. If they're not up, you kind of slow down and stop sending them to me, things like that. All of this, you go, well, what we build is a problem.
+
+98
+00:19:57,000 --> 00:20:14,000
+The master DOM itself is built upon a pretty standard key system, kind of the Ruby privilege of writing celery, if you will. It is interesting. It's often the baying of every avenue, every street, it's a backslot and it gets refused. I kind of didn't want to do that.
+
+99
+00:20:14,000 --> 00:20:30,000
+Of course, what they built was a reconciliation loop system. Specifically, I combined that with a state machine. This is an example of our state machine for the post object in the site I've had, which is the tweet or the tweeters we've got.
+
+100
+00:20:30,000 --> 00:20:46,000
+There are certain states. States have intervals to try them on, and a few markings, because those are what we're selling them to. The whole idea is every single state has a new function that runs if you're in that state, but what if you couldn't forget the next one?
+
+101
+00:20:46,000 --> 00:20:59,000
+This is an example of criticism. For example, if you delete a post, which is the top example on the slide, we have to then send that relation out to every single person who follows you, so you can find it in their templates as well.
+
+102
+00:20:59,000 --> 00:21:12,000
+What this does is it's kind of a reconciliation loop. There's a big loop, it talks to a state or a public, and it goes and finds things in a state and then sends them and reconciles them, and each of these methods here is the reconciliation function.
+
+103
+00:21:12,000 --> 00:21:28,000
+If you can run this function and get through the return value here, you progress to the next state and it's completely reconciled. Here you can see the user post, we go through all the targets as in your followers, we make fan out things for them, which is a record frame, you should be able to see them.
+
+104
+00:21:28,000 --> 00:21:43,000
+And then you can see the rest of the stuff. Editing is very similar, there's a crash text up on there. I'm going to go through all this here. It's inside the code base, if you go through it more there, I'll have to talk about it later in the conference as well.
+
+105
+00:21:43,000 --> 00:21:59,000
+But in some cases, you don't have to have almost a classic system like the QGIS one where you've got this object in it. Here, rather than saying this controller is used for this object, we say this controller looks kind of at each state of an object, like each function.
+
+106
+00:21:59,000 --> 00:22:14,000
+Sure, they can all run the same process, but one of the things we do is go like, oh, actually I want one of the posts handling to happen in these workers, and I want one of the user handling in the authority on this little button there that's in the QGIS.
+
+107
+00:22:14,000 --> 00:22:23,000
+Because generally people care when posts do not go in the timeline, but you don't care if their friends buy them and it's like a week out, so you never pay out of place these things.
+
+108
+00:22:23,000 --> 00:22:35,000
+So that's one example, it's a little bit mixed up. The other one here on the present is Airflow. So obviously Airflow is kind of like a dead job, and one of the things we do is try and look for ways to improve it.
+
+109
+00:22:35,000 --> 00:22:47,000
+And Airflow has two main ways of running tasks. There's a key, the lesson executor, which runs on pods, generally pretty good, its main problem is latency of pods, half of the discussion.
+
+110
+00:22:47,000 --> 00:23:00,000
+And so there's a celery, again, it's a key, celery is a key, and fortunately celery is quite a good key for what it's designed for, but its idea of tasks and Airflow's idea of tasks are quite different.
+
+111
+00:23:00,000 --> 00:23:08,000
+Which is just about trying to find a way to keep, to kind of work in what a celery has, to do it with more of a reconciliation.
+
+112
+00:23:08,000 --> 00:23:19,000
+And so we've got one, and it's called, it's almost called the main line, it's from a runtime executor, I mean, to have a program that's stellar because it gives you the last times.
+
+113
+00:23:19,000 --> 00:23:27,000
+And it kind of looks a bit like, especially the form, right? Like you have tasks, it's just an Airflow, it's like, I want to run this function, that's what Airflow does, right?
+
+114
+00:23:27,000 --> 00:23:39,000
+And then the scheduler goes, oh yes, this is run, and then you handle that executor, and these actually goes to the database and then some workload entry and says, yes, this task input needs to run, and then it just stops.
+
+115
+00:23:39,000 --> 00:23:50,000
+And then it truly runs, it controls, there is an allocator, and there is a runner. The allocator, its job is to take those workloads and assign them to the correct runner.
+
+116
+00:23:50,000 --> 00:24:03,000
+The runner's job is to, I don't know if you find, run tasks. And so you have a new workload, and it has a new runner assigned, and the allocator goes, oh, guess which loop? I found a workload with no runner.
+
+117
+00:24:03,000 --> 00:24:14,000
+It goes and looks at the runners, they're currently alive, it looks at the workload, it tries to do the best map for like resource usage, assigns it, its job is done, it's recognized, handed off.
+
+118
+00:24:14,000 --> 00:24:22,000
+The runner similarly says, oh, there's a workload to my name in it, I'm not doing it. Much like Hymbrick in my example there, takes it, runs it, and stops it up.
+
+119
+00:24:22,000 --> 00:24:32,000
+This is interesting because not only is it an R experience, easily, back in the celery, it's much more observable. You can see it any given time, what's the fate of the workload doing.
+
+120
+00:24:32,000 --> 00:24:43,000
+And also you can recover much more easily to the face if there's no queue to flush, right? Like, yes, we have a central data store, but Airflow already has to have one of those anyway, where Airflow requires a lot of data.
+
+121
+00:24:43,000 --> 00:24:55,000
+So, if there's no data store, there's no data required anymore for this. So that's kind of the intrusion of that.
+
+122
+00:24:55,000 --> 00:25:02,000
+Obviously the pattern applies to a lot of things, right, but I want to kind of just spend the last few minutes here talking about how you should build these.
+
+123
+00:25:02,000 --> 00:25:16,000
+So, let's have a look at that. Firstly, it's very, very tempting to go and put fate elsewhere. You have to go as tricky as self. All fate should be in one, maybe two central stores.
+
+124
+00:25:16,000 --> 00:25:25,000
+So, you get the service and there's no good recovery, if yes, that helps, but caching is a page in the hospital. The caching violation is very, very tricky.
+
+125
+00:25:25,000 --> 00:25:35,000
+And generally what I would do is I have like an API server, a database model, like Cometi has, and give you caching, sort of the logic right there, right at the top.
+
+126
+00:25:35,000 --> 00:25:45,000
+You also need no service-to-service communication. It's very tempting to go, ah, I can just get a little bit more latency if we have this service cause other service and then speed it up.
+
+127
+00:25:45,000 --> 00:25:54,000
+Technically, if that is a totally optional communication, it's fine, but again, I feel good archery ball and how do you do the right thing, right?
+
+128
+00:25:54,000 --> 00:26:03,000
+The right thing here is to, you know, go put an event or change a table in a data store, whatever, and then wait for it. It will be more latent.
+
+129
+00:26:03,000 --> 00:26:10,000
+If it wasn't a training system, you shouldn't be doing this by the way, right? There are a few things where if latency is important, this is not quite normal for you.
+
+130
+00:26:10,000 --> 00:26:16,000
+But you can probably deal with like point two seconds of latency, and at that point, it's going to be fine.
+
+131
+00:26:16,000 --> 00:26:23,000
+Finally, the key thing here is the controllers should be very simple loops. Generally they should be of the form while through.
+
+132
+00:26:24,000 --> 00:26:30,000
+Crew they're to basically find things that are in my reconciliation path, like things that I can do stuff to.
+
+133
+00:26:30,000 --> 00:26:36,000
+Go through to them and reconcile them. Sleep for maybe like, you know, point one seconds. Not used to be up at any key point in time.
+
+134
+00:26:36,000 --> 00:26:43,000
+Like that's how you do it. There's not a lot to them and that's kind of one of the other big advantages is they don't use a test and we get back to it.
+
+135
+00:26:43,000 --> 00:26:52,000
+Because if you do not do that at all, you're probably just running, right? Like a lot of our tests for all the stuff I do are mostly like, yeah, we set up in the right thing.
+
+136
+00:26:52,000 --> 00:26:58,000
+They just run all the real code, but no real injection apart on that. And then you just look at the result and state and then it's correct.
+
+137
+00:26:58,000 --> 00:27:02,000
+It's very easy to define the contract this stuff runs by.
+
+138
+00:27:02,000 --> 00:27:15,000
+The other nice thing is, whilst self-healing is kind of like a misleading word, it isn't in self-heal. If you've got a thing like Kubernetes say that you tell, hey, keep six copies of this controller money,
+
+139
+00:27:15,000 --> 00:27:22,000
+generally it's going to do the right thing and it will survive the most like network, like machine death or out of memory errors.
+
+140
+00:27:22,000 --> 00:27:29,000
+Because everything is in the data store and it's a single point of truth, as I mentioned again, like everything else is kind of flexible.
+
+141
+00:27:29,000 --> 00:27:36,000
+Everything else is careful about the impact, right, as the phrase goes. So you kind of have to properly, as long as you keep it good on a database,
+
+142
+00:27:36,000 --> 00:27:42,000
+keep it good back up so that you have that before too. It can see through the line more massively.
+
+143
+00:27:42,000 --> 00:27:51,000
+You're mainly down to, I think it's this flowness, or it runs for fault, and you almost never get those results. That was a nice design output by me.
+
+144
+00:27:51,000 --> 00:27:57,000
+There are of course downfalls, right, like as I kind of hinted before, maximum scale is a big challenge.
+
+145
+00:27:57,000 --> 00:28:02,000
+This model just doesn't work on some level of scale. That's the only scale that you can use that.
+
+146
+00:28:02,000 --> 00:28:12,000
+It's more complicated, that's the trend now. I personally think that a lot of systems, like this will pop out pretty high numbers in most of the systems, right, more than you ever want.
+
+147
+00:28:12,000 --> 00:28:20,000
+And generally what I do is I build systems such that I can run multiple versions of the whole system alongside each other and show other values.
+
+148
+00:28:20,000 --> 00:28:29,000
+And so you kind of have this extra state group. That is a big downside, right, like you're going to have this single central point of free put.
+
+149
+00:28:29,000 --> 00:28:38,000
+As I mentioned here on the slide, one of the things I do when I sort of sit down as the public system helps is I ask for low bound performance and I'll have the upper bound performance.
+
+150
+00:28:38,000 --> 00:28:46,000
+It's very important to me because yes, we do not expect to go above say 10 million requests per second per service, right.
+
+151
+00:28:46,000 --> 00:28:51,000
+Knowing both limits, such as design architecture, that is easy to write as well as being scalable.
+
+152
+00:28:52,000 --> 00:29:02,000
+As I mentioned, the desktop will be a bottleneck. You will be also going to be shocked at how fast even like a pad post-processing store is on modern hardware.
+
+153
+00:29:02,000 --> 00:29:10,000
+If you tweak it, you can get like 14 to 500 layers of performance out of like one machine.
+
+154
+00:29:10,000 --> 00:29:20,000
+You can go a very very long way with a big machine these days. And as long as you're not overusing transaction and using your cables, right, these things all still kind of work out.
+
+155
+00:29:20,000 --> 00:29:30,000
+I do want to end here by saying I'm not saying you should use this. It seems to be fine. They are great. They are complex. They work at scale.
+
+156
+00:29:30,000 --> 00:29:41,000
+But they are hard to get back sometimes and they're fairly majorly weird. They do feel good about them and please remember, as an all-gods expert, there is no universal solution.
+
+157
+00:29:41,000 --> 00:29:53,000
+I can spend an entire day telling you all-day perfect ideas. That's not true. It's the fear of finding out it's the worst you can find them out and crucially understanding how they fail so you can seek very scientific solutions.
+
+158
+00:29:53,000 --> 00:29:55,000
+And with that, I'll say thank you very much.
+
+159
+00:29:55,000 --> 00:29:57,000
+Thank you.
+
+160
+00:30:06,000 --> 00:30:14,000
+Thank you, Andrew. That was an amazing talk. So if you have more questions, please you can leave the speaker at off stage.
+

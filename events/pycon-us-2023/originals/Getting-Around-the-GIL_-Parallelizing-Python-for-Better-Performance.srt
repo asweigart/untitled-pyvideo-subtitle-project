@@ -1,0 +1,1580 @@
+1
+00:00:00,000 --> 00:00:06,000
+Okay, we're going to go ahead and get started with our first talk of the afternoon block,
+
+2
+00:00:06,000 --> 00:00:12,000
+Getting Around the Guild, Paralyzing Python for Better Performance with Ali Faridzadeh.
+
+3
+00:00:12,000 --> 00:00:22,000
+Thanks, guys. Hi, everyone. Thank you for being here today. My name is Ali, and I am the Director
+
+4
+00:00:22,000 --> 00:00:27,000
+of Solution Engineering and Platform at Bluebelt AI, the high-performance computing platform for
+
+5
+00:00:27,000 --> 00:00:33,000
+Python and SQL. A little bit about me. I live in Houston, Texas, in my right-hand
+
+6
+00:00:33,000 --> 00:00:39,000
+computer room. I started coding about 20 years ago, same time as PyCon's first. Then 10 years
+
+7
+00:00:39,000 --> 00:00:46,000
+ago, I wrote my first team fellow world with Python, and today I'm presenting at a 20th
+
+8
+00:00:46,000 --> 00:00:52,000
+Python conference coincidentally right on my birthday. So thank you. So I want to take a
+
+9
+00:00:52,000 --> 00:00:57,000
+selfie with you all. I'm not supposed to be taking my birthday with you. So if you don't mind.
+
+10
+00:00:57,000 --> 00:01:09,000
+So I have to get the lights out somehow, but anyway. One, two, three. Thank you. Okay. So
+
+11
+00:01:09,000 --> 00:01:17,000
+here, I'm going to take all of this. I'm going to take this picture. This about me is in
+
+12
+00:01:17,000 --> 00:01:22,000
+the next thing in this two-hour flow of career, journey and education and et cetera. Today I'm
+
+13
+00:01:22,000 --> 00:01:27,000
+going to talk about various ways to get around the GIL, the global interpreter lock, which
+
+14
+00:01:27,000 --> 00:01:32,000
+prevents Python from running on multiple CPUs, as you know. It is okay to take pictures if you
+
+15
+00:01:32,000 --> 00:01:37,000
+like in the slide. You have a lot of the special stuff that I do, like jumping to the
+
+16
+00:01:37,000 --> 00:01:43,000
+verizenda. I will talk a little bit about what is the GIL, a little bit deep. And then solutions
+
+17
+00:01:43,000 --> 00:01:49,000
+to get around the GIL. Some examples. I get some questions. If not, I'm going to stay around
+
+18
+00:01:49,000 --> 00:01:56,000
+for more questions. So there have been a couple of sessions about the GIL in this conference.
+
+19
+00:01:56,000 --> 00:02:03,000
+So by now you probably know about the global interpreter lock. And it is a mechanism using
+
+20
+00:02:03,000 --> 00:02:09,000
+C-Python implementation of Python Texture that only one thread can execute Python bytecode at
+
+21
+00:02:09,000 --> 00:02:15,000
+a time. This means that even in a multi-predic application, only one thread can execute Python
+
+22
+00:02:17,000 --> 00:02:23,000
+code at any given moment. But it would likely take advantage of all CPUs in our machines, right?
+
+23
+00:02:23,000 --> 00:02:29,000
+To accelerate the execution, I would use a compute class. So let's talk about the real world
+
+24
+00:02:29,000 --> 00:02:35,000
+use case. For a small data unit, not a lot. Because here I need to text maybe less than a minute
+
+25
+00:02:35,000 --> 00:02:41,000
+to finish the job. But for larger data, which is not the case in enterprises and even
+
+26
+00:02:41,000 --> 00:02:47,000
+mid-sized, small-sized companies, it's my character that I like. So let's talk about one use case.
+
+27
+00:02:47,000 --> 00:02:53,000
+Let's say you have an application. It requires 500 TB RAM. You will take an R524H storage in the
+
+28
+00:02:53,000 --> 00:02:59,000
+memory optimization between a Samsung and AWS for about $6 per hour. It provides you with
+
+29
+00:02:59,000 --> 00:03:05,000
+760 TB RAM and it also gives you 48 physical cores or CPUs. Let's say this job takes about one hour
+
+30
+00:03:05,000 --> 00:03:11,000
+on Python to run. And the frequency of the job is just one time per day. If you do the math,
+
+31
+00:03:11,000 --> 00:03:17,000
+this job alone is about $1. And the frequency of the job is just one time per day.
+
+32
+00:03:17,000 --> 00:03:23,000
+The frequency of the job is just one time per day. If you do the math, this job alone will cost you
+
+33
+00:03:23,000 --> 00:03:29,000
+around $200 per year. And normally in companies, there is not just one job, there are thousands of jobs
+
+34
+00:03:29,000 --> 00:03:35,000
+running. So that's why companies are spending millions of dollars on just AWS. AWS is happy,
+
+35
+00:03:35,000 --> 00:03:43,000
+but maybe not your CFO. Is there any CFO in this room? Anyone in charge of finances in this room?
+
+36
+00:03:43,000 --> 00:03:51,000
+Okay, I'm glad. So yeah, I'm not too happy with this waste of money. But really, it would be nice
+
+37
+00:03:51,000 --> 00:04:01,000
+if you can reduce the cost to just $45 per month. I'm taking advantage of all the 48 CPUs that
+
+38
+00:04:01,000 --> 00:04:09,000
+this instance gives you. Of course it would be nice. So let's get a little bit deeper. Why this
+
+39
+00:04:09,000 --> 00:04:15,000
+happens actually? Why this happens in Python? In order to understand why Python behaves this way,
+
+40
+00:04:15,000 --> 00:04:21,000
+we need to understand how Python manages its memory. It's all about memory. Obviously whenever you
+
+41
+00:04:21,000 --> 00:04:27,000
+create a variable in Python, Python needs to create it in the computer's memory. As with all
+
+42
+00:04:27,000 --> 00:04:33,000
+memory-managed languages, Python needs to know when the variable is not needed anymore so it can
+
+43
+00:04:33,000 --> 00:04:39,000
+remove it from the memory. Python achieves this by a method called reference counting. What is it?
+
+44
+00:04:39,000 --> 00:04:45,000
+Basically for every variable that Python stores in memory, it also stores a tally of how many
+
+45
+00:04:45,000 --> 00:04:51,000
+objects are referencing that variable. As long as the reference count for any variable is greater
+
+46
+00:04:51,000 --> 00:04:58,000
+than zero, fine, Python will keep that variable around. When that number hits zero, that means no more
+
+47
+00:04:58,000 --> 00:05:04,000
+objects need that variable. The garbage collector removes the object from memory automatically.
+
+48
+00:05:04,000 --> 00:05:09,000
+That's why people say you may not need to explicitly call for library PC to call the collector because
+
+49
+00:05:09,000 --> 00:05:17,000
+Python does it for you anyway. Let's see what happens if threads could modify the reference count
+
+50
+00:05:17,000 --> 00:05:25,000
+simultaneously at the same exact moment. Suppose we have two threads, two Python threads running, thread
+
+51
+00:05:25,000 --> 00:05:31,000
+one and thread two. If both reference the variable v, the variable v could be a large data frame.
+
+52
+00:05:31,000 --> 00:05:36,000
+The reference count for v would be then two because both threads are referencing that, the reference
+
+53
+00:05:36,000 --> 00:05:42,000
+count will be two. Then of course both threads simultaneously remove their reference to v. Well, have you
+
+54
+00:05:42,000 --> 00:05:50,000
+just guessed it right? At the time they both remove their variable, this reference count is two, right?
+
+55
+00:05:50,000 --> 00:05:55,000
+If each thread reads the reference count simultaneously, each thread would get an initial
+
+56
+00:05:55,000 --> 00:06:01,000
+reference count of two for variable v. Each thread would then increment the reference count value of
+
+57
+00:06:01,000 --> 00:06:08,000
+two for one. The final reference count would be then one. Unfortunately the actual reference counts
+
+58
+00:06:08,000 --> 00:06:14,000
+would be zero since both threads remove their reference to v. Now imagine hundreds of variables
+
+59
+00:06:14,000 --> 00:06:19,000
+are staying in the memory and soon he will run out of memory. Imagine you have multiple threads on the
+
+60
+00:06:19,000 --> 00:06:27,000
+same time. A lot of variables. Okay, so in order to remedy this problem, you could make sure that both
+
+61
+00:06:27,000 --> 00:06:34,000
+thread one and thread two cannot modify the reference count simultaneously. That means we achieve this
+
+62
+00:06:34,000 --> 00:06:40,000
+by locking the reference count such that thread two waits while thread one reads and increment the
+
+63
+00:06:40,000 --> 00:06:46,000
+reference count and only then we allow thread two to increment the reference count in turn. This
+
+64
+00:06:46,000 --> 00:06:52,000
+implementation was actually tried out in Python in the early days. However, locking the reference
+
+65
+00:06:52,000 --> 00:06:58,000
+count for every increment or fiximent for every object over every thread supposed to be
+
+66
+00:06:58,000 --> 00:07:06,000
+extremely slow. The fastest solution is to just lock the entire Python interface and let's only
+
+67
+00:07:06,000 --> 00:07:12,000
+one thread run on the interface at any given time. Hence the global interface lock. The deal is
+
+68
+00:07:12,000 --> 00:07:18,000
+definitely faster than any visual reference count lock but it only allows a single thread to execute.
+
+69
+00:07:18,000 --> 00:07:24,000
+There hasn't been a lot of work actually to improve the way in which Python is scheduled threads and
+
+70
+00:07:24,000 --> 00:07:30,000
+there is a definite improvement in Python 3 over Python 2 in that regard. I'm already talking about
+
+71
+00:07:30,000 --> 00:07:36,000
+how we can actually get around all the included deal that has been in Python 3.12. However, two
+
+72
+00:07:36,000 --> 00:07:42,000
+parallels on the approach has not yet been achieved completely. That can only happen by removing the
+
+73
+00:07:42,000 --> 00:07:48,000
+deal altogether. It may take a few more years to see that deal be completely removed but there are
+
+74
+00:07:48,000 --> 00:07:54,000
+ultimately back-outlets. The only way to do that is to have a single thread run on the interface.
+
+75
+00:07:54,000 --> 00:08:00,000
+It may take a few more years to see that deal be completely removed but there are ultimately back-outlets
+
+76
+00:08:00,000 --> 00:08:06,000
+to improve the performance of Python applications. This really needs a big amount of explore.
+
+77
+00:08:06,000 --> 00:08:12,000
+Before getting to available tools we need to understand the differences between concurrency and parallelism
+
+78
+00:08:12,000 --> 00:08:18,000
+because there is a lot of confusion in the computer science literature about that.
+
+79
+00:08:18,000 --> 00:08:28,000
+Concurrency is about multiple tasks which start, run and complete in overlapping time periods in no specific order.
+
+80
+00:08:28,000 --> 00:08:36,000
+Parallelism is about multiple tasks or sub-tasks of the same task that literally run at the same time on a hardware
+
+81
+00:08:36,000 --> 00:08:44,000
+with multiple compute resources like multi-core processors. Imagine that, next to 10, one step on the left
+
+82
+00:08:44,000 --> 00:08:50,000
+is stopping the salad while occasionally stirring the soup on the stove. He has to stop chopping,
+
+83
+00:08:50,000 --> 00:08:56,000
+shake the stove top and then stop chopping again and repeat this process until everything is done.
+
+84
+00:08:56,000 --> 00:09:04,000
+As you can see we only have one processing resource here, the chef, and his concurrency is mostly related to
+
+85
+00:09:04,000 --> 00:09:12,000
+logistics. Without concurrency the chef has to wait until the soup is on the stove and then stop chopping.
+
+86
+00:09:12,000 --> 00:09:18,000
+So, the chef is focused on the stove's grid and he starts chopping the salad.
+
+87
+00:09:18,000 --> 00:09:26,000
+Let's see now on the right side we have two chefs, one who can do the stirring and one who can chop the salad.
+
+88
+00:09:26,000 --> 00:09:32,000
+We have divided the work by adding another processing resource in other steps. Parallelism is literally
+
+89
+00:09:32,000 --> 00:09:40,000
+the simultaneous physical execution of tasks at the runtime and it requires hardware with multiple computation resources.
+
+90
+00:09:40,000 --> 00:09:52,000
+This is the hardware layer. As Rob Pike said in 2013, concurrency is about dealing with lots of things at once.
+
+91
+00:09:52,000 --> 00:10:00,000
+Parallelism is about doing lots of things at once. In a single course of computer you can have concurrency
+
+92
+00:10:00,000 --> 00:10:08,000
+but no parallelism, but both go beyond the traditional sequential model in which things happen one at a time.
+
+93
+00:10:08,000 --> 00:10:16,000
+So, there is a key difference between all task-based or some people call it scheduled-based engines versus two parallel engines.
+
+94
+00:10:16,000 --> 00:10:22,000
+So, let's map our kitchen async and cook example to reality.
+
+95
+00:10:22,000 --> 00:10:28,000
+So, this is how the scheduled or task-based computation engine life affects this work to look like.
+
+96
+00:10:28,000 --> 00:10:35,000
+There is a driver, some people call it leader, master driver, master node, who is scheduled and monitors the task.
+
+97
+00:10:35,000 --> 00:10:39,000
+And the computer node who executes the task.
+
+98
+00:10:39,000 --> 00:10:47,000
+The computers often need to wait for the next task to come causing some overhead and lots of computer resources
+
+99
+00:10:47,000 --> 00:10:53,000
+due to being idle. But at least there is some parallelism here. You see some many cores are working at the same time.
+
+100
+00:10:53,000 --> 00:10:58,000
+They are not at their full capacity. There is some idle time, but still there is some parallelism.
+
+101
+00:10:58,000 --> 00:11:03,000
+That's why some people call it partially parallel architecture.
+
+102
+00:11:03,000 --> 00:11:10,000
+On the other hand, in a two-part execution, you expect the cores to know their task end-to-end
+
+103
+00:11:10,000 --> 00:11:17,000
+and this causes running down without major delays resulting in a faster performance.
+
+104
+00:11:17,000 --> 00:11:22,000
+Basically, you get more bandwidth for your books. Is it bad?
+
+105
+00:11:22,000 --> 00:11:28,000
+Definitely, it's good. You'll like it. You'll like it if you're running at 100% because you're paying for it.
+
+106
+00:11:28,000 --> 00:11:37,000
+So, in a picture, on the left you see there is a driver node which coordinates tasks and assigns them to the computer node.
+
+107
+00:11:37,000 --> 00:11:43,000
+There is also communicated to the driver node. The users wait for the next task.
+
+108
+00:11:43,000 --> 00:11:51,000
+But on the right side, all the nodes are worker nodes. They are not tracing one node just for a scheduling task.
+
+109
+00:11:51,000 --> 00:11:54,000
+No, get that node for work.
+
+110
+00:11:54,000 --> 00:11:59,000
+So, all of them on the right side are imaginary colleges that are basically making all the work for nodes.
+
+111
+00:11:59,000 --> 00:12:08,000
+And all the nodes know what to do from the beginning to the end because there is some compilation process at the beginning.
+
+112
+00:12:08,000 --> 00:12:14,000
+So, there are a handful of libraries trying to help us achieve parallelism in PyCon.
+
+113
+00:12:14,000 --> 00:12:22,000
+I would classify existing libraries into two categories. Those which are what I'm calling partially parallel versus truly parallel.
+
+114
+00:12:22,000 --> 00:12:31,000
+Most existing data analytics libraries are based on the principle of distributing the data and parallelizing tasks to get performance benefits.
+
+115
+00:12:31,000 --> 00:12:40,000
+Parallelization is a very difficult problem to solve in general, but it can be done quite effectively for data analytics.
+
+116
+00:12:40,000 --> 00:12:45,000
+True parallelism is achieved when there is no driver-accessible bottleneck.
+
+117
+00:12:45,000 --> 00:12:57,000
+As I showed in the couple of slides earlier, the partially parallel libraries can be further explained through building Python libraries and executing task-based computation engines.
+
+118
+00:12:57,000 --> 00:13:07,000
+So, here on the left, we have a grading, which is good for IO data tests, multiprocessing, mainly for security data tests,
+
+119
+00:13:07,000 --> 00:13:15,000
+subprocessing, which we saw a few sessions about in this conference. They all run on a single machine typically.
+
+120
+00:13:15,000 --> 00:13:22,000
+In the middle, we have PySpark, GAS, Ray, Modin, and Unidisk, which can run on a cluster of nodes.
+
+121
+00:13:22,000 --> 00:13:29,000
+And Numba, which basically runs on a single node for now. And on the right, we have Bodo and MPI for Py.
+
+122
+00:13:29,000 --> 00:13:35,000
+Among these, Bodo and Numba also use just-in-time compilers.
+
+123
+00:13:35,000 --> 00:13:39,000
+One way to speed up Python in general is to compile it to native code.
+
+124
+00:13:39,000 --> 00:13:45,000
+Most general-purpose compilers use by converting between native sequential code.
+
+125
+00:13:45,000 --> 00:13:53,000
+However, for data analysis domain, Bodo has built an auto-parallelizing, we call it inferential, compiler.
+
+126
+00:13:53,000 --> 00:14:03,000
+It can detect data types from the data source automatically, compile the program, and then generate a truly parallel implementation, which uses NTI, and can be deployed on any slice cluster so that
+
+127
+00:14:03,000 --> 00:14:13,000
+the way we get around any slice cluster. So the way we really get around the deal is by not trying to get around the deal at all.
+
+128
+00:14:13,000 --> 00:14:22,000
+Instead, we run multiple Python processes, each with their own deal, in a truly parallel SPMD fashion.
+
+129
+00:14:22,000 --> 00:14:26,000
+SPMD means we are saying that program multiple data fashion.
+
+130
+00:14:26,000 --> 00:14:36,000
+So, I was looking for a company that landed with all these libraries, how they compare with each other.
+
+131
+00:14:36,000 --> 00:14:41,000
+I pulled this from the blog, and added Bodo based on some feedback from our customers.
+
+132
+00:14:41,000 --> 00:14:47,000
+But I wouldn't rely on this kind of parts a lot, because many of them are subjective.
+
+133
+00:14:47,000 --> 00:14:51,000
+For example, ease of adoption, what do they mean exactly by ease of adoption?
+
+134
+00:14:52,000 --> 00:15:01,000
+But the other one, like scalability, it's really easy to reference the background, like 1 terabyte of data, 100 graphics, etc.
+
+135
+00:15:01,000 --> 00:15:07,000
+Which is very 1 terabyte. And Bodo has been more than 10 terabytes of data.
+
+136
+00:15:07,000 --> 00:15:14,000
+So I wouldn't spend much time on this kind of comparison, because to be honest, each one of these libraries is used for one purpose.
+
+137
+00:15:14,000 --> 00:15:17,000
+And you have to find a purpose. I will talk about that in a second.
+
+138
+00:15:17,000 --> 00:15:24,000
+So, let's talk about a few examples. So, with multi-processing.
+
+139
+00:15:24,000 --> 00:15:28,000
+Now I'm going to talk about some data, simple data technologies, data transformation.
+
+140
+00:15:28,000 --> 00:15:34,000
+A group by an aggregation, like grouping by a column, and then doing a sum.
+
+141
+00:15:34,000 --> 00:15:39,000
+I don't expect you to read this because it's super small, but if you use multi-processing library for a group by,
+
+142
+00:15:39,000 --> 00:15:45,000
+you need to get the keys and data frames and append them to a list of data frames via a for loop.
+
+143
+00:15:45,000 --> 00:15:49,000
+And then apply the function locally on each process using a tool of math.
+
+144
+00:15:49,000 --> 00:15:56,000
+And then finally you concatenate all of these small data frames in your list and make it the original data frame.
+
+145
+00:15:57,000 --> 00:16:04,000
+So, if you want to use NPI for Pi library, you need to do a little bit more than that.
+
+146
+00:16:04,000 --> 00:16:12,000
+It's about 50 mb of code to do a simple group by dot sum, which is a one line in pandas.
+
+147
+00:16:12,000 --> 00:16:18,000
+But if you use this library to initialize NPI, load data on root process,
+
+148
+00:16:18,000 --> 00:16:23,000
+discrete data among processes, apply the group by function locally on each process,
+
+149
+00:16:23,000 --> 00:16:30,000
+gather the output from all processes, concatenate all local data to get the final output.
+
+150
+00:16:30,000 --> 00:16:34,000
+So, yeah, it's a lot of just word group by operation.
+
+151
+00:16:34,000 --> 00:16:41,000
+And imagine you have a simple application of a data frame of 3,000 mb of code to 5,000 mb of code.
+
+152
+00:16:41,000 --> 00:16:44,000
+So, it won't be for every single one like data to be hard.
+
+153
+00:16:44,000 --> 00:16:49,000
+Not just group by, you have other operations like merge and filtering and all of that.
+
+154
+00:16:51,000 --> 00:16:55,000
+So, there are simpler alternatives we can do to parallelize your code,
+
+155
+00:16:55,000 --> 00:17:00,000
+as long as you're working with simple data transformation like pandas operations,
+
+156
+00:17:00,000 --> 00:17:02,000
+with photo, modeling and that.
+
+157
+00:17:02,000 --> 00:17:07,000
+As you see, with all these libraries, you just need to write about 10 lines of code.
+
+158
+00:17:07,000 --> 00:17:10,000
+This is basically one line for group by.
+
+159
+00:17:10,000 --> 00:17:13,000
+There is no difference between pandas and these libraries.
+
+160
+00:17:13,000 --> 00:17:15,000
+Not much difference.
+
+161
+00:17:15,000 --> 00:17:18,000
+Bordel is just the same, but you have to add a GIF compiler,
+
+162
+00:17:18,000 --> 00:17:21,000
+a decorator on top of your function.
+
+163
+00:17:21,000 --> 00:17:25,000
+It's not even unique to just call a modim.pandas.
+
+164
+00:17:25,000 --> 00:17:27,000
+And Dask has its own data frame.
+
+165
+00:17:27,000 --> 00:17:30,000
+The data frame is called Dask's data frame.
+
+166
+00:17:30,000 --> 00:17:32,000
+We call it as dd, and then just call that.
+
+167
+00:17:32,000 --> 00:17:34,000
+Then you're reading the package files.
+
+168
+00:17:34,000 --> 00:17:42,000
+So, using this library is a bit easier to scale your code for thousands of data frame operations.
+
+169
+00:17:42,000 --> 00:17:46,000
+It's easier to maintain when your code is smaller.
+
+170
+00:17:46,000 --> 00:17:52,000
+And it saves a lot of engineering time for code review and all of that when you stop into your PR.
+
+171
+00:17:52,000 --> 00:17:59,000
+Save on cloud cost, compute resources, because you parallelize your code through these libraries.
+
+172
+00:17:59,000 --> 00:18:04,000
+And you can scale with large data simply from your java.local frame,
+
+173
+00:18:04,000 --> 00:18:06,000
+which is like a simple data engine,
+
+174
+00:18:06,000 --> 00:18:08,000
+at most 100-millibit of data you're working with,
+
+175
+00:18:08,000 --> 00:18:10,000
+you just java.local and repeat.
+
+176
+00:18:10,000 --> 00:18:12,000
+And then once you want to put it through production,
+
+177
+00:18:12,000 --> 00:18:14,000
+yeah, it's a simple migration.
+
+178
+00:18:16,000 --> 00:18:20,000
+So, now you may wonder, okay, which one is better?
+
+179
+00:18:20,000 --> 00:18:22,000
+Ali, you talked to me about a bunch of libraries,
+
+180
+00:18:22,000 --> 00:18:26,000
+and how can I know which one is best for me to use?
+
+181
+00:18:27,000 --> 00:18:31,000
+This question typically drives us into checking some benchmarks.
+
+182
+00:18:31,000 --> 00:18:35,000
+But, to be honest, let's not get into the benchmark game.
+
+183
+00:18:35,000 --> 00:18:40,000
+In fact, every vendor uses benchmarks to show that the product is better than others.
+
+184
+00:18:40,000 --> 00:18:45,000
+For example, while modern claims to outperform Pandas on DAS,
+
+185
+00:18:45,000 --> 00:18:53,000
+others, like in the middle, I read in an independent blog about that,
+
+186
+00:18:53,000 --> 00:18:56,000
+and in the middle you see a picture that they showed,
+
+187
+00:18:56,000 --> 00:18:58,000
+actually modern performance makes it fairer,
+
+188
+00:18:58,000 --> 00:19:03,000
+in fact, larger data, and they just use two different ways of data for that data operation.
+
+189
+00:19:03,000 --> 00:19:07,000
+So, and also there's another blog that compers all of these things,
+
+190
+00:19:07,000 --> 00:19:15,000
+Bodo, Array, Pyres, Spark, DAS, and a workflow that is derived from TPCA on AWS.
+
+191
+00:19:15,000 --> 00:19:21,000
+But again, you know, like some of these libraries are fit for compute-heavy operations,
+
+192
+00:19:21,000 --> 00:19:25,000
+some are not fair-backed, some are beyond the IO-heavy,
+
+193
+00:19:25,000 --> 00:19:28,000
+so you really need to try out yourself.
+
+194
+00:19:28,000 --> 00:19:31,000
+Don't rely on some benchmarks and don't just go with this.
+
+195
+00:19:31,000 --> 00:19:36,000
+I was like back in 2018, I was using multi-processing libraries,
+
+196
+00:19:36,000 --> 00:19:41,000
+and I saw that even for my operation, even in this lower-down,
+
+197
+00:19:41,000 --> 00:19:45,000
+higher-down itself, I'm sorry, the lower-down, Pandas itself,
+
+198
+00:19:45,000 --> 00:19:47,000
+so I wondered why even I should use it, it's just a bit busy.
+
+199
+00:19:47,000 --> 00:19:51,000
+So, I used it, Pandas had a large node on AWS,
+
+200
+00:19:51,000 --> 00:19:55,000
+and no one cared that much about cost of the time, so I just let it run.
+
+201
+00:19:55,000 --> 00:20:02,000
+I didn't use all of the CPUs, but yeah, I didn't know about all these libraries at the time.
+
+202
+00:20:02,000 --> 00:20:08,000
+So, what are the steps for boosting your performance?
+
+203
+00:20:08,000 --> 00:20:14,000
+First, you need to profile your application, meaning timing, timing for a function.
+
+204
+00:20:14,000 --> 00:20:17,000
+It's very basic, that is wrong for a long time.
+
+205
+00:20:17,000 --> 00:20:22,000
+Identify where the button next is, assuming there is no for loop,
+
+206
+00:20:22,000 --> 00:20:25,000
+you are using vectorization, there is no group by apply,
+
+207
+00:20:25,000 --> 00:20:28,000
+which is typically a various operation in Pandas,
+
+208
+00:20:28,000 --> 00:20:32,000
+and you have found other work-trounds for that, so no option exists.
+
+209
+00:20:32,000 --> 00:20:37,000
+And then, okay, save every input into that function,
+
+210
+00:20:37,000 --> 00:20:41,000
+and package some of these packages, good formats, compressed, columnar,
+
+211
+00:20:41,000 --> 00:20:47,000
+it's easy to read with Pandas, and then work exclusively on that function.
+
+212
+00:20:47,000 --> 00:20:51,000
+You need one of the libraries that I've shown before,
+
+213
+00:20:51,000 --> 00:20:54,000
+I'm going to show you in the next slide,
+
+214
+00:20:54,000 --> 00:20:57,000
+the base on-front-force-decast, it's kind of a rule of thumb,
+
+215
+00:20:57,000 --> 00:21:02,000
+and it's not vital, but it helps us navigate to which library we want to run.
+
+216
+00:21:02,000 --> 00:21:08,000
+So, let me get into this decision tree.
+
+217
+00:21:08,000 --> 00:21:11,000
+So, as I mentioned earlier, if your gameplay is very small,
+
+218
+00:21:11,000 --> 00:21:17,000
+you may not care a lot, you know, it's running fine, no one is picking on me for this.
+
+219
+00:21:17,000 --> 00:21:21,000
+So, if your gameplay is small, so what's the problem?
+
+220
+00:21:21,000 --> 00:21:23,000
+Why are you even thinking about optimizing?
+
+221
+00:21:23,000 --> 00:21:27,000
+You're not missing your SLAs, you're still like a mess,
+
+222
+00:21:27,000 --> 00:21:30,000
+unless then you have to run it for one minute and it's run for two minutes.
+
+223
+00:21:30,000 --> 00:21:34,000
+If yes, you're missing your SLAs, then life is good,
+
+224
+00:21:34,000 --> 00:21:38,000
+but if you're not missing your SLAs, you know what, to be honest,
+
+225
+00:21:38,000 --> 00:21:42,000
+many of these libraries are not really good, then you're dealing with very small run times,
+
+226
+00:21:42,000 --> 00:21:45,000
+like 10 seconds, 5 seconds, because you have your own other,
+
+227
+00:21:45,000 --> 00:21:49,000
+some have to compile and it does not.
+
+228
+00:21:49,000 --> 00:21:53,000
+But if you're not missing your SLAs, you can use other approaches,
+
+229
+00:21:53,000 --> 00:21:55,000
+like divide and conquer.
+
+230
+00:21:55,000 --> 00:21:59,000
+You divide your data from a category that is independent,
+
+231
+00:21:59,000 --> 00:22:02,000
+like a field that is independent, which can be stored with no dependencies,
+
+232
+00:22:02,000 --> 00:22:07,000
+so then run multiple jobs at the same time, so that would definitely reduce your SLA.
+
+233
+00:22:07,000 --> 00:22:10,000
+What is your thing when data is big?
+
+234
+00:22:10,000 --> 00:22:13,000
+Then I would ask you, what do you mean by big?
+
+235
+00:22:13,000 --> 00:22:16,000
+Does it fit on a single machine or not?
+
+236
+00:22:16,000 --> 00:22:19,000
+You're dealing with a huge cluster.
+
+237
+00:22:19,000 --> 00:22:26,000
+If it fits on a single node, then what is it that you want to achieve?
+
+238
+00:22:26,000 --> 00:22:29,000
+Do you want to reduce your costs and SLA?
+
+239
+00:22:29,000 --> 00:22:34,000
+No, you don't even care about your SLAs or costs,
+
+240
+00:22:34,000 --> 00:22:39,000
+so then, as is, there's no problem, just make sure your node has enough memory,
+
+241
+00:22:39,000 --> 00:22:41,000
+so it doesn't run out of memory,
+
+242
+00:22:41,000 --> 00:22:44,000
+because every reach your data from your data warehouse is going to grow,
+
+243
+00:22:44,000 --> 00:22:47,000
+it's not going to reduce, so after maybe one year,
+
+244
+00:22:47,000 --> 00:22:49,000
+or maybe even six months, your application may not work,
+
+245
+00:22:49,000 --> 00:22:52,000
+just make sure that you're watching for memory utilization.
+
+246
+00:22:52,000 --> 00:22:56,000
+But if you want to reduce the cost, maybe you want to store it your SLAs,
+
+247
+00:22:56,000 --> 00:23:01,000
+or get the RAIDs, and then, yeah, so let's talk.
+
+248
+00:23:01,000 --> 00:23:05,000
+Then you have to decide if it is a single data frame operation,
+
+249
+00:23:05,000 --> 00:23:09,000
+because many of these things I haven't told you are designed for data analytics
+
+250
+00:23:09,000 --> 00:23:11,000
+and data frame operation.
+
+251
+00:23:11,000 --> 00:23:13,000
+If no, it is not data frame operation,
+
+252
+00:23:13,000 --> 00:23:16,000
+I'm just basically having a problem on training my machine learning model,
+
+253
+00:23:16,000 --> 00:23:17,000
+for example.
+
+254
+00:23:17,000 --> 00:23:22,000
+Data frame operation is fine, if you don't get to the machine learning frame,
+
+255
+00:23:22,000 --> 00:23:24,000
+then it's going to take a long time.
+
+256
+00:23:24,000 --> 00:23:26,000
+Then you can try using RAID.
+
+257
+00:23:26,000 --> 00:23:30,000
+But if you're using NumPy, then you would try Numba,
+
+258
+00:23:30,000 --> 00:23:33,000
+because this has a trust and time compiler,
+
+259
+00:23:33,000 --> 00:23:37,000
+it's going to run in parallel, so for a NumPy operation, Numba is great.
+
+260
+00:23:37,000 --> 00:23:40,000
+But if you are doing Pondos operations, right,
+
+261
+00:23:40,000 --> 00:23:42,000
+then you have multiple pressures on a single machine,
+
+262
+00:23:42,000 --> 00:23:45,000
+you can use Bodo, Python, multi-tasking,
+
+263
+00:23:45,000 --> 00:23:48,000
+just be careful with that, as I told you,
+
+264
+00:23:48,000 --> 00:23:50,000
+that scan model, because if it is IO heavy,
+
+265
+00:23:50,000 --> 00:23:52,000
+multi-tasking may not be able to help you,
+
+266
+00:23:52,000 --> 00:23:54,000
+you have to use training instead.
+
+267
+00:23:57,000 --> 00:23:59,000
+Then let's talk about the real deal,
+
+268
+00:23:59,000 --> 00:24:03,000
+which is, no, my data really did equal the fitness in general,
+
+269
+00:24:03,000 --> 00:24:06,000
+I needed cluster to run it.
+
+270
+00:24:06,000 --> 00:24:08,000
+Then you have to ask yourself,
+
+271
+00:24:08,000 --> 00:24:11,000
+do you have the budget for the engineering bandwidth
+
+272
+00:24:11,000 --> 00:24:15,000
+to convert your code to one of these mature libraries like PySpark?
+
+273
+00:24:16,000 --> 00:24:19,000
+Then you say, yeah, we have three months allocated
+
+274
+00:24:19,000 --> 00:24:22,000
+by the engineering budget approved by our director of engineering
+
+275
+00:24:22,000 --> 00:24:25,000
+to convert the code from Python to PySpark,
+
+276
+00:24:25,000 --> 00:24:28,000
+then yes, we can go to this line,
+
+277
+00:24:28,000 --> 00:24:32,000
+it says, yes, I have time,
+
+278
+00:24:32,000 --> 00:24:35,000
+then again, are you using data-friendly operations?
+
+279
+00:24:35,000 --> 00:24:38,000
+Yes, then okay, convert it to PySpark or Dask.
+
+280
+00:24:39,000 --> 00:24:40,000
+That's good.
+
+281
+00:24:42,000 --> 00:24:44,000
+If no, again, machine learning is tough,
+
+282
+00:24:44,000 --> 00:24:47,000
+some kind of other, maybe Python,
+
+283
+00:24:47,000 --> 00:24:49,000
+or other stuff that you're doing not much in,
+
+284
+00:24:49,000 --> 00:24:52,000
+your bottleneck is not in data-friendly operations,
+
+285
+00:24:52,000 --> 00:24:54,000
+then consider Ray or PySpark.
+
+286
+00:24:55,000 --> 00:24:56,000
+And then if you don't have time,
+
+287
+00:24:56,000 --> 00:24:59,000
+or you don't have your budget to convert your code,
+
+288
+00:24:59,000 --> 00:25:02,000
+and you want your condos put as is to run,
+
+289
+00:25:03,000 --> 00:25:06,000
+just putting some gist decoration on top of your function
+
+290
+00:25:06,000 --> 00:25:11,000
+with a little bit of manipulation on data type stability,
+
+291
+00:25:11,000 --> 00:25:14,000
+then you can try Bodo or Modem.
+
+292
+00:25:14,000 --> 00:25:17,000
+Modem is really a laughter around Dask, Ray,
+
+293
+00:25:17,000 --> 00:25:20,000
+it's just kind of a condos, we use a condos API.
+
+294
+00:25:20,000 --> 00:25:23,000
+And Bodo is just in kind of a compiler using an API.
+
+295
+00:25:24,000 --> 00:25:30,000
+So let me get you to a simple example.
+
+296
+00:25:32,000 --> 00:25:35,000
+The rule of live demos is that in all of the live demos,
+
+297
+00:25:35,000 --> 00:25:40,000
+there is an AI agent sitting there to make sure it doesn't work.
+
+298
+00:25:40,000 --> 00:25:43,000
+So let me see if it's a sleeping or not a sleeping.
+
+299
+00:25:45,000 --> 00:25:48,000
+So yeah, this is a multi-color simulation,
+
+300
+00:25:48,000 --> 00:25:51,000
+and I'm going to try Bodo with this one,
+
+301
+00:25:51,000 --> 00:25:53,000
+so I already spun up my cluster,
+
+302
+00:25:53,000 --> 00:25:58,000
+and let's try without Bodo, it's just simple Python operation.
+
+303
+00:25:58,000 --> 00:26:01,000
+It's calculating the pipe, the 2.14.
+
+304
+00:26:02,000 --> 00:26:06,000
+I put 100 million data points for this estimation,
+
+305
+00:26:06,000 --> 00:26:10,000
+so it ran about 2.85 seconds.
+
+306
+00:26:10,000 --> 00:26:14,000
+If I run the same thing, and I just add this chip,
+
+307
+00:26:14,000 --> 00:26:16,000
+plus sometimes I put it on top of it,
+
+308
+00:26:16,000 --> 00:26:18,000
+and I run it the same,
+
+309
+00:26:21,000 --> 00:26:27,000
+it took about 0.13, so 0.13 runs to 2.8,
+
+310
+00:26:27,000 --> 00:26:30,000
+I have an 8 core, so if you do the math,
+
+311
+00:26:30,000 --> 00:26:37,000
+2.85 divided by 8, it should take about 0.35.
+
+312
+00:26:37,000 --> 00:26:42,000
+But why is running even faster than 0.35?
+
+313
+00:26:42,000 --> 00:26:44,000
+It's because when it does a compiler,
+
+314
+00:26:44,000 --> 00:26:47,000
+then it does some optimization on how to run this code
+
+315
+00:26:47,000 --> 00:26:49,000
+versus how Python runs it,
+
+316
+00:26:49,000 --> 00:26:53,000
+and even if I had run it in one single node with this compiler,
+
+317
+00:26:53,000 --> 00:26:55,000
+it would speed it almost faster than 2.8 seconds,
+
+318
+00:26:55,000 --> 00:26:57,000
+it may run it one second.
+
+319
+00:26:57,000 --> 00:27:03,000
+So that lets me to actually run this even much larger data,
+
+320
+00:27:03,000 --> 00:27:08,000
+lets me increase the data by 100 times on my machine.
+
+321
+00:27:08,000 --> 00:27:11,000
+Here's a simple example, think of about this,
+
+322
+00:27:11,000 --> 00:27:15,000
+it probably might raise from 100 megabytes to 1 kilobyte of data,
+
+323
+00:27:15,000 --> 00:27:17,000
+and if I run this,
+
+324
+00:27:24,000 --> 00:27:27,000
+so 100 times larger data will take around,
+
+325
+00:27:27,000 --> 00:27:30,000
+if Python will take around 200 seconds,
+
+326
+00:27:30,000 --> 00:27:35,000
+it took about 14 seconds.
+
+327
+00:27:35,000 --> 00:27:38,000
+So you see with the parallelism,
+
+328
+00:27:38,000 --> 00:27:41,000
+oh, one thing I forgot to show you,
+
+329
+00:27:41,000 --> 00:27:47,000
+and I want to show you the CPUs, that's the front part.
+
+330
+00:27:47,000 --> 00:27:51,000
+I had this 100 for the H-talk to be able to have some time
+
+331
+00:27:51,000 --> 00:27:54,000
+showing me the responses on the CPUs.
+
+332
+00:27:54,000 --> 00:27:57,000
+You see, the CPUs are 8 of them,
+
+333
+00:27:57,000 --> 00:28:00,000
+are working almost at 100% capacity,
+
+334
+00:28:00,000 --> 00:28:03,000
+running this and knocking in the parallel fashion,
+
+335
+00:28:03,000 --> 00:28:06,000
+when it comes to the real two parallel fashion.
+
+336
+00:28:06,000 --> 00:28:09,000
+So they are working very hard,
+
+337
+00:28:09,000 --> 00:28:12,000
+and yet, when I'm still done,
+
+338
+00:28:12,000 --> 00:28:15,000
+they go back to normal life.
+
+339
+00:28:15,000 --> 00:28:17,000
+So thank you so much, my name is Ali,
+
+340
+00:28:17,000 --> 00:28:19,000
+and I'm glad to be here with you,
+
+341
+00:28:19,000 --> 00:28:21,000
+so I can take some questions. Thank you so much.
+
+342
+00:28:27,000 --> 00:28:30,000
+Okay, we have about two minutes for questions.
+
+343
+00:28:30,000 --> 00:28:33,000
+If anyone wants to step up in the center and ask a question,
+
+344
+00:28:33,000 --> 00:28:35,000
+if not, you can catch Ali outside,
+
+345
+00:28:35,000 --> 00:28:37,000
+and he'll happily answer all of your questions
+
+346
+00:28:37,000 --> 00:28:40,000
+until it reaches 10 o'clock.
+
+347
+00:28:40,000 --> 00:28:42,000
+Okay, thanks, everyone.
+
+348
+00:28:42,000 --> 00:28:44,000
+We said there's no questions?
+
+349
+00:28:44,000 --> 00:28:45,000
+Oh, yeah.
+
+350
+00:28:45,000 --> 00:28:46,000
+Okay, we're just going to have it?
+
+351
+00:28:46,000 --> 00:28:48,000
+There's no question?
+
+352
+00:28:48,000 --> 00:28:49,000
+Yes.
+
+353
+00:28:49,000 --> 00:28:51,000
+Just one question.
+
+354
+00:28:51,000 --> 00:28:55,000
+What about PyPort, another machine that I use a lot?
+
+355
+00:28:55,000 --> 00:28:58,000
+Yes.
+
+356
+00:28:58,000 --> 00:29:01,000
+PyPort and TensorFlowflow and all of these libraries
+
+357
+00:29:01,000 --> 00:29:05,000
+are very particular for GPU systems.
+
+358
+00:29:05,000 --> 00:29:08,000
+A lot are discussed today, they're mostly on CPU systems,
+
+359
+00:29:08,000 --> 00:29:11,000
+except Numba that's had on on CPUs as well.
+
+360
+00:29:11,000 --> 00:29:13,000
+But at this point,
+
+361
+00:29:13,000 --> 00:29:16,000
+we're not really talking about the CPUs,
+
+362
+00:29:16,000 --> 00:29:18,000
+we're talking about the CPUs,
+
+363
+00:29:18,000 --> 00:29:20,000
+but at this point, for example,
+
+364
+00:29:20,000 --> 00:29:24,000
+Bodo does not support PyPort or TensorFlowflow.
+
+365
+00:29:24,000 --> 00:29:26,000
+It's a very small support you have for TensorFlowflow,
+
+366
+00:29:26,000 --> 00:29:29,000
+but not for PyPort or Chalk this moment.
+
+367
+00:29:39,000 --> 00:29:40,000
+I have also a question.
+
+368
+00:29:40,000 --> 00:29:43,000
+You mentioned data frames.
+
+369
+00:29:43,000 --> 00:29:45,000
+Did you mean Tomlats data frames here?
+
+370
+00:29:45,000 --> 00:29:46,000
+Yes.
+
+371
+00:29:46,000 --> 00:29:47,000
+Yes, okay.
+
+372
+00:29:47,000 --> 00:29:50,000
+Yep.
+
+373
+00:29:50,000 --> 00:29:55,000
+And what makes them so special compared to, for example,
+
+374
+00:29:55,000 --> 00:29:57,000
+Nampa array?
+
+375
+00:29:57,000 --> 00:30:01,000
+So in data science field,
+
+376
+00:30:01,000 --> 00:30:05,000
+you usually have tables that have column headers
+
+377
+00:30:05,000 --> 00:30:07,000
+and indexes and all of that.
+
+378
+00:30:07,000 --> 00:30:09,000
+In Nampa, you don't have the column headers,
+
+379
+00:30:09,000 --> 00:30:11,000
+so it's easier to communicate with the business person
+
+380
+00:30:11,000 --> 00:30:13,000
+of the company through like for the data,
+
+381
+00:30:13,000 --> 00:30:15,000
+like this is my price, this is my task,
+
+382
+00:30:15,000 --> 00:30:18,000
+how much I pay for this, and all of these have a name.
+
+383
+00:30:18,000 --> 00:30:21,000
+So for that reason, like that's one of the reasons.
+
+384
+00:30:21,000 --> 00:30:23,000
+But the really kind of thing is built on top of Nampa,
+
+385
+00:30:23,000 --> 00:30:26,000
+the same thing, added an index thing
+
+386
+00:30:26,000 --> 00:30:28,000
+and the column headers on top.
+
+387
+00:30:28,000 --> 00:30:29,000
+So it's the same.
+
+388
+00:30:29,000 --> 00:30:32,000
+Bodo also suffers Nampa, same way.
+
+389
+00:30:38,000 --> 00:30:40,000
+Okay, that was all the time we have for this.
+
+390
+00:30:40,000 --> 00:30:41,000
+If you have any more questions for Ali,
+
+391
+00:30:41,000 --> 00:30:42,000
+catch them out in the hallway.
+
+392
+00:30:42,000 --> 00:30:45,000
+You have 15 minutes before the next talk,
+
+393
+00:30:45,000 --> 00:30:46,000
+the second to last one of the day.
+
+394
+00:30:46,000 --> 00:30:50,000
+And the next talk in this room will be supercharging pipeline efficiency
+
+395
+00:30:50,000 --> 00:30:52,000
+with demo performance prediction.
+

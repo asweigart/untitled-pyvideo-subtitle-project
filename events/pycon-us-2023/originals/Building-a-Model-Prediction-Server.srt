@@ -1,0 +1,5772 @@
+1
+00:00:00,000 --> 00:00:10,000
+Hi, everybody. Welcome to PyCon, if this is your first tutorial. How many people have been to a tutorial before today for PyCon 2023?
+
+2
+00:00:10,000 --> 00:00:15,000
+Yeah? Oh, lots and lots. Okay. Thumbs up, thumbs down, how are they?
+
+3
+00:00:15,000 --> 00:00:21,000
+See, that's bad. I don't like to see that. That sets the bar really high. I was hoping for lots of thumbs down.
+
+4
+00:00:21,000 --> 00:00:28,000
+Cool. Well, welcome. I'm excited for this. This is my second PyCon. I think PyCon's really fun.
+
+5
+00:00:28,000 --> 00:00:38,000
+You always learn some really interesting new stuff. I learned that now they sell Dasani in these large cans, which I think is really intense.
+
+6
+00:00:38,000 --> 00:00:48,000
+It's like a tall boy of Dasani. So I think it's kind of fun that I now could just take this to parties. So this alone was worth making it out here.
+
+7
+00:00:48,000 --> 00:00:54,000
+What we are going to do today is talk about building a model prediction server in Python.
+
+8
+00:00:54,000 --> 00:01:03,000
+I'm sure we will have some bumps along the road, but hopefully everybody will actually get end-to-end through a small fast API app that serves a model.
+
+9
+00:01:03,000 --> 00:01:11,000
+We're going to talk a little bit more about that in a second. We're going to work with a scikit-learn model, mostly for simplicity.
+
+10
+00:01:11,000 --> 00:01:16,000
+There's no particular reason that this pattern wouldn't work with some other kind of model.
+
+11
+00:01:16,000 --> 00:01:24,000
+We're going to use a model trained on the Iris dataset, which is kind of a famous machine learning sample dataset.
+
+12
+00:01:24,000 --> 00:01:33,000
+Our model has 100% accuracy. This isn't a tutorial about modeling. That's not even really my background.
+
+13
+00:01:33,000 --> 00:01:42,000
+Really, I just want to have everything set up as simple as possible so all the questions we run into, all the challenges we solve, are about how are we getting a model into an API.
+
+14
+00:01:42,000 --> 00:01:51,000
+That's going to be our focus. Actually, since we're talking about it, I'd like to quickly show what exactly that's going to look like.
+
+15
+00:01:51,000 --> 00:01:58,000
+By the end of this, what you all should have is something that looks a lot like what I have here.
+
+16
+00:01:58,000 --> 00:02:02,000
+Already having trouble moving between desktops.
+
+17
+00:02:02,000 --> 00:02:12,000
+There we go.
+
+18
+00:02:12,000 --> 00:02:22,000
+You'll have an app that looks a bit like this. You should be able to run this command, which we will talk more about.
+
+19
+00:02:22,000 --> 00:02:27,000
+It'll start an API.
+
+20
+00:02:27,000 --> 00:02:47,000
+Then what you'll be able to do in your browser is go over to this nice docs page and see the endpoints that you've built, one of which is a prediction endpoint.
+
+21
+00:02:47,000 --> 00:02:56,000
+We will talk about what endpoint means. Basically, what's happening here is we have a little app that's running on our computer, but could be running anywhere.
+
+22
+00:02:56,000 --> 00:03:00,000
+Then we have a connection to it, which again is on our computer, but could be running anywhere.
+
+23
+00:03:00,000 --> 00:03:08,000
+We can pass to it an observation of data and have it predict for us the species of flower that this observation probably is.
+
+24
+00:03:08,000 --> 00:03:14,000
+What we would do here is just click Try It Out.
+
+25
+00:03:14,000 --> 00:03:22,000
+I'm going to say the sepal length is one centimeter, the sepal width is one, petal width is two.
+
+26
+00:03:22,000 --> 00:03:30,000
+When I submit this data, what I get back here is the flower type is Satosa.
+
+27
+00:03:30,000 --> 00:03:41,000
+What our API did was it took this submission of data with this observation and it predicted that based on those measurements, this is probably a Satosa flower.
+
+28
+00:03:41,000 --> 00:03:43,000
+This is how our API is going to work.
+
+29
+00:03:43,000 --> 00:03:48,000
+That is what we should finish with today at five o'clock, hopefully a little before five o'clock.
+
+30
+00:03:48,000 --> 00:03:56,000
+We're going to do it in pieces. Cool.
+
+31
+00:03:56,000 --> 00:04:03,000
+Before we do that, normally in a smaller class, I would have everybody introduce themselves, tell me a little bit about their jobs.
+
+32
+00:04:03,000 --> 00:04:06,000
+We have a lot of people in here, which is good.
+
+33
+00:04:06,000 --> 00:04:09,000
+I think around 30 it seems like.
+
+34
+00:04:09,000 --> 00:04:17,000
+Rather than everyone hear everyone's name, I would like it if you just introduce yourself to the people next to you because, like I said, we're going to hit some road bumps.
+
+35
+00:04:17,000 --> 00:04:22,000
+I'll be walking around to help, but it would be great if people can talk to your neighbors throughout.
+
+36
+00:04:22,000 --> 00:04:26,000
+Introduce yourself to your neighbors, tell them what you do, if you're a student, what your job is.
+
+37
+00:04:26,000 --> 00:04:28,000
+Just take a couple minutes.
+
+38
+00:04:28,000 --> 00:04:30,000
+Glad to see everybody's getting friendly.
+
+39
+00:04:30,000 --> 00:04:31,000
+Yes.
+
+40
+00:04:31,000 --> 00:04:36,000
+Oh, yes.
+
+41
+00:04:36,000 --> 00:04:39,000
+Do you mean when I'm showing the other thing, not the slides?
+
+42
+00:04:39,000 --> 00:04:40,000
+I can do that.
+
+43
+00:04:40,000 --> 00:04:41,000
+I'll zoom in on the future.
+
+44
+00:04:41,000 --> 00:04:42,000
+Thank you.
+
+45
+00:04:42,000 --> 00:04:43,000
+Cool.
+
+46
+00:04:43,000 --> 00:04:44,000
+Thanks, everybody.
+
+47
+00:04:44,000 --> 00:04:46,000
+That was a lot more interactive than I expected.
+
+48
+00:04:46,000 --> 00:04:47,000
+That's great.
+
+49
+00:04:47,000 --> 00:04:50,000
+Glad to see friendly chatty people here.
+
+50
+00:04:50,000 --> 00:04:51,000
+Cool.
+
+51
+00:04:51,000 --> 00:04:56,000
+Hopefully you can lean on the people around you a little bit as we go if you run into any issues.
+
+52
+00:04:56,000 --> 00:04:58,000
+I'll do my introduction, which you all have to hear.
+
+53
+00:04:58,000 --> 00:05:00,000
+I'm not just going to tell it to two or three people.
+
+54
+00:05:00,000 --> 00:05:03,000
+What I do now is I'm a backend engineer at a startup.
+
+55
+00:05:03,000 --> 00:05:07,000
+I work on a fair amount of Python, also a fair amount of Go.
+
+56
+00:05:07,000 --> 00:05:13,000
+I work on a couple projects that involve machine learning that's deployed in some way.
+
+57
+00:05:13,000 --> 00:05:18,000
+Right now, I am working on basically like an alert recommendation system.
+
+58
+00:05:18,000 --> 00:05:23,000
+Previously, I have worked on putting some NLP models in production.
+
+59
+00:05:23,000 --> 00:05:27,000
+In the past, I used to work for a company called AD451.
+
+60
+00:05:27,000 --> 00:05:28,000
+That's part of Kroger.
+
+61
+00:05:28,000 --> 00:05:30,000
+People know the big grocery chain, Kroger.
+
+62
+00:05:30,000 --> 00:05:33,000
+They actually own Smith's, which is out here.
+
+63
+00:05:33,000 --> 00:05:35,000
+I was a data scientist for them.
+
+64
+00:05:35,000 --> 00:05:42,000
+I've kind of seen both sides of the deployment and the actually doing the modeling parts of machine learning,
+
+65
+00:05:42,000 --> 00:05:47,000
+which has been fun and hopefully has taught me some useful things.
+
+66
+00:05:47,000 --> 00:05:49,000
+Outside of my day job, I also do a fair amount of teaching.
+
+67
+00:05:49,000 --> 00:05:55,000
+I teach at the University of Cincinnati a bit, and I do some consulting and corporate training stuff.
+
+68
+00:05:55,000 --> 00:05:59,000
+Then here are a couple links for me.
+
+69
+00:05:59,000 --> 00:06:03,000
+Without further ado, what's the rest of the day going to look like?
+
+70
+00:06:03,000 --> 00:06:06,000
+Basically, I know this is a pretty bare agenda.
+
+71
+00:06:06,000 --> 00:06:10,000
+I do have timings that I'm going to try to stick to, but I don't want to distract you all.
+
+72
+00:06:10,000 --> 00:06:12,000
+I can adjust on the fly.
+
+73
+00:06:12,000 --> 00:06:15,000
+Basically, we have four sections of what we're going to do today.
+
+74
+00:06:15,000 --> 00:06:17,000
+We're going to start by just setting up a project.
+
+75
+00:06:17,000 --> 00:06:20,000
+I know this is the least exciting part, but it is a thing we've got to do.
+
+76
+00:06:20,000 --> 00:06:22,000
+We're just going to get everything set.
+
+77
+00:06:22,000 --> 00:06:23,000
+We're going to create an environment.
+
+78
+00:06:23,000 --> 00:06:24,000
+We're going to get folders set up.
+
+79
+00:06:24,000 --> 00:06:26,000
+We're going to install the packages we need.
+
+80
+00:06:26,000 --> 00:06:30,000
+Then in step two, we will have a working fast API app by the end of that.
+
+81
+00:06:30,000 --> 00:06:34,000
+It won't do much, but it will be an app that we can start just the same way that I demoed.
+
+82
+00:06:34,000 --> 00:06:39,000
+In section three, we're going to work with what's called Pydantic, a library for data models.
+
+83
+00:06:39,000 --> 00:06:45,000
+That's how we're going to model the information we pass into our API and the information we get out.
+
+84
+00:06:45,000 --> 00:06:50,000
+Then we're going to incorporate that, but we won't actually be using our model object until section four.
+
+85
+00:06:50,000 --> 00:06:53,000
+At that point, we're going to add the model into the API.
+
+86
+00:06:53,000 --> 00:06:55,000
+Then we're going to be making live predictions.
+
+87
+00:06:55,000 --> 00:07:00,000
+You're going to have the whole same code that I just showed running on my laptop.
+
+88
+00:07:00,000 --> 00:07:02,000
+That's the plan.
+
+89
+00:07:02,000 --> 00:07:04,000
+Also, there's a break from 3 to 3.30.
+
+90
+00:07:04,000 --> 00:07:11,000
+I'm going to try to stick to that almost exactly, because that will also be a good cue for me to make sure that we have as much done as we should by 3 o'clock.
+
+91
+00:07:11,000 --> 00:07:14,000
+If I don't notice that it's 3.01, somebody let me know.
+
+92
+00:07:14,000 --> 00:07:17,000
+We should have a break at 3.01, ideally at 3.00.
+
+93
+00:07:17,000 --> 00:07:18,000
+We'll see.
+
+94
+00:07:18,000 --> 00:07:21,000
+We'll see how on top of things I am.
+
+95
+00:07:21,000 --> 00:07:30,000
+Roughly, each section is going to be about 40 minutes, but that's half me lecturing and half you working.
+
+96
+00:07:30,000 --> 00:07:36,000
+If all goes really well, it'll be less than half me lecturing and more than half you working.
+
+97
+00:07:36,000 --> 00:07:40,000
+I actually want to talk a little bit about that before we go on.
+
+98
+00:07:40,000 --> 00:07:43,000
+At this point, especially now that things are remote, I think everybody has seen,
+
+99
+00:07:43,000 --> 00:07:46,000
+that there's a lot of free videos online.
+
+100
+00:07:46,000 --> 00:07:49,000
+There's a lot of learning you can get just on the Internet.
+
+101
+00:07:49,000 --> 00:07:56,000
+To me, the benefit of an in-person tutorial is that there is an instructor who can answer your questions as you go.
+
+102
+00:07:56,000 --> 00:08:00,000
+That really is the target of the way I'm delivering this.
+
+103
+00:08:00,000 --> 00:08:02,000
+We're actually going to move pretty fast through slides.
+
+104
+00:08:02,000 --> 00:08:07,000
+I'll probably go through every slide, but a lot of the slides are going to be there for your reference.
+
+105
+00:08:07,000 --> 00:08:09,000
+I'm going to talk a bit about what we're going to do.
+
+106
+00:08:10,000 --> 00:08:15,000
+I probably won't do live coding because it'll take a lot of time, and I'd rather you have that time for working.
+
+107
+00:08:15,000 --> 00:08:17,000
+Maybe in some cases I'll do some live coding.
+
+108
+00:08:17,000 --> 00:08:22,000
+Generally, I'm going to talk about the concepts and move pretty fast through that.
+
+109
+00:08:22,000 --> 00:08:28,000
+Then I'm going to let you loose, and we're going to have work time for half the section total time.
+
+110
+00:08:28,000 --> 00:08:31,000
+Then I'm going to walk around and help with whatever.
+
+111
+00:08:31,000 --> 00:08:32,000
+Raise your hand, ask questions.
+
+112
+00:08:32,000 --> 00:08:36,000
+If I get questions that I think are applicable to everyone, I'll share.
+
+113
+00:08:36,000 --> 00:08:40,000
+Ideally, a lot of this is work time with a person who can help you through work.
+
+114
+00:08:40,000 --> 00:08:43,000
+That's what to expect as we go.
+
+115
+00:08:43,000 --> 00:08:46,000
+If I go quickly through slides, feel free to ask questions.
+
+116
+00:08:46,000 --> 00:08:49,000
+I want questions, but I may defer some of them, just a heads up.
+
+117
+00:08:49,000 --> 00:08:55,000
+If you ask me a question that I think is going to take a while to answer or isn't something that people need to know in order to get started working,
+
+118
+00:08:55,000 --> 00:08:59,000
+I might say, let me come back to that once I've let everybody loose to start working, and then I'll answer.
+
+119
+00:08:59,000 --> 00:09:02,000
+That's the plan, just so you know.
+
+120
+00:09:02,000 --> 00:09:14,000
+I'm going to pause on this slide for a second because what I just said about the format means that you'll probably be referencing the slides and some other resources quite often.
+
+121
+00:09:14,000 --> 00:09:19,000
+I would like everybody to pull up at least the first two resources here.
+
+122
+00:09:19,000 --> 00:09:22,000
+This first one is the slides that I'm delivering.
+
+123
+00:09:22,000 --> 00:09:25,000
+You can follow along. They're going to be exactly the same.
+
+124
+00:09:25,000 --> 00:09:32,000
+The second one, I don't want to click on it just yet because I know people are typing,
+
+125
+00:09:32,000 --> 00:09:44,000
+but the second one is four different copies of the app that we're making with what you have done after each section in each of those folders.
+
+126
+00:09:44,000 --> 00:09:48,000
+There is an app section one folder that is all the code you'll have after section one.
+
+127
+00:09:48,000 --> 00:09:51,000
+App section two is all the code you'll have after section two.
+
+128
+00:09:51,000 --> 00:09:54,000
+App section three, etc., etc.
+
+129
+00:09:54,000 --> 00:09:59,000
+To make that even a little bit clearer, I actually created what's called a diff,
+
+130
+00:09:59,000 --> 00:10:05,000
+so like the change set, the delta, between each of those copies.
+
+131
+00:10:05,000 --> 00:10:08,000
+Those are available at these links as well.
+
+132
+00:10:08,000 --> 00:10:13,000
+That'll just be really clear from section one to section two what code was added.
+
+133
+00:10:13,000 --> 00:10:23,000
+Hopefully, this will be a good way to keep track of what you're working on if you run into trouble, something you can reference.
+
+134
+00:10:23,000 --> 00:10:28,000
+The main one of these I want you to make sure that everybody has up on their computer right now is this one,
+
+135
+00:10:28,000 --> 00:10:32,000
+because from the slides, as you can see right here, you can get to all the other links.
+
+136
+00:10:32,000 --> 00:10:35,000
+I want to make sure everybody has the slides open on their computer.
+
+137
+00:10:35,000 --> 00:10:38,000
+I'll give you another minute for that, and then we'll keep going.
+
+138
+00:10:53,000 --> 00:11:03,000
+I don't hear a lot of keyboard clicking, so I guess we're good.
+
+139
+00:11:03,000 --> 00:11:11,000
+That brings us to section one, setting up your project workspace, the most fun part of any project.
+
+140
+00:11:11,000 --> 00:11:19,000
+What we're going to do during this section is set up a virtual environment with the packages that we need and with our application.
+
+141
+00:11:19,000 --> 00:11:24,000
+We haven't really written any code yet, but our application installed in it.
+
+142
+00:11:24,000 --> 00:11:32,000
+That's going to require setting up some folders as well, but hopefully that should be pretty straightforward.
+
+143
+00:11:32,000 --> 00:11:37,000
+Before we even get started, you're going to have to find a place where you're going to save your projects.
+
+144
+00:11:37,000 --> 00:11:43,000
+This tutorial, I assume, has people of a wide range of different experiences with Python.
+
+145
+00:11:43,000 --> 00:11:48,000
+In general, Python projects live in a folder on your computer somewhere.
+
+146
+00:11:48,000 --> 00:11:52,000
+We are going to access the folder mostly through the command line.
+
+147
+00:11:52,000 --> 00:12:04,000
+That means probably PowerShell on Windows, or if you're familiar with WSL and have it, Windows Subsystem for Linux, you can use that and Bash on Mac, Bash on Linux.
+
+148
+00:12:04,000 --> 00:12:08,000
+We're mostly going to do that through the command line.
+
+149
+00:12:08,000 --> 00:12:16,000
+Occasionally, though, we have to download a couple files because I don't want you to have to type out all the really long configuration that's going to go with some of this stuff.
+
+150
+00:12:16,000 --> 00:12:23,000
+It would be good if you also know how to get to that folder from however you usually look at files on your computer.
+
+151
+00:12:23,000 --> 00:12:26,000
+Windows Explorer or Finder.
+
+152
+00:12:26,000 --> 00:12:30,000
+We'll get more into that. If people have trouble, I can probably coach you through that.
+
+153
+00:12:30,000 --> 00:12:35,000
+As you see, I'm on a Mac. Mac and Linux is definitely what I know better.
+
+154
+00:12:35,000 --> 00:12:38,000
+I have done this whole tutorial myself through Windows.
+
+155
+00:12:38,000 --> 00:12:44,000
+Fingers crossed, I think I can debug most common Windows problems as well as we go.
+
+156
+00:12:44,000 --> 00:12:50,000
+Now, when we're setting up a project, what are we going to actually want to set up?
+
+157
+00:12:50,000 --> 00:12:57,000
+A project in general, in Python or most programming languages, is going to be some code.
+
+158
+00:12:57,000 --> 00:12:59,000
+That's like the thing in a project.
+
+159
+00:12:59,000 --> 00:13:03,000
+Additionally, you might have some kind of resource you use with the code.
+
+160
+00:13:03,000 --> 00:13:13,000
+You might have, say, images that are part of a website or configuration files or, in our case, a model because we're going to build an API that pulls in a model.
+
+161
+00:13:13,000 --> 00:13:18,000
+The model itself is in Python code.
+
+162
+00:13:18,000 --> 00:13:26,000
+In this case, it's going to be a pickle file, which is a specific type of file for saved data that you've exported from Python.
+
+163
+00:13:26,000 --> 00:13:28,000
+We're going to have a place for our code.
+
+164
+00:13:28,000 --> 00:13:34,000
+We're going to have a place for our model, potentially more than one model in case we ever wanted to add a second one or a new version.
+
+165
+00:13:34,000 --> 00:13:37,000
+Then we're going to have a place for our tests.
+
+166
+00:13:37,000 --> 00:13:40,000
+Those are the three main folders where we want to save things.
+
+167
+00:13:40,000 --> 00:13:44,000
+Additionally, we're going to have metadata about our project.
+
+168
+00:13:44,000 --> 00:13:48,000
+We're going to install our project as a Python package.
+
+169
+00:13:48,000 --> 00:13:50,000
+Hopefully that doesn't sound too intimidating.
+
+170
+00:13:50,000 --> 00:13:54,000
+I think sometimes jumping into packaging in Python can sound like a lot.
+
+171
+00:13:54,000 --> 00:13:57,000
+We're going to do that all in just one or two steps.
+
+172
+00:13:57,000 --> 00:14:02,000
+I have a configuration file that you can just use straight out of the box, and that should solve all those problems.
+
+173
+00:14:02,000 --> 00:14:04,000
+There are some advantages to setting it up that way.
+
+174
+00:14:04,000 --> 00:14:11,000
+That metadata configuration is something that I'll provide, and you'll also put in the folder where we're making our project.
+
+175
+00:14:11,000 --> 00:14:18,000
+What that's going to look like is our root folder that we're putting everything in the project in.
+
+176
+00:14:18,000 --> 00:14:20,000
+I'm just calling it project here.
+
+177
+00:14:20,000 --> 00:14:23,000
+You can call it fast API app, SKLearn app.
+
+178
+00:14:23,000 --> 00:14:25,000
+Call that whatever you want.
+
+179
+00:14:25,000 --> 00:14:30,000
+That is the root of all the stuff we're working on.
+
+180
+00:14:30,000 --> 00:14:33,000
+Then there's going to be a tests folder for the tests.
+
+181
+00:14:33,000 --> 00:14:34,000
+That's pretty simple.
+
+182
+00:14:34,000 --> 00:14:35,000
+We're not going to put anything in there yet.
+
+183
+00:14:35,000 --> 00:14:40,000
+Our app folder is where we're going to keep all the source code for the project, including the models.
+
+184
+00:14:40,000 --> 00:14:42,000
+The models are going to go in there too.
+
+185
+00:14:42,000 --> 00:14:45,000
+In there, we're going to have a models folder.
+
+186
+00:14:45,000 --> 00:14:49,000
+Then we're going to put two files in init.py.
+
+187
+00:14:49,000 --> 00:14:52,000
+You'll see these are two underscores on each side of init.
+
+188
+00:14:52,000 --> 00:14:56,000
+Underscore, underscore, init, underscore, underscore.
+
+189
+00:14:56,000 --> 00:15:03,000
+You don't always need those actually, but those tell Python that the folder that they're in is a package.
+
+190
+00:15:03,000 --> 00:15:06,000
+That's helpful to us for a few reasons.
+
+191
+00:15:06,000 --> 00:15:16,000
+It basically helps us later on when we're going to want to import code from other folders in the application or other files in the application.
+
+192
+00:15:16,000 --> 00:15:22,000
+As a general heuristic, it never hurts to just put one of those in a folder of Python source code.
+
+193
+00:15:22,000 --> 00:15:24,000
+That's usually the way to do things.
+
+194
+00:15:24,000 --> 00:15:26,000
+Again, we're going to set up this app folder and a models folder.
+
+195
+00:15:26,000 --> 00:15:28,000
+Each of them will have an init.py in them.
+
+196
+00:15:28,000 --> 00:15:30,000
+Then we're going to have a tests folder that doesn't.
+
+197
+00:15:30,000 --> 00:15:31,000
+It could if you wanted to.
+
+198
+00:15:31,000 --> 00:15:32,000
+It wouldn't do any harm.
+
+199
+00:15:32,000 --> 00:15:35,000
+We just don't need it.
+
+200
+00:15:35,000 --> 00:15:41,000
+Then we're going to put the model file, which you can download from the GitHub repo.
+
+201
+00:15:41,000 --> 00:15:43,000
+I have a link here in the slides.
+
+202
+00:15:43,000 --> 00:15:46,000
+Again, this is why I'd like you to have the slides open.
+
+203
+00:15:46,000 --> 00:15:52,000
+We're going to download this pickle file, which is our model, and put it in the models folder.
+
+204
+00:15:52,000 --> 00:15:58,000
+We're also going to add a readme, which I think I discuss on the next slide.
+
+205
+00:15:58,000 --> 00:16:03,000
+First, though, I want to mention how you download files in GitHub.
+
+206
+00:16:03,000 --> 00:16:09,000
+This is probably better done as a demonstration rather than me just showing slides.
+
+207
+00:16:09,000 --> 00:16:10,000
+This is GitHub.
+
+208
+00:16:10,000 --> 00:16:14,000
+GitHub is a place where you can store and version your code.
+
+209
+00:16:14,000 --> 00:16:19,000
+This repository is where I have all the sample code that I discussed.
+
+210
+00:16:19,000 --> 00:16:22,000
+You'll actually see there's app section one.
+
+211
+00:16:22,000 --> 00:16:27,000
+This is all the code that's done after section one, app section two, and then, of course,
+
+212
+00:16:27,000 --> 00:16:31,000
+app section four is all the code we will have done at the end of the day.
+
+213
+00:16:31,000 --> 00:16:37,000
+If you want to download a file in GitHub and those links on the last slide,
+
+214
+00:16:37,000 --> 00:16:43,000
+this link actually takes you into that GitHub repo.
+
+215
+00:16:43,000 --> 00:16:47,000
+The way you download a file is you go over to this little download icon.
+
+216
+00:16:47,000 --> 00:16:49,000
+This file doesn't show anything on GitHub.
+
+217
+00:16:49,000 --> 00:16:52,000
+GitHub doesn't know what to do with a pickle file.
+
+218
+00:16:52,000 --> 00:16:56,000
+If you just go over here, everybody should have this little download.
+
+219
+00:16:56,000 --> 00:16:59,000
+Download raw, I think, is what the help text says.
+
+220
+00:16:59,000 --> 00:17:05,000
+If you click that, you can see a little bit of an icon popped over into my dock over here.
+
+221
+00:17:05,000 --> 00:17:12,000
+That is how we're going to download the model file.
+
+222
+00:17:12,000 --> 00:17:17,000
+Hopping back around.
+
+223
+00:17:17,000 --> 00:17:23,000
+Then, oh, I'm sorry, I did the read me out of order.
+
+224
+00:17:23,000 --> 00:17:25,000
+I'll show you the read me in a second as well.
+
+225
+00:17:25,000 --> 00:17:27,000
+At this point, we're going to download the model file.
+
+226
+00:17:27,000 --> 00:17:33,000
+Then we're also going to add these two metadata files, setup.cfg and pyproject.toml.
+
+227
+00:17:33,000 --> 00:17:36,000
+I'll show them a second in the next slide.
+
+228
+00:17:36,000 --> 00:17:41,000
+Basically, because they are going to define this entire project folder as a package,
+
+229
+00:17:41,000 --> 00:17:44,000
+they go at the base of the project.
+
+230
+00:17:44,000 --> 00:17:47,000
+They go at the very bottom in the main folder alongside tests and app.
+
+231
+00:17:47,000 --> 00:17:50,000
+Pyproject.toml and setup.cfg.
+
+232
+00:17:50,000 --> 00:17:53,000
+Those define our project as a package.
+
+233
+00:17:53,000 --> 00:17:57,000
+The setup.cfg looks basically like this.
+
+234
+00:17:57,000 --> 00:17:59,000
+I'm going to have you just download this from the repo though,
+
+235
+00:17:59,000 --> 00:18:03,000
+because there's a whole list here of all the packages that we rely upon.
+
+236
+00:18:03,000 --> 00:18:06,000
+Things like fast API and scikit-learn, of course,
+
+237
+00:18:06,000 --> 00:18:10,000
+but also the packages that those packages depend upon.
+
+238
+00:18:10,000 --> 00:18:16,000
+It's good practice to have these exactly listed with the version,
+
+239
+00:18:16,000 --> 00:18:19,000
+precisely the version that you know everything works with.
+
+240
+00:18:19,000 --> 00:18:22,000
+I've already tested that and got that set up.
+
+241
+00:18:22,000 --> 00:18:23,000
+You could just use these.
+
+242
+00:18:23,000 --> 00:18:25,000
+If you ever wanted to install a new package,
+
+243
+00:18:25,000 --> 00:18:29,000
+you could then add that new package into the list, choose a specific version.
+
+244
+00:18:29,000 --> 00:18:31,000
+Then if you were to repeat this setup step,
+
+245
+00:18:31,000 --> 00:18:35,000
+you will end up with that package installed too along with all your others.
+
+246
+00:18:35,000 --> 00:18:37,000
+This is setup.cfg.
+
+247
+00:18:37,000 --> 00:18:49,000
+You also give a name to the package you're creating from your source code.
+
+248
+00:18:49,000 --> 00:18:51,000
+You tell it where it lives.
+
+249
+00:18:51,000 --> 00:18:56,000
+This says the app package that I'm making is in the app folder.
+
+250
+00:18:56,000 --> 00:18:59,000
+You say, is there any non-Python code?
+
+251
+00:18:59,000 --> 00:19:02,000
+Is there anything in that app folder that should be included,
+
+252
+00:19:02,000 --> 00:19:04,000
+even though it's not just Python files?
+
+253
+00:19:04,000 --> 00:19:06,000
+This says anything in the models folder,
+
+254
+00:19:06,000 --> 00:19:08,000
+which remember we're going to create.
+
+255
+00:19:08,000 --> 00:19:11,000
+Include that too, even though it's not just .py files.
+
+256
+00:19:11,000 --> 00:19:15,000
+We still want that stuff because we need it as part of our API.
+
+257
+00:19:15,000 --> 00:19:17,000
+That's setup.cfg.
+
+258
+00:19:17,000 --> 00:19:19,000
+Pyproject.toml is even simpler.
+
+259
+00:19:19,000 --> 00:19:22,000
+We just say what tool we're going to install this with.
+
+260
+00:19:22,000 --> 00:19:24,000
+Some of this Python packaging stuff,
+
+261
+00:19:24,000 --> 00:19:28,000
+I've done Python packaging for many, well, many is a bit strong,
+
+262
+00:19:28,000 --> 00:19:30,000
+but quite a few years now.
+
+263
+00:19:30,000 --> 00:19:32,000
+I'll say even as someone who does this all the time,
+
+264
+00:19:32,000 --> 00:19:34,000
+I realize some of this is pretty cryptic.
+
+265
+00:19:34,000 --> 00:19:37,000
+There's a lot of incantations you've got to use here.
+
+266
+00:19:37,000 --> 00:19:40,000
+In general, it's mostly fine to just copy other people's configuration
+
+267
+00:19:40,000 --> 00:19:41,000
+and start from there.
+
+268
+00:19:41,000 --> 00:19:43,000
+That's what I'm going to have you do for this.
+
+269
+00:19:43,000 --> 00:19:46,000
+This kind of stuff, as long as you use basically the same setup
+
+270
+00:19:46,000 --> 00:19:50,000
+in these two files, will work on pretty much any project of this sort.
+
+271
+00:19:51,000 --> 00:19:54,000
+Then the last thing, which I accidentally foreshadowed,
+
+272
+00:19:54,000 --> 00:19:56,000
+was a readme file.
+
+273
+00:19:56,000 --> 00:19:59,000
+I highly recommend every project you make has a readme.
+
+274
+00:19:59,000 --> 00:20:03,000
+You'll see it's customary to call it readme in all caps, .md,
+
+275
+00:20:03,000 --> 00:20:05,000
+meaning it's Markdown.
+
+276
+00:20:05,000 --> 00:20:07,000
+You can put whatever you want in a readme.
+
+277
+00:20:07,000 --> 00:20:09,000
+You can put one sentence.
+
+278
+00:20:09,000 --> 00:20:13,000
+Ideally, you say what the project is for and how you run it.
+
+279
+00:20:13,000 --> 00:20:16,000
+You can add more details beyond that, but really that's the key.
+
+280
+00:20:16,000 --> 00:20:20,000
+If you want to copy the readme from my repository, too,
+
+281
+00:20:20,000 --> 00:20:22,000
+I have a link here.
+
+282
+00:20:22,000 --> 00:20:24,000
+Markdown is a special language.
+
+283
+00:20:24,000 --> 00:20:28,000
+It's not just for readmes, but it's a way of making styled text
+
+284
+00:20:28,000 --> 00:20:34,000
+that you can basically just type regular text in your editor,
+
+285
+00:20:34,000 --> 00:20:36,000
+like VS Code or PyCharm.
+
+286
+00:20:36,000 --> 00:20:41,000
+But when you open it in certain situations, so in your browser, for example,
+
+287
+00:20:41,000 --> 00:20:45,000
+you can actually see it with bold, italics, underline.
+
+288
+00:20:45,000 --> 00:20:47,000
+Actually, there's no underline.
+
+289
+00:20:47,000 --> 00:20:53,000
+Bold, italics, headings, code blocks, nice things like that.
+
+290
+00:20:53,000 --> 00:20:56,000
+With the sample readme, if you choose to just use that one,
+
+291
+00:20:56,000 --> 00:20:58,000
+what it looks like is this.
+
+292
+00:20:58,000 --> 00:21:00,000
+This is after it's rendered.
+
+293
+00:21:00,000 --> 00:21:02,000
+But it just gives some real basic background.
+
+294
+00:21:02,000 --> 00:21:04,000
+Here's how you run the app that we built.
+
+295
+00:21:04,000 --> 00:21:06,000
+Here's how you test it out.
+
+296
+00:21:06,000 --> 00:21:09,000
+And that's everything in the sample readme.
+
+297
+00:21:11,000 --> 00:21:16,000
+Okay, so I think we just have one last concept before I turn you loose in this bit.
+
+298
+00:21:16,000 --> 00:21:18,000
+Virtual environments.
+
+299
+00:21:18,000 --> 00:21:24,000
+Just out of curiosity, how many people have used virtual and vervien before?
+
+300
+00:21:24,000 --> 00:21:26,000
+Okay, so a little more than half.
+
+301
+00:21:26,000 --> 00:21:28,000
+That's good for me to know.
+
+302
+00:21:28,000 --> 00:21:32,000
+I'm still going to walk through all this, but it's just helpful to know that people are familiar.
+
+303
+00:21:32,000 --> 00:21:38,000
+So there's a general class of problems in software development
+
+304
+00:21:38,000 --> 00:21:42,000
+around reproducibility and isolation,
+
+305
+00:21:42,000 --> 00:21:46,000
+which is a really complicated way of saying basically when you start a new project,
+
+306
+00:21:46,000 --> 00:21:51,000
+you usually want to have just a set of packages and a version of Python unique to that project.
+
+307
+00:21:51,000 --> 00:21:53,000
+That has a lot of benefits.
+
+308
+00:21:53,000 --> 00:21:55,000
+It means that when you install packages for one project,
+
+309
+00:21:55,000 --> 00:21:57,000
+they don't suddenly show up in another project.
+
+310
+00:21:57,000 --> 00:21:59,000
+They don't change the versions in another project.
+
+311
+00:21:59,000 --> 00:22:03,000
+It means you can use different versions of Python for different projects.
+
+312
+00:22:03,000 --> 00:22:07,000
+It means that if you set things up from scratch on a new computer,
+
+313
+00:22:07,000 --> 00:22:09,000
+they should work pretty much exactly the same.
+
+314
+00:22:09,000 --> 00:22:15,000
+And between that setup.cfg file we saw earlier and using a virtual environment,
+
+315
+00:22:15,000 --> 00:22:17,000
+we can mostly iron out those wrinkles.
+
+316
+00:22:17,000 --> 00:22:20,000
+And it makes it a lot easier from this point on in the tutorial,
+
+317
+00:22:20,000 --> 00:22:24,000
+because we will all be working with a very similar project workspace.
+
+318
+00:22:24,000 --> 00:22:28,000
+So a virtual environment is the way we solve that.
+
+319
+00:22:28,000 --> 00:22:31,000
+Python ships with a package called venv.
+
+320
+00:22:31,000 --> 00:22:36,000
+Anyone who has Python 3 installed will have venv on their computer as part of Python already.
+
+321
+00:22:36,000 --> 00:22:43,000
+And venv is a way of creating a fresh environment
+
+322
+00:22:43,000 --> 00:22:46,000
+that is just stored in a folder as part of your project.
+
+323
+00:22:46,000 --> 00:22:51,000
+So the way you do this is you navigate to the path to your project,
+
+324
+00:22:51,000 --> 00:22:54,000
+which we talked about earlier. You have to have a project folder.
+
+325
+00:22:54,000 --> 00:22:59,000
+And again, I'll be able to help if you aren't familiar with doing that from either PowerShell or Bash.
+
+326
+00:22:59,000 --> 00:23:01,000
+I think I can help you through that.
+
+327
+00:23:01,000 --> 00:23:04,000
+And then we're going to create the virtual environment with this special command.
+
+328
+00:23:04,000 --> 00:23:08,000
+So python3-m venv venv.
+
+329
+00:23:08,000 --> 00:23:10,000
+I realize that's a little weird.
+
+330
+00:23:10,000 --> 00:23:13,000
+So what this is saying is call Python, start up Python.
+
+331
+00:23:13,000 --> 00:23:18,000
+And then dash m means look for the module, which is like a package, look for the module called venv.
+
+332
+00:23:18,000 --> 00:23:21,000
+Venv is the name of the tool that we're using.
+
+333
+00:23:21,000 --> 00:23:23,000
+And the last argument could be anything.
+
+334
+00:23:23,000 --> 00:23:28,000
+You can call the folder that your environment is stored in whatever you want.
+
+335
+00:23:28,000 --> 00:23:31,000
+But we're going to call it venv because that's customary.
+
+336
+00:23:31,000 --> 00:23:35,000
+So that'll create a new folder just called venv in your project.
+
+337
+00:23:35,000 --> 00:23:41,000
+And then you can switch into that venv by running one of these two commands,
+
+338
+00:23:41,000 --> 00:23:43,000
+depending on which platform you're on.
+
+339
+00:23:43,000 --> 00:23:47,000
+The last thing we're going to do, and this is actually the most important command of all,
+
+340
+00:23:47,000 --> 00:23:50,000
+is pip install dash e dot.
+
+341
+00:23:50,000 --> 00:23:56,000
+What that says is install all of the code in this folder.
+
+342
+00:23:56,000 --> 00:24:01,000
+So all the stuff we already set up, the models, the setup.cfg, the pyproject.toml,
+
+343
+00:24:01,000 --> 00:24:05,000
+install all of that based on the metadata that we described,
+
+344
+00:24:05,000 --> 00:24:10,000
+pull in all the packages that it needs, and make it editable.
+
+345
+00:24:10,000 --> 00:24:13,000
+Dash e means editable, which means that as we keep working on this project,
+
+346
+00:24:13,000 --> 00:24:15,000
+our changes will be reflected.
+
+347
+00:24:15,000 --> 00:24:16,000
+We don't want to just install it.
+
+348
+00:24:16,000 --> 00:24:21,000
+We want to make sure that it's a copy that we can work with as we go,
+
+349
+00:24:21,000 --> 00:24:25,000
+so we can add new things and we will still see those in our package.
+
+350
+00:24:25,000 --> 00:24:31,000
+So once you go through all these steps, what you'll have is the ability to start up the venv.
+
+351
+00:24:31,000 --> 00:24:37,000
+If you just run Python, you will open up a version of Python that has access to the project we created,
+
+352
+00:24:37,000 --> 00:24:43,000
+that has all the packages we installed, and so you should be able to do something like import fast API.
+
+353
+00:24:43,000 --> 00:24:49,000
+So very quickly, I'm not going to do much live coding, but this bit I think is worth showing.
+
+354
+00:24:55,000 --> 00:24:59,000
+You can see I'm actually in a venv right now, which I'm going to exit.
+
+355
+00:24:59,000 --> 00:25:01,000
+Okay.
+
+356
+00:25:01,000 --> 00:25:09,000
+So in the app section one folder, here are the files we created.
+
+357
+00:25:09,000 --> 00:25:11,000
+We have the app folder, which is our source code.
+
+358
+00:25:11,000 --> 00:25:14,000
+We have the tests folder, which doesn't have anything in it just yet.
+
+359
+00:25:14,000 --> 00:25:15,000
+Oh, yeah, thank you.
+
+360
+00:25:15,000 --> 00:25:18,000
+Back of the room helping me keep an eye on sizes.
+
+361
+00:25:18,000 --> 00:25:19,000
+How's that?
+
+362
+00:25:19,000 --> 00:25:20,000
+Thanks.
+
+363
+00:25:20,000 --> 00:25:22,000
+Good help.
+
+364
+00:25:22,000 --> 00:25:25,000
+Here are the files again.
+
+365
+00:25:25,000 --> 00:25:27,000
+App is the code that we're going to write.
+
+366
+00:25:27,000 --> 00:25:30,000
+We haven't done anything in there yet except put the model in.
+
+367
+00:25:30,000 --> 00:25:35,000
+Pyproject.toml and setup.cfg are those metadata configuration files.
+
+368
+00:25:35,000 --> 00:25:38,000
+Tests is empty for now until we write some tests.
+
+369
+00:25:38,000 --> 00:25:41,000
+And readme is the description of our app.
+
+370
+00:25:41,000 --> 00:25:47,000
+So if we look at what's in readme, we have this overview of the app.
+
+371
+00:25:47,000 --> 00:25:52,000
+If we look at what's in setup.cfg, we have all these package requirements.
+
+372
+00:25:52,000 --> 00:25:55,000
+Oops, scrolling isn't working.
+
+373
+00:25:55,000 --> 00:25:59,000
+If we look at what's in app, we have a models folder.
+
+374
+00:25:59,000 --> 00:26:02,000
+And we also have the init.py.
+
+375
+00:26:02,000 --> 00:26:10,000
+And in models, there's another init.py and also the model file that we created.
+
+376
+00:26:10,000 --> 00:26:15,000
+And that means that if I create a virtual environment with that command I showed before,
+
+377
+00:26:15,000 --> 00:26:19,000
+Python 3-M vnv, vnv.
+
+378
+00:26:19,000 --> 00:26:22,000
+Oh, actually, before I run this, I'm actually going to not do that.
+
+379
+00:26:22,000 --> 00:26:25,000
+Notice there's no vn folder here just yet.
+
+380
+00:26:25,000 --> 00:26:34,000
+Now if I run python-m vnvnv, Python 3, oops.
+
+381
+00:26:34,000 --> 00:26:39,000
+It doesn't look like anything has happened, but when I look at what's in my folder,
+
+382
+00:26:39,000 --> 00:26:41,000
+now there's a vn folder too.
+
+383
+00:26:41,000 --> 00:26:46,000
+And I can run that command, source vnvbin activate.
+
+384
+00:26:46,000 --> 00:26:49,000
+And now you see in parentheses this little vnv.
+
+385
+00:26:49,000 --> 00:26:54,000
+That means you've entered a virtual environment that you can run Python in, you can install things in.
+
+386
+00:26:54,000 --> 00:26:59,000
+And then the very last thing I said we need to do is pip install-e.
+
+387
+00:26:59,000 --> 00:27:01,000
+And this is actually kind of cool to watch.
+
+388
+00:27:01,000 --> 00:27:05,000
+So it is looking at all of our metadata and it says these are the packages that you need.
+
+389
+00:27:05,000 --> 00:27:07,000
+I'll go install all of those.
+
+390
+00:27:07,000 --> 00:27:10,000
+And then at the end it says, okay, your package was called app?
+
+391
+00:27:10,000 --> 00:27:11,000
+Well, I've successfully built it.
+
+392
+00:27:11,000 --> 00:27:12,000
+We're done now.
+
+393
+00:27:12,000 --> 00:27:14,000
+Here's all the packages I installed.
+
+394
+00:27:14,000 --> 00:27:17,000
+And sometimes it'll tell you you can upgrade pip.
+
+395
+00:27:17,000 --> 00:27:18,000
+That happens all the time.
+
+396
+00:27:18,000 --> 00:27:19,000
+It's not important.
+
+397
+00:27:19,000 --> 00:27:22,000
+At least it's not important right now.
+
+398
+00:27:22,000 --> 00:27:25,000
+So look at all this stuff we needed just to get Fast API so I could learn.
+
+399
+00:27:25,000 --> 00:27:29,000
+There's a lot of stuff built in there.
+
+400
+00:27:29,000 --> 00:27:34,000
+So I think that's the last thing I want to point out there.
+
+401
+00:27:34,000 --> 00:27:35,000
+Yeah.
+
+402
+00:27:35,000 --> 00:27:44,000
+So now if I start up Python, I can import Fast API because I'm in a vn where I installed it.
+
+403
+00:27:44,000 --> 00:27:48,000
+That wouldn't be true if I just used my system Python.
+
+404
+00:27:48,000 --> 00:27:57,000
+So that's vm and that brings us to our to-do list for this section.
+
+405
+00:27:57,000 --> 00:27:59,000
+So this is the part.
+
+406
+00:27:59,000 --> 00:28:01,000
+We're doing great on time actually.
+
+407
+00:28:01,000 --> 00:28:05,000
+So this is the part where I set you loose, but also this is the part where I'm available for questions.
+
+408
+00:28:05,000 --> 00:28:09,000
+So consider this your invitation to get going.
+
+409
+00:28:09,000 --> 00:28:11,000
+Raise your hand if you have any questions.
+
+410
+00:28:11,000 --> 00:28:17,000
+So I'll take about 20 minutes for this.
+
+411
+00:28:17,000 --> 00:28:19,000
+So until about 2.20.
+
+412
+00:28:19,000 --> 00:28:21,000
+All right.
+
+413
+00:28:21,000 --> 00:28:23,000
+So that was fun.
+
+414
+00:28:23,000 --> 00:28:27,000
+I'd say about the same number of issues as I anticipated.
+
+415
+00:28:27,000 --> 00:28:29,000
+But thanks everybody for working through that.
+
+416
+00:28:29,000 --> 00:28:38,000
+I know this kind of stuff, this section in particular, is the part that depends the most on the operating system you're on and the configuration of your computer.
+
+417
+00:28:38,000 --> 00:28:47,000
+So mostly I hate to jinx it, but if you work through the problems in this stuff, you're way less likely to have problems the rest of the way.
+
+418
+00:28:47,000 --> 00:28:51,000
+So hopefully we already got through the hardest part.
+
+419
+00:28:51,000 --> 00:28:53,000
+Great.
+
+420
+00:28:53,000 --> 00:28:56,000
+So that is setting up a project.
+
+421
+00:28:56,000 --> 00:29:00,000
+Now everybody has a package installed with all the dependencies it needs.
+
+422
+00:29:00,000 --> 00:29:05,000
+And from here on out, all we're going to do is add code to that project that enhances functionality.
+
+423
+00:29:05,000 --> 00:29:09,000
+We're just going to add features basically.
+
+424
+00:29:09,000 --> 00:29:14,000
+And that's the first feature we're going to have is a simple fast API app.
+
+425
+00:29:14,000 --> 00:29:19,000
+So how many people have used fast API before?
+
+426
+00:29:19,000 --> 00:29:21,000
+Okay.
+
+427
+00:29:21,000 --> 00:29:23,000
+More than I would have thought, to be honest.
+
+428
+00:29:23,000 --> 00:29:30,000
+We're going to talk about what fast API is, why we chose that for this tutorial, and how you build one.
+
+429
+00:29:30,000 --> 00:29:40,000
+So when we finish section two, what we're going to have is a little fast API app that has one endpoint, which is sort of like a function.
+
+430
+00:29:40,000 --> 00:29:42,000
+It's almost like one function in a package.
+
+431
+00:29:42,000 --> 00:29:51,000
+There's one endpoint you can connect to, and whenever you talk to it, it just sends back a message that says the API is up and running.
+
+432
+00:29:51,000 --> 00:29:59,000
+This is sometimes called a status endpoint, because sometimes if you run a web server, you want to have a way to check, is the web server up and working?
+
+433
+00:29:59,000 --> 00:30:03,000
+So what we're going to build is a way to do that.
+
+434
+00:30:03,000 --> 00:30:07,000
+But before that, I want to talk a bit about what web APIs are.
+
+435
+00:30:07,000 --> 00:30:18,000
+If anybody is familiar with the term REST APIs, which is not technically a subset, but sort of a subset of web APIs, we're building a REST API.
+
+436
+00:30:18,000 --> 00:30:25,000
+When I say web APIs, what I mean is an API is an application programming interface.
+
+437
+00:30:25,000 --> 00:30:31,000
+So technically, any sort of code that you work with has an interface of some sort.
+
+438
+00:30:31,000 --> 00:30:37,000
+If you think of working with a package, its interface is the functions and the classes that are in it.
+
+439
+00:30:37,000 --> 00:30:42,000
+If you think of working with a programming language, its interface is all the words you can type.
+
+440
+00:30:42,000 --> 00:30:49,000
+Python has an if keyword and a def keyword, and in some sense, that's the interface to Python.
+
+441
+00:30:49,000 --> 00:30:59,000
+Well, that technical definition of an API, an applications programming interface, is so broad that it isn't really helpful.
+
+442
+00:30:59,000 --> 00:31:05,000
+Most of the time when people talk about APIs, what they mean are APIs that work over the Internet.
+
+443
+00:31:05,000 --> 00:31:08,000
+That's what we're building. We're building a web API.
+
+444
+00:31:08,000 --> 00:31:11,000
+From here on out, I'm just going to call them APIs.
+
+445
+00:31:11,000 --> 00:31:15,000
+Fast API doesn't have anything to do with the application programming interface of Python.
+
+446
+00:31:15,000 --> 00:31:19,000
+It's for fast web APIs, but the web is sort of implicit.
+
+447
+00:31:19,000 --> 00:31:32,000
+With web APIs, generally speaking, you send a request to the server that runs the API, and it sends back a response.
+
+448
+00:31:32,000 --> 00:31:36,000
+Everything is in what's called the client-server protocol.
+
+449
+00:31:36,000 --> 00:31:40,000
+There's always a client sending a request and the server sending the response.
+
+450
+00:31:40,000 --> 00:31:45,000
+What we are building is the server, and then anyone can be the client.
+
+451
+00:31:45,000 --> 00:31:52,000
+Earlier, when I showed what happened when I started the app, that was starting the server.
+
+452
+00:31:52,000 --> 00:31:57,000
+When I went to the webpage to try to use the app to get a prediction, that was me being the client.
+
+453
+00:31:57,000 --> 00:32:03,000
+I went on my browser and I pretended to be a client talking to the server that was already running on my computer.
+
+454
+00:32:03,000 --> 00:32:08,000
+What that looks like is, I mean, this is a pretty amazing diagram, I know.
+
+455
+00:32:08,000 --> 00:32:13,000
+Basically, you just have two things talking to each other, but they each have a specific way they talk.
+
+456
+00:32:13,000 --> 00:32:19,000
+The client sends requests, the server, for every request, receives it and sends a response.
+
+457
+00:32:19,000 --> 00:32:21,000
+The server never talks to the client first.
+
+458
+00:32:21,000 --> 00:32:24,000
+The server always takes an input and sends an output.
+
+459
+00:32:24,000 --> 00:32:28,000
+In that sense, it's a lot like a Python function.
+
+460
+00:32:28,000 --> 00:32:30,000
+Well, I shouldn't even say a Python function.
+
+461
+00:32:30,000 --> 00:32:33,000
+It's like a function in a programming language.
+
+462
+00:32:33,000 --> 00:32:36,000
+You have this set of code.
+
+463
+00:32:36,000 --> 00:32:40,000
+You may or may not know what's inside, but you can invoke it by sending over some arguments.
+
+464
+00:32:40,000 --> 00:32:44,000
+That's like our request in this sense.
+
+465
+00:32:44,000 --> 00:32:49,000
+The response is like the return value of your function.
+
+466
+00:32:49,000 --> 00:32:57,000
+The one additional argument that gets sent on a request is what's called a method.
+
+467
+00:32:57,000 --> 00:33:02,000
+These requests for web APIs, they're called HTTP requests.
+
+468
+00:33:02,000 --> 00:33:05,000
+They always come with a method specified.
+
+469
+00:33:05,000 --> 00:33:13,000
+The most common ones are get, post, put, and delete, but there's other ones like options and headers and ones people never use.
+
+470
+00:33:13,000 --> 00:33:15,000
+Never as strong, rarely used.
+
+471
+00:33:15,000 --> 00:33:18,000
+For this tutorial, we only need to know get and post.
+
+472
+00:33:18,000 --> 00:33:23,000
+What a method does is it signifies the type of operation you're doing.
+
+473
+00:33:23,000 --> 00:33:25,000
+It's not just a regular argument.
+
+474
+00:33:25,000 --> 00:33:29,000
+It's sort of a signal to the server of what kind of thing you're trying to do.
+
+475
+00:33:29,000 --> 00:33:33,000
+A get type of request says fetch some data for me.
+
+476
+00:33:33,000 --> 00:33:38,000
+Send me a message and reply about some information you already have.
+
+477
+00:33:38,000 --> 00:33:42,000
+A post is submitting some data.
+
+478
+00:33:42,000 --> 00:33:50,000
+If you think of filling out a form on the web, let's say you create your profile on Facebook.
+
+479
+00:33:50,000 --> 00:33:53,000
+You're sending a post request of all the information about yourself.
+
+480
+00:33:53,000 --> 00:34:00,000
+You're saying, my name is Ethan, I live in Chicago, these are my hobbies, whatever, whatever.
+
+481
+00:34:00,000 --> 00:34:02,000
+That is submitting some data to the server.
+
+482
+00:34:02,000 --> 00:34:08,000
+Generally, you can think get is retrieve some data for me and post is submit some of my data.
+
+483
+00:34:08,000 --> 00:34:11,000
+Those are the ones we're going to work with today.
+
+484
+00:34:11,000 --> 00:34:18,000
+Again, this is called HTTP, the whole protocol, and that's hypertext transfer protocol.
+
+485
+00:34:18,000 --> 00:34:21,000
+It doesn't really matter, but that's what it is.
+
+486
+00:34:21,000 --> 00:34:23,000
+It defines that these are the methods you should send.
+
+487
+00:34:23,000 --> 00:34:28,000
+This is the way we're going to talk to each other, the client server protocol.
+
+488
+00:34:28,000 --> 00:34:29,000
+Mostly, we don't need to worry about that.
+
+489
+00:34:29,000 --> 00:34:33,000
+That's one of the best things about Fast API, that it simplifies a lot of this stuff for us.
+
+490
+00:34:33,000 --> 00:34:37,000
+You don't really have to think about all these nuances.
+
+491
+00:34:37,000 --> 00:34:46,000
+Now, I compared API endpoints to functions where you just send a request,
+
+492
+00:34:46,000 --> 00:34:50,000
+which is like arguments, and get a response, which is like a return value.
+
+493
+00:34:50,000 --> 00:34:54,000
+There's a couple more nuances and a couple things that are worth pointing out.
+
+494
+00:34:54,000 --> 00:34:58,000
+One thing that's a lot different than a function is that quite often,
+
+495
+00:34:58,000 --> 00:35:03,000
+I mean a meaningful amount of the time, when you send a request to an API,
+
+496
+00:35:03,000 --> 00:35:05,000
+you don't ever get a response.
+
+497
+00:35:05,000 --> 00:35:11,000
+You just get ghosted because the network might go out, the API might be down.
+
+498
+00:35:11,000 --> 00:35:13,000
+It's not just like a function running on your computer.
+
+499
+00:35:13,000 --> 00:35:14,000
+It's really another server.
+
+500
+00:35:14,000 --> 00:35:16,000
+You don't know what's going on over there.
+
+501
+00:35:16,000 --> 00:35:18,000
+There's no guarantee you get a response.
+
+502
+00:35:18,000 --> 00:35:20,000
+If you do, it could take a while.
+
+503
+00:35:20,000 --> 00:35:22,000
+There might be a lot of data that needs to come back.
+
+504
+00:35:22,000 --> 00:35:25,000
+The network might be slow that day.
+
+505
+00:35:25,000 --> 00:35:28,000
+The server might be on the other side of the world.
+
+506
+00:35:28,000 --> 00:35:32,000
+Today, we shouldn't have to worry about that because we're going to run the server on our own computer.
+
+507
+00:35:32,000 --> 00:35:34,000
+It should be pretty simple.
+
+508
+00:35:34,000 --> 00:35:38,000
+Another thing is that if you do something wrong in Python,
+
+509
+00:35:38,000 --> 00:35:42,000
+hopping over to Python,
+
+510
+00:35:42,000 --> 00:35:48,000
+if I start up Python and I say like x equals 4, x plus abc,
+
+511
+00:35:48,000 --> 00:35:50,000
+that's an error. That's no good.
+
+512
+00:35:50,000 --> 00:35:55,000
+What Python does on errors is it gives you a traceback.
+
+513
+00:35:55,000 --> 00:35:58,000
+It says, hey, you did this stuff wrong. Here's the problem.
+
+514
+00:35:58,000 --> 00:36:00,000
+The error messages aren't perfect,
+
+515
+00:36:00,000 --> 00:36:03,000
+although especially in recent versions of Python, they've gotten quite good.
+
+516
+00:36:03,000 --> 00:36:05,000
+But at least they give you something.
+
+517
+00:36:05,000 --> 00:36:09,000
+Not so with APIs. They're not quite so nice.
+
+518
+00:36:09,000 --> 00:36:14,000
+APIs return to you a code that indicates whether the response,
+
+519
+00:36:14,000 --> 00:36:17,000
+well, the code comes with a response,
+
+520
+00:36:17,000 --> 00:36:21,000
+and it indicates whether what you asked it to do worked or didn't work.
+
+521
+00:36:21,000 --> 00:36:24,000
+If you get something in the 200s, they all have slightly different meanings,
+
+522
+00:36:24,000 --> 00:36:27,000
+but 200s means thumbs up, everything worked.
+
+523
+00:36:27,000 --> 00:36:29,000
+It's like not getting an error in Python.
+
+524
+00:36:29,000 --> 00:36:33,000
+And if you get something in the 400s or 500s, it means something went wrong.
+
+525
+00:36:33,000 --> 00:36:35,000
+It might give you some more details. It might not.
+
+526
+00:36:35,000 --> 00:36:37,000
+That might be all you get.
+
+527
+00:36:37,000 --> 00:36:43,000
+So if anybody has seen 404, resource not found or 404 page not found,
+
+528
+00:36:43,000 --> 00:36:47,000
+404 is the specific error code for what a server is supposed to return
+
+529
+00:36:47,000 --> 00:36:52,000
+if it can't find the thing you're asking for, thus not found.
+
+530
+00:36:52,000 --> 00:36:53,000
+But there's lots of them.
+
+531
+00:36:53,000 --> 00:36:56,000
+401, I think, is unauthenticated or unauthorized,
+
+532
+00:36:56,000 --> 00:37:00,000
+so if you're not logged into something, you might get that one.
+
+533
+00:37:00,000 --> 00:37:03,000
+One of them means malformed data.
+
+534
+00:37:03,000 --> 00:37:06,000
+So a good API will send back a code that's meaningful to you,
+
+535
+00:37:06,000 --> 00:37:10,000
+but a lot of APIs don't even bother and they just always send you a 404 if it breaks.
+
+536
+00:37:10,000 --> 00:37:15,000
+So annoying, but there's just not the same concept of tracebacks.
+
+537
+00:37:15,000 --> 00:37:21,000
+And the last thing is that if you work with a function, you know what the function is.
+
+538
+00:37:21,000 --> 00:37:23,000
+You're in a programming language, you just call the function by its name,
+
+539
+00:37:23,000 --> 00:37:25,000
+and you pass the arguments.
+
+540
+00:37:25,000 --> 00:37:29,000
+APIs are over the internet usually, so they're going to be at a domain,
+
+541
+00:37:29,000 --> 00:37:32,000
+like, I don't know, myweatherapi.com,
+
+542
+00:37:32,000 --> 00:37:36,000
+and then myweatherapi.com is going to have multiple endpoints,
+
+543
+00:37:36,000 --> 00:37:42,000
+so different functionality, sort of like different functions in a package.
+
+544
+00:37:42,000 --> 00:37:47,000
+So maybe slash Chicago slash temp is the way I can get the temperature in Chicago.
+
+545
+00:37:47,000 --> 00:37:50,000
+That's called the route or the path.
+
+546
+00:37:50,000 --> 00:37:58,000
+We're going to build a route on our endpoint for now that is just for localhost slash,
+
+547
+00:37:58,000 --> 00:38:01,000
+which is the same thing as like myweatherapi slash.
+
+548
+00:38:01,000 --> 00:38:04,000
+Sort of like the home page if there were no extension here.
+
+549
+00:38:04,000 --> 00:38:08,000
+Later we're going to say localhost slash predict,
+
+550
+00:38:08,000 --> 00:38:11,000
+and that's going to be the endpoint we use for predictions.
+
+551
+00:38:11,000 --> 00:38:15,000
+So let's talk about Fast API.
+
+552
+00:38:15,000 --> 00:38:19,000
+Why is Fast API really popular?
+
+553
+00:38:19,000 --> 00:38:20,000
+Because it is.
+
+554
+00:38:20,000 --> 00:38:25,000
+I think it only is like four or five years old, and it is a huge hit.
+
+555
+00:38:25,000 --> 00:38:31,000
+As far as I can tell for people building small APIs around some other feature,
+
+556
+00:38:31,000 --> 00:38:36,000
+so in our case like a model, it seems to have taken the ecosystem by storm.
+
+557
+00:38:36,000 --> 00:38:38,000
+And I really like it.
+
+558
+00:38:38,000 --> 00:38:41,000
+I've used Flask a fair amount, which was, I mean it remains big,
+
+559
+00:38:41,000 --> 00:38:44,000
+but is not nearly as big now that Fast API is around,
+
+560
+00:38:44,000 --> 00:38:46,000
+and I see the merits of Fast API.
+
+561
+00:38:46,000 --> 00:38:48,000
+So what's nice about it?
+
+562
+00:38:48,000 --> 00:38:50,000
+Well, it's super simple.
+
+563
+00:38:50,000 --> 00:38:54,000
+For every one of those routes, like slash Chicago slash temp or slash predict,
+
+564
+00:38:54,000 --> 00:38:58,000
+all you need to do is write a function, and it handles all the rest.
+
+565
+00:38:58,000 --> 00:39:03,000
+It turns that function into a route, and any time someone asks for that route,
+
+566
+00:39:03,000 --> 00:39:07,000
+it calls the function and returns its result.
+
+567
+00:39:07,000 --> 00:39:09,000
+It has pretty good automatic codes.
+
+568
+00:39:09,000 --> 00:39:11,000
+It handles a lot of those codes for you.
+
+569
+00:39:11,000 --> 00:39:16,000
+So if you send malformed data, it sends the right code back to say your data was malformed.
+
+570
+00:39:16,000 --> 00:39:21,000
+If something goes wrong on the server, it sends back, I think 500 is a server error.
+
+571
+00:39:21,000 --> 00:39:25,000
+It also takes a lot of cues from Python's type hints.
+
+572
+00:39:25,000 --> 00:39:29,000
+So if you haven't used type hints before, you're going to see them a lot for the rest of the presentation,
+
+573
+00:39:29,000 --> 00:39:34,000
+because Fast API uses those type hints to figure out what kind of data should be sent to it
+
+574
+00:39:34,000 --> 00:39:36,000
+and what it should send back.
+
+575
+00:39:36,000 --> 00:39:42,000
+It has awesome documentation, so we saw that earlier when I started up the server.
+
+576
+00:39:42,000 --> 00:39:47,000
+When I started up the server, we got this.
+
+577
+00:39:47,000 --> 00:39:52,000
+Nope, that's Jupiter.
+
+578
+00:39:52,000 --> 00:39:57,000
+Being real slow.
+
+579
+00:39:57,000 --> 00:40:01,000
+We'll see if that loads in time.
+
+580
+00:40:01,000 --> 00:40:06,000
+But when I started up the server, we saw that really nice docs page that showed,
+
+581
+00:40:06,000 --> 00:40:11,000
+here's this endpoint, here's that endpoint.
+
+582
+00:40:11,000 --> 00:40:13,000
+So here we go again.
+
+583
+00:40:13,000 --> 00:40:17,000
+You can see it shows us all the different routes in our server automatically.
+
+584
+00:40:17,000 --> 00:40:22,000
+And not just does it show us the route, but it shows us a little blurb about what these things do.
+
+585
+00:40:22,000 --> 00:40:25,000
+So in this case, we said just return dummy prediction.
+
+586
+00:40:25,000 --> 00:40:28,000
+And it tells the errors that might come back.
+
+587
+00:40:28,000 --> 00:40:31,000
+It says what sorts of things you need to send over, like an observation.
+
+588
+00:40:31,000 --> 00:40:33,000
+So it does all of this for you.
+
+589
+00:40:33,000 --> 00:40:38,000
+You don't need to do anything to set up these documentation, these docs.
+
+590
+00:40:38,000 --> 00:40:41,000
+I think that alone is worth using.
+
+591
+00:40:41,000 --> 00:40:45,000
+It's just a really, really nice thing to not have to worry about that yourself.
+
+592
+00:40:45,000 --> 00:40:47,000
+And last, the performance is really good.
+
+593
+00:40:47,000 --> 00:40:52,000
+I've never pushed Fast API super hard, but a lot of people who have say that it is really performant.
+
+594
+00:40:52,000 --> 00:40:55,000
+It does things asynchronously in the background.
+
+595
+00:40:55,000 --> 00:40:58,000
+You don't need to know anything about asynchronous Python.
+
+596
+00:40:58,000 --> 00:41:01,000
+You don't need to write anything that says async.
+
+597
+00:41:01,000 --> 00:41:08,000
+It will dispatch your endpoints to run asynchronously so you can get multiple requests at one time and process all of them.
+
+598
+00:41:08,000 --> 00:41:11,000
+It probably doesn't matter so much until you're really worried about performance,
+
+599
+00:41:11,000 --> 00:41:16,000
+but it is a nice thing to know that you're not going to have to switch frameworks at some point.
+
+600
+00:41:16,000 --> 00:41:21,000
+So what does a simple app look like?
+
+601
+00:41:21,000 --> 00:41:25,000
+So this file, which only has what?
+
+602
+00:41:25,000 --> 00:41:30,000
+Six actual lines of code, five actual lines of code if you don't count the doc string.
+
+603
+00:41:30,000 --> 00:41:35,000
+This is a fully working Fast API server, which is pretty cool.
+
+604
+00:41:35,000 --> 00:41:40,000
+And what this says is import the Fast API class.
+
+605
+00:41:40,000 --> 00:41:46,000
+So classes in Python are sort of like the idea of a sort of object you might create.
+
+606
+00:41:46,000 --> 00:41:51,000
+So this lets us create a Fast API object, which we assign to a variable called app.
+
+607
+00:41:51,000 --> 00:41:56,000
+And then we want to listen for get requests.
+
+608
+00:41:56,000 --> 00:41:58,000
+Remember, we said that's one of the methods.
+
+609
+00:41:58,000 --> 00:42:01,000
+We want to listen for get requests at the slash route.
+
+610
+00:42:01,000 --> 00:42:06,000
+So the slash route means there's nothing beyond just a single slash.
+
+611
+00:42:06,000 --> 00:42:14,000
+And whenever we get a request for that slash, whenever we get a get request for the slash endpoint, return this string.
+
+612
+00:42:14,000 --> 00:42:20,000
+And that by itself, if we kick it off, this is a good time to actually demo it.
+
+613
+00:42:20,000 --> 00:42:27,000
+I'm hopping between app sections, but we're going to go back to app section two where we have this set up.
+
+614
+00:42:27,000 --> 00:42:46,000
+And if we start this up, we get this little blurb here.
+
+615
+00:42:46,000 --> 00:42:50,000
+And then it kicks up the server that we saw before.
+
+616
+00:42:50,000 --> 00:42:55,000
+And I actually I realize now that I might have to switch VMs for this to be reflected.
+
+617
+00:42:55,000 --> 00:42:58,000
+This might still show the version of the app that has all the endpoints.
+
+618
+00:42:58,000 --> 00:43:00,000
+This might not be the minimal one right here.
+
+619
+00:43:00,000 --> 00:43:01,000
+Oh, no, it is.
+
+620
+00:43:01,000 --> 00:43:02,000
+Okay, good.
+
+621
+00:43:02,000 --> 00:43:05,000
+And it shows that we've created this little status endpoint.
+
+622
+00:43:05,000 --> 00:43:07,000
+And it says what it's going to return is a string.
+
+623
+00:43:07,000 --> 00:43:12,000
+And if we wanted to test it, we can hit test it out, execute.
+
+624
+00:43:12,000 --> 00:43:17,000
+And when we hit this, this is the slash endpoint, right?
+
+625
+00:43:17,000 --> 00:43:19,000
+It's just a little slash after local host.
+
+626
+00:43:19,000 --> 00:43:20,000
+I realize that's really small.
+
+627
+00:43:20,000 --> 00:43:22,000
+Sorry.
+
+628
+00:43:22,000 --> 00:43:27,000
+So when we hit the slash endpoint, we get back this response.
+
+629
+00:43:27,000 --> 00:43:29,000
+The API is up and running.
+
+630
+00:43:29,000 --> 00:43:34,000
+I know one thing I haven't discussed yet is how would you actually access this outside of the docs page?
+
+631
+00:43:34,000 --> 00:43:36,000
+The docs page is just so much easier for demos.
+
+632
+00:43:36,000 --> 00:43:42,000
+I tend to use that, but I will show how to do it from Python or from curl, which is a command line app.
+
+633
+00:43:42,000 --> 00:43:49,000
+So that's what our minimal status endpoint looks like once we put together that really simple fast API file.
+
+634
+00:43:49,000 --> 00:43:51,000
+So again, this is all we had to create.
+
+635
+00:43:51,000 --> 00:43:59,000
+And we're going to save this at main.py inside our app folder, which we already created in the last step.
+
+636
+00:43:59,000 --> 00:44:02,000
+So that's the docs page.
+
+637
+00:44:02,000 --> 00:44:06,000
+And then how would we get this not from the docs page?
+
+638
+00:44:06,000 --> 00:44:07,000
+Well, we could use curl.
+
+639
+00:44:07,000 --> 00:44:11,000
+So curl, I actually don't know what curl stands for, something URL.
+
+640
+00:44:11,000 --> 00:44:17,000
+But it's a way of interacting with web APIs, really anything on the Internet from the command line.
+
+641
+00:44:17,000 --> 00:44:21,000
+So you could run this on Mac or Windows if you have curl installed.
+
+642
+00:44:21,000 --> 00:44:30,000
+And this says send a get request, get request, because dash X is saying what kind of request to send to this URL.
+
+643
+00:44:30,000 --> 00:44:37,000
+So send a get request to local host, which is your computer, because that's where we're running the API.
+
+644
+00:44:37,000 --> 00:44:40,000
+And then it'll spit back whatever is returned.
+
+645
+00:44:40,000 --> 00:44:45,000
+So in this case, when our API is running, it'll say the API is up and running.
+
+646
+00:44:45,000 --> 00:44:51,000
+You could also use the requests library or the HTTP library in Python.
+
+647
+00:44:51,000 --> 00:44:54,000
+Our project installed HTTP with it.
+
+648
+00:44:54,000 --> 00:44:58,000
+So if you use the setup.cfg file that I provided, you'll have HTTP installed.
+
+649
+00:44:58,000 --> 00:45:01,000
+So you could actually try this.
+
+650
+00:45:01,000 --> 00:45:08,000
+And you can say import HTTP and then calling HTTP dot get sends a get request to this URL.
+
+651
+00:45:08,000 --> 00:45:13,000
+And you'll notice the response we get back is a 200 code, which means it worked.
+
+652
+00:45:13,000 --> 00:45:17,000
+And fast API did that for us. We didn't actually tell it what code to return.
+
+653
+00:45:17,000 --> 00:45:21,000
+It just automatically said, well, if all goes well, I'll send it 200.
+
+654
+00:45:21,000 --> 00:45:27,000
+And then when we use dot JSON, which decodes the response, we'll talk more about JSON in the next section,
+
+655
+00:45:27,000 --> 00:45:30,000
+it decodes whatever contents were in the response.
+
+656
+00:45:30,000 --> 00:45:33,000
+And what was in there was the API is up and running.
+
+657
+00:45:33,000 --> 00:45:36,000
+So you can see you could do this from Python, from curl.
+
+658
+00:45:36,000 --> 00:45:38,000
+You could do this from any programming language.
+
+659
+00:45:38,000 --> 00:45:43,000
+I think I hardly ever say something will work in all cases,
+
+660
+00:45:43,000 --> 00:45:47,000
+but I think every programming language has a way to hit web APIs.
+
+661
+00:45:47,000 --> 00:45:49,000
+That's probably no exaggeration.
+
+662
+00:45:49,000 --> 00:45:54,000
+So what's that?
+
+663
+00:45:54,000 --> 00:45:56,000
+Oh, is that really true? SQL. Oh, even SQL.
+
+664
+00:45:56,000 --> 00:45:57,000
+Wow. See, that's great.
+
+665
+00:45:57,000 --> 00:46:01,000
+See if you want to do this in your database for some reason, if you're just totally insane.
+
+666
+00:46:01,000 --> 00:46:03,000
+It's possible.
+
+667
+00:46:03,000 --> 00:46:05,000
+So anyway, this is the API we've built so far.
+
+668
+00:46:05,000 --> 00:46:06,000
+We can access it from anywhere.
+
+669
+00:46:06,000 --> 00:46:09,000
+It doesn't do a whole lot, but it does say, yeah, I'm here.
+
+670
+00:46:09,000 --> 00:46:10,000
+I'm listening.
+
+671
+00:46:10,000 --> 00:46:13,000
+And we can do more stuff if we need to.
+
+672
+00:46:13,000 --> 00:46:18,000
+The other thing we want to do in this section, though, is as a general rule, when you write more code,
+
+673
+00:46:18,000 --> 00:46:20,000
+you should add more tests.
+
+674
+00:46:20,000 --> 00:46:25,000
+So this is a good opportunity to add a test along with the app that we've built so far.
+
+675
+00:46:25,000 --> 00:46:32,000
+And our test is just going to make sure that indeed the app is up when we ask the slash end point,
+
+676
+00:46:32,000 --> 00:46:37,000
+when we send it a get request, we want to make sure that it does return that text.
+
+677
+00:46:37,000 --> 00:46:39,000
+So we're going to write that test.
+
+678
+00:46:39,000 --> 00:46:43,000
+We can do our interactive testing throughout today,
+
+679
+00:46:43,000 --> 00:46:46,000
+but if you were to go on and build much bigger applications,
+
+680
+00:46:46,000 --> 00:46:51,000
+you don't want to test every single endpoint of your app every single time you make a change interactively,
+
+681
+00:46:51,000 --> 00:46:53,000
+because that would take forever.
+
+682
+00:46:53,000 --> 00:46:55,000
+And you'd miss things all the time.
+
+683
+00:46:55,000 --> 00:46:58,000
+So automated tests are generally the way people work on big projects,
+
+684
+00:46:58,000 --> 00:47:03,000
+or even medium or even small projects, especially once you get familiar with the pattern,
+
+685
+00:47:03,000 --> 00:47:05,000
+which we're going to talk about.
+
+686
+00:47:05,000 --> 00:47:07,000
+It's very easy to write a quick test.
+
+687
+00:47:07,000 --> 00:47:12,000
+So we're going to use PyTest, which as far as I can tell is the most popular testing library in Python.
+
+688
+00:47:12,000 --> 00:47:15,000
+It's definitely the most popular third party library for testing.
+
+689
+00:47:15,000 --> 00:47:19,000
+I was trying to look for stats on how many people use it, but I couldn't.
+
+690
+00:47:19,000 --> 00:47:23,000
+Most major applications I've seen use PyTest anymore.
+
+691
+00:47:23,000 --> 00:47:25,000
+And it's really easy to get started with,
+
+692
+00:47:25,000 --> 00:47:29,000
+which is the main thing I cared about for this tutorial.
+
+693
+00:47:29,000 --> 00:47:33,000
+So PyTest asks you to do only a few things to write tests.
+
+694
+00:47:33,000 --> 00:47:36,000
+Put your tests in a tests directory.
+
+695
+00:47:36,000 --> 00:47:38,000
+Good thing we already made that.
+
+696
+00:47:38,000 --> 00:47:43,000
+When you make a file with tests in it, it should be called test underscore something dot py.
+
+697
+00:47:43,000 --> 00:47:46,000
+So test my endpoint, test my app.
+
+698
+00:47:46,000 --> 00:47:53,000
+And then the tests themselves are just functions that start with test and have an assert statement in them.
+
+699
+00:47:53,000 --> 00:47:56,000
+So assert, if you're not familiar with it in Python,
+
+700
+00:47:56,000 --> 00:48:02,000
+it's a special statement that evaluates whatever is after it.
+
+701
+00:48:02,000 --> 00:48:05,000
+And if that returns true, nothing happens.
+
+702
+00:48:05,000 --> 00:48:08,000
+But if that returns false, there's an error that gets raised.
+
+703
+00:48:08,000 --> 00:48:10,000
+So this is perfect for tests, right?
+
+704
+00:48:10,000 --> 00:48:14,000
+In this case, assert that the result equals four.
+
+705
+00:48:14,000 --> 00:48:18,000
+If the result didn't equal four, an error would get raised and our test would fail.
+
+706
+00:48:18,000 --> 00:48:21,000
+And this is how you write tests in PyTest.
+
+707
+00:48:21,000 --> 00:48:22,000
+Really, really simple.
+
+708
+00:48:22,000 --> 00:48:28,000
+Anything that you can think of in terms of true false, say like this response is equal to this string.
+
+709
+00:48:28,000 --> 00:48:30,000
+The result is greater than five.
+
+710
+00:48:30,000 --> 00:48:36,000
+Anything that can be true false evaluated will work on the right-hand side of an assert statement.
+
+711
+00:48:36,000 --> 00:48:38,000
+We are not going to test the addition operator.
+
+712
+00:48:38,000 --> 00:48:42,000
+We're going to test our app, which is a little more meaningful.
+
+713
+00:48:42,000 --> 00:48:46,000
+Before we do that, though, we need a way to actually access our app from PyTest.
+
+714
+00:48:46,000 --> 00:48:49,000
+And PyTest provides something called a fixture,
+
+715
+00:48:49,000 --> 00:48:53,000
+which is a way of creating a resource that you reuse throughout all your tests.
+
+716
+00:48:53,000 --> 00:49:02,000
+So I use fixtures for lots of things, not just for fast API apps, but it is perfect for a fast API app.
+
+717
+00:49:02,000 --> 00:49:07,000
+So what we're going to do is write a small fixture that creates a test app.
+
+718
+00:49:07,000 --> 00:49:11,000
+And then in our tests themselves, we will test the app.
+
+719
+00:49:11,000 --> 00:49:14,000
+So let me demonstrate that a little.
+
+720
+00:49:14,000 --> 00:49:21,000
+We're going to create this file called conf-test for, I think, I think conf-test stands for like configuration of tests.
+
+721
+00:49:21,000 --> 00:49:28,000
+And if you just leave that in your tests folder, notice it doesn't start with test.
+
+722
+00:49:28,000 --> 00:49:32,000
+I said PyTest tests need to start with test underscore something dot py.
+
+723
+00:49:32,000 --> 00:49:34,000
+That's intentional because this isn't a test.
+
+724
+00:49:34,000 --> 00:49:38,000
+This is actually a resource for all of our tests to use.
+
+725
+00:49:38,000 --> 00:49:41,000
+So what we add in here, we have some imports.
+
+726
+00:49:41,000 --> 00:49:48,000
+But really, the interesting thing here is let's create a test client, a way of accessing our API and mark it as a fixture.
+
+727
+00:49:48,000 --> 00:49:55,000
+When we say at PyTest dot fixture, that creates this as a reusable resource that we can access from all of our tests.
+
+728
+00:49:55,000 --> 00:50:01,000
+So all this returns is a little test client to access the application we built.
+
+729
+00:50:01,000 --> 00:50:12,000
+And then in all of our tests, in all of our tests, we can use that test client as an argument.
+
+730
+00:50:12,000 --> 00:50:18,000
+So this test takes in a client and we don't have to worry about how it gets there.
+
+731
+00:50:18,000 --> 00:50:20,000
+We can use that in all of our tests.
+
+732
+00:50:20,000 --> 00:50:23,000
+But the answer to how it gets there is that it's just running this code.
+
+733
+00:50:23,000 --> 00:50:28,000
+It's just going to create the test client and prepare it for every single one of the tests that needs it.
+
+734
+00:50:28,000 --> 00:50:31,000
+So we have that little snippet to create a test client.
+
+735
+00:50:31,000 --> 00:50:34,000
+And then this is the way we test our status endpoint.
+
+736
+00:50:34,000 --> 00:50:40,000
+We say take the client, send a get request to slash, check the status code.
+
+737
+00:50:40,000 --> 00:50:42,000
+So our response has a dot status code attribute.
+
+738
+00:50:42,000 --> 00:50:45,000
+Make sure it's a 200 because, remember, 200 is for success.
+
+739
+00:50:45,000 --> 00:50:48,000
+That's what we expect to get back.
+
+740
+00:50:48,000 --> 00:50:54,000
+And then use dot JSON to turn the response into a Python object.
+
+741
+00:50:54,000 --> 00:50:57,000
+That could turn out to be a dictionary, a list, a string, an integer.
+
+742
+00:50:57,000 --> 00:50:59,000
+But in this case, we know what it should be.
+
+743
+00:50:59,000 --> 00:51:00,000
+It should be the string.
+
+744
+00:51:00,000 --> 00:51:03,000
+This is the string that we put in our status endpoint.
+
+745
+00:51:03,000 --> 00:51:07,000
+So assert that the payload is that string.
+
+746
+00:51:07,000 --> 00:51:13,000
+And this test makes sure that our endpoint runs exactly as we expect.
+
+747
+00:51:13,000 --> 00:51:20,000
+Now, when we actually run tests in PyTest, I'd rather live demo this because it's more interesting.
+
+748
+00:51:20,000 --> 00:51:23,000
+All you have to do is just type PyTest.
+
+749
+00:51:23,000 --> 00:51:25,000
+Nope, I forgot because I'm in the wrong folder.
+
+750
+00:51:25,000 --> 00:51:29,000
+I need to because I started my virtual environment from the app section four folder.
+
+751
+00:51:29,000 --> 00:51:33,000
+I can't always do things in the other apps.
+
+752
+00:51:33,000 --> 00:51:38,000
+But if I do PyTest here, OK, now, now this is going to be difficult.
+
+753
+00:51:38,000 --> 00:51:47,000
+What did I do wrong here?
+
+754
+00:51:47,000 --> 00:51:48,000
+That is true.
+
+755
+00:51:48,000 --> 00:51:54,000
+I don't think you should need to do Python dash MPy test in this case if you did pip install dash E dot, I think.
+
+756
+00:51:54,000 --> 00:51:57,000
+Yeah, this is how it should work.
+
+757
+00:51:57,000 --> 00:52:02,000
+I think I didn't install this package.
+
+758
+00:52:02,000 --> 00:52:03,000
+Yeah, yeah, yeah.
+
+759
+00:52:03,000 --> 00:52:07,000
+So this is what it looks like to run PyTest.
+
+760
+00:52:07,000 --> 00:52:08,000
+PyTest prints out some info.
+
+761
+00:52:08,000 --> 00:52:12,000
+This is kind of nice because you sort of get a snapshot of what your environment looks like.
+
+762
+00:52:12,000 --> 00:52:14,000
+So it says you're running with Python 310.
+
+763
+00:52:14,000 --> 00:52:19,000
+You know, you all will have whatever version you have that version of PyTest.
+
+764
+00:52:19,000 --> 00:52:23,000
+And then here's the directory you're running from.
+
+765
+00:52:23,000 --> 00:52:26,000
+It'll say how many tests it found collected two items.
+
+766
+00:52:26,000 --> 00:52:30,000
+So I'm doing this in the final version of our code for today.
+
+767
+00:52:30,000 --> 00:52:34,000
+You'll only have one test when you finish this, the status end point.
+
+768
+00:52:34,000 --> 00:52:39,000
+And then it runs the file and every little dot after the file name is a test that passed.
+
+769
+00:52:39,000 --> 00:52:41,000
+If a test failed, it'll show an F instead.
+
+770
+00:52:41,000 --> 00:52:42,000
+But all of our tests passed.
+
+771
+00:52:42,000 --> 00:52:45,000
+And it says that you got some warnings.
+
+772
+00:52:45,000 --> 00:52:48,000
+These are not super important.
+
+773
+00:52:48,000 --> 00:52:51,000
+But you ultimately had to pass.
+
+774
+00:52:51,000 --> 00:52:54,000
+You got one warning and all the tests ran in .05 seconds.
+
+775
+00:52:54,000 --> 00:52:57,000
+So PyTest has a pretty familiar interface.
+
+776
+00:52:57,000 --> 00:53:01,000
+All you need to do is type PyTest to run it, which is really nice.
+
+777
+00:53:01,000 --> 00:53:09,000
+Yeah, so good point that if you don't install your code as a package the way we did in the first step,
+
+778
+00:53:09,000 --> 00:53:11,000
+PyTest doesn't always work so seamlessly.
+
+779
+00:53:11,000 --> 00:53:14,000
+That's actually why I wanted everybody to set it up quite like that.
+
+780
+00:53:14,000 --> 00:53:20,000
+So this is pretty smooth sailing now that we've handled all the hard stuff in section one.
+
+781
+00:53:20,000 --> 00:53:21,000
+Yeah?
+
+782
+00:53:21,000 --> 00:53:31,000
+Yeah, so the question is why do we want to do this if Fast API doesn't require it?
+
+783
+00:53:31,000 --> 00:53:34,000
+I'm going to repeat everything for the recording.
+
+784
+00:53:34,000 --> 00:53:39,000
+Because it simplifies the imports for the tests and it simplifies the imports in a couple other cases
+
+785
+00:53:39,000 --> 00:53:43,000
+where I found that it didn't like relative imports from within the tests.
+
+786
+00:53:43,000 --> 00:53:46,000
+So if anybody's fought with Python imports before,
+
+787
+00:53:46,000 --> 00:53:51,000
+the solution is often just install your code as a package and it makes things easier.
+
+788
+00:53:51,000 --> 00:53:52,000
+Right.
+
+789
+00:53:52,000 --> 00:53:54,000
+So that brings us to our to-do list.
+
+790
+00:53:54,000 --> 00:53:57,000
+We're still running pretty much right on time, which is great.
+
+791
+00:53:57,000 --> 00:54:00,000
+So I said we will have a break of three.
+
+792
+00:54:00,000 --> 00:54:02,000
+So that gives us 15 minutes of work time.
+
+793
+00:54:02,000 --> 00:54:03,000
+But I'll be around in the break.
+
+794
+00:54:03,000 --> 00:54:07,000
+I'll probably go grab a coffee, but I'll still be around to answer questions from 3 to 3.30.
+
+795
+00:54:07,000 --> 00:54:11,000
+So 15 minutes of work and that might spill over a little into the break if you wish.
+
+796
+00:54:11,000 --> 00:54:15,000
+But yeah, have at it.
+
+797
+00:54:15,000 --> 00:54:17,000
+Okay.
+
+798
+00:54:17,000 --> 00:54:18,000
+Cool.
+
+799
+00:54:18,000 --> 00:54:19,000
+So more than halfway through.
+
+800
+00:54:19,000 --> 00:54:20,000
+Good job, everyone.
+
+801
+00:54:20,000 --> 00:54:23,000
+The hard parts are done.
+
+802
+00:54:23,000 --> 00:54:24,000
+Thanks for sticking with us.
+
+803
+00:54:24,000 --> 00:54:27,000
+I know there is a lot going on.
+
+804
+00:54:27,000 --> 00:54:30,000
+A lot of people have had some issues, but I think we haven't run into anything we can't solve yet,
+
+805
+00:54:30,000 --> 00:54:32,000
+which is pretty good.
+
+806
+00:54:32,000 --> 00:54:34,000
+Pretty good.
+
+807
+00:54:34,000 --> 00:54:38,000
+So hope you all enjoyed your coffee and snacks.
+
+808
+00:54:38,000 --> 00:54:42,000
+We are going to talk about Pydantic in this section.
+
+809
+00:54:42,000 --> 00:54:49,000
+So at the end of section three, our goal is to have a Pydantic models file.
+
+810
+00:54:49,000 --> 00:54:54,000
+And in that we're going to define what does an observation look like, an observation of our data,
+
+811
+00:54:54,000 --> 00:54:59,000
+and what does a prediction for the type of flower, a prediction about our data look like.
+
+812
+00:54:59,000 --> 00:55:04,000
+And then we're going to build a new endpoint that actually takes in one of those observations
+
+813
+00:55:04,000 --> 00:55:08,000
+and returns a prediction.
+
+814
+00:55:08,000 --> 00:55:09,000
+We won't actually be using a model yet.
+
+815
+00:55:09,000 --> 00:55:12,000
+We're just going to return a fake prediction that always predicts.
+
+816
+00:55:12,000 --> 00:55:14,000
+I think we're always going to predict Sidosa.
+
+817
+00:55:14,000 --> 00:55:16,000
+But we're going to have a new endpoint.
+
+818
+00:55:16,000 --> 00:55:18,000
+So second endpoint and more models.
+
+819
+00:55:18,000 --> 00:55:25,000
+And best of all, I actually think this is probably the simplest section, despite all that code.
+
+820
+00:55:25,000 --> 00:55:28,000
+So far, this is the only endpoint we have.
+
+821
+00:55:28,000 --> 00:55:29,000
+This endpoint is a function.
+
+822
+00:55:29,000 --> 00:55:30,000
+We called it status.
+
+823
+00:55:30,000 --> 00:55:33,000
+It doesn't actually matter if you name the function, as you all probably noticed.
+
+824
+00:55:33,000 --> 00:55:38,000
+It will show up in the docs, but it doesn't have anything to do with the endpoint that it responds to.
+
+825
+00:55:38,000 --> 00:55:42,000
+It doesn't have anything to do with the request that it takes or the response that it sends.
+
+826
+00:55:42,000 --> 00:55:46,000
+But that status function also doesn't take any arguments.
+
+827
+00:55:46,000 --> 00:55:48,000
+It just runs.
+
+828
+00:55:48,000 --> 00:55:52,000
+Well, that's in contrast to an endpoint that has inputs.
+
+829
+00:55:52,000 --> 00:55:59,000
+So you might imagine a function like this that predicts an output or an outcome based on an observation.
+
+830
+00:55:59,000 --> 00:56:05,000
+And that's pretty much what our route, our new endpoint, is going to look like in our API.
+
+831
+00:56:05,000 --> 00:56:12,000
+We're going to say take in an observation, run the predict function, do something with it, and then return the prediction.
+
+832
+00:56:12,000 --> 00:56:19,000
+Before we do that, though, we need to actually flesh out what does a prediction and an observation look like.
+
+833
+00:56:19,000 --> 00:56:22,000
+And to build those, we're going to use Pydantic.
+
+834
+00:56:22,000 --> 00:56:26,000
+So Pydantic is a library that's very tightly integrated into FastAPI.
+
+835
+00:56:27,000 --> 00:56:36,000
+The one liner I would give of what Pydantic is is that it is a library that validates data is the type you think it is,
+
+836
+00:56:36,000 --> 00:56:41,000
+including things like I expect a dictionary with these keys.
+
+837
+00:56:41,000 --> 00:56:44,000
+I expect this many numbers.
+
+838
+00:56:44,000 --> 00:56:48,000
+So it has fine-grained runtime validation of types.
+
+839
+00:56:48,000 --> 00:56:56,000
+And the benefit of that is that mostly when we talk over the Internet, we send and receive data in a format called JSON,
+
+840
+00:56:56,000 --> 00:56:58,000
+which is just text.
+
+841
+00:56:58,000 --> 00:57:00,000
+Ultimately, it's just text.
+
+842
+00:57:00,000 --> 00:57:05,000
+But it is a series of keys and values, lists and dictionaries, really a lot of basic Python types.
+
+843
+00:57:05,000 --> 00:57:11,000
+And Pydantic knows how to convert its data into JSON and how to take JSON and turn it into its kind of data.
+
+844
+00:57:11,000 --> 00:57:19,000
+So by writing our FastAPI endpoints to work with Pydantic, all the JSON conversion in both directions is taken care of.
+
+845
+00:57:19,000 --> 00:57:22,000
+We don't need to worry about how do we send this data over the network.
+
+846
+00:57:22,000 --> 00:57:25,000
+It's all done for us.
+
+847
+00:57:25,000 --> 00:57:28,000
+With that, let's just jump into what an observation looks like.
+
+848
+00:57:28,000 --> 00:57:32,000
+So the pattern with Pydantic is really, really simple.
+
+849
+00:57:32,000 --> 00:57:34,000
+It's a beautifully simple library.
+
+850
+00:57:35,000 --> 00:57:42,000
+So generally speaking, you import the base model class from Pydantic, and then you write your own classes that inherit.
+
+851
+00:57:42,000 --> 00:57:45,000
+That's what those parentheses are after our class name.
+
+852
+00:57:45,000 --> 00:57:55,000
+Our class inherits from the base model, which means it takes its functionality from the way base model works.
+
+853
+00:57:55,000 --> 00:58:02,000
+The functionality that we're getting from it is that for any attributes that are listed here and their types,
+
+854
+00:58:02,000 --> 00:58:09,000
+that model will know those are now the four fields that I should always have, in this case four, and they should always be floats.
+
+855
+00:58:09,000 --> 00:58:12,000
+So if you try to create an observation with only three values, it'll yell at you.
+
+856
+00:58:12,000 --> 00:58:14,000
+With five, it'll yell at you.
+
+857
+00:58:14,000 --> 00:58:16,000
+With the wrong names, it'll yell at you.
+
+858
+00:58:16,000 --> 00:58:18,000
+With integers, well, integers would be fine.
+
+859
+00:58:18,000 --> 00:58:23,000
+But with strings, with Booleans, any of the different kind of data, it'll also yell at you.
+
+860
+00:58:23,000 --> 00:58:35,000
+So the annotations here, this is what I want to show, the annotations here provide Pydantic a way of validating our data.
+
+861
+00:58:35,000 --> 00:58:41,000
+So I can create that class, that observation class, and then in Python, I can create a new observation.
+
+862
+00:58:41,000 --> 00:58:43,000
+I can create multiple if I want.
+
+863
+00:58:43,000 --> 00:58:48,000
+But here I say, create me an observation where the sepal length is this, the width, the petal length, the petal width.
+
+864
+00:58:48,000 --> 00:58:52,000
+And then when I print it out, when I just type obs, I see, sure, it's an observation with those attributes.
+
+865
+00:58:52,000 --> 00:59:00,000
+But Pydantic is particular, and it says, it's Pydantic, you might say.
+
+866
+00:59:00,000 --> 00:59:04,000
+It doesn't like if I try to pass in a string for one of those fields.
+
+867
+00:59:04,000 --> 00:59:09,000
+If I didn't pass in all the fields that I was supposed to, it would also give me a validation error.
+
+868
+00:59:09,000 --> 00:59:13,000
+So Pydantic is aware of what this data should look like.
+
+869
+00:59:13,000 --> 00:59:20,000
+And like I said, while we're not going to actually test it out, it's doing all the JSON conversion for us in the back end,
+
+870
+00:59:20,000 --> 00:59:23,000
+because it knows how this is supposed to work.
+
+871
+00:59:23,000 --> 00:59:28,000
+So it can handle all these types, integers, floats, strings, booleans.
+
+872
+00:59:28,000 --> 00:59:32,000
+And it can also handle some more abstract types, like a literal.
+
+873
+00:59:32,000 --> 00:59:39,000
+So you might say, the value of this field always needs to be either the letter A or the letter B or the letter C.
+
+874
+00:59:39,000 --> 00:59:45,000
+It's not just any string. It's literally A, B, or C. Literally the number one, two, or three.
+
+875
+00:59:45,000 --> 00:59:49,000
+Union means that it can either be this or this.
+
+876
+00:59:49,000 --> 00:59:54,000
+So you might say either it's going to be a string or an integer. Both are valid.
+
+877
+00:59:54,000 --> 00:59:56,000
+So you would use a union for that.
+
+878
+00:59:56,000 --> 01:00:03,000
+And optional, which means either that thing, so say an optional integer, is either an integer or a none value.
+
+879
+01:00:03,000 --> 01:00:12,000
+Because it's common that if values are optional in your data schema, you just allow the user to pass in none.
+
+880
+01:00:12,000 --> 01:00:14,000
+So that's what optional might be for.
+
+881
+01:00:14,000 --> 01:00:21,000
+And that's really handy, those extra types, because our prediction is always going to be literally either Satosa, VersaColor, or Virginica.
+
+882
+01:00:21,000 --> 01:00:24,000
+Those are the three types of flowers we're always going to predict.
+
+883
+01:00:24,000 --> 01:00:29,000
+So instead of just saying a prediction is a flower type, which is a string,
+
+884
+01:00:29,000 --> 01:00:34,000
+we're going to say a prediction is a flower type, which is always either literally Satosa, VersaColor, or Virginica.
+
+885
+01:00:34,000 --> 01:00:41,000
+So what's cool about this is when we put this all together, this is not very much code.
+
+886
+01:00:41,000 --> 01:00:45,000
+We've defined all the data, all the data schema of our whole application.
+
+887
+01:00:45,000 --> 01:00:49,000
+And this whole thing is about, what, 12 lines of Python.
+
+888
+01:00:49,000 --> 01:00:51,000
+And we can leave docstrings in here, too.
+
+889
+01:00:51,000 --> 01:00:58,000
+I've been trying to put docstrings throughout our app just so future us or other people would understand what this is for.
+
+890
+01:00:58,000 --> 01:01:04,000
+So here we're saying whenever we receive an observation from a user to make a prediction, it needs to have these four fields.
+
+891
+01:01:04,000 --> 01:01:05,000
+They need to be floats.
+
+892
+01:01:06,000 --> 01:01:11,000
+Pydantic will allow integers instead of floats since they work in all the same cases.
+
+893
+01:01:11,000 --> 01:01:17,000
+And whenever we return a prediction, it's going to have one field, which is the flower type, and it's going to be one of those three values.
+
+894
+01:01:17,000 --> 01:01:20,000
+That's it. That's all of Pydantic that we need.
+
+895
+01:01:20,000 --> 01:01:28,000
+One thing I will point out, though, literal is a special construct that's in the typing module, which comes with Python, so you'll have it.
+
+896
+01:01:28,000 --> 01:01:33,000
+But just be aware you might need to import that. Not might. You do need to import that.
+
+897
+01:01:33,000 --> 01:01:38,000
+We're going to save all of that stuff in Pydantic models.py inside the app folder.
+
+898
+01:01:38,000 --> 01:01:39,000
+Yes?
+
+899
+01:01:45,000 --> 01:01:48,000
+This is required for our application, not just for tests.
+
+900
+01:01:48,000 --> 01:01:53,000
+Yep. And we're going to actually see how this stuff gets integrated into our application in a couple slides.
+
+901
+01:01:53,000 --> 01:01:56,000
+It's not in there yet. We're building this first.
+
+902
+01:01:56,000 --> 01:02:05,000
+So once we've set up these models, now we can build endpoints that expect to receive observations and predictions and return observations and predictions.
+
+903
+01:02:07,000 --> 01:02:12,000
+And that endpoint is going to be called slash predict, which sort of makes sense.
+
+904
+01:02:13,000 --> 01:02:15,000
+Here's what it might look like.
+
+905
+01:02:15,000 --> 01:02:19,000
+The first thing we need to do is import from that Pydantic models file we just made.
+
+906
+01:02:19,000 --> 01:02:23,000
+Import those two Pydantic models, the observation and the prediction.
+
+907
+01:02:24,000 --> 01:02:30,000
+And then the endpoint itself takes in an observation, we'll call it obs, and returns a prediction.
+
+908
+01:02:30,000 --> 01:02:36,000
+So for anyone who hasn't really used type annotations in Python, this is mostly what they look like.
+
+909
+01:02:36,000 --> 01:02:41,000
+Your arguments can be suffixed by a colon and then a class.
+
+910
+01:02:41,000 --> 01:02:46,000
+So we're saying the obs argument to our function should be an observation.
+
+911
+01:02:46,000 --> 01:02:51,000
+And then this arrow after the function definition indicates what it should return.
+
+912
+01:02:51,000 --> 01:02:55,000
+So this says the predict function returns a prediction.
+
+913
+01:02:55,000 --> 01:03:03,000
+And fast API takes that and it automatically handles all the things like if I don't get an observation, throw an error.
+
+914
+01:03:03,000 --> 01:03:06,000
+That's where I said it could give you the malformed data error.
+
+915
+01:03:06,000 --> 01:03:12,000
+It handles that for you. It says, well, if anybody ever calls this endpoint with the wrong kind of thing, I can handle that automatically.
+
+916
+01:03:12,000 --> 01:03:14,000
+Say no, you need to send me an observation.
+
+917
+01:03:16,000 --> 01:03:20,000
+And then we for now are just going to instantiate a fake prediction.
+
+918
+01:03:20,000 --> 01:03:27,000
+We're just going to say it's a TOSA every time because we haven't connected our model yet, which we will do in section four.
+
+919
+01:03:27,000 --> 01:03:29,000
+So that endpoint is pretty straightforward, too.
+
+920
+01:03:29,000 --> 01:03:34,000
+But we're going to want to put that in the same main.py file as everything else.
+
+921
+01:03:34,000 --> 01:03:37,000
+Before we do, though, a couple of things I want to point out.
+
+922
+01:03:37,000 --> 01:03:43,000
+So eagle-eyed observers will notice that we're using post instead of get.
+
+923
+01:03:43,000 --> 01:03:48,000
+I said get is for fetching data, but post is for submitting data.
+
+924
+01:03:48,000 --> 01:03:51,000
+There is some nuance here.
+
+925
+01:03:51,000 --> 01:03:59,000
+So generally you'll see generally you'll see people who write prediction APIs or model APIs using post.
+
+926
+01:03:59,000 --> 01:04:02,000
+There's a few reasons. One is that in some sense, yes, you are submitting data.
+
+927
+01:04:02,000 --> 01:04:06,000
+You're asking the server to do something with some data that you sent over.
+
+928
+01:04:06,000 --> 01:04:15,000
+Another is that there's a lot of restrictions on how get requests work, including how you can send data with them.
+
+929
+01:04:15,000 --> 01:04:20,000
+And the way fast API works is because it honors those restrictions.
+
+930
+01:04:20,000 --> 01:04:24,000
+It doesn't allow you to pass a Pydantic model with a get request.
+
+931
+01:04:24,000 --> 01:04:28,000
+And so since we want to take in a Pydantic model, we're going to use post.
+
+932
+01:04:28,000 --> 01:04:33,000
+While this is a little weird, the lines are blurry between get and post.
+
+933
+01:04:33,000 --> 01:04:38,000
+So as a general rule, post is what we're going to use for predictions.
+
+934
+01:04:38,000 --> 01:04:41,000
+Another thing, this time we added something.
+
+935
+01:04:41,000 --> 01:04:45,000
+So in our, do I have it handy?
+
+936
+01:04:45,000 --> 01:04:47,000
+I don't want to go through all the slides.
+
+937
+01:04:47,000 --> 01:04:52,000
+But when we wrote the status endpoint, we just said at app.get slash.
+
+938
+01:04:52,000 --> 01:04:54,000
+And we didn't have anything about a status code.
+
+939
+01:04:54,000 --> 01:04:59,000
+But now we're saying return the status code 201.
+
+940
+01:04:59,000 --> 01:05:05,000
+The reason for that is that 201 is generally the status code returned from posts.
+
+941
+01:05:05,000 --> 01:05:08,000
+There's all kinds of nuances in this where you can return whatever status code you want.
+
+942
+01:05:08,000 --> 01:05:12,000
+But a successful post request generally returns a 201.
+
+943
+01:05:12,000 --> 01:05:16,000
+So we're going to adhere to that principle.
+
+944
+01:05:16,000 --> 01:05:21,000
+And then, of course, the Python type hints, we've already gone through exactly what we're doing there.
+
+945
+01:05:21,000 --> 01:05:26,000
+So this endpoint, we would integrate into our full main.py.
+
+946
+01:05:26,000 --> 01:05:30,000
+I'm not going to show it here because it won't fit on the screen anymore at this point.
+
+947
+01:05:30,000 --> 01:05:33,000
+But you can check in the app folders if you want.
+
+948
+01:05:33,000 --> 01:05:37,000
+And at that point, we're going to have an endpoint that actually handles predictions.
+
+949
+01:05:37,000 --> 01:05:57,000
+So we will have the same endpoint that we saw earlier.
+
+950
+01:05:57,000 --> 01:05:58,000
+It won't work.
+
+951
+01:05:58,000 --> 01:06:00,000
+It won't actually do real predictions yet.
+
+952
+01:06:00,000 --> 01:06:02,000
+But it will have all the same documentation.
+
+953
+01:06:02,000 --> 01:06:06,000
+So you can try this out as soon as you have this set up and you run the application with that
+
+954
+01:06:06,000 --> 01:06:09,000
+learn app main, you'll have this.
+
+955
+01:06:09,000 --> 01:06:13,000
+And you'll see that it gives you all this nice documentation about these are the four fields you need to pass
+
+956
+01:06:13,000 --> 01:06:15,000
+because that's the observation we defined.
+
+957
+01:06:15,000 --> 01:06:20,000
+And it says the default value is zero here, indicating to you that it's supposed to be a number,
+
+958
+01:06:20,000 --> 01:06:23,000
+which again, we defined in our model.
+
+959
+01:06:23,000 --> 01:06:29,000
+And it says what you're going to get back is just a string.
+
+960
+01:06:29,000 --> 01:06:30,000
+Anything else to point out here?
+
+961
+01:06:30,000 --> 01:06:33,000
+Yeah, we can even go down here and see exactly what is an observation.
+
+962
+01:06:33,000 --> 01:06:37,000
+And it gives us the doc string we wrote, an observation of a flower's measurements.
+
+963
+01:06:37,000 --> 01:06:40,000
+So it pulls that doc string from the Pydantic model we wrote.
+
+964
+01:06:40,000 --> 01:06:45,000
+And it says the sepal length is, you can change some of these descriptions here.
+
+965
+01:06:45,000 --> 01:06:50,000
+If you go deeper into Pydantic, you can change the title and the description of these things.
+
+966
+01:06:50,000 --> 01:06:57,000
+And these stars, I think, means that they're all required fields, though I am not certain of that.
+
+967
+01:06:57,000 --> 01:07:02,000
+And were we to submit the wrong data, so we can actually test this out,
+
+968
+01:07:03,000 --> 01:07:11,000
+we already saw if I do some actual numbers here and execute.
+
+969
+01:07:11,000 --> 01:07:14,000
+It shows us how we could have done that with curl, which I didn't point out before.
+
+970
+01:07:14,000 --> 01:07:16,000
+That is pretty neat.
+
+971
+01:07:16,000 --> 01:07:20,000
+But it sends back the flower type is virginica.
+
+972
+01:07:20,000 --> 01:07:22,000
+What would happen if I sent some bad data?
+
+973
+01:07:22,000 --> 01:07:29,000
+What if I forgot a field, for example?
+
+974
+01:07:29,000 --> 01:07:34,000
+It gives us this nice description here where it says the location body petal width.
+
+975
+01:07:34,000 --> 01:07:36,000
+So body is the data you sent.
+
+976
+01:07:36,000 --> 01:07:38,000
+And then petal width is the missing field.
+
+977
+01:07:38,000 --> 01:07:40,000
+It says that's a required field.
+
+978
+01:07:40,000 --> 01:07:42,000
+And it's missing.
+
+979
+01:07:42,000 --> 01:07:44,000
+So all of this was handled for us.
+
+980
+01:07:44,000 --> 01:07:46,000
+We didn't have to write any of this validation.
+
+981
+01:07:46,000 --> 01:07:48,000
+This is the nice thing about Pydantic and FastAPI together.
+
+982
+01:07:48,000 --> 01:07:50,000
+Uh-huh.
+
+983
+01:07:50,000 --> 01:07:55,000
+Good question.
+
+984
+01:07:55,000 --> 01:07:59,000
+So the question was, would you write tests to make sure this kind of validation works?
+
+985
+01:07:59,000 --> 01:08:06,000
+I think in general, the rule with tests is like, is the juice worth the squeeze?
+
+986
+01:08:06,000 --> 01:08:09,000
+Don't test every single thing, but test the things that you're worried about.
+
+987
+01:08:09,000 --> 01:08:13,000
+And there are heuristics, but there is no clear-cut answer.
+
+988
+01:08:13,000 --> 01:08:19,000
+In this kind of case, I would probably trust, unless I were writing an app that could never fail,
+
+989
+01:08:19,000 --> 01:08:24,000
+that was mission critical in some way, I'd probably trust that Pydantic works the way I think it does.
+
+990
+01:08:24,000 --> 01:08:27,000
+You can't test the surface area of every single library you depend upon,
+
+991
+01:08:27,000 --> 01:08:30,000
+so you may not want to worry so much about this kind of stuff.
+
+992
+01:08:30,000 --> 01:08:34,000
+But you do want to make sure that your app returns the sorts of things you expect.
+
+993
+01:08:34,000 --> 01:08:37,000
+In this tutorial, we're only going to write tests for what you call the happy path,
+
+994
+01:08:37,000 --> 01:08:40,000
+when the user does everything they're supposed to.
+
+995
+01:08:40,000 --> 01:08:43,000
+If you wanted to really harden the app and you wanted to be serious about it,
+
+996
+01:08:43,000 --> 01:08:45,000
+maybe you would test this kind of stuff.
+
+997
+01:08:45,000 --> 01:08:48,000
+Maybe you would try some invalid inputs and stuff.
+
+998
+01:08:51,000 --> 01:08:56,000
+The last thing, speaking of tests, is how do we add a test for this new endpoint?
+
+999
+01:08:56,000 --> 01:08:59,000
+The answer is it's pretty straightforward.
+
+1000
+01:08:59,000 --> 01:09:02,000
+This time, we're going to reuse that same fixture.
+
+1001
+01:09:02,000 --> 01:09:06,000
+We wrote the client last time because we said we were going to reuse it across multiple tests.
+
+1002
+01:09:06,000 --> 01:09:08,000
+Here that comes full circle.
+
+1003
+01:09:08,000 --> 01:09:11,000
+On the predict test, we're still going to use the same client,
+
+1004
+01:09:11,000 --> 01:09:15,000
+but this time we're going to post to the slash predict endpoint,
+
+1005
+01:09:15,000 --> 01:09:18,000
+and we're going to pass the observation data as a dictionary,
+
+1006
+01:09:18,000 --> 01:09:23,000
+but to the JSON parameter.
+
+1007
+01:09:23,000 --> 01:09:31,000
+What this is saying is pass this JSON in the body to the predict endpoint with a post request.
+
+1008
+01:09:31,000 --> 01:09:38,000
+This simulates exactly the same thing that's happening when we just issue that request in the slash docs page in the browser.
+
+1009
+01:09:38,000 --> 01:09:42,000
+Then we want to check. The status code ought to be 201.
+
+1010
+01:09:42,000 --> 01:09:49,000
+When we unpack the JSON response, we should have the flower type as Satosa.
+
+1011
+01:09:49,000 --> 01:09:51,000
+I actually want to illustrate that real fast.
+
+1012
+01:09:51,000 --> 01:09:55,000
+When we get back as JSON, if we actually did this correctly...
+
+1013
+01:09:55,000 --> 01:10:09,000
+If we execute this and everything goes well, this is JSON.
+
+1014
+01:10:09,000 --> 01:10:15,000
+JSON is just text that is in the form of dictionaries and lists, basically.
+
+1015
+01:10:15,000 --> 01:10:22,000
+Here you'll see in Python you'd consider this a dictionary with one key, flower type, and one value for that key, Satosa.
+
+1016
+01:10:22,000 --> 01:10:26,000
+That's actually how we unpack it in our tests.
+
+1017
+01:10:26,000 --> 01:10:32,000
+In our tests we say the payload, when we got the JSON from the response and we turned it into a Python object,
+
+1018
+01:10:32,000 --> 01:10:38,000
+the payload should be a dictionary that has one key called flower type and its value should be Satosa.
+
+1019
+01:10:38,000 --> 01:10:42,000
+That's what our test is checking here.
+
+1020
+01:10:42,000 --> 01:10:46,000
+Like I said, this is actually a pretty straightforward section.
+
+1021
+01:10:46,000 --> 01:10:49,000
+That's that. We've got a to-do list.
+
+1022
+01:10:49,000 --> 01:10:54,000
+Take about 20 minutes for this and I'll be around if you have questions.
+
+1023
+01:11:00,000 --> 01:11:07,000
+Let's do it. Section four. Last lecture you've got to listen to.
+
+1024
+01:11:07,000 --> 01:11:11,000
+We are running right on schedule, which is awesome.
+
+1025
+01:11:11,000 --> 01:11:19,000
+We have a little bit less than an hour left and we should finish building the app a little bit early.
+
+1026
+01:11:19,000 --> 01:11:24,000
+If all goes well, I'll save some time at the end for general questions.
+
+1027
+01:11:24,000 --> 01:11:28,000
+I have some appendix slides as general thoughts on related things.
+
+1028
+01:11:28,000 --> 01:11:32,000
+I'll also hang around for any questions you have.
+
+1029
+01:11:32,000 --> 01:11:39,000
+I can't guarantee I have answers to everything about how you deploy models this way, but there will be chatting time at the end.
+
+1030
+01:11:39,000 --> 01:11:45,000
+Before then, we should have one more 20-ish minute lecture and 20-ish minutes of work time.
+
+1031
+01:11:45,000 --> 01:11:51,000
+This is the fun part where we actually connect a model and we have a working API in about half an hour.
+
+1032
+01:11:51,000 --> 01:11:59,000
+Let's do it. Our goal now is to update that predict endpoint so it no longer just says Satosa every time.
+
+1033
+01:11:59,000 --> 01:12:06,000
+Now we're going to have a scikit-learn model that actually takes in that observation data and returns a real prediction.
+
+1034
+01:12:06,000 --> 01:12:14,000
+To do that, we need to load in that model object that we downloaded way back at the beginning of today.
+
+1035
+01:12:14,000 --> 01:12:21,000
+What we did was we saved that model in app-models-iris-regression.pickle.
+
+1036
+01:12:21,000 --> 01:12:28,000
+Now probably the way most people have opened files with Python is you say with open my file whatever as F.
+
+1037
+01:12:28,000 --> 01:12:31,000
+You see that construct all the time.
+
+1038
+01:12:31,000 --> 01:12:35,000
+There's a nuance with Python packages.
+
+1039
+01:12:35,000 --> 01:12:40,000
+Because we're using a Python package, we have to do it the way Python packages work.
+
+1040
+01:12:40,000 --> 01:12:49,000
+That nuance basically means that opening files with that kind of statement that's relative to some area on your computer isn't reliable.
+
+1041
+01:12:49,000 --> 01:12:53,000
+There's no guarantee that things are where you think they are.
+
+1042
+01:12:53,000 --> 01:13:01,000
+Basically it boils down to the fact that when you install a package, sometimes the installer puts that package somewhere else on your computer.
+
+1043
+01:13:01,000 --> 01:13:06,000
+What you have to do is reference files relative to the package.
+
+1044
+01:13:06,000 --> 01:13:08,000
+We're going to use importlib for that.
+
+1045
+01:13:08,000 --> 01:13:11,000
+Importlib is a library about importing things.
+
+1046
+01:13:11,000 --> 01:13:13,000
+It comes with Python.
+
+1047
+01:13:13,000 --> 01:13:17,000
+It has a .resources.openbinary.
+
+1048
+01:13:17,000 --> 01:13:19,000
+I think there's open text too.
+
+1049
+01:13:19,000 --> 01:13:21,000
+We're opening a binary file.
+
+1050
+01:13:21,000 --> 01:13:27,000
+This is saying import from a package, look for a resource inside the package.
+
+1051
+01:13:27,000 --> 01:13:31,000
+The package is app, the app that we've been building.
+
+1052
+01:13:31,000 --> 01:13:37,000
+We're going to import that code from within our own package using that function.
+
+1053
+01:13:37,000 --> 01:13:41,000
+We're going to decode it with a pickle module because it's a pickle file.
+
+1054
+01:13:41,000 --> 01:13:46,000
+Pickle is a library that also ships with Python.
+
+1055
+01:13:46,000 --> 01:13:50,000
+It allows you to save Python objects as files.
+
+1056
+01:13:50,000 --> 01:13:54,000
+That's the super high level view.
+
+1057
+01:13:54,000 --> 01:13:56,000
+That's how we saved our model.
+
+1058
+01:13:56,000 --> 01:13:58,000
+It's a very common way to save models.
+
+1059
+01:13:58,000 --> 01:14:00,000
+Not the only, but it is a common way.
+
+1060
+01:14:00,000 --> 01:14:10,000
+We're going to open that binary file and then use the pickle library to decode the contents back into a scikit-learn model.
+
+1061
+01:14:10,000 --> 01:14:15,000
+That avoids a lot of hoops we could have to jump through if we did just with open.
+
+1062
+01:14:15,000 --> 01:14:19,000
+Let's first look at a function that would load our model.
+
+1063
+01:14:19,000 --> 01:14:21,000
+I'm going to just write a function called loadModel.
+
+1064
+01:14:21,000 --> 01:14:29,000
+It takes in a parameter model name and it returns a logistic regression, which we know is what's inside that file.
+
+1065
+01:14:29,000 --> 01:14:33,000
+Here you see us using that importLib.resources function.
+
+1066
+01:14:33,000 --> 01:14:42,000
+With that file, now you say the app package, that's what we've been calling our package, app.models.
+
+1067
+01:14:42,000 --> 01:14:46,000
+That's the part of the package we want to get to, the models folder.
+
+1068
+01:14:46,000 --> 01:14:48,000
+Model name, we're not going to hard code just yet.
+
+1069
+01:14:48,000 --> 01:14:52,000
+We're going to say in theory the model name could be anything because you might have multiple models.
+
+1070
+01:14:52,000 --> 01:14:54,000
+You might have v1 and v2.
+
+1071
+01:14:54,000 --> 01:15:04,000
+In this tutorial we only do have one, but it's nice to parameterize that and let that be a parameter to the function in case sometime you do have more than one model in that models folder.
+
+1072
+01:15:05,000 --> 01:15:13,000
+You say with that whole thing as f, use the pickle.load function to decode the contents of that file.
+
+1073
+01:15:13,000 --> 01:15:20,000
+Then we just return the model, which in our case we know is a logistic regression.
+
+1074
+01:15:20,000 --> 01:15:29,000
+We're not touching anything else, we're just going to put this in main.py for now because we're going to use that loadModel function in our predict endpoint.
+
+1075
+01:15:30,000 --> 01:15:37,000
+Before we do that though, let's have a look at what that's actually going to look like.
+
+1076
+01:15:37,000 --> 01:15:48,000
+We're not going to update the endpoint just yet, but if we want to call this function, we could say the model name we're always going to use, we're going to use all caps for that variable because it's a constant.
+
+1077
+01:15:48,000 --> 01:15:51,000
+We're going to say that's the iris regression.pickle file.
+
+1078
+01:15:51,000 --> 01:15:53,000
+That's exactly what we downloaded earlier.
+
+1079
+01:15:53,000 --> 01:16:00,000
+Then when we call loadModel on that, we actually get a model object and then we save that in a variable in our Python session.
+
+1080
+01:16:00,000 --> 01:16:02,000
+You'll notice this isn't happening inside any endpoint.
+
+1081
+01:16:02,000 --> 01:16:04,000
+This is just in the main file.
+
+1082
+01:16:04,000 --> 01:16:07,000
+Why are we doing it that way?
+
+1083
+01:16:07,000 --> 01:16:19,000
+We could run loadModel inside the endpoint, but any code inside a fast API endpoint runs every time the endpoint is hit by the client.
+
+1084
+01:16:19,000 --> 01:16:23,000
+Any time someone sends a request to the endpoint, that code runs.
+
+1085
+01:16:23,000 --> 01:16:25,000
+Opening models can be pretty slow.
+
+1086
+01:16:25,000 --> 01:16:27,000
+In our case, it's really not.
+
+1087
+01:16:27,000 --> 01:16:29,000
+This logistic regression model is really tiny.
+
+1088
+01:16:29,000 --> 01:16:36,000
+If you had a neural net, that could take a second or two, which is pretty long to wait for your API to respond.
+
+1089
+01:16:36,000 --> 01:16:40,000
+Conceivably, it could take even longer for certain really large models.
+
+1090
+01:16:40,000 --> 01:16:51,000
+By just putting loadModel in the global scope of main.py, we only load it once, and then we can use it from within our endpoints because of the way scoping works in Python.
+
+1091
+01:16:51,000 --> 01:16:56,000
+Python allows you to create variables out here, but then use them inside your functions.
+
+1092
+01:16:56,000 --> 01:17:02,000
+That's what we're going to do inside our predict endpoint.
+
+1093
+01:17:02,000 --> 01:17:03,000
+Yes?
+
+1094
+01:17:03,000 --> 01:17:09,000
+How does the size of the model impact app performance?
+
+1095
+01:17:09,000 --> 01:17:13,000
+The question is how does the size of the model impact app performance?
+
+1096
+01:17:13,000 --> 01:17:19,000
+It does impact it, but it doesn't really have anything to do with fast API, if that makes sense.
+
+1097
+01:17:19,000 --> 01:17:25,000
+If your model takes a long time to make predictions, it'll take the same amount of time if you run it as part of the endpoint.
+
+1098
+01:17:25,000 --> 01:17:28,000
+It will depend on your model completely.
+
+1099
+01:17:28,000 --> 01:17:33,000
+If you have a model that makes fast predictions, which most models predicting is fast.
+
+1100
+01:17:33,000 --> 01:17:35,000
+It's the training that's slow.
+
+1101
+01:17:35,000 --> 01:17:44,000
+But whatever time it takes for the model to make a prediction, that will happen as part of the request-response delay.
+
+1102
+01:17:44,000 --> 01:17:45,000
+It'll depend.
+
+1103
+01:17:45,000 --> 01:17:50,000
+Generally, unless you're building GPT, you're probably going to be fine.
+
+1104
+01:17:50,000 --> 01:17:57,000
+Most of this stuff runs pretty instantly, even neural nets.
+
+1105
+01:17:57,000 --> 01:18:07,000
+Let's have a quick look at our model interactively to see what does it look like to make predictions with a model.
+
+1106
+01:18:07,000 --> 01:18:25,000
+I'm going to start a Python session and import the load model function.
+
+1107
+01:18:25,000 --> 01:18:35,000
+We're going to load that iris regression model.
+
+1108
+01:18:35,000 --> 01:18:38,000
+Then we're going to see what does it look like to make predictions.
+
+1109
+01:18:38,000 --> 01:18:41,000
+There is this predict function.
+
+1110
+01:18:41,000 --> 01:18:46,000
+It's a method on the object, on the model object.
+
+1111
+01:18:46,000 --> 01:18:52,000
+I usually use IPython, so I don't always know the right syntax for help in regular Python.
+
+1112
+01:18:52,000 --> 01:18:55,000
+There is a way to get the doc string.
+
+1113
+01:18:55,000 --> 01:19:03,000
+This says the predict method on the logistic regression model takes a parameter that is an array-like thing.
+
+1114
+01:19:03,000 --> 01:19:06,000
+The shape should be two-dimensional, is what this is saying.
+
+1115
+01:19:06,000 --> 01:19:12,000
+It should be as many rows as there are samples and as many columns as there are features in our observation.
+
+1116
+01:19:12,000 --> 01:19:16,000
+It's a matrix, and that's going to become relevant here in a moment.
+
+1117
+01:19:16,000 --> 01:19:26,000
+Then it's going to return back a tuple, or it's an array, I guess, but a one-dimensional array of predictions for each sample,
+
+1118
+01:19:26,000 --> 01:19:32,000
+for each observation, I guess would be simpler, that was passed in.
+
+1119
+01:19:32,000 --> 01:19:44,000
+That's going to be relevant to us because let's use pandas here to create a row.
+
+1120
+01:19:44,000 --> 01:19:51,000
+Let's say I'm going to just copy this rather than type all this out.
+
+1121
+01:19:51,000 --> 01:20:03,000
+I'm not going to because I forgot there's all those dots in there.
+
+1122
+01:20:03,000 --> 01:20:12,000
+Let's make an observation, pd.series, and then I'll just make a dictionary where we have sepal length.
+
+1123
+01:20:12,000 --> 01:20:25,000
+The problem is that these have to be the exact names, so they're kind of long.
+
+1124
+01:20:25,000 --> 01:20:38,000
+I hope I don't have any typos in here because it will take a long time to recover.
+
+1125
+01:20:38,000 --> 01:20:41,000
+We have an observation.
+
+1126
+01:20:41,000 --> 01:20:44,000
+Whatever, I'm just using dummy values here.
+
+1127
+01:20:44,000 --> 01:20:48,000
+Now we want to predict with our model on this observation.
+
+1128
+01:20:48,000 --> 01:20:53,000
+We're going to get an error here because remember we said it's supposed to be two-dimensional.
+
+1129
+01:20:53,000 --> 01:20:58,000
+If you try to pass in a single row, and this is relevant to our API here, we're going to see two.
+
+1130
+01:20:58,000 --> 01:21:02,000
+If we just try to pass in a single row, we get this long, long, long thing that eventually says,
+
+1131
+01:21:02,000 --> 01:21:06,000
+expected a two-dimensional array, but I got a one-dimensional array instead, and that's the array.
+
+1132
+01:21:06,000 --> 01:21:13,000
+Either reshape the data in some way, or reshape the data in one of these two ways.
+
+1133
+01:21:13,000 --> 01:21:15,000
+We could do it that way.
+
+1134
+01:21:15,000 --> 01:21:20,000
+What I think is a little bit nicer is if you're working in data science, you're probably kind of familiar with pandas.
+
+1135
+01:21:20,000 --> 01:21:23,000
+What I would rather do is turn that into a data frame.
+
+1136
+01:21:23,000 --> 01:21:29,000
+Our observation was this single panda series, which is like a row in pandas.
+
+1137
+01:21:29,000 --> 01:21:35,000
+One thing you can do is turn that into a data frame by saying data frame and then listing every row,
+
+1138
+01:21:35,000 --> 01:21:37,000
+but there's only one.
+
+1139
+01:21:37,000 --> 01:21:42,000
+That data frame is a one-row data frame that has these columns.
+
+1140
+01:21:42,000 --> 01:21:46,000
+You see we automatically get a row index of zero, but we keep the right column names.
+
+1141
+01:21:46,000 --> 01:21:55,000
+Now if we try to predict on that thing, it doesn't like it because I typed the feature names out of order.
+
+1142
+01:21:55,000 --> 01:21:58,000
+I forgot. That's kind of frustrating. I'll hop back to the slides.
+
+1143
+01:21:58,000 --> 01:22:04,000
+What actually happened here, I don't know if anybody noticed this, is I typed...
+
+1144
+01:22:04,000 --> 01:22:09,000
+Yeah, I typed petal width and then petal length instead of petal length and then petal width.
+
+1145
+01:22:09,000 --> 01:22:17,000
+Scikit does not like it if you have an observation that has the feature names in a different order than your training data.
+
+1146
+01:22:17,000 --> 01:22:22,000
+That's what we're getting here. It's actually a good catch because you might have made some mistake and they might not be in the right order.
+
+1147
+01:22:22,000 --> 01:22:24,000
+You might have the wrong values in the wrong places.
+
+1148
+01:22:24,000 --> 01:22:30,000
+If you were to do this all correctly, I'm not going to make you all wait on me to type again.
+
+1149
+01:22:30,000 --> 01:22:34,000
+What it would look like is you get that error and then we convert to a data frame.
+
+1150
+01:22:34,000 --> 01:22:39,000
+Then when you run dot predict on that data frame, you get an array with just one item.
+
+1151
+01:22:39,000 --> 01:22:46,000
+Because remember when we looked at the doc string, it said it returns an array with a prediction for every row, for every sample.
+
+1152
+01:22:46,000 --> 01:22:51,000
+We have an array that is just one item and that's two.
+
+1153
+01:22:51,000 --> 01:22:54,000
+You'll notice that's not like Satosa or Virginica.
+
+1154
+01:22:54,000 --> 01:23:00,000
+It has encoded those as zero for Satosa, one for Versicolor, two for Virginica.
+
+1155
+01:23:00,000 --> 01:23:04,000
+What we could do is unpack that set of predictions.
+
+1156
+01:23:04,000 --> 01:23:07,000
+Say just get the only item, the zeroth item.
+
+1157
+01:23:07,000 --> 01:23:09,000
+Now that's a two.
+
+1158
+01:23:09,000 --> 01:23:16,000
+Then we can map between the values that it's giving us and what they actually mean semantically.
+
+1159
+01:23:16,000 --> 01:23:18,000
+Where did I get that?
+
+1160
+01:23:18,000 --> 01:23:24,000
+If you trained your own model, you would probably know however you encoded the different classes.
+
+1161
+01:23:24,000 --> 01:23:26,000
+This actually comes from the IRS data set.
+
+1162
+01:23:26,000 --> 01:23:32,000
+You can look at what the target values are and what the target actual names are.
+
+1163
+01:23:32,000 --> 01:23:41,000
+Here if I get that prediction and it's a two, I can also look up in this dictionary mapping from the number to the name.
+
+1164
+01:23:41,000 --> 01:23:47,000
+We take the class flower mapping and look up our prediction, which is just a two, and it returns Virginica.
+
+1165
+01:23:47,000 --> 01:23:53,000
+I know that probably seems like a lot, but really when we string it all together it's not terribly complicated.
+
+1166
+01:23:53,000 --> 01:23:55,000
+What we're going to do is add this process.
+
+1167
+01:23:55,000 --> 01:24:00,000
+What we've done here is we created an observation in some way.
+
+1168
+01:24:00,000 --> 01:24:03,000
+Our endpoint can handle that. It has an observation.
+
+1169
+01:24:03,000 --> 01:24:07,000
+We take that observation, we turn it into a data frame of one row.
+
+1170
+01:24:07,000 --> 01:24:12,000
+We run the data frame through our model to predict one target.
+
+1171
+01:24:12,000 --> 01:24:16,000
+Then we extract that target and decode it from a number back into a string.
+
+1172
+01:24:16,000 --> 01:24:23,000
+Remember this is what our predict endpoint looks like right now before we've done any of that.
+
+1173
+01:24:23,000 --> 01:24:27,000
+What it will look like is this.
+
+1174
+01:24:27,000 --> 01:24:32,000
+We hard code the class flower mapping because we know what that correspondence is.
+
+1175
+01:24:32,000 --> 01:24:39,000
+Then we take our observation, we turn it into a data frame, we run it through model.predict.
+
+1176
+01:24:39,000 --> 01:24:46,000
+That gives us an array with one item, so we add that zero at the end in brackets to just unpack and get the first item.
+
+1177
+01:24:46,000 --> 01:24:54,000
+Then we convert from the number into the string flower type using the mapping.
+
+1178
+01:24:54,000 --> 01:24:58,000
+Then we use that flower type string as our prediction.
+
+1179
+01:24:58,000 --> 01:25:01,000
+We put that back into our Pydantic model and return that.
+
+1180
+01:25:01,000 --> 01:25:06,000
+This code is quite compressed. I realize there's a lot happening in this first line.
+
+1181
+01:25:06,000 --> 01:25:11,000
+You can break it into multiple lines if you want.
+
+1182
+01:25:11,000 --> 01:25:14,000
+This really is all stuff we just saw in the last couple slides.
+
+1183
+01:25:14,000 --> 01:25:18,000
+Except I'll point out, I realize that's a mystery. We haven't written this.
+
+1184
+01:25:18,000 --> 01:25:21,000
+What is observation.as data frame?
+
+1185
+01:25:21,000 --> 01:25:24,000
+Sadly, Pydantic does not do that for you.
+
+1186
+01:25:24,000 --> 01:25:31,000
+We're going to write that function on the next slide.
+
+1187
+01:25:31,000 --> 01:25:35,000
+Now we want to find a way to turn an observation into a data frame.
+
+1188
+01:25:35,000 --> 01:25:40,000
+You could do this in any number of ways. I think the most elegant way to do it is write a simple method.
+
+1189
+01:25:40,000 --> 01:25:45,000
+A method is a function attached to a class. Our observation is a class.
+
+1190
+01:25:45,000 --> 01:25:52,000
+We can say, for any given observation, create a method as row that works on the object itself.
+
+1191
+01:25:52,000 --> 01:25:59,000
+That's what self means in Python. It says when you call this method, you can actually access the object that it's working on.
+
+1192
+01:25:59,000 --> 01:26:04,000
+It just takes the self object and creates a series.
+
+1193
+01:26:04,000 --> 01:26:10,000
+Seeple length in centimeters is the sepal length attribute of this object.
+
+1194
+01:26:10,000 --> 01:26:17,000
+It turns that into a dictionary and then sends it to the pandas.series constructor and returns that as a row.
+
+1195
+01:26:17,000 --> 01:26:19,000
+What you get back there is a series.
+
+1196
+01:26:19,000 --> 01:26:23,000
+If you've written the as row function, it's really easy to write the as data frame function.
+
+1197
+01:26:23,000 --> 01:26:27,000
+All you need to do is create a data frame with only one row.
+
+1198
+01:26:27,000 --> 01:26:30,000
+The row is self.asRow.
+
+1199
+01:26:30,000 --> 01:26:36,000
+Here we're starting to mix some object-oriented programming in for the first time.
+
+1200
+01:26:36,000 --> 01:26:39,000
+We're combining multiple functions we've written.
+
+1201
+01:26:39,000 --> 01:26:44,000
+Ultimately, what's happening here is we're taking in the attributes of the observation.
+
+1202
+01:26:44,000 --> 01:26:47,000
+We're converting them into a panda series.
+
+1203
+01:26:47,000 --> 01:26:51,000
+Then we're creating a data frame that has only one row, which is that panda series.
+
+1204
+01:26:51,000 --> 01:26:59,000
+If we hop back, we can remember that the whole point of that was to create a data frame we can pass into model.predict.
+
+1205
+01:26:59,000 --> 01:27:02,000
+Maybe a lot, but I think as we work through it should make sense.
+
+1206
+01:27:02,000 --> 01:27:03,000
+Yes?
+
+1207
+01:27:15,000 --> 01:27:20,000
+Good question. Why do we have the .0? Are we just trying to get the first row of the data frame?
+
+1208
+01:27:20,000 --> 01:27:25,000
+The zero is actually a modifier of this entire phrase.
+
+1209
+01:27:25,000 --> 01:27:31,000
+What we're doing is we're taking the data frame because model.predict insists on having a two-dimensional input.
+
+1210
+01:27:31,000 --> 01:27:37,000
+The data frame has one row, but it's a two-dimensional object that model.predict plays well with.
+
+1211
+01:27:37,000 --> 01:27:42,000
+That causes the prediction to just be an array of one item.
+
+1212
+01:27:42,000 --> 01:27:47,000
+Then, scrolling back,
+
+1213
+01:27:47,000 --> 01:27:54,000
+what we got out of our prediction, model.predict, is we get an array with only a single item, and we need to get that item out.
+
+1214
+01:27:54,000 --> 01:27:57,000
+Zero says get the first item of that array, which is the only item.
+
+1215
+01:28:01,000 --> 01:28:10,000
+You can be sure that there will always be one item in this case because we actually wrote the code that takes an observation and always returns a one-row data frame.
+
+1216
+01:28:10,000 --> 01:28:15,000
+This code that is a list of one row will always be a one-row data frame.
+
+1217
+01:28:15,000 --> 01:28:22,000
+In a more general sense, you wouldn't want to do it this way, but for our use case, all we're doing is taking an observation, turning it into a row,
+
+1218
+01:28:22,000 --> 01:28:27,000
+and we're forcing it into a data frame just because that's what model.predict wants to work with.
+
+1219
+01:28:27,000 --> 01:28:32,000
+We can always know there will just be one prediction.
+
+1220
+01:28:32,000 --> 01:28:35,000
+Yes. Oh, wait. Sorry. You had your hand up first.
+
+1221
+01:28:35,000 --> 01:28:43,000
+Data frame is a 2D array. It counts as a 2D array because it has rows and columns.
+
+1222
+01:28:43,000 --> 01:28:46,000
+Does that make sense? Yes.
+
+1223
+01:28:54,000 --> 01:28:57,000
+If you were to pass a data frame with more than one row, you'd get multiple predictions.
+
+1224
+01:28:57,000 --> 01:29:00,000
+We can actually look at that.
+
+1225
+01:29:00,000 --> 01:29:09,000
+If we were to go over here, we had this error, but observation was this single row, so we could make a new data frame that's...
+
+1226
+01:29:12,000 --> 01:29:15,000
+We're just going to have three identical rows.
+
+1227
+01:29:15,000 --> 01:29:20,000
+If you model.predict this, I think we might still get that same error. We'll see.
+
+1228
+01:29:20,000 --> 01:29:31,000
+You really will get something that looks like an array of 111, or whatever it is.
+
+1229
+01:29:31,000 --> 01:29:36,000
+You'll get them all the time. In our case, we know it will always just be a single.
+
+1230
+01:29:36,000 --> 01:29:43,000
+I know there's been a lot of code in this section.
+
+1231
+01:29:43,000 --> 01:29:49,000
+What we've done is we have added the load model function, we've updated the predict endpoint,
+
+1232
+01:29:49,000 --> 01:29:53,000
+and in the predict endpoint, we've used the load model function, well, the output from it,
+
+1233
+01:29:53,000 --> 01:29:59,000
+and we are turning observations into data frames that we can run the model on.
+
+1234
+01:29:59,000 --> 01:30:05,000
+Once we actually do that, we can try this out. We can go into the docs page, or we can use cURL.
+
+1235
+01:30:05,000 --> 01:30:09,000
+I think my API is shut down.
+
+1236
+01:30:09,000 --> 01:30:16,000
+But a key difference from what we had in the last section is now...
+
+1237
+01:30:16,000 --> 01:30:24,000
+It doesn't always say that your flower is a setosa.
+
+1238
+01:30:24,000 --> 01:30:36,000
+If I want to try this out, I'll say 1111, and this says that's a setosa, but I think...
+
+1239
+01:30:36,000 --> 01:30:41,000
+What directory am I in? I'm in section four.
+
+1240
+01:30:41,000 --> 01:30:47,000
+Will I be able to manipulate this to get a different flower?
+
+1241
+01:30:47,000 --> 01:30:53,000
+Still a setosa. There is a way. It's in the tests, actually, but I don't know what the...
+
+1242
+01:30:53,000 --> 01:30:57,000
+Yeah, let's see. You're right. Let's do some big numbers.
+
+1243
+01:30:57,000 --> 01:31:01,000
+You think all big numbers are just some?
+
+1244
+01:31:01,000 --> 01:31:04,000
+I kind of assumed it was a ratio, too, but I don't know that for sure.
+
+1245
+01:31:04,000 --> 01:31:06,000
+Nope, big numbers work. Now it's a virginica.
+
+1246
+01:31:06,000 --> 01:31:12,000
+Now you can see this isn't a dummy anymore. This is really making some predictions based on the data we get in.
+
+1247
+01:31:12,000 --> 01:31:19,000
+The last thing that we want to do in this section is update our tests to reflect that we're working with real data now.
+
+1248
+01:31:19,000 --> 01:31:26,000
+You could make a separate test. In fact, make a separate test if you wish.
+
+1249
+01:31:26,000 --> 01:31:29,000
+I partly did it all in one test because it fits better on the slide.
+
+1250
+01:31:29,000 --> 01:31:37,000
+We already had this. We had this particular observation that came back as setosa before when it was hard-coded.
+
+1251
+01:31:37,000 --> 01:31:42,000
+It happens that those numbers still work to create a setosa now that it's a real model.
+
+1252
+01:31:42,000 --> 01:31:49,000
+But I just added this extra code now with these numbers for our observation.
+
+1253
+01:31:49,000 --> 01:31:54,000
+If we pass these and get these predicted, we should still get a 201. It's still a success.
+
+1254
+01:31:54,000 --> 01:31:57,000
+But now the flower type should be versicolor.
+
+1255
+01:31:57,000 --> 01:32:04,000
+What we're doing in this test predict now is not just testing that the predict endpoint is there and always returning setosa.
+
+1256
+01:32:04,000 --> 01:32:07,000
+We're actually testing that it returns what we expect it to return.
+
+1257
+01:32:07,000 --> 01:32:12,000
+That this kind of flower is a setosa and this kind of flower is a versicolor.
+
+1258
+01:32:12,000 --> 01:32:15,000
+When you run this, this should all pass smoothly.
+
+1259
+01:32:15,000 --> 01:32:22,000
+It'll only count as one test though, but like I said, if you wanted to add this as two tests, you could say test predict setosa
+
+1260
+01:32:22,000 --> 01:32:26,000
+and then start a new function right here. Test predict versicolor.
+
+1261
+01:32:26,000 --> 01:32:31,000
+You'd still have to make client a parameter, but it'll work just the same.
+
+1262
+01:32:31,000 --> 01:32:34,000
+Honestly, it might be better practice.
+
+1263
+01:32:34,000 --> 01:32:39,000
+That takes us to our to-do list for this section, especially because this is the last section.
+
+1264
+01:32:39,000 --> 01:32:42,000
+I wanted to put a bit of a stretch goal in here.
+
+1265
+01:32:42,000 --> 01:32:50,000
+If you finish early and you want to keep poking around and seeing what would it look like to have a more featureful API,
+
+1266
+01:32:50,000 --> 01:32:56,000
+one thing you might want in a bigger API is, I don't know, not bigger, in a more featureful API,
+
+1267
+01:32:56,000 --> 01:32:59,000
+is you might want to let people pass more than one prediction at a time.
+
+1268
+01:32:59,000 --> 01:33:04,000
+In fact, maybe that's the more common way. They might say, I have all these observations, score all of them.
+
+1269
+01:33:04,000 --> 01:33:10,000
+If you want, try to write a batch predict endpoint that is at slash batch predict.
+
+1270
+01:33:10,000 --> 01:33:16,000
+Instead of taking a single observation, it takes a list of observations and it returns a list of predictions.
+
+1271
+01:33:16,000 --> 01:33:21,000
+The code for that is in the repo, too. It's not like there's no way to find the answer.
+
+1272
+01:33:21,000 --> 01:33:30,000
+If you want to toy around and give that a try, that's an interesting and very practical further use case for this kind of an API.
+
+1273
+01:33:30,000 --> 01:33:39,000
+That's it for this section. I'll give you 20 minutes, and then we'll save the last 10 minutes or so for just some wrap up and chit chat.
+
+1274
+01:33:40,000 --> 01:33:46,000
+Okay, 10 minutes left.
+
+1275
+01:33:46,000 --> 01:33:54,000
+Hopefully everybody was able to work through the exercises, but if not, I don't think anybody's coming into this room right at 5 o'clock,
+
+1276
+01:33:54,000 --> 01:33:57,000
+and I'll be around for a little bit to help out with things.
+
+1277
+01:33:57,000 --> 01:33:59,000
+I hope you enjoyed today. Thanks so much for coming.
+
+1278
+01:33:59,000 --> 01:34:02,000
+This was a lot of fun. It's the first time I've given this talk,
+
+1279
+01:34:02,000 --> 01:34:09,000
+and I hope that some of these concepts are things that you can take into actually building APIs on your own.
+
+1280
+01:34:09,000 --> 01:34:12,000
+A couple other things that I just want to mention.
+
+1281
+01:34:12,000 --> 01:34:19,000
+These are sort of like appendix slides, but some topics that I think it would be weird to end this talk without even mentioning it all.
+
+1282
+01:34:19,000 --> 01:34:27,000
+We installed our app as package. We used that setup.cfg and pyproject.toml.
+
+1283
+01:34:27,000 --> 01:34:31,000
+Those probably aren't familiar to most people unless you do a lot of Python packaging.
+
+1284
+01:34:31,000 --> 01:34:36,000
+I will say this system is a lot better than just using requirements.txt for a few reasons.
+
+1285
+01:34:36,000 --> 01:34:42,000
+The simplest one is that it makes testing and relative imports from within your package work a lot smoother.
+
+1286
+01:34:42,000 --> 01:34:49,000
+Going deeper than that is probably more than we need to do, but you'll probably have noticed this wasn't that much more overhead.
+
+1287
+01:34:49,000 --> 01:34:53,000
+You could basically copy some files, and all you would need to change is the dependency list.
+
+1288
+01:34:53,000 --> 01:34:59,000
+So this, using the setup.cfg and pyproject.toml, yes, you need to install with that pip step,
+
+1289
+01:34:59,000 --> 01:35:04,000
+but it handles all your requirements, and it just it handles a lot of problems for you.
+
+1290
+01:35:04,000 --> 01:35:07,000
+There are better solutions.
+
+1291
+01:35:07,000 --> 01:35:10,000
+I would prefer a true dependency management tool.
+
+1292
+01:35:10,000 --> 01:35:18,000
+So a real dependency management tool lets you say add this package, remove this package, upgrade this package, and it handles all the things that need to change.
+
+1293
+01:35:18,000 --> 01:35:25,000
+If you were to do that in the setup we had, you would have to delete a line in the setup.cfg and rerun the install step.
+
+1294
+01:35:25,000 --> 01:35:30,000
+And even then if you deleted a line, it wouldn't erase the package, it just wouldn't install it in the future.
+
+1295
+01:35:30,000 --> 01:35:39,000
+I like poetry for that, but poetry, which is the most mature tool that I've seen in Python for this, it still also has some hiccups.
+
+1296
+01:35:39,000 --> 01:35:42,000
+I run into some problems periodically.
+
+1297
+01:35:42,000 --> 01:35:47,000
+I've run into some limitations that have actually made it impossible to use for certain projects, but those are pretty niche.
+
+1298
+01:35:47,000 --> 01:35:53,000
+So I would say mostly if you're developing an application, poetry or something like pipenv, which is a similar tool,
+
+1299
+01:35:53,000 --> 01:35:56,000
+that's probably a good idea.
+
+1300
+01:35:56,000 --> 01:36:01,000
+Poetry lets you say add this package, upgrade this package, and it also keeps track of two different things.
+
+1301
+01:36:01,000 --> 01:36:05,000
+It keeps track of the direct dependencies, the things that you said I need.
+
+1302
+01:36:05,000 --> 01:36:13,000
+So in this project all we needed was, like if we were starting from scratch, we would just say I need pandas, scikit-learn, and fast API.
+
+1303
+01:36:13,000 --> 01:36:16,000
+And it would get those and it would list those as the things you requested.
+
+1304
+01:36:16,000 --> 01:36:21,000
+But it would also keep track of all the transitive dependencies that those depend upon.
+
+1305
+01:36:21,000 --> 01:36:29,000
+So pandas depends on numpy, scikit also depends on scipy, fast API depends on pidantic.
+
+1306
+01:36:29,000 --> 01:36:38,000
+And it would also lock all of those to a specific version and create a lock file that you can store in your repository to keep track of the exact versions you used.
+
+1307
+01:36:38,000 --> 01:36:43,000
+I'm not going to go any deeper on that, but that is what I would recommend.
+
+1308
+01:36:43,000 --> 01:36:44,000
+There are some other options.
+
+1309
+01:36:44,000 --> 01:36:46,000
+Conda is good for scientific computing.
+
+1310
+01:36:46,000 --> 01:36:48,000
+I would not use it for application development.
+
+1311
+01:36:48,000 --> 01:36:58,000
+Docker is actually a more thorough solution to this problem in a few ways, but it does take more time to learn and it has more startup time.
+
+1312
+01:36:58,000 --> 01:37:04,000
+You have to basically start a new Docker container every time you want a clean environment to test.
+
+1313
+01:37:04,000 --> 01:37:06,000
+Other ways to store your models.
+
+1314
+01:37:06,000 --> 01:37:07,000
+We used pickle.
+
+1315
+01:37:07,000 --> 01:37:08,000
+It's not great.
+
+1316
+01:37:08,000 --> 01:37:14,000
+You probably saw some warnings that the model was trained on a different version of scikit-learn than we used.
+
+1317
+01:37:14,000 --> 01:37:17,000
+I thought about fixing that, but then I thought, no, it's actually more instructive to see that.
+
+1318
+01:37:17,000 --> 01:37:19,000
+That will happen all the time.
+
+1319
+01:37:19,000 --> 01:37:31,000
+So pickle is a way of storing any Python object in a file, and that means that it's it makes some assumptions about the version of Python and the version of packages you have.
+
+1320
+01:37:31,000 --> 01:37:33,000
+If those don't match, you can have issues.
+
+1321
+01:37:33,000 --> 01:37:35,000
+There are other options.
+
+1322
+01:37:35,000 --> 01:37:40,000
+I've seen people just store the weights of the model in a file, which you can do however you want.
+
+1323
+01:37:40,000 --> 01:37:42,000
+That's more common with like neural nets.
+
+1324
+01:37:42,000 --> 01:37:46,000
+Some packages have their own serialization formats.
+
+1325
+01:37:46,000 --> 01:37:58,000
+Scikit-learn, their documentation has a section on model persistence, but I have looked at it and I came away sort of nonplussed because the other things they recommend have pretty similar problems to pickle.
+
+1326
+01:37:58,000 --> 01:38:01,000
+All that to say, I'm not sure there's a great solution.
+
+1327
+01:38:01,000 --> 01:38:03,000
+A couple people asked me about this.
+
+1328
+01:38:03,000 --> 01:38:07,000
+If I were to do this, I don't use scikit-learn at work.
+
+1329
+01:38:07,000 --> 01:38:09,000
+We use PyTorch stuff.
+
+1330
+01:38:09,000 --> 01:38:20,000
+But if I were doing this, I would probably retrain the model every time I bumped the scikit-learn or Python version for the application.
+
+1331
+01:38:20,000 --> 01:38:24,000
+So that way everything always matches, but you need to have the code.
+
+1332
+01:38:24,000 --> 01:38:31,000
+It doesn't need to be automated, but you need to have the code saved to reproduce your model from scratch, which is not impossible.
+
+1333
+01:38:31,000 --> 01:38:32,000
+Lots of people have done that.
+
+1334
+01:38:32,000 --> 01:38:37,000
+So that is one possible answer there, although it's a bit of a pain.
+
+1335
+01:38:37,000 --> 01:38:40,000
+Okay, so we deployed our model as an API.
+
+1336
+01:38:40,000 --> 01:38:42,000
+An API is real time.
+
+1337
+01:38:42,000 --> 01:38:51,000
+It takes in a prediction or some predictions and it returns, or I'm sorry, it takes in an observation or some observations and it returns a prediction or multiple predictions.
+
+1338
+01:38:51,000 --> 01:38:53,000
+This is not the only architecture.
+
+1339
+01:38:53,000 --> 01:39:06,000
+You can also do batch prediction, which is there is some data at rest and you run on some regular cadence, either based on an event happening or every night or every week, and you turn through all the data and you make predictions on all of it.
+
+1340
+01:39:06,000 --> 01:39:09,000
+So what I always compare this to is Spotify's Discover Weekly.
+
+1341
+01:39:09,000 --> 01:39:12,000
+If anyone's seen that, every Monday you have new recommended music.
+
+1342
+01:39:12,000 --> 01:39:16,000
+So you can sort of think of Spotify churning through all the data every Sunday night.
+
+1343
+01:39:16,000 --> 01:39:18,000
+For some use cases, this works great.
+
+1344
+01:39:18,000 --> 01:39:22,000
+It's actually really good the way Spotify does it, that everybody knows what day their music will come out.
+
+1345
+01:39:22,000 --> 01:39:27,000
+But for other use cases where you need to ask a question and get an answer right then, it's not helpful.
+
+1346
+01:39:27,000 --> 01:39:32,000
+However, it can be easier to set up and requires less infrastructure.
+
+1347
+01:39:32,000 --> 01:39:38,000
+So you can consider that airflow is a thing people use for setting up at least parts of that.
+
+1348
+01:39:38,000 --> 01:39:43,000
+Streaming prediction is when data comes in in micro batches.
+
+1349
+01:39:43,000 --> 01:39:46,000
+So like Spark has Spark streaming.
+
+1350
+01:39:46,000 --> 01:39:49,000
+Sometimes people will use RabbitMQ for this.
+
+1351
+01:39:49,000 --> 01:39:51,000
+Kafka is more common in data science.
+
+1352
+01:39:51,000 --> 01:39:58,000
+It's where you have sort of like a central exchange that keeps track of things happening and it passes them around to a model that can score it.
+
+1353
+01:39:58,000 --> 01:40:03,000
+This, in contrast to batch prediction, is actually more complicated to set up than real-time scoring.
+
+1354
+01:40:03,000 --> 01:40:08,000
+And I think like an order of magnitude more complicated and just introduces tons of new problems.
+
+1355
+01:40:08,000 --> 01:40:16,000
+But there are cases where it makes a lot of sense and it can really help you if your server is sometimes overwhelmed by a lot of requests.
+
+1356
+01:40:16,000 --> 01:40:24,000
+So if you sometimes have a huge jump in the number of users of your API, what would happen with our API is it would crash.
+
+1357
+01:40:24,000 --> 01:40:29,000
+You could set it up on something that scales like Kubernetes and you might be OK.
+
+1358
+01:40:29,000 --> 01:40:32,000
+But streaming, all that happens is things just pile up.
+
+1359
+01:40:32,000 --> 01:40:33,000
+There's a queue.
+
+1360
+01:40:33,000 --> 01:40:37,000
+And so, yeah, you get slower, but nothing explodes.
+
+1361
+01:40:37,000 --> 01:40:38,000
+Streaming is pretty common.
+
+1362
+01:40:38,000 --> 01:40:43,000
+It's good for certain use cases, but it is complicated.
+
+1363
+01:40:43,000 --> 01:40:44,000
+Testing.
+
+1364
+01:40:44,000 --> 01:40:47,000
+Ideally, you'd have more than one test for every endpoint.
+
+1365
+01:40:47,000 --> 01:40:53,000
+We just tested the happy path, which was to say, like, if someone passes data in exactly the way we expect, here's what should come back.
+
+1366
+01:40:53,000 --> 01:40:56,000
+It would be good to test a little bit with bad inputs.
+
+1367
+01:40:56,000 --> 01:41:00,000
+As I said earlier, I wouldn't make sure the pedantic works the way you expect.
+
+1368
+01:41:00,000 --> 01:41:04,000
+I wouldn't be like making sure the pedantic error messages are word for word.
+
+1369
+01:41:04,000 --> 01:41:05,000
+You think they should be.
+
+1370
+01:41:05,000 --> 01:41:09,000
+But I would make sure that if users pass in data in a format you anticipate, they might.
+
+1371
+01:41:09,000 --> 01:41:10,000
+But it's wrong.
+
+1372
+01:41:10,000 --> 01:41:13,000
+I would make sure it at least returns an error code, at least like test.
+
+1373
+01:41:13,000 --> 01:41:15,000
+It returns a 422 or something.
+
+1374
+01:41:15,000 --> 01:41:19,000
+How to test testing my the model itself.
+
+1375
+01:41:19,000 --> 01:41:21,000
+That's pretty hard.
+
+1376
+01:41:21,000 --> 01:41:22,000
+I don't have a good answer here.
+
+1377
+01:41:22,000 --> 01:41:24,000
+This is really an MLOps question.
+
+1378
+01:41:24,000 --> 01:41:32,000
+Because if you write, if you hard code tests of individual observations, when you update your model, they might not come back the same.
+
+1379
+01:41:32,000 --> 01:41:41,000
+So one thing that I think is a good starting point is have some sanity tests where it's like if the model doesn't predict this for this observation, something is badly wrong.
+
+1380
+01:41:41,000 --> 01:41:50,000
+So I was saying, like, if you could find the most setosa-ish flower and write a test for that observation and make sure it always returns setosa, that would be good.
+
+1381
+01:41:50,000 --> 01:41:55,000
+Because in that rare case that it fails, that means something has really gone wrong with your model.
+
+1382
+01:41:55,000 --> 01:41:58,000
+This is a field to follow.
+
+1383
+01:41:58,000 --> 01:42:02,000
+And I think experimentation is good because I just have not seen a clear consensus.
+
+1384
+01:42:02,000 --> 01:42:04,000
+Everybody says they have answers for this kind of stuff.
+
+1385
+01:42:04,000 --> 01:42:06,000
+And none of them make any sense.
+
+1386
+01:42:06,000 --> 01:42:10,000
+They all have like huge gaps because your model has to change over time.
+
+1387
+01:42:10,000 --> 01:42:15,000
+And if you knew how your model would perform in a specific situation, you would already have made it that way.
+
+1388
+01:42:15,000 --> 01:42:17,000
+You know, it's like that's what modeling is.
+
+1389
+01:42:17,000 --> 01:42:18,000
+It's inferring patterns from data.
+
+1390
+01:42:18,000 --> 01:42:22,000
+And if you know and hard code all the patterns, what is a model for?
+
+1391
+01:42:22,000 --> 01:42:24,000
+So I think this is pretty hard.
+
+1392
+01:42:24,000 --> 01:42:26,000
+Authentication.
+
+1393
+01:42:26,000 --> 01:42:33,000
+You probably, if you are a data scientist, if you're not writing a lot of APIs, you're just doing it occasionally.
+
+1394
+01:42:33,000 --> 01:42:35,000
+You probably shouldn't be the one writing authentication.
+
+1395
+01:42:35,000 --> 01:42:37,000
+But it's good to be aware of the options.
+
+1396
+01:42:37,000 --> 01:42:40,000
+Basic auth is very simple.
+
+1397
+01:42:40,000 --> 01:42:45,000
+You pass a user name and a password, and the API validates it and sends something back.
+
+1398
+01:42:45,000 --> 01:42:47,000
+This is reasonably common.
+
+1399
+01:42:47,000 --> 01:42:49,000
+API keys, even simpler.
+
+1400
+01:42:49,000 --> 01:42:54,000
+You issue every user an API key, which you can hard code and store in a database.
+
+1401
+01:42:54,000 --> 01:42:58,000
+And then they have to pass the API key every time they send a request.
+
+1402
+01:42:58,000 --> 01:43:01,000
+And you just check, have I seen this API key before?
+
+1403
+01:43:01,000 --> 01:43:03,000
+So you would have to look in the database.
+
+1404
+01:43:03,000 --> 01:43:04,000
+But you say, have I seen this API key?
+
+1405
+01:43:04,000 --> 01:43:05,000
+Whose is it?
+
+1406
+01:43:05,000 --> 01:43:09,000
+Maybe you keep track of the fact that they requested something because you're going to bill them for it.
+
+1407
+01:43:09,000 --> 01:43:11,000
+Very simple.
+
+1408
+01:43:11,000 --> 01:43:13,000
+Auth, pretty complicated.
+
+1409
+01:43:14,000 --> 01:43:21,000
+It's like two different steps where you send the user name and password once, and then you get a token that you have to keep reusing every time you make a request.
+
+1410
+01:43:21,000 --> 01:43:24,000
+Only lasts for a certain amount of time.
+
+1411
+01:43:24,000 --> 01:43:27,000
+That's actually really the more serious way to do it.
+
+1412
+01:43:27,000 --> 01:43:30,000
+But there's nothing especially wrong with the other options.
+
+1413
+01:43:30,000 --> 01:43:36,000
+Again, I wouldn't be, I wouldn't recommend you write this stuff, but it is possible.
+
+1414
+01:43:36,000 --> 01:43:38,000
+And to be clear, I'm not saying no one should write it.
+
+1415
+01:43:38,000 --> 01:43:42,000
+I'm just saying it probably shouldn't be the data scientist.
+
+1416
+01:43:42,000 --> 01:43:43,000
+Deploying an API.
+
+1417
+01:43:43,000 --> 01:43:46,000
+I think this is the last slide, right?
+
+1418
+01:43:46,000 --> 01:43:53,000
+So again, unlikely you'll be doing this if you're more of a data scientist and don't do a lot of API development.
+
+1419
+01:43:53,000 --> 01:43:55,000
+But there's a few options.
+
+1420
+01:43:55,000 --> 01:43:59,000
+The simplest, and you totally could do this with the app we just built, is just throw it in a platform as a service.
+
+1421
+01:43:59,000 --> 01:44:01,000
+That's what PASS stands for.
+
+1422
+01:44:01,000 --> 01:44:03,000
+Heroku is the most common one of these.
+
+1423
+01:44:03,000 --> 01:44:05,000
+They used to have a free tier, and now they don't.
+
+1424
+01:44:05,000 --> 01:44:07,000
+It is a big bummer.
+
+1425
+01:44:07,000 --> 01:44:09,000
+But it's only five bucks a month.
+
+1426
+01:44:09,000 --> 01:44:15,000
+So if you really wanted to, you could put an API up there, and they'll even give you a database with it.
+
+1427
+01:44:15,000 --> 01:44:20,000
+More complicated is to use something like Docker, which I mentioned previously, very briefly.
+
+1428
+01:44:20,000 --> 01:44:28,000
+Docker is a way of creating an app that's very portable, can be moved into different places and still work the same, even different operating systems.
+
+1429
+01:44:28,000 --> 01:44:30,000
+And then you would throw that into a cloud provider.
+
+1430
+01:44:30,000 --> 01:44:35,000
+So AWS and GCP and Azure and Linode and DigitalOcean.
+
+1431
+01:44:35,000 --> 01:44:39,000
+All the common cloud providers have support for that.
+
+1432
+01:44:39,000 --> 01:44:42,000
+They'll just take your container and they'll run it.
+
+1433
+01:44:42,000 --> 01:44:46,000
+The hard way to do this, but also the most seriously scalable, is Kubernetes.
+
+1434
+01:44:46,000 --> 01:44:48,000
+I'm not an expert on Kubernetes.
+
+1435
+01:44:48,000 --> 01:44:51,000
+It is terrifying.
+
+1436
+01:44:51,000 --> 01:44:56,000
+But it is a way of saying under these conditions, we should scale in this way.
+
+1437
+01:44:56,000 --> 01:44:58,000
+We should have this kind of load balancing.
+
+1438
+01:44:58,000 --> 01:45:04,000
+It handles all of these problems at the cost of you having to know a lot of things about all of these problems.
+
+1439
+01:45:04,000 --> 01:45:11,000
+But in my experience, if you get serious about this kind of stuff at large scale, you're going to end up on Kubernetes.
+
+1440
+01:45:13,000 --> 01:45:17,000
+So that's all the random thoughts I had that didn't fit anywhere in the actual presentation.
+
+1441
+01:45:17,000 --> 01:45:19,000
+And I will be around for a while.
+
+1442
+01:45:19,000 --> 01:45:23,000
+So if you have more questions, feel free to come by and chat.
+
+1443
+01:45:23,000 --> 01:45:25,000
+Thanks for coming, everybody. This was great. It was a lot of fun.
+

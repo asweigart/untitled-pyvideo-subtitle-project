@@ -1,0 +1,1120 @@
+1
+00:00:00,000 --> 00:00:07,000
+Good afternoon everyone. Thank you so much for joining me here today.
+
+2
+00:00:07,000 --> 00:00:12,680
+So a little bit about me before we get started. I am Chief Technology Officer at Research
+
+3
+00:00:12,680 --> 00:00:17,360
+Affiliates, a finance firm located in Newport Beach, California. I've been programming in
+
+4
+00:00:17,360 --> 00:00:22,320
+Python since the year 2000. And back then I was doing work on my team to give me the
+
+5
+00:00:22,320 --> 00:00:26,920
+composition and then later on I was a professor of music technology. And I was doing a lot
+
+6
+00:00:26,920 --> 00:00:32,520
+of work using Python for algorithmic composition and computational musicology. Since 2012,
+
+7
+00:00:32,520 --> 00:00:38,360
+however, I've been using Python to build financial systems and that work led me to build Static
+
+8
+00:00:38,360 --> 00:00:44,400
+Frame, an alternative data frame library built on an immutable data model.
+
+9
+00:00:44,400 --> 00:00:50,680
+So we're all here this week to celebrate 20 years of Python, right? Well, I'm celebrating
+
+10
+00:00:50,680 --> 00:00:56,080
+something slightly different. 20 years of CSV parsing in Python. All of you are excited
+
+11
+00:00:56,080 --> 00:01:01,880
+about this as well, right? Well, it turns out in 2003, 20 years ago, Python 2.3 was
+
+12
+00:01:01,880 --> 00:01:07,040
+released, which included for the very first time the CSV package in the standard library
+
+13
+00:01:07,040 --> 00:01:13,040
+and in that was a function called CSVReader. The way this worked is given an iterable of
+
+14
+00:01:13,040 --> 00:01:17,880
+lines, it would parse the delimited data. And the core functionality of this was implemented
+
+15
+00:01:17,880 --> 00:01:23,840
+in a state machine tokenizer implemented in C. Now if you go to C Python source code and
+
+16
+00:01:23,880 --> 00:01:29,040
+you look at CSV.C, you'll see this code right here. And this is that core state machine
+
+17
+00:01:29,040 --> 00:01:34,320
+tokenizer, a function called parse process char. I know this is pretty small. And what
+
+18
+00:01:34,320 --> 00:01:40,360
+this function does is process one character at a time with a giant switch statement controlling
+
+19
+00:01:40,360 --> 00:01:45,360
+the state. We all know great things lie behind giant switch statements, right?
+
+20
+00:01:45,360 --> 00:01:50,800
+Okay, so the CSVReader is very efficient because of the C core and it's configurable for a
+
+21
+00:01:50,800 --> 00:01:57,280
+wide range of CSV dialects. So in basic usage, we can take a string I.O. wrapping a string
+
+22
+00:01:57,280 --> 00:02:01,040
+that is representing two lines and we can feed that to the reader. It's going to give
+
+23
+00:02:01,040 --> 00:02:04,920
+us back an iterator and we can give that to a list and we're going to see that it's nicely
+
+24
+00:02:04,920 --> 00:02:10,920
+parsed out our field from the delimiter. Now a really nice feature of the CSVReader is
+
+25
+00:02:10,920 --> 00:02:16,600
+it's highly configurable. So here I give it a custom delimiter, a custom escape character,
+
+26
+00:02:16,600 --> 00:02:23,600
+a custom quote character, and we see it parses everything out just as expected. Now the CSVReader
+
+27
+00:02:23,600 --> 00:02:30,600
+didn't do everything. It returns parse rows, not columns. And CSV files generally contain
+
+28
+00:02:31,280 --> 00:02:38,280
+columnar data, data by column. So the CSVReader doesn't help us with detecting the type per
+
+29
+00:02:38,280 --> 00:02:44,600
+column, which is pretty useful, nor does it create columnar collections or arrays. So
+
+30
+00:02:44,600 --> 00:02:49,800
+since 2003, over the last 20 years, Pandas and NumPy in particular, but others, have
+
+31
+00:02:49,800 --> 00:02:56,800
+offered some alternatives. Now Pandas read CSV, does automatic type discovery per column,
+
+32
+00:02:57,320 --> 00:03:03,080
+it has full support for CSVReader dialect configurations, and it has generally very
+
+33
+00:03:03,080 --> 00:03:09,240
+good performance. I often think that the early growth of Pandas was in large part due to
+
+34
+00:03:09,360 --> 00:03:15,800
+the excellent performance of its CSVReader. However, not all D types are supported by
+
+35
+00:03:15,800 --> 00:03:22,320
+this tool. There's no support for Unicode arrays. All strings are brought in as PyObjects
+
+36
+00:03:22,320 --> 00:03:28,520
+in NumPy object arrays. And there's no support for Datetime 64 units. NumPy has a full range
+
+37
+00:03:28,520 --> 00:03:34,120
+of Datetime 64 units to allow you to specify the unit of your Datetime, but Pandas really
+
+38
+00:03:34,120 --> 00:03:39,600
+likes to bring everything in as a nanosecond. Now NumPy offers some options here. NumPy
+
+39
+00:03:39,600 --> 00:03:45,680
+has two functions, loadText and genFromText, that do similar things. These support all
+
+40
+00:03:45,680 --> 00:03:52,680
+NumPy D types and Datetime 64 units. And empty loadText, for example, works well, but doesn't
+
+41
+00:03:52,680 --> 00:03:58,680
+support escape fields and doesn't do any automatic type discovery. And see, genFromText does
+
+42
+00:03:58,680 --> 00:04:03,320
+do automatic type discovery, but it doesn't support loaded or escaped fields. So we have
+
+43
+00:04:03,320 --> 00:04:10,320
+a sort of mixture of solutions here. GenFromText also doesn't really show sufficient performance
+
+44
+00:04:10,320 --> 00:04:16,320
+at scale, and I'll show examples of that later on. So in trying to come up with a solution
+
+45
+00:04:16,320 --> 00:04:22,320
+for this in static frame, I put together pieces to create some kind of a monster here. So
+
+46
+00:04:22,320 --> 00:04:27,320
+I used CSVReader for handling loaded and escaped characters, and that gave me an iterator that
+
+47
+00:04:27,320 --> 00:04:32,320
+I then set into genFromText to do my type discovery and array creation. And this, as you might
+
+48
+00:04:32,320 --> 00:04:39,320
+expect, had fairly poor performance at scale. So this led me to create a new implementation
+
+49
+00:04:39,320 --> 00:04:46,320
+called delimitedToReraise. This supports full dialect configuration from the CSVReader,
+
+50
+00:04:46,320 --> 00:04:53,320
+supports all NumPy D types, and permits optional type discovery per column, with performance
+
+51
+00:04:53,320 --> 00:04:59,320
+largely better than pandas read CSV. And we'll see some examples of that later on. So today
+
+52
+00:04:59,320 --> 00:05:04,320
+we're going to talk about some of the challenge of building columnar arrays from CSV. We'll
+
+53
+00:05:04,320 --> 00:05:09,320
+look in depth at the C implementation of delimitedToReraise, and then we'll look at some performance
+
+54
+00:05:09,320 --> 00:05:14,320
+studies and talk about some future enhancements. Now through this presentation, I'm going to
+
+55
+00:05:14,320 --> 00:05:19,320
+use a lot of diagrams and flow charts to try to show you what's going on in the underlying
+
+56
+00:05:19,320 --> 00:05:24,320
+C code, and that's because the C is very verbose, and it won't sit on a slide here at all. So
+
+57
+00:05:24,320 --> 00:05:28,320
+we're not going to see a lot of C, we're going to see a lot of diagrams. Now in these diagrams,
+
+58
+00:05:28,320 --> 00:05:33,320
+we're going to try to isolate the pure C type and teams from those that involve Py objects,
+
+59
+00:05:33,320 --> 00:05:39,320
+and we see we call Py objects, not Py objects. So we're going to see some flow charts that
+
+60
+00:05:39,320 --> 00:05:42,320
+look like this. Now you don't have to understand this right now, we're going to come back to
+
+61
+00:05:42,320 --> 00:05:46,320
+this, but I just want you to notice the purple and the white boxes. The purple boxes are
+
+62
+00:05:46,320 --> 00:05:51,320
+places where we're interacting with Py objects. The white boxes are where we're dealing only
+
+63
+00:05:51,320 --> 00:05:57,320
+with pure C type, and when we're dealing with pure C type, we get the best performance.
+
+64
+00:05:57,320 --> 00:06:03,320
+You can see right here, this little loop, all C types. That's optimal performance, and in fact
+
+65
+00:06:03,320 --> 00:06:10,320
+we can even not hold the gear when we do things like that. Okay, so all of you have probably
+
+66
+00:06:10,320 --> 00:06:16,320
+dealt with C-NC files at some point, and they really are still a necessary evil. They are
+
+67
+00:06:16,320 --> 00:06:20,320
+human readable, which is great, and they're widely used and supported, but they're almost
+
+68
+00:06:20,320 --> 00:06:26,320
+always slower than binary formats, such as Parquet or NTV or many others. There is no
+
+69
+00:06:26,320 --> 00:06:33,320
+standard way of encoding metadata in a CSV, which means it can be very difficult to work with.
+
+70
+00:06:33,320 --> 00:06:39,320
+So when we're trying to build arrays from a CSV, we cannot know the number of columns or rows
+
+71
+00:06:39,320 --> 00:06:45,320
+in advance. If we just have a file, we can't know this in advance. The type per column,
+
+72
+00:06:45,320 --> 00:06:51,320
+further, is not encoded in the file. We have no idea what is in these files. So in general, it takes
+
+73
+00:06:51,320 --> 00:06:58,320
+two full iterations to get everything into an array. First, we have to load the Unicode data into
+
+74
+00:06:58,320 --> 00:07:04,320
+some sort of a dynamic array per column, and we can optimally discover the type as we do that.
+
+75
+00:07:04,320 --> 00:07:09,320
+And then once we know the size and type, then we can convert the fields to values and load them in
+
+76
+00:07:09,320 --> 00:07:15,320
+arrays, and I'm going to show you how I do that. All right, so the limited to arrays is a C
+
+77
+00:07:15,320 --> 00:07:21,320
+extension implemented in a raykit. This is a package. You can find it on GitHub. And we make heavy
+
+78
+00:07:21,320 --> 00:07:29,320
+use of the CPython and NumPy C APIs. And also I want to call out a hypothesis for really helping you
+
+79
+00:07:29,320 --> 00:07:35,320
+do extensive property testing to these functions when dealing with arbitrary input. Hypothesis really
+
+80
+00:07:35,320 --> 00:07:42,320
+can help you get to a good, solid implementation. So I made heavy reuse of the CSV reader in this
+
+81
+00:07:42,320 --> 00:07:48,320
+implementation. So I took that state machine tokenizer code and repurposed it. By doing so, I was
+
+82
+00:07:48,320 --> 00:07:55,320
+able to keep all of the dialect configuration options that are so useful in the standard library CSV
+
+83
+00:07:55,320 --> 00:08:02,320
+reader. Now as I mentioned, better than Python performance in our C code requires not using py
+
+84
+00:08:02,320 --> 00:08:08,320
+objects. We just write C code to do a bunch of sets of py objects, we get basic Python performance.
+
+85
+00:08:08,320 --> 00:08:14,320
+But if we want to move faster than that, we need to deal with C type. Now py objects incur overhead
+
+86
+00:08:14,320 --> 00:08:19,320
+even when we're working in C. We have to do type and error checking, and we have to manage our
+
+87
+00:08:19,320 --> 00:08:24,320
+reference count. So there is overhead when we deal with py objects that we don't have when we deal
+
+88
+00:08:24,320 --> 00:08:30,320
+with C type. So if you were approaching this, I'm just going to tell you how not to do it. This is kind
+
+89
+00:08:30,320 --> 00:08:36,320
+of what I do. You take the CSV reader and you create py object strings. So we've seen how the CSV
+
+90
+00:08:36,320 --> 00:08:41,320
+reader can give us py object strings. Then you can convert those strings to py object values, maybe
+
+91
+00:08:41,320 --> 00:08:48,320
+flows or booleans or integers, etc. Then you can copy those py objects into NumPy arrays. Now you
+
+92
+00:08:48,320 --> 00:08:54,320
+can do this, it'll work, but it creates tons of unnecessary intermediary py objects, and those
+
+93
+00:08:54,320 --> 00:09:01,320
+become expensive. Furthermore, it's not really what we want to do. NumPy arrays are arrays of C
+
+94
+00:09:01,320 --> 00:09:08,320
+type. What we want to do is go directly from the Unicode to the C type and skip all of these py
+
+95
+00:09:08,320 --> 00:09:16,320
+objects. So if we go back to the CSV.C module in the standard library, as I did when I was trying to
+
+96
+00:09:16,320 --> 00:09:21,320
+figure this out and figure out how this thing works, it's been there just a while, you start to notice
+
+97
+00:09:21,320 --> 00:09:27,320
+that there's two key functions that are being called as we process each character. One function is
+
+98
+00:09:27,320 --> 00:09:33,320
+parse and add char. It's gotten through the parsing in the various states to determine, yes, this is a
+
+99
+00:09:33,320 --> 00:09:39,320
+character we should keep. And then there's parse stage field. This is saying the field is complete.
+
+100
+00:09:39,320 --> 00:09:44,320
+We're done, we want to close this field and we're ready to move on. So that insight that there's these
+
+101
+00:09:44,320 --> 00:09:49,320
+two functions that are really what drives this allowed me to extend a new purpose for what I needed to
+
+102
+00:09:49,320 --> 00:09:55,320
+do. So this is how to do it. We recast the state machine tokenizer from CSV reader that we were just
+
+103
+00:09:55,320 --> 00:10:00,320
+looking at and we replace those two functions with different functions that will allow us to append
+
+104
+00:10:00,320 --> 00:10:06,320
+a point and append an offset. And I'll explain those in a little bit. We store characters per column,
+
+105
+00:10:06,320 --> 00:10:13,320
+not by row now, per column, into dynamic C arrays. And then we convert those column fields to C
+
+106
+00:10:13,320 --> 00:10:20,320
+types and then insert them into NumPy arrays and buffers. This we can do all without involving any py
+
+107
+00:10:20,320 --> 00:10:26,320
+object. None of the Intimidator py objects that we have to create and we truly can go directly from
+
+108
+00:10:26,320 --> 00:10:35,320
+Unicode into our C array type. So this is just a function and you can use it if you very simply.
+
+109
+00:10:35,320 --> 00:10:42,320
+So given an iterator of lines, it will return a list of 1D NumPy arrays. All the arguments for dialect
+
+110
+00:10:42,320 --> 00:10:49,320
+configuration are inherited from the CSV reader and we commit optional arguments for per column
+
+111
+00:10:49,320 --> 00:10:54,320
+definition. And I take those as a function because it solves some problems when writing dealing with
+
+112
+00:10:54,320 --> 00:10:59,320
+the second scene. So for example, to specify D types, of course it can discover D types for you,
+
+113
+00:10:59,320 --> 00:11:04,320
+but if you want to specify D types, you give it a function that, given a position, returns a D type
+
+114
+00:11:04,320 --> 00:11:11,320
+initializer. Similarly, if you want to specify excluding a function, you can have, sorry, excluding a
+
+115
+00:11:11,320 --> 00:11:16,320
+column, you can give a function to the line select parameter, which, given a column position, returns a
+
+116
+00:11:16,320 --> 00:11:22,320
+Boolean. So let's look at the basic usage of this function. This is a very simple case. I'm giving it a
+
+117
+00:11:22,320 --> 00:11:29,320
+list of strings representing record lines. This could be an open file or any other iterator of records.
+
+118
+00:11:29,320 --> 00:11:36,320
+And we start off with two records and we see that we get back three arrays, one for each column, an array
+
+119
+00:11:36,320 --> 00:11:42,320
+of integers, an array of Booleans, an array of one character Unicode. We see the types have been parsed
+
+120
+00:11:42,320 --> 00:11:49,320
+and determined for us, which is very nice. A slightly more involved example with some more configuration.
+
+121
+00:11:49,320 --> 00:11:56,320
+Here we provide a custom delimiter. We provide a function to make sure that everything after the first
+
+122
+00:11:56,320 --> 00:12:02,320
+column comes in as a string, and then we provide a second function for line select to just exclude the
+
+123
+00:12:02,320 --> 00:12:08,320
+third column. And we see now we get back two arrays and we see that our Booleans are not converted to
+
+124
+00:12:08,320 --> 00:12:14,320
+Booleans. They're just left as strings, which is exactly what we want. Okay, I wrote this use of
+
+125
+00:12:14,320 --> 00:12:20,320
+the static frame. It's perfectly useful on your own. You can just want to use it for NumPy, but in static
+
+126
+00:12:20,320 --> 00:12:26,320
+frame, all the constructors just call this when they need it. So from delimited, from CSV, from
+
+127
+00:12:26,320 --> 00:12:31,320
+CSV, they all call this under the hood, build the NumPy arrays they need, and then package that into the
+
+128
+00:12:31,320 --> 00:12:36,320
+revoking data frame. It's an additional configuration that stays with in static frame, like actually
+
+129
+00:12:36,320 --> 00:12:41,320
+opening a file, so I don't put that in delimited arrays. You can do that in static frame. And
+
+130
+00:12:41,320 --> 00:12:47,320
+interpreting the index in columns. All of that is encapsulated within static frame constructors.
+
+131
+00:12:47,320 --> 00:12:58,320
+Okay, let's dig into the implementation. So there's three C structs that underlie how this thing works.
+
+132
+00:12:58,320 --> 00:13:04,320
+There's one called the delimited reader. There's what I call a code point line, and what I call a code
+
+133
+00:13:04,320 --> 00:13:10,320
+point grid. And I'll refer to this sometimes as CPL and CPG. Now I use the term code point here to
+
+134
+00:13:10,320 --> 00:13:15,320
+refer to a Unicode character. I could have just called it a character, but code points seem to fit.
+
+135
+00:13:15,320 --> 00:13:22,320
+In CPython, we use the PyUCS4 pipe for this. This is a four byte Unicode character. Importantly, this is
+
+136
+00:13:22,320 --> 00:13:30,320
+not a Py object. This is just a simple C pipe that has a convenient alias in the CPython API.
+
+137
+00:13:30,320 --> 00:13:35,320
+So let's start with the delimited reader. So the delimited reader is extended from the CSV reader,
+
+138
+00:13:35,320 --> 00:13:44,320
+and it just iterates over the record strings. It calls the Python CHGI function pride Unicode data
+
+139
+00:13:44,320 --> 00:13:52,320
+to extract the underlying C array from the Python object, and does that once per record. And then we
+
+140
+00:13:52,320 --> 00:13:57,320
+part the fields per record. We process each character one at a time, calling those same functions for
+
+141
+00:13:57,320 --> 00:14:03,320
+adding characters and completing fields that I was showing you. All the while this tracks field, column,
+
+142
+00:14:03,320 --> 00:14:10,320
+and row positions, so we always have the context of where we are in the file. Now the code point line
+
+143
+00:14:10,320 --> 00:14:15,320
+stores Unicode data per column. This is what we're going to use to collect our characters as we're
+
+144
+00:14:15,320 --> 00:14:21,320
+moving through the file. And this is based loosely on Aero's string array data structure. So we have
+
+145
+00:14:21,320 --> 00:14:28,320
+two dynamically allocated C arrays inside of this structure. One of them we call buffer is just a C
+
+146
+00:14:28,320 --> 00:14:34,320
+array of Unicode characters, and it's going to store contiguous characters without null terminators,
+
+147
+00:14:34,320 --> 00:14:40,320
+so we can be maximally compact. We have a second array also contained within the CTO, which stores the
+
+148
+00:14:40,320 --> 00:14:48,320
+offsets, or the size of each field. So we separated these things into two arrays. Once this thing is
+
+149
+00:14:48,320 --> 00:14:56,320
+fully loaded, we can then go to each field per offset and convert those fields to a C type. So this
+
+150
+00:14:56,320 --> 00:15:01,320
+diagram here is a little schematic to try to help you understand what the code point line is. We see
+
+151
+00:15:01,320 --> 00:15:07,320
+here these little gray horizontal boxes, it's a representation of a dynamically allocated array, and we
+
+152
+00:15:07,320 --> 00:15:13,320
+see we have one array of a buffer and another array of offsets. And we can unpack this by looking at the
+
+153
+00:15:13,320 --> 00:15:18,320
+offsets. We see the first field is three characters, that's red. The second field is five characters, that's
+
+154
+00:15:18,320 --> 00:15:26,320
+green. And the third field is four characters, that's green. Now the code point grid is really there to
+
+155
+00:15:26,320 --> 00:15:33,320
+serve as an interface between the limited reader and the CPLs. So it dynamically creates and populates
+
+156
+00:15:33,320 --> 00:15:39,320
+CPLs as needed. It's really the public interface. And it exposes these two functions that we call during
+
+157
+00:15:39,320 --> 00:15:45,320
+distinct machine tokenization. We are pending either a point or we're pending an offset. And again, the
+
+158
+00:15:45,320 --> 00:15:51,320
+delimited reader knows where we are in the file, so we know which column, which CPL to populate as we move
+
+159
+00:15:51,320 --> 00:15:57,320
+through the file. So returning to the same diagram, we see that the code point grid surrounds and contains
+
+160
+00:15:57,320 --> 00:16:04,320
+one or more code point lines. All right, so next we're going to look at the processing stages. How do we
+
+161
+00:16:04,320 --> 00:16:10,320
+move through this and get to our final result? So we start with our input. Our input is simply an iterator of
+
+162
+00:16:10,320 --> 00:16:16,320
+records. This can be a file, it can be any other iterator of strings. Next we initialize the delimited
+
+163
+00:16:16,320 --> 00:16:24,320
+reader and the code point grid. Now we're ready to, in our first iteration, to read through the file and load
+
+164
+00:16:24,320 --> 00:16:33,320
+up our code point lines. So in this flow chart, I'll show you a little bit of how that works. So we start a
+
+165
+00:16:33,320 --> 00:16:39,320
+purple box here, a pie object, an iterator of strings. We use that to get the underlying UnicodeC
+
+166
+00:16:39,320 --> 00:16:44,320
+array and we can reset our field length, reset our field number, and then we're ready to iterate through
+
+167
+00:16:44,320 --> 00:16:51,320
+code points. So as we iterate through code points, I'm vastly since the final goes on here, but as we
+
+168
+00:16:51,320 --> 00:16:56,320
+iterate through code points, we say is it a delimiter or not? If it's not a delimiter, then we know we need to
+
+169
+00:16:56,320 --> 00:17:02,320
+append a point and we can increment the field length. If it is a delimiter, then we know we're done with
+
+170
+00:17:02,320 --> 00:17:10,320
+the field. We can append an offset and we can increment the field number and reset the field length.
+
+171
+00:17:10,320 --> 00:17:16,320
+Then when we're done with that character, we go on and say, well do we have more characters? And we loop
+
+172
+00:17:16,320 --> 00:17:22,320
+through here until we're done with this record. Now again, notice that this loop here has no pie objects.
+
+173
+00:17:22,320 --> 00:17:29,320
+That's really critical to getting good performance out of this. Finally, if we are done with that record,
+
+174
+00:17:29,320 --> 00:17:34,320
+we go and look, we increment the record count, and we see if we have any more records. If we do, we go back
+
+175
+00:17:34,320 --> 00:17:41,320
+and we repeat the whole process again. Okay, we've completed our first iteration through the elements
+
+176
+00:17:41,320 --> 00:17:46,320
+that we're trying to represent here. Now we're ready to essentially go to them again, but we no longer
+
+177
+00:17:46,320 --> 00:17:51,320
+need our records. We no longer need the delimited reader. Now everything is loaded in our code point
+
+178
+00:17:51,320 --> 00:17:57,320
+lines and we're ready to convert those to arrays, deliver our final output, which is going to be a list
+
+179
+00:17:57,320 --> 00:18:06,320
+of arrays. So this flow chart shows that second iteration in detail. We're going to start with a CPL.
+
+180
+00:18:06,320 --> 00:18:11,320
+We're going to walk through each of our code point lines. And then the next step is we need to create
+
+181
+00:18:11,320 --> 00:18:16,320
+our numPy array that we're going to ultimately deliver back to the caller. To do that, we need to know
+
+182
+00:18:16,320 --> 00:18:22,320
+the size and the type. We know the size because the CPL is already loaded, and the type might come from
+
+183
+00:18:22,320 --> 00:18:27,320
+the type parser or it might come from the user who's provided it as an argument. Once we have that,
+
+184
+00:18:27,320 --> 00:18:33,320
+we can create our numPy array, and it would be a contiguous numPy array from which we can pull off
+
+185
+00:18:33,320 --> 00:18:39,320
+the underlying C buffer. And so we're done with purple boxes. We have no after this step. We can put
+
+186
+00:18:39,320 --> 00:18:46,320
+aside our py objects and we can focus on just dealing with pure C type. So now in this loop, we're going
+
+187
+00:18:46,320 --> 00:18:52,320
+to grab the next offset. We're going to use that offset to read from our Unicode code point. We're going
+
+188
+00:18:52,320 --> 00:18:59,320
+to convert those to a C type, and we're going to insert that C type directly in our numPy array buffer.
+
+189
+00:18:59,320 --> 00:19:04,320
+And then we can continue to do that in a loop. And again, we can do that all without any interaction
+
+190
+00:19:04,320 --> 00:19:10,320
+with py objects. Finally, our array is done. We need to attend that array to a list. There we interact
+
+191
+00:19:10,320 --> 00:19:15,320
+with the py object, and we go on and consider if we have more CTOs to process and repeat this until we're
+
+192
+00:19:15,320 --> 00:19:20,320
+done. So as I alluded to, performance of this routine is critical, and that was the main goal of me sitting
+
+193
+00:19:20,320 --> 00:19:27,320
+out to do this. So we're going to look at a number of benchmarks. Now the way I do benchmarks is on
+
+194
+00:19:27,320 --> 00:19:32,320
+fairly large numbers of elements. So here I'm looking at 10 million elements. And we're going to use
+
+195
+00:19:32,320 --> 00:19:37,320
+the terministic randomly generated values via a package called FramingSixSeries. And we're going to
+
+196
+00:19:37,320 --> 00:19:42,320
+compare three scenarios for interpreting columns in both StaticFrame and Pandas. So one scenario is
+
+197
+00:19:42,320 --> 00:19:47,320
+type discovery. You've just given the CSV to the reader. It doesn't know any of the types. It's going to
+
+198
+00:19:47,320 --> 00:19:52,320
+figure out the type for you. The second scenario is just load everything at strings. I don't care what the
+
+199
+00:19:52,320 --> 00:19:57,320
+types are. Just give me all strings. And the third scenario is I know all my types. Don't do types
+
+200
+00:19:57,320 --> 00:20:02,320
+discovery. Just load this thing and give me back some of the reads. So there's a lot of information here.
+
+201
+00:20:02,320 --> 00:20:07,320
+We're going to come back to this. But right now I want you to focus on the legend over here on the right,
+
+202
+00:20:07,320 --> 00:20:12,320
+which shows those three scenarios. First for StaticFrame, type parsing at string type given, and
+
+203
+00:20:12,320 --> 00:20:17,320
+second for Pandas, type parsing at string and type given. We're going to come back to this. Now I think
+
+204
+00:20:17,320 --> 00:20:22,320
+it's really important when we do performance analysis of the type discovery, we're going to look at
+
+205
+00:20:22,320 --> 00:20:27,320
+Now I think it's really important when we do performance analysis of data frames that we explore
+
+206
+00:20:27,320 --> 00:20:32,320
+different states and de-type heterogeneity. I think far too often I see performance
+
+207
+00:20:32,320 --> 00:20:37,320
+studies of data frame operations where they just compare one table.
+
+208
+00:20:37,320 --> 00:20:42,320
+And you can get quite different results by having different both states of tables
+
+209
+00:20:42,320 --> 00:20:47,320
+and type heterogeneity. So we're going to look at three state ratios,
+
+210
+00:20:47,320 --> 00:20:52,320
+tall, square, and wide, and we're going to look at three types of de-type heterogeneity.
+
+211
+00:20:52,320 --> 00:20:57,320
+Whether we have a different type per column, whether we have mixed where we have sort of
+
+212
+00:20:57,320 --> 00:21:02,320
+chunks of uniform types together, or whether it's uniform. It's just all one type.
+
+213
+00:21:02,320 --> 00:21:07,320
+So with this we create our grid where we have the state from tall, square,
+
+214
+00:21:07,320 --> 00:21:12,320
+wide as columns, and we have the de-type heterogeneity as rows, column,
+
+215
+00:21:12,320 --> 00:21:17,320
+and mixed and uniform. And with this we get our nine data frame fixtures that we're going to
+
+216
+00:21:17,320 --> 00:21:22,320
+use to compare performance. So now looking back at this diagram,
+
+217
+00:21:22,320 --> 00:21:27,320
+hopefully you have some context to understand what's going on here. We can see in general
+
+218
+00:21:27,320 --> 00:21:32,320
+that the red, orange, and slightly yellow bars at the end are all
+
+219
+00:21:32,320 --> 00:21:37,320
+higher, and that means slower than the first three which are static frames. So in this diagram,
+
+220
+00:21:37,320 --> 00:21:42,320
+lower is better. But let's look at some particular details with what we see in the
+
+221
+00:21:42,320 --> 00:21:47,320
+performance comparison here. So in general, static frame outperforms pandas in a lot of
+
+222
+00:21:47,320 --> 00:21:52,320
+these cases, specifically 26 out of the 27 scenarios static frame outperforms pandas.
+
+223
+00:21:52,320 --> 00:21:57,320
+The one case that we don't is right there in the uniform tall scenario
+
+224
+00:21:57,320 --> 00:22:02,320
+where type parsing these uniform floats, pandas was a little bit faster.
+
+225
+00:22:02,320 --> 00:22:07,320
+Other than that, static frame pretty much outperforms pandas in all of these scenarios.
+
+226
+00:22:07,320 --> 00:22:12,320
+Another observation is that because pandas convert
+
+227
+00:22:12,320 --> 00:22:17,320
+strings to NumPy object arrays and creates a bunch of py objects,
+
+228
+00:22:17,320 --> 00:22:22,320
+that's very expensive. So if we look here, we see the pandas loading the data
+
+229
+00:22:22,320 --> 00:22:27,320
+as a string, that's that orange bar, we see in almost every case
+
+230
+00:22:27,320 --> 00:22:32,320
+that that orange bar takes the most time. So that is an expensive cost
+
+231
+00:22:32,320 --> 00:22:37,320
+that pandas is making for that choice. Now finally, we notice that
+
+232
+00:22:37,320 --> 00:22:42,320
+we get really excellent performance with the limited tool arrays and static frame with
+
+233
+00:22:42,320 --> 00:22:47,320
+wide data frames. Whereas when we get tall, our performance then
+
+234
+00:22:47,320 --> 00:22:52,320
+increases a little bit, and I think that might be due to me using the biggest size
+
+235
+00:22:52,320 --> 00:22:57,320
+Unicode, pyucs4, that may be what's hindering tall performance there.
+
+236
+00:22:57,320 --> 00:23:02,320
+So we see here in the wide results, we see the outperformance with static frame
+
+237
+00:23:02,320 --> 00:23:07,320
+in loading these files is an order of magnitude better than pandas,
+
+238
+00:23:07,320 --> 00:23:12,320
+but as we go to more tall, we see that it's maybe just about twice as fast
+
+239
+00:23:12,320 --> 00:23:17,320
+and that changes a little bit every other different type. I mentioned
+
+240
+00:23:17,320 --> 00:23:22,320
+NumPy Gen from text. This machine is important, it was what I used for many years.
+
+241
+00:23:22,320 --> 00:23:27,320
+It is the only NumPy machine that supports type discovery, but as I mentioned, at scale
+
+242
+00:23:27,320 --> 00:23:32,320
+it doesn't really meet my needs. So here I've added NumPy Gen from text
+
+243
+00:23:32,320 --> 00:23:37,320
+to these performance studies, and we can see for tall and square
+
+244
+00:23:37,320 --> 00:23:42,320
+tables, it performs much, much slower than both static frame and pandas.
+
+245
+00:23:42,320 --> 00:23:47,320
+Interestingly, on wide data frames, it's fairly competitive with
+
+246
+00:23:47,320 --> 00:23:52,320
+pandas, and in fact performs a little bit better than pandas in a few cases.
+
+247
+00:23:52,320 --> 00:23:57,320
+Alright, so hopefully I convinced you that
+
+248
+00:23:57,320 --> 00:24:02,320
+DelimitedArrays offers a fast, full-featured tool for creating NumPy arrays from
+
+249
+00:24:02,320 --> 00:24:07,320
+CSVs. If you're just working with NumPy, you can use it in isolation. If you want to use it within a
+
+250
+00:24:07,320 --> 00:24:12,320
+fully-featured data frame library, it's there on static frame, ready for you to use.
+
+251
+00:24:12,320 --> 00:24:17,320
+So in considering where else we might go with this, I had to consider
+
+252
+00:24:17,320 --> 00:24:22,320
+parallelization. Like is there a way we can paralyze some of these operations?
+
+253
+00:24:22,320 --> 00:24:27,320
+Now when we're reading the file and we're loading the TPLs, I don't think
+
+254
+00:24:27,320 --> 00:24:32,320
+we can really paralyze that. That would be a little tricky. But once all of our TPLs
+
+255
+00:24:32,320 --> 00:24:37,320
+are fully loaded, we just need to convert those to NumPy arrays, and that is
+
+256
+00:24:37,320 --> 00:24:42,320
+in fact an embarrassing and parallel problem. However, I don't know how to do it yet.
+
+257
+00:24:42,320 --> 00:24:47,320
+So multi-threading primitives in CPython that are cross-platform are
+
+258
+00:24:47,320 --> 00:24:52,320
+elusive. And if anyone would like to help, I would be happy to get some
+
+259
+00:24:52,320 --> 00:24:57,320
+insights and possibly how to do that. Now there is a good example of
+
+260
+00:24:57,320 --> 00:25:02,320
+parallelized CSV loading provided to us by the Polars data frame library.
+
+261
+00:25:02,320 --> 00:25:07,320
+As many of you probably know, Polars is implemented in Rust based on arrow array
+
+262
+00:25:07,320 --> 00:25:12,320
+definitions, and it offers a company called read CSV, which takes advantage of
+
+263
+00:25:12,320 --> 00:25:17,320
+multi-threaded implementation. Now this isn't really an alternative for me because it does
+
+264
+00:25:17,320 --> 00:25:22,320
+not support the full range of dialect configurations, and it's built around
+
+265
+00:25:22,320 --> 00:25:27,320
+arrow, so it does not really support all NumPy D types. But interesting to look at.
+
+266
+00:25:27,320 --> 00:25:32,320
+So if we add Polars to our performance test now as the yellow bar, we see that
+
+267
+00:25:32,320 --> 00:25:37,320
+it performs really well for call arrays. But as we get
+
+268
+00:25:37,320 --> 00:25:42,320
+square and more columnar, we see that static frames using good old
+
+269
+00:25:42,320 --> 00:25:47,320
+Sasson C and one thread can outperform the Polars multi-threaded implementation
+
+270
+00:25:47,320 --> 00:25:52,320
+at least for wide data frames. So some more work to do potentially there, but
+
+271
+00:25:52,320 --> 00:25:57,320
+this is a pretty good result.
+
+272
+00:25:57,320 --> 00:26:02,320
+Alright, in conclusion, we can go back to the piece of code. I think all of us
+
+273
+00:26:02,320 --> 00:26:07,320
+write code hoping that it might be useful for a month or a year or a few years,
+
+274
+00:26:07,320 --> 00:26:12,320
+but to have a piece of code that's been around for 20 years and continue to be
+
+275
+00:26:12,320 --> 00:26:17,320
+useful both in the standard library and useful for people like me to take this and build it into
+
+276
+00:26:17,320 --> 00:26:22,320
+something else is just really exciting and I think it's something we should all be really happy about.
+
+277
+00:26:22,320 --> 00:26:27,320
+Alright, thank you for your attention. If you'd like to learn more about
+
+278
+00:26:27,320 --> 00:26:32,320
+static frame or other related tools, you can go to this URL and feel free to come chat with me
+
+279
+00:26:32,320 --> 00:26:37,320
+throughout the conference. I'll be around. Happy to take any questions now or later on.
+
+280
+00:26:37,320 --> 00:26:42,320
+Thank you for your attention.
+

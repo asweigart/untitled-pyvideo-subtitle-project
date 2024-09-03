@@ -1,0 +1,2196 @@
+1
+00:00:00,000 --> 00:00:02,000
+Cool.
+
+2
+00:00:06,000 --> 00:00:08,000
+Hi there.
+
+3
+00:00:08,000 --> 00:00:10,000
+Thanks for coming.
+
+4
+00:00:10,000 --> 00:00:15,000
+If you're here for the site-by-talk, this is not it.
+
+5
+00:00:15,000 --> 00:00:20,000
+So I'm sorry, this is a lasting change in the schedule.
+
+6
+00:00:20,000 --> 00:00:23,000
+But you're also not allowed to leave now because I already started talking.
+
+7
+00:00:23,000 --> 00:00:27,000
+So just sit down. It's going to be asynchronous. It's going to be fun.
+
+8
+00:00:27,000 --> 00:00:33,000
+Before we begin, trans rights are human rights against bigotry.
+
+9
+00:00:33,000 --> 00:00:39,000
+And any legislation that limits people from being their true selves.
+
+10
+00:00:39,000 --> 00:00:43,000
+My name is Lucas Langa. I'm the CPEC's developer in residence.
+
+11
+00:00:43,000 --> 00:00:47,000
+I'm a leads manager of some ancient versions of Python.
+
+12
+00:00:47,000 --> 00:00:50,000
+We will not be talking about those today.
+
+13
+00:00:50,000 --> 00:00:53,000
+We're going to be talking about 3.11 and future.
+
+14
+00:00:54,000 --> 00:00:56,000
+It's a great role.
+
+15
+00:00:56,000 --> 00:01:02,000
+Kind of my dream to be able to work on Python full-time.
+
+16
+00:01:02,000 --> 00:01:06,000
+Very grateful to MedOp to just make it available for me to do it for another year.
+
+17
+00:01:06,000 --> 00:01:08,000
+So thanks to them.
+
+18
+00:01:08,000 --> 00:01:11,000
+But now we're not going to be talking about happy things.
+
+19
+00:01:11,000 --> 00:01:13,000
+We're going to be talking about problems.
+
+20
+00:01:13,000 --> 00:01:15,000
+So what is a problem?
+
+21
+00:01:15,000 --> 00:01:17,000
+Everybody says Python is slow.
+
+22
+00:01:17,000 --> 00:01:22,000
+And Python is slow in different ways to any user of Python.
+
+23
+00:01:22,000 --> 00:01:25,000
+Because it really matters what you're trying to do with it.
+
+24
+00:01:25,000 --> 00:01:30,000
+And how you observe that it's not as efficient as you would like.
+
+25
+00:01:30,000 --> 00:01:35,000
+So we're not going to be talking today about the start of time of Python.
+
+26
+00:01:35,000 --> 00:01:40,000
+We're not going to be talking about the sheer number crunching power of Python.
+
+27
+00:01:40,000 --> 00:01:45,000
+Instead what we're going to be talking about is concurrent data ingestion
+
+28
+00:01:45,000 --> 00:01:49,000
+that ends up with parallel data processing.
+
+29
+00:01:49,000 --> 00:01:55,000
+So I use the word concurrent there and I use the word parallel.
+
+30
+00:01:55,000 --> 00:01:58,000
+They sort of seem the same but are not.
+
+31
+00:01:58,000 --> 00:02:03,000
+Concurrency is the ability for us to deal with many things at the same time.
+
+32
+00:02:03,000 --> 00:02:07,000
+Even if you're only able to do one thing at a time.
+
+33
+00:02:07,000 --> 00:02:10,000
+And parallelism is actually doing many things at once.
+
+34
+00:02:10,000 --> 00:02:16,000
+A good analogy for us is that one bartender can prepare one beverage at a time.
+
+35
+00:02:16,000 --> 00:02:20,000
+But they can still look after several customers.
+
+36
+00:02:20,000 --> 00:02:24,000
+If you want them to be able to prepare multiple beverages at a time,
+
+37
+00:02:24,000 --> 00:02:26,000
+now you need many of them.
+
+38
+00:02:26,000 --> 00:02:30,000
+So concurrency, being able to serve multiple customers.
+
+39
+00:02:30,000 --> 00:02:35,000
+And parallelism, being able to prepare multiple drinks at the same time.
+
+40
+00:02:35,000 --> 00:02:38,000
+So today we're talking about both of those things.
+
+41
+00:02:38,000 --> 00:02:43,000
+In particular some of the archetypes of data processing that you're going to see
+
+42
+00:02:43,000 --> 00:02:48,000
+that are especially hit with the problem that we're going to be talking about today
+
+43
+00:02:48,000 --> 00:02:50,000
+are data syncs.
+
+44
+00:02:50,000 --> 00:02:54,000
+So data syncs are either kind of data that you're accepting from somebody periodically
+
+45
+00:02:54,000 --> 00:02:59,000
+or just request base where you're mostly just ingesting them to a database
+
+46
+00:02:59,000 --> 00:03:05,000
+for further analysis later on that is not part of your system on its own.
+
+47
+00:03:05,000 --> 00:03:11,000
+So it's either you pulling something on your own or you do push data.
+
+48
+00:03:11,000 --> 00:03:13,000
+Then you have the web, right?
+
+49
+00:03:13,000 --> 00:03:15,000
+So request response.
+
+50
+00:03:15,000 --> 00:03:18,000
+Obviously there's more than HTTP that does just that.
+
+51
+00:03:18,000 --> 00:03:22,000
+Everybody thinks of HTTP when they think about requests and responses.
+
+52
+00:03:22,000 --> 00:03:28,000
+So here the crucial thing is the ability for us to serve multiple clients at the same time
+
+53
+00:03:28,000 --> 00:03:32,000
+and give them responses in sensible time to each of them.
+
+54
+00:03:32,000 --> 00:03:34,000
+And then you have map reviews.
+
+55
+00:03:34,000 --> 00:03:38,000
+You know, back in my day, 20 years ago, it was like older age.
+
+56
+00:03:38,000 --> 00:03:40,000
+But now it's still super useful.
+
+57
+00:03:40,000 --> 00:03:46,000
+It lets us deal with data that are too big to be handled by a single thread,
+
+58
+00:03:46,000 --> 00:03:49,000
+single process, or even a single machine.
+
+59
+00:03:49,000 --> 00:03:55,000
+So what you do is you essentially split process data and then combine the results.
+
+60
+00:03:55,000 --> 00:04:03,000
+So that is essentially the most interesting of the three because it doesn't have any
+
+61
+00:04:04,000 --> 00:04:06,000
+well, disruptions for us.
+
+62
+00:04:06,000 --> 00:04:13,000
+You can focus on essentially making sure that we can utilize our hardware to its full potential.
+
+63
+00:04:13,000 --> 00:04:19,000
+So, you know, let's talk about this kind of processing and how Python can be used in ways
+
+64
+00:04:19,000 --> 00:04:22,000
+that are not slow and not frustrating.
+
+65
+00:04:22,000 --> 00:04:25,000
+So first let me give you an example.
+
+66
+00:04:25,000 --> 00:04:32,000
+This is a slide from an internal presentation I did at Facebook seven years back,
+
+67
+00:04:32,000 --> 00:04:34,000
+eight years ago now.
+
+68
+00:04:34,000 --> 00:04:41,000
+We observed a weird thing in our service where there were like two threads that we were working with
+
+69
+00:04:41,000 --> 00:04:46,000
+and one of them had what we expressed to be a CQ leak.
+
+70
+00:04:46,000 --> 00:04:50,000
+There is no such a thing, but it's how we saw things happen.
+
+71
+00:04:50,000 --> 00:04:56,000
+There was a periodic thing that the green thread was supposed to do,
+
+72
+00:04:56,000 --> 00:05:01,000
+but for whatever reason, it was doing it in a seemingly rare way.
+
+73
+00:05:01,000 --> 00:05:06,000
+And we were really confused by it because it wasn't that the task was taking longer.
+
+74
+00:05:06,000 --> 00:05:13,000
+No, it was still the same thing, only it just took increasing amounts of time for us to wait until it actually happened.
+
+75
+00:05:13,000 --> 00:05:15,000
+It was really frustrating.
+
+76
+00:05:15,000 --> 00:05:19,000
+And it was a little confusing also to find out what is happening.
+
+77
+00:05:19,000 --> 00:05:23,000
+We used TDD where nothing was really showing up.
+
+78
+00:05:23,000 --> 00:05:29,000
+We used Cprofile where nothing was really obvious there since Cprofile doesn't deal with multiple threads easily,
+
+79
+00:05:29,000 --> 00:05:31,000
+so we could only observe R2.
+
+80
+00:05:31,000 --> 00:05:36,000
+And you know, and it's long story short, it turned out that yeah, there was a third one.
+
+81
+00:05:36,000 --> 00:05:41,000
+There was a shared library that ironically used for performance metrics,
+
+82
+00:05:41,000 --> 00:05:44,000
+where somebody made a change where they were like,
+
+83
+00:05:44,000 --> 00:05:48,000
+no, we cannot send so much data over the network anymore just for performance metrics.
+
+84
+00:05:48,000 --> 00:05:51,000
+So we're just going to aggregate them in the process.
+
+85
+00:05:51,000 --> 00:05:54,000
+And because of a slight misunderstanding in how Python works,
+
+86
+00:05:54,000 --> 00:05:57,000
+they were just accruing data and never throwing it away,
+
+87
+00:05:57,000 --> 00:06:03,000
+which meant that the third thread was in fact taking longer and longer to complete.
+
+88
+00:06:03,000 --> 00:06:06,000
+And why would that even matter for us?
+
+89
+00:06:06,000 --> 00:06:09,000
+Why would that matter for the blue and the green thread?
+
+90
+00:06:09,000 --> 00:06:13,000
+Well, because of the global integer lock.
+
+91
+00:06:13,000 --> 00:06:20,000
+So a feature of Python that we had from the day that Python added threading,
+
+92
+00:06:20,000 --> 00:06:26,000
+and we still have it, there are obviously changes to it, we can improve on it,
+
+93
+00:06:26,000 --> 00:06:28,000
+but it's what we have today, right?
+
+94
+00:06:28,000 --> 00:06:35,000
+Even if your computer has multiple processors or has multiple cores on a single processor,
+
+95
+00:06:35,000 --> 00:06:43,000
+outside of a few tricks that we can do, only one thread of Python will execute at a given moment in time.
+
+96
+00:06:43,000 --> 00:06:47,000
+And obviously that seems like a problem that should be solved,
+
+97
+00:06:47,000 --> 00:06:50,000
+so there are multiple attempts to address this.
+
+98
+00:06:50,000 --> 00:06:55,000
+The first serious one that was successful was the Galactomy in 2016,
+
+99
+00:06:55,000 --> 00:07:00,000
+where Larry Hastings removed the Gal and Python still continued to work.
+
+100
+00:07:00,000 --> 00:07:05,000
+However, it wasn't really that fast anymore,
+
+101
+00:07:05,000 --> 00:07:14,000
+because ironically having one lock for the entire interpreter to protect its data structures with is really efficient.
+
+102
+00:07:14,000 --> 00:07:19,000
+So if you remove this one lock and replace it with many locks, it's no longer that quick.
+
+103
+00:07:19,000 --> 00:07:27,000
+Moreover, Larry was at the time unable to make it work in ways where if you add cores to your problem,
+
+104
+00:07:27,000 --> 00:07:29,000
+it scales up kind of linearly.
+
+105
+00:07:29,000 --> 00:07:30,000
+You would expect this, right?
+
+106
+00:07:30,000 --> 00:07:34,000
+If you have a problem that is crunched with one thread,
+
+107
+00:07:34,000 --> 00:07:39,000
+it should take more time than one that you use four threads for.
+
+108
+00:07:39,000 --> 00:07:41,000
+But this is not what we observed.
+
+109
+00:07:41,000 --> 00:07:45,000
+Pretty quickly it tapered off and adding more cores, more threads to a program,
+
+110
+00:07:45,000 --> 00:07:48,000
+they didn't do anything actually anymore.
+
+111
+00:07:48,000 --> 00:07:57,000
+So this is why the problem stayed, and it was kind of not addressed until Sandro Somera came around
+
+112
+00:07:57,000 --> 00:07:59,000
+and we moved the Gal again, and we did nine.
+
+113
+00:07:59,000 --> 00:08:05,000
+This time he made some more extensive changes, such that Python could scale.
+
+114
+00:08:05,000 --> 00:08:11,000
+It was still slower in a single thread, because the truth of the matter that a single lock is faster than many locks,
+
+115
+00:08:11,000 --> 00:08:17,000
+this is really hard to jump through, but it did scale.
+
+116
+00:08:17,000 --> 00:08:25,000
+So if you put four cores on a program, it would be close to four times faster than just putting one on the same problem.
+
+117
+00:08:25,000 --> 00:08:27,000
+So that's cool. And there's a tech open.
+
+118
+00:08:27,000 --> 00:08:29,000
+Why is it accepted?
+
+119
+00:08:29,000 --> 00:08:39,000
+Well, because it turns out a lot of Python programmers like you depend on the implicit behavior that having a global and hit lock gives you.
+
+120
+00:08:39,000 --> 00:08:44,000
+There is a lot of Python code, but it's not thread safe, because that was never really an issue.
+
+121
+00:08:44,000 --> 00:08:57,000
+So it's not an easy decision for the steering council to make whether we should break this in the name of scalability.
+
+122
+00:08:57,000 --> 00:09:07,000
+Well, so I will leave that problem to them, and we're going to talk about the Gal and what we can do with having the Gal.
+
+123
+00:09:07,000 --> 00:09:15,000
+So even if we removed it, in the best case scenario, the most popular version of Python today is 3.8,
+
+124
+00:09:15,000 --> 00:09:20,000
+while we are on the brink of 3.12 beta 1.
+
+125
+00:09:20,000 --> 00:09:32,000
+So it suggests to me that even if you added the Gal from 3.13, that would be released October 2024, add five years to that,
+
+126
+00:09:32,000 --> 00:09:36,000
+and then you would be able to enjoy the Gal as Python in 2030.
+
+127
+00:09:36,000 --> 00:09:41,000
+So maybe you'll stay on the clock because it's relevant what I'm about to say.
+
+128
+00:09:41,000 --> 00:09:45,000
+Well, so what are we going to do today?
+
+129
+00:09:45,000 --> 00:09:51,000
+It was just kind of epiphany a long time ago that somebody had that, you know,
+
+130
+00:09:51,000 --> 00:10:00,000
+it is a waste of time to wait on an external resource if you need multiple resources to be available to you.
+
+131
+00:10:00,000 --> 00:10:07,000
+So what if we could, instead of waiting for one, and then when it's complete, waiting another time for another one,
+
+132
+00:10:07,000 --> 00:10:14,000
+sort of move things around and just say, I'm interested in all of those, tell me as soon as any is available.
+
+133
+00:10:14,000 --> 00:10:17,000
+So this is essentially the basis of HMDiL.
+
+134
+00:10:17,000 --> 00:10:21,000
+We have an event loop, and in that loop we're asking, do you have anything for me?
+
+135
+00:10:21,000 --> 00:10:26,000
+And you can subscribe to multiple things that we want to be ready, right?
+
+136
+00:10:26,000 --> 00:10:28,000
+So like connections and so on and so on.
+
+137
+00:10:28,000 --> 00:10:33,000
+So this is a view of a single request and response, but the real matter,
+
+138
+00:10:33,000 --> 00:10:36,000
+like the real server that you have will look more like this.
+
+139
+00:10:36,000 --> 00:10:41,000
+So you have a single, you know, kind of request being served,
+
+140
+00:10:41,000 --> 00:10:47,000
+but there's going to be many requests served and, you know, responses sent back at the same time.
+
+141
+00:10:47,000 --> 00:10:49,000
+And this is the basis of Node.js.
+
+142
+00:10:49,000 --> 00:10:51,000
+This is the basis of Nginx.
+
+143
+00:10:51,000 --> 00:10:55,000
+Like, you know, asynchronous programming is very popular kind of across the board.
+
+144
+00:10:55,000 --> 00:11:00,000
+It is kind of agreed upon that it is the most efficient way to do this.
+
+145
+00:11:00,000 --> 00:11:06,000
+It's wasteful to waste an entire thread and its memory for, you know, just waiting on things.
+
+146
+00:11:06,000 --> 00:11:08,000
+So this is what ACKL does.
+
+147
+00:11:08,000 --> 00:11:12,000
+It essentially allows us to maximize the usage of a single thread.
+
+148
+00:11:12,000 --> 00:11:16,000
+If you want to use many threads, just launch multiple processes.
+
+149
+00:11:16,000 --> 00:11:17,000
+You have multiple cores.
+
+150
+00:11:17,000 --> 00:11:19,000
+This is how you solve it, right?
+
+151
+00:11:19,000 --> 00:11:23,000
+And then we handle IO asynchronously, right?
+
+152
+00:11:23,000 --> 00:11:28,000
+So we just subscribe to changes and as they happen, you are notified.
+
+153
+00:11:28,000 --> 00:11:33,000
+And finally, we can write concurrent code in Python using coroutines.
+
+154
+00:11:33,000 --> 00:11:38,000
+I'm not going to be able to really just give you a primer on this today.
+
+155
+00:11:38,000 --> 00:11:50,000
+So let's just say, ACKL is nice for IO, but it's also nice for orchestrating processing of actual computation.
+
+156
+00:11:50,000 --> 00:11:55,000
+For example, black, the other formatter, doesn't have any networking built in,
+
+157
+00:11:55,000 --> 00:12:02,000
+but it is using async.il to make it possible for you to auto format multiple files in a directory at the same time.
+
+158
+00:12:02,000 --> 00:12:06,000
+As long as you have enough cores, it will use async.il to orchestrate this.
+
+159
+00:12:06,000 --> 00:12:12,000
+So we're going to be talking about how to use this for, you know, data science-y things today.
+
+160
+00:12:12,000 --> 00:12:19,000
+I don't have time to do a primer on async.il, so just, you know, bear with me that there are async functions,
+
+161
+00:12:19,000 --> 00:12:22,000
+so there's async.dev, and they have always in them.
+
+162
+00:12:22,000 --> 00:12:26,000
+And always are the things that, you know, kind of denote IO.
+
+163
+00:12:26,000 --> 00:12:31,000
+So things can happen that can take time and we're waiting for them.
+
+164
+00:12:31,000 --> 00:12:34,000
+The nice thing about this is that it reads from top to bottom.
+
+165
+00:12:34,000 --> 00:12:41,000
+In the example here, we're awaiting on a download of file one, and only after that completes,
+
+166
+00:12:41,000 --> 00:12:46,000
+we're awaiting for file two to download, and only after that completes,
+
+167
+00:12:46,000 --> 00:12:49,000
+we're awaiting for file three to download.
+
+168
+00:12:49,000 --> 00:12:51,000
+So those things are still linear.
+
+169
+00:12:51,000 --> 00:12:53,000
+We can read it from top to bottom.
+
+170
+00:12:53,000 --> 00:12:58,000
+No kind of callback nonsense, no callback confusion.
+
+171
+00:12:58,000 --> 00:13:02,000
+But we can do some magic there, and with the help of async.il Gather,
+
+172
+00:13:02,000 --> 00:13:06,000
+we can make those things happen at the same time.
+
+173
+00:13:06,000 --> 00:13:07,000
+So that's pretty cool.
+
+174
+00:13:07,000 --> 00:13:11,000
+Well, if you would want to know more about this,
+
+175
+00:13:11,000 --> 00:13:17,000
+I actually made like a series of videos a while back that are like an index introduction to async.il.
+
+176
+00:13:17,000 --> 00:13:20,000
+So I encourage you to do so.
+
+177
+00:13:20,000 --> 00:13:26,000
+It shows off async.il as this framework that allows Python to be high performance enough
+
+178
+00:13:26,000 --> 00:13:28,000
+for production application.
+
+179
+00:13:28,000 --> 00:13:33,000
+And in fact, HDB, the database, is written in Python, and it is written using async.il,
+
+180
+00:13:33,000 --> 00:13:35,000
+and it is high performance.
+
+181
+00:13:35,000 --> 00:13:38,000
+So back to not produce.
+
+182
+00:13:38,000 --> 00:13:43,000
+Our synthetic use case today will just deal with some time series data.
+
+183
+00:13:43,000 --> 00:13:50,000
+So there's going to be some pandas data frames that have daytime objects in one column
+
+184
+00:13:50,000 --> 00:13:52,000
+and some numbers in a second column.
+
+185
+00:13:52,000 --> 00:13:55,000
+To just spice things up, sometimes the numbers are going to be nams,
+
+186
+00:13:55,000 --> 00:13:59,000
+so not a number, because something went wrong and, you know,
+
+187
+00:13:59,000 --> 00:14:01,000
+gathering the data and so on.
+
+188
+00:14:01,000 --> 00:14:03,000
+So it's a synthetic use case.
+
+189
+00:14:03,000 --> 00:14:07,000
+I don't really have a great real world example for you there,
+
+190
+00:14:07,000 --> 00:14:14,000
+but it will enable us to see all the moving parts that we need to kind of analyze and improve
+
+191
+00:14:14,000 --> 00:14:16,000
+so that the thing is fast.
+
+192
+00:14:16,000 --> 00:14:18,000
+But at least it is an example.
+
+193
+00:14:18,000 --> 00:14:23,000
+My mind works best with examples, so we will be able to focus on the processing part.
+
+194
+00:14:23,000 --> 00:14:27,000
+Later on, you can add on a server on top of this.
+
+195
+00:14:27,000 --> 00:14:29,000
+You can add more things on top of that.
+
+196
+00:14:29,000 --> 00:14:30,000
+That's fine.
+
+197
+00:14:30,000 --> 00:14:33,000
+Today we're focusing on the processing bit.
+
+198
+00:14:33,000 --> 00:14:35,000
+The processing bit is simple, right?
+
+199
+00:14:35,000 --> 00:14:38,000
+We load some data from somewhere, we process it, and we return it.
+
+200
+00:14:38,000 --> 00:14:43,000
+But obviously, if the data is bigger than what you can handle in a single thread
+
+201
+00:14:43,000 --> 00:14:45,000
+or maybe even on a single machine,
+
+202
+00:14:45,000 --> 00:14:48,000
+what you have to do is you have to split the data somehow,
+
+203
+00:14:48,000 --> 00:14:50,000
+gather the results, and only later return it.
+
+204
+00:14:50,000 --> 00:14:52,000
+So this is what we're going to do.
+
+205
+00:14:52,000 --> 00:14:59,000
+And at first, we're going to have this example for, you know, going to serialize processing.
+
+206
+00:14:59,000 --> 00:15:02,000
+Later on, we're going to split and apply some magic.
+
+207
+00:15:02,000 --> 00:15:06,000
+And we're going to see that the second one is 25 times faster.
+
+208
+00:15:06,000 --> 00:15:09,000
+So, you know, spoiler alert.
+
+209
+00:15:09,000 --> 00:15:14,000
+Anyway, I will be showing the code that actually makes all of this happen.
+
+210
+00:15:14,000 --> 00:15:19,000
+And if you're like me, you get easily distracted by things that you see
+
+211
+00:15:19,000 --> 00:15:23,000
+but you don't quite understand because you're using helper functions
+
+212
+00:15:23,000 --> 00:15:25,000
+that don't behave as you expected.
+
+213
+00:15:25,000 --> 00:15:30,000
+So I'll actually use one slide and do some math so you can see, like, hey,
+
+214
+00:15:30,000 --> 00:15:34,000
+the print is not a print because I wanted the print to be nice
+
+215
+00:15:34,000 --> 00:15:39,000
+and I wanted it to be colorful and I wanted it to show us which process we're in.
+
+216
+00:15:39,000 --> 00:15:45,000
+So we're using a rich to essentially just show us, you know, in colors that,
+
+217
+00:15:45,000 --> 00:15:50,000
+oh, this is how much time this thing takes, and this is the process we're in.
+
+218
+00:15:50,000 --> 00:15:52,000
+And then there's a main usage in the bottom.
+
+219
+00:15:52,000 --> 00:15:57,000
+The only thing it does is it uses chase malloc, which you should use as well,
+
+220
+00:15:57,000 --> 00:16:02,000
+to tell you, oh, the print memory usage is this and the peak memory usage was that.
+
+221
+00:16:02,000 --> 00:16:07,000
+So yeah, we got out of the way our main async font on our main.
+
+222
+00:16:07,000 --> 00:16:09,000
+We have to make data frames.
+
+223
+00:16:09,000 --> 00:16:14,000
+So, of course, like in the real world, what you would have is you would get this data from somewhere
+
+224
+00:16:14,000 --> 00:16:16,000
+you would just need to know its shape.
+
+225
+00:16:16,000 --> 00:16:18,000
+Here we're going to generate some.
+
+226
+00:16:18,000 --> 00:16:23,000
+So the easiest way for us to generate it would just be to just create some data frames
+
+227
+00:16:23,000 --> 00:16:24,000
+and put it in a pickle file.
+
+228
+00:16:24,000 --> 00:16:26,000
+So this is what we're doing.
+
+229
+00:16:26,000 --> 00:16:31,000
+Maybe there's a nicer way to do this with NumPy or Pandas, you can tell me after.
+
+230
+00:16:31,000 --> 00:16:33,000
+But that still did work.
+
+231
+00:16:33,000 --> 00:16:37,000
+It did take an awful amount of time, but we only had to do this once
+
+232
+00:16:37,000 --> 00:16:39,000
+because it's a big data bundle, so fine.
+
+233
+00:16:39,000 --> 00:16:45,000
+It is 45 gigs big, which is barely enough to fit in my laptop's memory.
+
+234
+00:16:45,000 --> 00:16:49,000
+Which, well, maybe in times you have laptops that stick to your computer,
+
+235
+00:16:49,000 --> 00:16:51,000
+it's like cool.
+
+236
+00:16:51,000 --> 00:16:54,000
+So I cannot even tell you this is a big data.
+
+237
+00:16:54,000 --> 00:16:57,000
+Like now it's really sticking to my laptop's memory.
+
+238
+00:16:57,000 --> 00:16:59,000
+But it's still a lot, right?
+
+239
+00:16:59,000 --> 00:17:04,000
+And it still takes a lot of time to process this amount of data, even with modern processors.
+
+240
+00:17:04,000 --> 00:17:06,000
+So yeah, okay, let's go with that.
+
+241
+00:17:06,000 --> 00:17:11,000
+So a little more than 45 gigs of pickle file.
+
+242
+00:17:11,000 --> 00:17:16,000
+And ultimately, you know, we will just be using this synthetic data file
+
+243
+00:17:16,000 --> 00:17:18,000
+because it doesn't quite matter.
+
+244
+00:17:18,000 --> 00:17:20,000
+How are we going to process it?
+
+245
+00:17:20,000 --> 00:17:22,000
+With this very elaborate function.
+
+246
+00:17:22,000 --> 00:17:25,000
+We're just going to call Nansam on this.
+
+247
+00:17:25,000 --> 00:17:27,000
+It is an example, right?
+
+248
+00:17:27,000 --> 00:17:32,000
+Usually what you want to see here is there is some processing that is really not
+
+249
+00:17:32,000 --> 00:17:35,000
+easily kind of decomposable by you.
+
+250
+00:17:35,000 --> 00:17:38,000
+You just have something to call to process the data on Nansam.
+
+251
+00:17:38,000 --> 00:17:40,000
+Great example.
+
+252
+00:17:40,000 --> 00:17:45,000
+Just to be fair to NumPy, maybe there's some NumPy configured here,
+
+253
+00:17:45,000 --> 00:17:48,000
+I have to say that NumPy, in many cases,
+
+254
+00:17:48,000 --> 00:17:52,000
+when it's doing its thing on the seaside with a large set of data,
+
+255
+00:17:52,000 --> 00:17:55,000
+will still free the gill.
+
+256
+00:17:55,000 --> 00:17:59,000
+So other threads in your program will be able to do something else
+
+257
+00:17:59,000 --> 00:18:02,000
+while NumPy is crunching numbers.
+
+258
+00:18:02,000 --> 00:18:03,000
+Not always.
+
+259
+00:18:03,000 --> 00:18:05,000
+I'm not sure if it's in this case.
+
+260
+00:18:05,000 --> 00:18:09,000
+But often enough, so NumPy is super efficient on its own already.
+
+261
+00:18:09,000 --> 00:18:14,000
+But bear in mind that this is just an example that shows us processing
+
+262
+00:18:14,000 --> 00:18:19,000
+that holds off the thread on asyncIO from doing anything else.
+
+263
+00:18:19,000 --> 00:18:23,000
+AsyncIO, we want to always have a very short moment of processing
+
+264
+00:18:23,000 --> 00:18:26,000
+so that we can go back to the event group and ask,
+
+265
+00:18:26,000 --> 00:18:28,000
+do you have anything else for me?
+
+266
+00:18:28,000 --> 00:18:32,000
+Otherwise, you cannot really support all the other request responses
+
+267
+00:18:32,000 --> 00:18:36,000
+or help tips or periodic functions that you have in your application
+
+268
+00:18:36,000 --> 00:18:38,000
+and so on and so on.
+
+269
+00:18:38,000 --> 00:18:41,000
+So this is a good example because it is running through this Nansam like action page
+
+270
+00:18:41,000 --> 00:18:42,000
+for a few seconds.
+
+271
+00:18:42,000 --> 00:18:48,000
+So we will be kind of breaking this down to multiple processes.
+
+272
+00:18:48,000 --> 00:18:51,000
+Yeah.
+
+273
+00:18:51,000 --> 00:18:52,000
+Okay.
+
+274
+00:18:52,000 --> 00:18:55,000
+Our main async death.
+
+275
+00:18:55,000 --> 00:18:58,000
+There's not much interesting things that happen here,
+
+276
+00:18:58,000 --> 00:19:00,000
+even though there's a few lines.
+
+277
+00:19:00,000 --> 00:19:03,000
+The most important thing here is that we're using a process pool executor
+
+278
+00:19:03,000 --> 00:19:04,000
+from asyncIO.
+
+279
+00:19:04,000 --> 00:19:08,000
+And we can say one worker, we can say a hundred workers.
+
+280
+00:19:08,000 --> 00:19:13,000
+What we're saying here is we have all this data that is given to us
+
+281
+00:19:13,000 --> 00:19:18,000
+as the input argument, and we are putting it into batches.
+
+282
+00:19:18,000 --> 00:19:22,000
+And each of those batches, we are running in an executor.
+
+283
+00:19:22,000 --> 00:19:29,000
+So loop.runAnExecutor runs our process function with the slice of data.
+
+284
+00:19:29,000 --> 00:19:31,000
+The slice of data is going to be an efficient number.
+
+285
+00:19:31,000 --> 00:19:32,000
+So cool.
+
+286
+00:19:32,000 --> 00:19:36,000
+And then we're waiting for results with the single await that we have there.
+
+287
+00:19:36,000 --> 00:19:38,000
+So asyncIO.wait.
+
+288
+00:19:38,000 --> 00:19:41,000
+And later on, we're just summing up the results,
+
+289
+00:19:41,000 --> 00:19:44,000
+which is this final phase of not produce.
+
+290
+00:19:44,000 --> 00:19:48,000
+We're just using our batch results to create a total sum.
+
+291
+00:19:48,000 --> 00:19:49,000
+Done.
+
+292
+00:19:49,000 --> 00:19:53,000
+Well, so we can actually have many workers.
+
+293
+00:19:53,000 --> 00:19:54,000
+We can have one.
+
+294
+00:19:54,000 --> 00:19:55,000
+We can have multiple.
+
+295
+00:19:55,000 --> 00:19:58,000
+So how do we run this entire thing?
+
+296
+00:19:58,000 --> 00:20:02,000
+Like the easiest thing that we can do that fits in a slide will be just this.
+
+297
+00:20:02,000 --> 00:20:07,000
+So we just start this malloc to be able to actually gather data later on.
+
+298
+00:20:07,000 --> 00:20:08,000
+We can start it.
+
+299
+00:20:08,000 --> 00:20:10,000
+We load the data from a pickle file.
+
+300
+00:20:10,000 --> 00:20:16,000
+And we use asyncIO.run to run our main async function.
+
+301
+00:20:16,000 --> 00:20:19,000
+So how does this look like for a single worker?
+
+302
+00:20:19,000 --> 00:20:24,000
+A single worker will take a little under 160 seconds to complete.
+
+303
+00:20:24,000 --> 00:20:25,000
+Cool.
+
+304
+00:20:25,000 --> 00:20:27,000
+Two billion records, so maybe that's not so bad.
+
+305
+00:20:27,000 --> 00:20:32,000
+But, well, my laptop has more than a single core.
+
+306
+00:20:32,000 --> 00:20:35,000
+So how about we add more workers to this?
+
+307
+00:20:35,000 --> 00:20:36,000
+So we add four.
+
+308
+00:20:36,000 --> 00:20:38,000
+And it's a linear of 69.
+
+309
+00:20:38,000 --> 00:20:39,000
+Nice.
+
+310
+00:20:39,000 --> 00:20:44,000
+The problem, though, is that I have 10 cores, not four.
+
+311
+00:20:44,000 --> 00:20:49,000
+So let's introduce more workers and see if it's faster with 10.
+
+312
+00:20:49,000 --> 00:20:51,000
+It's not.
+
+313
+00:20:51,000 --> 00:20:52,000
+And it's weird.
+
+314
+00:20:52,000 --> 00:20:55,000
+Maybe there's some clue on the slide already why it isn't.
+
+315
+00:20:55,000 --> 00:20:58,000
+It isn't, but it is quite a bit disappointing.
+
+316
+00:20:58,000 --> 00:21:00,000
+There are a few clues.
+
+317
+00:21:00,000 --> 00:21:08,000
+The first one is that it takes a long time for any worker process to even receive our data.
+
+318
+00:21:08,000 --> 00:21:15,000
+The first worker process waits almost 10 seconds to get anything that it can work with.
+
+319
+00:21:15,000 --> 00:21:19,000
+And the last one waits over a minute to do anything.
+
+320
+00:21:19,000 --> 00:21:23,000
+So the fact that we spawn multiple doesn't really help us at all.
+
+321
+00:21:23,000 --> 00:21:27,000
+So we wait, I believe, until they get their data.
+
+322
+00:21:27,000 --> 00:21:28,000
+Why is that?
+
+323
+00:21:28,000 --> 00:21:33,000
+Well, our naive kind of view of the world at this point is that we have this one main process
+
+324
+00:21:33,000 --> 00:21:37,000
+that dispatches our data to multiple workers and they do their thing.
+
+325
+00:21:37,000 --> 00:21:41,000
+But in truth, there is a little more subtlety to this.
+
+326
+00:21:41,000 --> 00:21:50,000
+We have to serialize the data first to pass it to a self-process, which in turn has to deserialize it.
+
+327
+00:21:50,000 --> 00:21:51,000
+We are using PICL for this.
+
+328
+00:21:51,000 --> 00:21:56,000
+So there is PICLing on the brown side and unpicling on the blue side.
+
+329
+00:21:56,000 --> 00:22:00,000
+And the problem there is that there is only one dispatcher.
+
+330
+00:22:00,000 --> 00:22:07,000
+So there can only be one process that does all this PICLing of this entire 45 gig data file.
+
+331
+00:22:07,000 --> 00:22:10,000
+And this is obviously an issue.
+
+332
+00:22:10,000 --> 00:22:13,000
+We would have to do something about it.
+
+333
+00:22:13,000 --> 00:22:18,000
+Better yet, if you actually see what is happening, like the example is extremely pathological
+
+334
+00:22:18,000 --> 00:22:25,000
+because it takes 10 seconds to get the data and then 0.81 seconds to compute the result.
+
+335
+00:22:25,000 --> 00:22:29,000
+So obviously, just adding more workers to this only makes matters worse.
+
+336
+00:22:29,000 --> 00:22:33,000
+Like it just makes no sense to operate like this.
+
+337
+00:22:33,000 --> 00:22:42,000
+But in fact, I would be lucky that it serialized itself by mistake because if it didn't, we would run out of memory.
+
+338
+00:22:42,000 --> 00:22:51,000
+If the main process already takes 50 gigs of memory and if each of the worker processes would really take 4.5 gigs at the same time,
+
+339
+00:22:51,000 --> 00:22:53,000
+well, we would be in trouble on my laptop.
+
+340
+00:22:53,000 --> 00:22:57,000
+We would be start swapping and that would be terrible.
+
+341
+00:22:57,000 --> 00:22:58,000
+So what can we do?
+
+342
+00:22:58,000 --> 00:23:01,000
+Well, maybe we can use copy on write.
+
+343
+00:23:01,000 --> 00:23:02,000
+What is that?
+
+344
+00:23:02,000 --> 00:23:08,000
+Well, on the next up, there is the system call for support.
+
+345
+00:23:08,000 --> 00:23:15,000
+So when you have a process and you have a program pointer to write the next instruction that is going to execute
+
+346
+00:23:15,000 --> 00:23:23,000
+and it has some data segments in memory, if you say for, you're creating a child's process from the process that you're already on.
+
+347
+00:23:23,000 --> 00:23:30,000
+So naively, what you would do is you would just create a new segment in memory for the program and a new segment for memory for the data.
+
+348
+00:23:30,000 --> 00:23:34,000
+You would put the pointer somewhere and the child process and start running.
+
+349
+00:23:34,000 --> 00:23:44,000
+The problem with that is that it's pretty slow because if the process is using a lot of memory, copying this entire space is pretty time consuming.
+
+350
+00:23:44,000 --> 00:23:55,000
+So for it to be faster, Linux uses a trick where it just observes how the program uses the memory and as long as it's only reading,
+
+351
+00:23:55,000 --> 00:24:00,000
+we don't really have to copy the parent's memory space.
+
+352
+00:24:00,000 --> 00:24:08,000
+Only if the parent or child mutates any of the data, now we actually have to create their own respective copies.
+
+353
+00:24:08,000 --> 00:24:11,000
+So in theory, that would be an improvement for us.
+
+354
+00:24:11,000 --> 00:24:22,000
+But in practice, it's not because Python's memory management is such a weird beast that even objects read, create memory writes.
+
+355
+00:24:22,000 --> 00:24:24,000
+Because of our garbage collector.
+
+356
+00:24:24,000 --> 00:24:38,000
+So here, seven years back or so, I created an issue that said, okay, let's add GC3 functionality that at the time would really help Instagram to restart their server,
+
+357
+00:24:38,000 --> 00:24:45,000
+freeze some objects so that they will never be mutated by Python's garbage collection, so that copy on write would actually be useful.
+
+358
+00:24:45,000 --> 00:24:47,000
+And it is.
+
+359
+00:24:47,000 --> 00:24:54,000
+But in our case, if you want to ever have more than one data set being loaded to our program, that is obviously not going to help us.
+
+360
+00:24:54,000 --> 00:25:00,000
+Because we want to be able to process the data as it comes.
+
+361
+00:25:00,000 --> 00:25:03,000
+So just freezing things, no, not sensible.
+
+362
+00:25:03,000 --> 00:25:10,000
+So how about the Per-Eder-Ber-Gil or also called sub-interpreters?
+
+363
+00:25:10,000 --> 00:25:12,000
+Honestly, very excited about this.
+
+364
+00:25:12,000 --> 00:25:15,000
+This is also very promising, I think, to Python.
+
+365
+00:25:15,000 --> 00:25:23,000
+What it does is it allows us to have a single process, house multiple isolated interpreters.
+
+366
+00:25:23,000 --> 00:25:25,000
+So they are independent.
+
+367
+00:25:25,000 --> 00:25:27,000
+And independent is the key word here.
+
+368
+00:25:27,000 --> 00:25:29,000
+They don't have any data sharing.
+
+369
+00:25:29,000 --> 00:25:34,000
+Objects of one interpreter are invisible to the other interpreter.
+
+370
+00:25:34,000 --> 00:25:39,000
+So sadly, there is no current way to share data there.
+
+371
+00:25:39,000 --> 00:25:50,000
+So we spent a lot of time implementing this because it was really tricky to make sure that one interpreter does not step on another's toes in the same process.
+
+372
+00:25:50,000 --> 00:26:02,000
+It's an awesome achievement, but we still have some work there in the future to actually make data sharing kind of automatic or easy to use from this thing.
+
+373
+00:26:02,000 --> 00:26:08,000
+And again, that's our future of 3.12, so by the time we get to it, it's going to be a while.
+
+374
+00:26:08,000 --> 00:26:13,000
+So what we left with is shared memory, the main topic of today's talk, in fact.
+
+375
+00:26:13,000 --> 00:26:19,000
+Amazingly, this is a feature of operating systems all around.
+
+376
+00:26:19,000 --> 00:26:25,000
+It's supported by Windows, it's supported by Mac OS, obviously, it works on Linux.
+
+377
+00:26:25,000 --> 00:26:29,000
+So I'm kind of surprised it's not more popular.
+
+378
+00:26:29,000 --> 00:26:32,000
+So we're going to be using shared memory now in our program.
+
+379
+00:26:32,000 --> 00:26:35,000
+And there's changes that we have to make.
+
+380
+00:26:35,000 --> 00:26:37,000
+There are lines of code that we have to add.
+
+381
+00:26:37,000 --> 00:26:40,000
+But fundamentally, it's not entirely that complicated.
+
+382
+00:26:40,000 --> 00:26:44,000
+What we're going to be doing is we're going to be creating a shared memory manager.
+
+383
+00:26:44,000 --> 00:26:48,000
+And with that shared memory manager, we're going to create a shared memory segment that we create.
+
+384
+00:26:48,000 --> 00:26:50,000
+How big should it be?
+
+385
+00:26:50,000 --> 00:26:53,000
+Well, let's say it's as big as our data set at the moment.
+
+386
+00:26:53,000 --> 00:27:03,000
+Like if you have a production application, we probably want it to be bigger, like with some padding so that if there's a bigger request later on, you can still fit it.
+
+387
+00:27:03,000 --> 00:27:11,000
+In our case, we can just say the same size of bytes as the data that we already got.
+
+388
+00:27:11,000 --> 00:27:19,000
+And then we can use NumPython Magic powers, which is to treat an array not to an existing memory buffer, which we do here.
+
+389
+00:27:19,000 --> 00:27:23,000
+And then we just copy our people to the shared memory.
+
+390
+00:27:23,000 --> 00:27:25,000
+It is a little annoying.
+
+391
+00:27:25,000 --> 00:27:27,000
+I have to copy here.
+
+392
+00:27:27,000 --> 00:27:29,000
+And it's not optimal.
+
+393
+00:27:29,000 --> 00:27:40,000
+Ideally, maybe people could learn to write to a shared memory directly or something, or we could use a different visualization method that writes to the shared memory or a shared memory directly.
+
+394
+00:27:40,000 --> 00:27:42,000
+But it is what it is currently, as an example.
+
+395
+00:27:42,000 --> 00:27:47,000
+Just have in mind that, you know, annoyingly, we have to copy at least one.
+
+396
+00:27:47,000 --> 00:27:55,000
+But this one is happening on the main service once, and then we don't have to do anything ever again.
+
+397
+00:27:55,000 --> 00:28:13,000
+So, with this in mind, with the old situation, we have our main function accept the data segments, and then we batch it as we were passing arguments to the process functions in the executor.
+
+398
+00:28:13,000 --> 00:28:21,000
+We're going to be changing this right now because we don't want to actually pass data to the process function.
+
+399
+00:28:21,000 --> 00:28:29,000
+Instead, what we want to do is we want to just be able to use the shared memory from the workers of law.
+
+400
+00:28:29,000 --> 00:28:33,000
+So now we will be only passing tiny metadata, right?
+
+401
+00:28:33,000 --> 00:28:44,000
+So the process function will accept the shared memory segments, mainly the shape of the data so that we can use it directly with NumPy on the worker side.
+
+402
+00:28:44,000 --> 00:28:50,000
+The detail so NumPy knows how big each element in the list is, and some windowing.
+
+403
+00:28:50,000 --> 00:28:56,000
+So, you know, it's going to be an object and a batch size that each worker has to know about.
+
+404
+00:28:56,000 --> 00:29:07,000
+Because now we have this huge segment that we share, and you have to tell each worker that you deal with this part, whereas the other worker will deal with this part, and so on and so on.
+
+405
+00:29:07,000 --> 00:29:10,000
+And only after we're going to sum up the results out of all of those.
+
+406
+00:29:10,000 --> 00:29:11,000
+So cool.
+
+407
+00:29:11,000 --> 00:29:16,000
+So now we already passed some metadata to the process function.
+
+408
+00:29:16,000 --> 00:29:18,000
+We need to modify the process function.
+
+409
+00:29:18,000 --> 00:29:22,000
+So before it was nice and tiny.
+
+410
+00:29:22,000 --> 00:29:25,000
+Now it's going to be a little less nice and tiny.
+
+411
+00:29:25,000 --> 00:29:30,000
+But if you look closely, half of it is my blown out signature, right?
+
+412
+00:29:30,000 --> 00:29:34,000
+Because there's more arguments, and I like type annotations.
+
+413
+00:29:34,000 --> 00:29:36,000
+So yeah.
+
+414
+00:29:36,000 --> 00:29:43,000
+Other than that, we just create the memory segment, the segment back with the name that we have provided.
+
+415
+00:29:43,000 --> 00:29:47,000
+And again, just recreate the array from an existing buffer.
+
+416
+00:29:47,000 --> 00:29:49,000
+You don't need to copy through it anymore.
+
+417
+00:29:49,000 --> 00:29:51,000
+You just use whatever is already there.
+
+418
+00:29:51,000 --> 00:29:53,000
+And we can actually use the num sum again.
+
+419
+00:29:53,000 --> 00:30:02,000
+But now we have to use our window, so our offset and the batch size to just process the sum for the segment that we want.
+
+420
+00:30:02,000 --> 00:30:04,000
+And essentially, that's it.
+
+421
+00:30:04,000 --> 00:30:12,000
+So now, when we have all this, see, there is no data passed to the process anymore.
+
+422
+00:30:12,000 --> 00:30:14,000
+Only tiny metadata.
+
+423
+00:30:14,000 --> 00:30:22,000
+Which is awesome because the situation before was that the serialization and the serialization took a long time.
+
+424
+00:30:22,000 --> 00:30:24,000
+This is no going away.
+
+425
+00:30:24,000 --> 00:30:31,000
+We're still serializing and de-serializing only now we're doing this on tiny pieces of information, right?
+
+426
+00:30:31,000 --> 00:30:37,000
+So now, we can tell to the worker process, you know, just a few inches and one string.
+
+427
+00:30:37,000 --> 00:30:42,000
+It's very quick for Python to serialize those tiny pieces of information.
+
+428
+00:30:42,000 --> 00:30:51,000
+But now, with those metadata, we are able to access the segment we built directly from the worker.
+
+429
+00:30:51,000 --> 00:30:53,000
+So how fast is it?
+
+430
+00:30:53,000 --> 00:30:55,000
+Boom, six seconds.
+
+431
+00:30:55,000 --> 00:31:00,000
+So yeah, that's really the 25x improvement that I promised.
+
+432
+00:31:00,000 --> 00:31:02,000
+So let me show you the slide again.
+
+433
+00:31:02,000 --> 00:31:04,000
+Cool, we won.
+
+434
+00:31:04,000 --> 00:31:06,000
+You should be excited.
+
+435
+00:31:06,000 --> 00:31:11,000
+There are some caveats, you know, I'm an honest person, I'm going to tolerate it.
+
+436
+00:31:11,000 --> 00:31:15,000
+I'm not always well in paradise, but 25x is good.
+
+437
+00:31:15,000 --> 00:31:18,000
+Anywhere.
+
+438
+00:31:18,000 --> 00:31:27,000
+Now we actually see that the time to receive the request is essentially, we can just ignore, right?
+
+439
+00:31:27,000 --> 00:31:34,000
+The first process, the first worker process and the last worker process received the request essentially at the same time,
+
+440
+00:31:34,000 --> 00:31:37,000
+which is what we wanted.
+
+441
+00:31:37,000 --> 00:31:46,000
+We see that there is a tiny bit of time spent on actually creating the serial memory segment kind of access from the worker,
+
+442
+00:31:46,000 --> 00:31:48,000
+but still like what, 40 milliseconds?
+
+443
+00:31:48,000 --> 00:31:52,000
+So like it's also kind of compared to what we had before.
+
+444
+00:31:52,000 --> 00:31:53,000
+So that's great.
+
+445
+00:31:53,000 --> 00:31:58,000
+And then the processing actually happens now like then it's periodically in parallel,
+
+446
+00:31:58,000 --> 00:32:05,000
+like Spawn Process 5 is faster than Spawn Process 9, and Spawn Process 11, yeah,
+
+447
+00:32:05,000 --> 00:32:12,000
+you can see they're a little chaotic, but they all converge and actually send back a result, which is awesome.
+
+448
+00:32:12,000 --> 00:32:19,000
+And the nicer thing is that because of how this works right now, the peak memory usage was five times slower,
+
+449
+00:32:19,000 --> 00:32:23,000
+but the actual memory usage at the time of sending back is essentially zero,
+
+450
+00:32:23,000 --> 00:32:25,000
+and we're not really using any memory anymore, right?
+
+451
+00:32:25,000 --> 00:32:29,000
+It's just one some number, so it's awesome.
+
+452
+00:32:29,000 --> 00:32:38,000
+But if you look at the top of the slide, you will see a new 25 seconds spend on actually copying the pickle to the serial memory segment.
+
+453
+00:32:38,000 --> 00:32:43,000
+And this is again something that would be cool if pickle could do it,
+
+454
+00:32:43,000 --> 00:32:49,000
+or if you had undisensoryization methods that just wrote to shared memory directly, so you could skip this.
+
+455
+00:32:49,000 --> 00:32:52,000
+But I'll just read this as homework to you.
+
+456
+00:32:52,000 --> 00:32:58,000
+Sensible consideration to see Python, like we're living in those awesome times where like what should I work on?
+
+457
+00:32:58,000 --> 00:33:01,000
+Like, great example.
+
+458
+00:33:01,000 --> 00:33:06,000
+So anyway, even if you're like this is not solvable, you will always be stuck with this.
+
+459
+00:33:06,000 --> 00:33:12,000
+If we still combine those two numbers, it's still five times faster than the serialized version, so it's still worth it.
+
+460
+00:33:12,000 --> 00:33:18,000
+In any case, shared memory, pretty awesome, because there's no serialization overhead,
+
+461
+00:33:18,000 --> 00:33:23,000
+two parallel access to shared data, and less overall memory consumption.
+
+462
+00:33:23,000 --> 00:33:27,000
+On the flip side, as you could see there was more code.
+
+463
+00:33:27,000 --> 00:33:33,000
+We actually have to handle the shared memory manager and the shared memory names.
+
+464
+00:33:33,000 --> 00:33:39,000
+We have to pass those and, you know, kind of fight with offset and everything, so there's definitely more code.
+
+465
+00:33:39,000 --> 00:33:45,000
+But more importantly, there's a disadvantage that there's two parallel access to shared data.
+
+466
+00:33:45,000 --> 00:33:54,000
+I realize that I also listed it as an advantage, but if you actually mutate the shared data from one of the processes,
+
+467
+00:33:54,000 --> 00:34:03,000
+you might end up in a situation where the data structure is half complete, half mutated, it's not finished doing its thing,
+
+468
+00:34:03,000 --> 00:34:11,000
+and another process actually concurrently, actually in parallel, is accessing this unfinished data structure and process.
+
+469
+00:34:11,000 --> 00:34:19,000
+So the deal kind of makes sense, right? But if you really want to parallelize it, it's what you're getting.
+
+470
+00:34:19,000 --> 00:34:27,000
+So if you need to synchronize things to make sure that you're not stepping on each other's toes when you mutate shared data,
+
+471
+00:34:27,000 --> 00:34:36,000
+you need to do this explicitly. And there is a nice helper in the shared memory support in multi-processing that can help you.
+
+472
+00:34:36,000 --> 00:34:42,000
+And to show this, let's go and try out Windows, because I promised you that shared memory works there too.
+
+473
+00:34:42,000 --> 00:34:52,000
+And in fact, starting yesterday, when I actually reminded SpeedDollar to do it, the Windows Store version of Python is now 3.11 as well.
+
+474
+00:34:52,000 --> 00:34:58,000
+So if you download Python from the Windows Store, you're going to get 3.11 at the moment. So cool.
+
+475
+00:34:58,000 --> 00:35:08,000
+If you do and start it on PowerShell, you can now create as many sections, but not a raw one, but one called a shareable list.
+
+476
+00:35:08,000 --> 00:35:16,000
+And inside the shareable list, you can put strings, you can put bytes, you can put numbers, nons, and booleans, and that's essentially it.
+
+477
+00:35:17,000 --> 00:35:23,000
+You can do a lot with that too, right? Again, it's a way for processes to communicate, so pretty cool.
+
+478
+00:35:23,000 --> 00:35:29,000
+And another process would actually be using the same name of a memory segment to read the list back.
+
+479
+00:35:29,000 --> 00:35:39,000
+So pretty cool. They can do things. They can like send timestamps. Oh no, they cannot send timestamps, because timestamps are arbitrary Python objects, and those are not supported.
+
+480
+00:35:39,000 --> 00:35:48,000
+With many types, what you can do is you can find some way to theorize them into primitive types, in which case you can share them again.
+
+481
+00:35:48,000 --> 00:35:58,000
+If you ever use JSON, you know the story. So here we can, for example, use the timestamp method on the daytime object.
+
+482
+00:35:58,000 --> 00:36:06,000
+Just put it in the list, and read it back, recreate the daytime object on the other end, and boom, it's the same one.
+
+483
+00:36:06,000 --> 00:36:15,000
+Only thing is that now you are back in the theorization business, so if you're going to be doing this a lot, it's going to slow you down, right?
+
+484
+00:36:15,000 --> 00:36:21,000
+So you have to know what you're dealing with. Most of the time it just makes sense to use primitive types if you're using this.
+
+485
+00:36:21,000 --> 00:36:27,000
+But when you are, the nice thing is that the mutations of the shareable list are atomic.
+
+486
+00:36:27,000 --> 00:36:33,000
+So you're never going to end up in a situation where an object is half copied there and half not.
+
+487
+00:36:33,000 --> 00:36:37,000
+That's not going to happen to you, which is great in terms of consistency.
+
+488
+00:36:37,000 --> 00:36:47,000
+In the NumPy example that we used before, we just mapped a NumPy array over an arbitrary segment of memory.
+
+489
+00:36:47,000 --> 00:36:54,000
+So if there are any changes that change the shape of it and the other side doesn't know about it, you're going to get a crash.
+
+490
+00:36:54,000 --> 00:36:56,000
+Here, less likely.
+
+491
+00:36:57,000 --> 00:37:03,000
+Okay, so let's show another example. Looks the same, but it's not because now it's Windows Subsystem for Linux.
+
+492
+00:37:03,000 --> 00:37:08,000
+So we covered Linux with Windows, I know. It's a little disappointing, but we don't have time.
+
+493
+00:37:08,000 --> 00:37:17,000
+So, I know, I know. One of you would ask me this, like, dude, all of you, what you've shown, can we just use which multi-task is there,
+
+494
+00:37:17,000 --> 00:37:23,000
+and we don't need to use async-iro for this, so why do you always take time to type annotations in your slides?
+
+495
+00:37:23,000 --> 00:37:32,000
+No, I mean async-iro in your slides. So, no, like, async-iro is awesome because if you have your processing there,
+
+496
+00:37:32,000 --> 00:37:39,000
+you can add so many more things on top of this, like a health check, you can add progress monitoring,
+
+497
+00:37:39,000 --> 00:37:45,000
+you can embed whatever you put here in a server that you already have for other purposes.
+
+498
+00:37:45,000 --> 00:37:52,000
+So async-iro composes really nicely in this sort of way, but, you know, kind of rip-tap API and whatnot,
+
+499
+00:37:52,000 --> 00:38:00,000
+like it's also super easy to use, so like there's really no excuse because it is the way to write Python in ways that are fast as go.
+
+500
+00:38:00,000 --> 00:38:05,000
+Like, so, you know, if you really want fast servers, that's how you get to those.
+
+501
+00:38:05,000 --> 00:38:16,000
+So I would really kind of suggest you look at it, also because if you are really doing things that are, you know,
+
+502
+00:38:16,000 --> 00:38:20,000
+dealing with multiple things at once, so concurrency, however you're doing them,
+
+503
+00:38:20,000 --> 00:38:27,000
+with threads or with async-iro or G event, no, don't use G event, but, you know, there are multiple ways to do this.
+
+504
+00:38:27,000 --> 00:38:35,000
+You're going to have to handle errors, and now we can handle errors in async-iro in a really elegant way.
+
+505
+00:38:35,000 --> 00:38:45,000
+So what I kind of did before is I showed you the happy case where everything is fine and there are no try-and-excepts because nothing ever fails.
+
+506
+00:38:45,000 --> 00:38:50,000
+And this is a nice story, and I could finish my talk right now and you'd say, this is so awesome,
+
+507
+00:38:50,000 --> 00:38:53,000
+and then you would show some exceptions and I can catch you liar.
+
+508
+00:38:53,000 --> 00:39:05,000
+So let's synthesize a failure in our process function by saying, it will say, oops, I failed whenever it's on process one or on process 11, right?
+
+509
+00:39:05,000 --> 00:39:10,000
+You know, whatever. Stupid, but you do need an exception to do that.
+
+510
+00:39:10,000 --> 00:39:17,000
+Okay, that's arbitrary enough. And if you run this in our happy case code, what you're going to get is an exception, we accepted that.
+
+511
+00:39:17,000 --> 00:39:22,000
+I don't expect you to be able to read this, it's just there's an exception, right?
+
+512
+00:39:22,000 --> 00:39:30,000
+Like there's a value error, but what you should also notice is that, oh, it's the main process that totally crashed because this one word failed.
+
+513
+00:39:30,000 --> 00:39:33,000
+That kind of sucks, like we should do something about it.
+
+514
+00:39:33,000 --> 00:39:44,000
+So what you can do is you can wrap this for loop here around with try-excepts and say, well, if you try to get a result and there's an exception instead, we're going to catch it.
+
+515
+00:39:44,000 --> 00:39:52,000
+Fine, but you know, you're going to get one exception from the batch and then you're in the except clause and you're done.
+
+516
+00:39:52,000 --> 00:39:55,000
+This is the most thing that you can learn from it.
+
+517
+00:39:55,000 --> 00:40:01,000
+So maybe you can observe all the exceptions by hand in the for loop and then you have to gather them somewhere
+
+518
+00:40:01,000 --> 00:40:13,000
+and then you have to do something manually with them. It's kind of annoying, but most importantly, and if I'm honest with you, the ordinary reason why there are no try-excepts here is that I simply forgot.
+
+519
+00:40:13,000 --> 00:40:28,000
+Because it's really easy to just forget when you're excited about getting something running, but like, let's just deal with this, let's just make it run, and then it runs and you're happy, you go away, and you know, now it's the uncle's problem if it crashes at 3 AM.
+
+520
+00:40:28,000 --> 00:40:42,000
+So now let's not do that. Like instead now in 3.11, you can use task groups. If you use task groups that are async-width, async-width task group of DG, you have a block in which there are no arrays.
+
+521
+00:40:42,000 --> 00:40:48,000
+What the hell? Oh, because what is happening now is we are creating tasks inside the task group.
+
+522
+00:40:48,000 --> 00:40:59,000
+And the task group guarantees that by the time you leave the task group, right, so you leave the async-width block, all the tasks are done.
+
+523
+00:40:59,000 --> 00:41:06,000
+So there are not going to be any run-away tasks. You'll know that everything just finished. And what if there is an exception?
+
+524
+00:41:06,000 --> 00:41:13,000
+What if there's many? Because those are multiple processes that are literally running in parallel, so there can be many exceptions.
+
+525
+00:41:13,000 --> 00:41:21,000
+In this case, we're going to cancel everything else by default. You don't have to do anything so that there are no run-away tasks.
+
+526
+00:41:21,000 --> 00:41:26,000
+Everything is complete when we exit the async-width block, which is great.
+
+527
+00:41:26,000 --> 00:41:35,000
+So if you don't actually add any other types of steps, you're still going to get an exception, but you can see it's a little different, because now we have an exception group.
+
+528
+00:41:35,000 --> 00:41:42,000
+So if there will be many exceptions, we already have all of them grouped for us, so we can actually see all of them at once.
+
+529
+00:41:42,000 --> 00:41:54,000
+But better yet, if we simply use Python 3.11's exception star, which we already have there, we can already react to those exceptions as they happen.
+
+530
+00:41:54,000 --> 00:42:00,000
+We also ignore the cancel and exception task, as I said before, just so that we can actually report a result.
+
+531
+00:42:00,000 --> 00:42:05,000
+And with those changes, you get colors now. Thanks, Rick.
+
+532
+00:42:06,000 --> 00:42:17,000
+So yeah, this is actually cool in the sense that even if you forgot about the try-except, even if you forgot about the cancel and exception task,
+
+533
+00:42:17,000 --> 00:42:25,000
+if you just defaulted to using task groups, it would always tell you right away that something went wrong. There's an exception group.
+
+534
+00:42:25,000 --> 00:42:34,000
+And you would not have any tasks that are rendering, making it harder for you to shut down your application with Ctrl-C or however else.
+
+535
+00:42:34,000 --> 00:42:42,000
+Defaulting to task groups really changes how I think about async ILO, because it makes it much easier to structure a code correctly.
+
+536
+00:42:42,000 --> 00:42:48,000
+Everything that is within the async list will be dealt with by the time we're done with the async list.
+
+537
+00:42:48,000 --> 00:42:56,000
+You can obviously even put a wait there, and amazingly async ILO makes it work, but it will only cancel the part that is inside the block,
+
+538
+00:42:56,000 --> 00:43:01,000
+which isn't a code in Python, so it's a little tricky how they did that, but you know, it's amazing.
+
+539
+00:43:01,000 --> 00:43:12,000
+So I'm really happy about task groups. It's on its own a reason to use async ILO over just dealing with threads, which give you none of those nice keys.
+
+540
+00:43:13,000 --> 00:43:23,000
+So anyway, oops, I failed, and we can move on to, yeah, I actually made an entire 45-minute talk only about except star and exception groups.
+
+541
+00:43:23,000 --> 00:43:28,000
+So if you're like, sounds cool, but here we're doing it strange as well, then you can give me another chance.
+
+542
+00:43:28,000 --> 00:43:34,000
+And if that still failed, then I'm sorry, you can just leave me, like, you know, a thumbs down on YouTube.
+
+543
+00:43:34,000 --> 00:43:41,000
+So yeah, again, what about subinterpreters? Can you actually use them anyway? No.
+
+544
+00:43:41,000 --> 00:43:52,000
+And the reason why not is that there is no executor in async ILO yet that would allow us to use subinterpreter's magic as we have thread and process thread to executors.
+
+545
+00:43:52,000 --> 00:43:59,000
+But again, homework. Like, there's a whole room of people here, like, that might be your contribution.
+
+546
+00:43:59,000 --> 00:44:07,000
+So I invite you to actually play with Python now. These are really fun times to find out new ways to use it.
+
+547
+00:44:07,000 --> 00:44:12,000
+My name is Lucas Ranga. I'm really happy to be here. Thanks for the opportunity to speak.
+
+548
+00:44:12,000 --> 00:44:18,000
+I'm not taking questions, but I'm here doing our event, so you can ask me questions in person. Thank you.
+
+549
+00:44:22,000 --> 00:44:25,000
+Thanks.
+

@@ -1,0 +1,4112 @@
+1
+00:00:00,000 --> 00:00:03,760
+Okay. Hey, everyone. Welcome.
+
+2
+00:00:03,760 --> 00:00:06,040
+This is going to talk on profiling.
+
+3
+00:00:06,040 --> 00:00:09,320
+We're going to be talking about a lot of different profiling tools out there,
+
+4
+00:00:09,320 --> 00:00:13,600
+and discussing the background and some information you need to know about
+
+5
+00:00:13,600 --> 00:00:16,980
+profilers before you can be most effective for using them.
+
+6
+00:00:16,980 --> 00:00:19,180
+I am Shanna Matthews.
+
+7
+00:00:19,180 --> 00:00:22,480
+I'm a Developer Advocate at Sentry.
+
+8
+00:00:22,480 --> 00:00:25,420
+In my past, I've been a Developer Advocate a lot,
+
+9
+00:00:25,420 --> 00:00:28,880
+and also a Software Engineer. Interji?
+
+10
+00:00:29,040 --> 00:00:30,760
+Hey, I'm Interji.
+
+11
+00:00:30,760 --> 00:00:32,240
+I'm a Director of Engineering at Sentry,
+
+12
+00:00:32,240 --> 00:00:34,700
+and my teams work on session replay,
+
+13
+00:00:34,700 --> 00:00:36,200
+which launched earlier this year,
+
+14
+00:00:36,200 --> 00:00:39,000
+and also profiling, which we'll be talking to you about today.
+
+15
+00:00:39,000 --> 00:00:42,840
+We're probably not going to really talk about Sentry too much,
+
+16
+00:00:42,840 --> 00:00:44,240
+like at all during this presentation,
+
+17
+00:00:44,240 --> 00:00:45,280
+but we do have a booth,
+
+18
+00:00:45,280 --> 00:00:48,520
+and we'd be delighted to talk to you more about Sentry.
+
+19
+00:00:48,520 --> 00:00:52,120
+So please come find us after this or at our booth,
+
+20
+00:00:52,120 --> 00:00:57,440
+which we'll be hanging out at this evening and all day tomorrow and the next day.
+
+21
+00:00:57,440 --> 00:01:00,120
+Cool. Okay. So yeah, like I said,
+
+22
+00:01:00,120 --> 00:01:03,280
+I'm going to start this out by doing a background on profiling,
+
+23
+00:01:03,280 --> 00:01:06,640
+and giving you more conceptual information about different kinds of profilers,
+
+24
+00:01:06,640 --> 00:01:09,000
+and then Interji will take over in the second half,
+
+25
+00:01:09,000 --> 00:01:12,800
+and do a demo to show some of the stuff more hands-on.
+
+26
+00:01:12,800 --> 00:01:16,000
+Great. So I like to be interactive.
+
+27
+00:01:16,000 --> 00:01:18,080
+I won't ask you questions, really, don't worry.
+
+28
+00:01:18,080 --> 00:01:19,240
+But before we start,
+
+29
+00:01:19,240 --> 00:01:23,200
+I like to get a sense of how familiar people are with profiling.
+
+30
+00:01:23,200 --> 00:01:26,400
+So please raise your hand for me if you're
+
+31
+00:01:26,400 --> 00:01:29,360
+what you would consider novice at profiling.
+
+32
+00:01:29,360 --> 00:01:32,120
+Don't really know what it is, you just played around with it a little.
+
+33
+00:01:32,120 --> 00:01:35,200
+Okay, cool. Maybe more of an intermediate level,
+
+34
+00:01:35,200 --> 00:01:37,360
+like you use them but you're not an expert.
+
+35
+00:01:37,360 --> 00:01:39,280
+Okay. Okay, cool.
+
+36
+00:01:39,280 --> 00:01:43,400
+Raise your hand if you are an expert at profiling.
+
+37
+00:01:43,400 --> 00:01:45,520
+Okay. Ask him the questions.
+
+38
+00:01:45,520 --> 00:01:48,040
+We'll be directing questions to him. No, I'm just kidding.
+
+39
+00:01:48,040 --> 00:01:51,440
+Okay. Cool. So obviously this is PyCon,
+
+40
+00:01:51,440 --> 00:01:54,800
+so we're going to talk about some Python-specific profiling tools.
+
+41
+00:01:54,800 --> 00:01:59,640
+How many people have actually used Python's profile or C-profile?
+
+42
+00:01:59,640 --> 00:02:01,800
+Good. Lots of you. Okay, that's great.
+
+43
+00:02:01,800 --> 00:02:03,120
+We'll definitely be talking about that,
+
+44
+00:02:03,120 --> 00:02:05,400
+but talking about some other tools as well.
+
+45
+00:02:05,400 --> 00:02:07,200
+Okay. Last one, I promise.
+
+46
+00:02:07,200 --> 00:02:10,400
+How many people have used continuous profiling tools?
+
+47
+00:02:10,400 --> 00:02:12,920
+So AWS and GCP have versions.
+
+48
+00:02:12,920 --> 00:02:14,200
+Okay. A couple of people. Cool.
+
+49
+00:02:14,200 --> 00:02:16,960
+We're going to talk about those a little bit as well.
+
+50
+00:02:16,960 --> 00:02:20,200
+Great. So I'm going to start from the very basics,
+
+51
+00:02:20,200 --> 00:02:23,320
+but we won't spend too much time on the super simple stuff.
+
+52
+00:02:23,320 --> 00:02:25,200
+But what is a profiler?
+
+53
+00:02:25,200 --> 00:02:29,240
+So a profiler is a dynamic analysis tool.
+
+54
+00:02:29,240 --> 00:02:32,280
+So this means that it works while your code is running,
+
+55
+00:02:32,280 --> 00:02:35,720
+and this is really in contrast to static analysis tools.
+
+56
+00:02:35,720 --> 00:02:39,320
+So really common static analysis tools you're probably familiar with would be things like
+
+57
+00:02:39,320 --> 00:02:45,200
+code coverage or things that can look at your code and pick out potential security flaws.
+
+58
+00:02:45,200 --> 00:02:47,280
+So those are things that can just look at your code
+
+59
+00:02:47,280 --> 00:02:49,680
+even though it's not running and give you this information.
+
+60
+00:02:49,680 --> 00:02:52,600
+Profilers have to be running while your code is running,
+
+61
+00:02:52,600 --> 00:02:54,560
+otherwise it can't really tell you anything.
+
+62
+00:02:54,560 --> 00:02:57,960
+There are so many different types of profilers out there.
+
+63
+00:02:57,960 --> 00:03:02,120
+There's like anything that you want to measure about your code,
+
+64
+00:03:02,120 --> 00:03:03,720
+you can pretty much get a profile to do it.
+
+65
+00:03:03,720 --> 00:03:08,600
+But the most common ones by far would be memory profilers and CPU profilers.
+
+66
+00:03:08,600 --> 00:03:12,720
+We're really going to exclusively talk about CPU profilers today.
+
+67
+00:03:12,720 --> 00:03:14,800
+But just like earlier in this room, it was cool.
+
+68
+00:03:14,800 --> 00:03:16,960
+There was someone talking about at the Bloomberg talk,
+
+69
+00:03:16,960 --> 00:03:18,240
+they're talking about memory,
+
+70
+00:03:18,240 --> 00:03:19,960
+that memory profiler.
+
+71
+00:03:19,960 --> 00:03:23,240
+So go talk to them if you want to talk about memory profilers.
+
+72
+00:03:23,240 --> 00:03:26,080
+Cool. So even within CPU profilers,
+
+73
+00:03:26,080 --> 00:03:29,880
+there's actually a lot of variation in how they work.
+
+74
+00:03:29,880 --> 00:03:33,640
+The way that they are designed really impacts what they're most useful for
+
+75
+00:03:33,640 --> 00:03:36,320
+and what they're most effective at measuring.
+
+76
+00:03:36,320 --> 00:03:40,400
+We're now going to do a little bit of history of profiling.
+
+77
+00:03:40,400 --> 00:03:43,080
+I really like learning about the history of computing,
+
+78
+00:03:43,080 --> 00:03:46,760
+and I think it's so helpful to understand a little bit of the background about these things.
+
+79
+00:03:46,760 --> 00:03:49,920
+Things just build upon each other and technology just gets more complicated.
+
+80
+00:03:49,920 --> 00:03:53,200
+So it's good to understand where things come from to know where we're at.
+
+81
+00:03:53,200 --> 00:03:56,800
+Cool. So profilers have actually been around since the 70s,
+
+82
+00:03:56,800 --> 00:03:58,200
+which is crazy to me.
+
+83
+00:03:58,200 --> 00:04:00,520
+The first ones were made by IBM,
+
+84
+00:04:00,520 --> 00:04:05,560
+and they basically worked by using timer interrupts and
+
+85
+00:04:05,560 --> 00:04:08,400
+stopping the system and recording the register.
+
+86
+00:04:08,400 --> 00:04:10,000
+So by doing this,
+
+87
+00:04:10,000 --> 00:04:12,680
+it was by definition a sampling profiler.
+
+88
+00:04:12,680 --> 00:04:14,760
+Don't worry if you don't know what that really means yet.
+
+89
+00:04:14,760 --> 00:04:18,880
+We'll be talking a lot more about what that means later on in the talk.
+
+90
+00:04:18,880 --> 00:04:22,600
+Then the first profile that shipped on Unix was just called Prof.
+
+91
+00:04:22,600 --> 00:04:25,440
+All it could really give you was just a printout of
+
+92
+00:04:25,440 --> 00:04:28,680
+all the different functions that it saw and how long it saw them running for,
+
+93
+00:04:28,680 --> 00:04:31,400
+which was really helpful for them at the time.
+
+94
+00:04:31,400 --> 00:04:33,600
+But obviously now we have a lot better tools.
+
+95
+00:04:33,600 --> 00:04:41,160
+In 1982, the first Unix profiler that could actually give you a call graph shipped.
+
+96
+00:04:41,160 --> 00:04:43,800
+So that was very revolutionary at the time.
+
+97
+00:04:43,800 --> 00:04:46,880
+The call graph, if you have used Python profilers,
+
+98
+00:04:46,880 --> 00:04:50,160
+are those pretty colorful graphs.
+
+99
+00:04:50,160 --> 00:04:54,720
+They mostly look like a tree that show you the hot code paths.
+
+100
+00:04:54,720 --> 00:04:58,720
+I don't know if they were really that colorful back in 1982 when these were happening,
+
+101
+00:04:58,720 --> 00:05:01,120
+but that's when the first one showed up.
+
+102
+00:05:01,120 --> 00:05:04,240
+Cool. So back then,
+
+103
+00:05:04,240 --> 00:05:07,600
+profilers were mostly used on profiling compilers,
+
+104
+00:05:07,600 --> 00:05:09,700
+which that's cool because compilers are some of
+
+105
+00:05:09,700 --> 00:05:13,120
+the most computationally intensive things happening at the time.
+
+106
+00:05:13,120 --> 00:05:15,120
+But for a while, there weren't really,
+
+107
+00:05:15,120 --> 00:05:17,240
+there were many breakthroughs for a little bit.
+
+108
+00:05:17,240 --> 00:05:20,400
+There was this Adam paper which I have listed here.
+
+109
+00:05:20,400 --> 00:05:24,320
+I think it's neat because the Adam paper was really about figuring out how to make
+
+110
+00:05:24,320 --> 00:05:27,080
+your program's code modify itself.
+
+111
+00:05:27,080 --> 00:05:29,480
+So this is used for a lot of things,
+
+112
+00:05:29,480 --> 00:05:31,720
+but they also implemented this in compilers.
+
+113
+00:05:31,720 --> 00:05:35,440
+So instead of having to run the compilers a completely separate thing,
+
+114
+00:05:35,440 --> 00:05:38,280
+your code could actually profile itself,
+
+115
+00:05:38,280 --> 00:05:40,440
+which is what we do very commonly now.
+
+116
+00:05:40,440 --> 00:05:42,840
+This is actually called instrumentation.
+
+117
+00:05:42,840 --> 00:05:46,160
+In this paper, which I think is funny because now we all
+
+118
+00:05:46,160 --> 00:05:50,040
+use the term instrumentation very freely and it's a very obvious concept,
+
+119
+00:05:50,040 --> 00:05:55,160
+but this was when it was decided to be a new term.
+
+120
+00:05:55,160 --> 00:05:58,800
+Then pretty soon after that in 1997,
+
+121
+00:05:58,800 --> 00:06:03,240
+actually the term continuous profiling came into the lexicon.
+
+122
+00:06:03,240 --> 00:06:06,520
+This is another paper and it was about how you could run
+
+123
+00:06:06,520 --> 00:06:09,880
+profiling continuously on just one machine.
+
+124
+00:06:09,880 --> 00:06:12,800
+This is the first time continuous profiling was actually happening.
+
+125
+00:06:12,800 --> 00:06:15,240
+It still was probably not that good at the time.
+
+126
+00:06:15,240 --> 00:06:18,560
+It was doing statistical profiling again and it was really
+
+127
+00:06:18,560 --> 00:06:20,680
+exciting because you could save your profiles on
+
+128
+00:06:20,680 --> 00:06:23,320
+the same disk and run this all the time on one machine.
+
+129
+00:06:23,320 --> 00:06:26,680
+It maybe wasn't very accurate at the time still,
+
+130
+00:06:26,680 --> 00:06:28,760
+but it was functional, so that's cool.
+
+131
+00:06:28,760 --> 00:06:30,800
+Then sometime in this timeline,
+
+132
+00:06:30,800 --> 00:06:32,440
+deterministic profiler showed up.
+
+133
+00:06:32,440 --> 00:06:36,560
+I really tried to find when deterministic profilers first started to be discussed,
+
+134
+00:06:36,560 --> 00:06:37,960
+but I couldn't. So if you know,
+
+135
+00:06:37,960 --> 00:06:40,000
+I would love to hear more about that.
+
+136
+00:06:40,000 --> 00:06:43,440
+Again, deterministic profilers are like the flip side of sampling,
+
+137
+00:06:43,440 --> 00:06:46,400
+but we'll talk about that a lot more in a little bit.
+
+138
+00:06:46,400 --> 00:06:52,760
+Great. The next really big thing on here was Google's Google-wide profiling paper.
+
+139
+00:06:52,760 --> 00:06:56,340
+This was a big expansion of the idea of continuous profiling.
+
+140
+00:06:56,340 --> 00:07:01,600
+This came out in 2010 when Google published about how they had decided to
+
+141
+00:07:01,600 --> 00:07:05,640
+profile all of their machines across data centers.
+
+142
+00:07:05,640 --> 00:07:09,160
+This is taking continuous profiling from running on one machine to
+
+143
+00:07:09,160 --> 00:07:12,120
+running on thousands and thousands and thousands.
+
+144
+00:07:12,120 --> 00:07:13,880
+Obviously, for Google to do this,
+
+145
+00:07:13,880 --> 00:07:16,320
+they had to make sure they had a really low overhead,
+
+146
+00:07:16,320 --> 00:07:19,040
+and they were able to get pretty high accuracy.
+
+147
+00:07:19,040 --> 00:07:21,600
+The tool that they used for this was called O-Profile,
+
+148
+00:07:21,600 --> 00:07:23,180
+which I don't actually know that much about,
+
+149
+00:07:23,180 --> 00:07:25,520
+but if you want to look at it more.
+
+150
+00:07:25,520 --> 00:07:29,240
+Yeah, and Google obviously cared about this because they were doing this in
+
+151
+00:07:29,240 --> 00:07:33,000
+their data centers and it was a massive cost savings if they could
+
+152
+00:07:33,000 --> 00:07:37,280
+shave off even a little bit of time to the CPU intensive processes.
+
+153
+00:07:37,280 --> 00:07:39,000
+That's why they cared.
+
+154
+00:07:39,000 --> 00:07:43,360
+Now that we're all running things in the Cloud all the time across data centers,
+
+155
+00:07:43,360 --> 00:07:45,640
+we're all starting to care about this.
+
+156
+00:07:45,640 --> 00:07:48,960
+There's been breakthroughs every 10 years or so.
+
+157
+00:07:48,960 --> 00:07:51,560
+Maybe not so surprising that now in the 2020s,
+
+158
+00:07:51,560 --> 00:07:56,040
+we're seeing an explosion of continuous profiling tools.
+
+159
+00:07:56,040 --> 00:07:59,120
+A lot of these are based on open source profilers that have
+
+160
+00:07:59,120 --> 00:08:01,880
+just gradually been improving over the years.
+
+161
+00:08:01,880 --> 00:08:05,240
+Much thanks to all the maintainers out there.
+
+162
+00:08:05,240 --> 00:08:09,560
+Cool. I'm going to take a sec also to compare profiling to
+
+163
+00:08:09,560 --> 00:08:12,880
+the traditional three pillars of observability.
+
+164
+00:08:12,880 --> 00:08:15,720
+I don't know if people here are really into observability.
+
+165
+00:08:15,720 --> 00:08:18,480
+I definitely wasn't before joining Sentry.
+
+166
+00:08:18,480 --> 00:08:23,680
+I'll just talk a little bit about what they are and how profiling is different.
+
+167
+00:08:23,680 --> 00:08:26,600
+Tracing is one of the pillars.
+
+168
+00:08:26,600 --> 00:08:29,640
+It's very often referred to as distributed tracing.
+
+169
+00:08:29,640 --> 00:08:33,720
+Tracing is basically tracking a request as it moves through a system,
+
+170
+00:08:33,720 --> 00:08:38,200
+and if it's moving through multiple systems, it's distributed.
+
+171
+00:08:38,200 --> 00:08:41,080
+Distributed tracing is really helpful.
+
+172
+00:08:41,080 --> 00:08:43,560
+It gives you a lot of information and it can also give you
+
+173
+00:08:43,560 --> 00:08:45,800
+information about the timing of those requests.
+
+174
+00:08:45,800 --> 00:08:47,320
+It's very helpful in performance,
+
+175
+00:08:47,320 --> 00:08:49,720
+but it's useful for a lot of other things too.
+
+176
+00:08:49,720 --> 00:08:52,080
+Tracing is great because it can give you information
+
+177
+00:08:52,080 --> 00:08:54,560
+about external parts of your code that might be slow.
+
+178
+00:08:54,560 --> 00:08:58,200
+If you're calling services that are slow or your database is slow,
+
+179
+00:08:58,200 --> 00:09:01,720
+you can really see that information by looking at your tracing data.
+
+180
+00:09:01,720 --> 00:09:05,640
+However, it is not that great at telling you why your own code is slow,
+
+181
+00:09:05,640 --> 00:09:10,480
+unless you want to go in and add a whole bunch of instrumentation inside your own code,
+
+182
+00:09:10,480 --> 00:09:12,760
+which some people do that and that's great,
+
+183
+00:09:12,760 --> 00:09:16,000
+but it's a little time-consuming and burdensome.
+
+184
+00:09:16,000 --> 00:09:20,360
+So logging. Hopefully, everyone is familiar with logging.
+
+185
+00:09:20,360 --> 00:09:22,600
+Logs are very manual.
+
+186
+00:09:22,600 --> 00:09:26,080
+We all know that they can be used for performance,
+
+187
+00:09:26,080 --> 00:09:29,760
+but they're also just totally useful for debugging stuff,
+
+188
+00:09:29,760 --> 00:09:32,680
+even though it can be a pain to dig through them sometimes.
+
+189
+00:09:32,680 --> 00:09:37,200
+I don't think that profiling can compete with logging in any way.
+
+190
+00:09:37,200 --> 00:09:39,560
+It's just another tool to use on top of logging.
+
+191
+00:09:39,560 --> 00:09:42,840
+So sorry, you're going to have to keep digging through your logs a lot.
+
+192
+00:09:42,840 --> 00:09:45,240
+Then finally, metrics.
+
+193
+00:09:45,240 --> 00:09:48,360
+So metrics are just numeric measurements and
+
+194
+00:09:48,360 --> 00:09:51,720
+you collect them continuously as your system is running.
+
+195
+00:09:51,720 --> 00:09:53,920
+Metrics are just numbers,
+
+196
+00:09:53,920 --> 00:09:57,240
+so they are really efficient to store unlike logs.
+
+197
+00:09:57,240 --> 00:10:01,680
+But they're not so great for giving you any information about why things are happening.
+
+198
+00:10:01,680 --> 00:10:04,600
+They're super awesome for letting you know that something is going wrong.
+
+199
+00:10:04,600 --> 00:10:08,120
+But if you need to actually go figure out why that's happening and fix it,
+
+200
+00:10:08,120 --> 00:10:10,880
+your metrics aren't going to do anything for you.
+
+201
+00:10:10,880 --> 00:10:13,320
+So profiling.
+
+202
+00:10:13,320 --> 00:10:16,800
+I definitely think profiling is complimentary to almost all of these.
+
+203
+00:10:16,800 --> 00:10:21,680
+I think there are certain use cases where profiling can replace,
+
+204
+00:10:21,800 --> 00:10:25,400
+or maybe could start to replace tracing.
+
+205
+00:10:25,400 --> 00:10:28,360
+But that's maybe for another person's talk.
+
+206
+00:10:28,360 --> 00:10:32,880
+Profiling is really good for doing exactly what metrics can't,
+
+207
+00:10:32,880 --> 00:10:37,120
+which is showing you where things are going wrong in your own code.
+
+208
+00:10:37,120 --> 00:10:38,920
+So if something bad is happening,
+
+209
+00:10:38,920 --> 00:10:43,560
+it can pretty much get you down to the line number of where that slowdown is happening.
+
+210
+00:10:43,560 --> 00:10:46,120
+You don't have to dig around for it.
+
+211
+00:10:47,960 --> 00:10:51,200
+Cool. So now we will finally talk about
+
+212
+00:10:51,200 --> 00:10:53,640
+deterministic versus sampling profilers,
+
+213
+00:10:53,640 --> 00:10:56,720
+which I've been previewing over and over again.
+
+214
+00:10:56,720 --> 00:10:59,200
+At a really, really high level,
+
+215
+00:10:59,200 --> 00:11:06,120
+deterministic profilers are really focused on precise function timing information.
+
+216
+00:11:06,120 --> 00:11:10,560
+So every time that a function starts or ends or an exception happens,
+
+217
+00:11:10,560 --> 00:11:14,160
+your deterministic profiler takes note of that.
+
+218
+00:11:14,160 --> 00:11:17,920
+They also definitely have a higher performance overhead.
+
+219
+00:11:17,920 --> 00:11:20,360
+So doing this for every single function,
+
+220
+00:11:20,400 --> 00:11:22,600
+start and end takes up a lot of overhead.
+
+221
+00:11:22,600 --> 00:11:25,720
+This slide says more than 15 percent overhead,
+
+222
+00:11:25,720 --> 00:11:29,560
+but in reality, it can be a lot more than 15 percent overhead.
+
+223
+00:11:29,560 --> 00:11:33,920
+It can be 200 percent, two times, three times, more than that even.
+
+224
+00:11:33,920 --> 00:11:35,640
+On the other hand, at a super high level,
+
+225
+00:11:35,640 --> 00:11:40,840
+sampling profilers, they compromise by giving you less precise information
+
+226
+00:11:40,840 --> 00:11:43,720
+with a much lower performance overhead.
+
+227
+00:11:43,720 --> 00:11:45,240
+So how does that work?
+
+228
+00:11:45,240 --> 00:11:49,960
+So I said that these deterministic profilers basically track every time
+
+229
+00:11:49,960 --> 00:11:52,760
+that a function starts and every time that it ends
+
+230
+00:11:52,760 --> 00:11:56,280
+and every time an exception happens, but that's not really on here.
+
+231
+00:11:57,800 --> 00:12:01,400
+And so, yeah, this is that diagram and that's the top part.
+
+232
+00:12:01,400 --> 00:12:05,640
+And then on the bottom part is a discussion of how sampling profilers work.
+
+233
+00:12:05,640 --> 00:12:08,760
+So what you can see is on these dotted lines,
+
+234
+00:12:08,760 --> 00:12:13,640
+that's basically where the sampling profiler is taking a snapshot of your call stack.
+
+235
+00:12:13,640 --> 00:12:17,080
+So instead of doing that all the time, it's just doing that on a regular basis.
+
+236
+00:12:18,040 --> 00:12:24,200
+Um, yeah, this can, this is really great because it means that the overhead is constant.
+
+237
+00:12:24,200 --> 00:12:28,840
+So on that top diagram, the more function calls you have,
+
+238
+00:12:28,840 --> 00:12:31,480
+the more overhead that the profiler is going to add.
+
+239
+00:12:32,360 --> 00:12:35,640
+And that can be frustrating and also like mess up your data.
+
+240
+00:12:36,520 --> 00:12:40,040
+On the bottom, like you have a very consistent amount of time
+
+241
+00:12:40,040 --> 00:12:42,280
+that you're going to spend grabbing samples.
+
+242
+00:12:42,280 --> 00:12:45,080
+So the profiler's overhead is both lower and more consistent.
+
+243
+00:12:45,720 --> 00:12:47,720
+Cool.
+
+244
+00:12:47,720 --> 00:12:51,480
+Okay, so this is just a little bit more about how the sampling profiler works.
+
+245
+00:12:51,480 --> 00:12:56,920
+So I said it's like a little bit less accurate, um, which is true,
+
+246
+00:12:56,920 --> 00:13:00,520
+but they're like very fancy and they collect so many samples now
+
+247
+00:13:00,520 --> 00:13:04,520
+that we pretty much don't even need to think about them as being too much less accurate.
+
+248
+00:13:04,520 --> 00:13:06,520
+So this is basically how that would work.
+
+249
+00:13:06,520 --> 00:13:10,680
+So we had those dotted lines showing when we were taking snapshots of the call stack.
+
+250
+00:13:11,560 --> 00:13:14,680
+Imagine we took one at zero milliseconds, which would be sample one.
+
+251
+00:13:15,400 --> 00:13:18,120
+And we see we have ABC, that's our call stack.
+
+252
+00:13:19,560 --> 00:13:24,680
+And then we take another snapshot at 10 milliseconds and only A and B are on the call stack.
+
+253
+00:13:24,680 --> 00:13:28,440
+So these are our two samples and really, really, really roughly here,
+
+254
+00:13:28,440 --> 00:13:32,600
+we can see that we can say that C took about 10 milliseconds.
+
+255
+00:13:33,240 --> 00:13:36,840
+Obviously, actual sampling profilers are taking many more samples than this
+
+256
+00:13:36,840 --> 00:13:37,880
+and have a lot more data.
+
+257
+00:13:37,880 --> 00:13:42,440
+So they can use fancy math to be really accurate about how long things actually took.
+
+258
+00:13:42,440 --> 00:13:46,440
+Wonderful. Okay. So that's sampling versus deterministic profilers.
+
+259
+00:13:46,440 --> 00:13:50,840
+Now, we're going to talk a little bit about profiling locally versus in production.
+
+260
+00:13:50,840 --> 00:13:53,880
+It sounds like a lot of you are quite familiar with profiling locally,
+
+261
+00:13:53,880 --> 00:13:59,000
+which is probably what you're doing with your Python built-in profiling tools on your computer.
+
+262
+00:14:00,040 --> 00:14:03,880
+Yeah, local profiling usually uses these deterministic profilers.
+
+263
+00:14:03,880 --> 00:14:07,480
+So Python C profile and profile are both deterministic.
+
+264
+00:14:08,680 --> 00:14:12,120
+Profiling locally is not really representative of what's happening in the environment.
+
+265
+00:14:12,120 --> 00:14:15,480
+It's not really representative of what's happening in the real world, though.
+
+266
+00:14:15,480 --> 00:14:19,080
+So the more complicated your system gets, the more external things it's calling,
+
+267
+00:14:19,080 --> 00:14:22,840
+the less similar what's happening on your dev box is to what's actually happening
+
+268
+00:14:22,840 --> 00:14:24,360
+and what your users are seeing.
+
+269
+00:14:24,360 --> 00:14:30,360
+So sampling in production is really helpful for a more complicated or cloud-based product.
+
+270
+00:14:31,800 --> 00:14:34,200
+Yeah, so in production, you'd usually use a sampling profiler
+
+271
+00:14:34,200 --> 00:14:37,400
+because you really don't want to give your code any more overhead
+
+272
+00:14:37,400 --> 00:14:39,480
+when your users are actually using it.
+
+273
+00:14:39,480 --> 00:14:41,560
+You get a whole bunch more real-world information.
+
+274
+00:14:43,960 --> 00:14:50,040
+Okay, let's talk a little bit about visualizing profile data.
+
+275
+00:14:50,040 --> 00:14:54,120
+So hopefully a lot of people here recognize this.
+
+276
+00:14:54,120 --> 00:14:59,400
+This would be the output of if you ran C profile on your computer
+
+277
+00:14:59,400 --> 00:15:03,800
+and then you put it into Gprof2.
+
+278
+00:15:04,360 --> 00:15:06,200
+This is the kind of thing that you'd get out of it.
+
+279
+00:15:06,680 --> 00:15:12,760
+Yeah, these are called call graph visualizations,
+
+280
+00:15:12,760 --> 00:15:14,520
+call graph visualizations, and these are actually the ones
+
+281
+00:15:14,520 --> 00:15:16,920
+that were invented back in 1982 or whatever.
+
+282
+00:15:16,920 --> 00:15:19,080
+So these have been around for a really long time.
+
+283
+00:15:19,080 --> 00:15:20,200
+They're still very useful.
+
+284
+00:15:20,200 --> 00:15:21,800
+There's honestly not much wrong with that.
+
+285
+00:15:22,680 --> 00:15:26,200
+We have new ones and we'll talk about new visualization types.
+
+286
+00:15:26,200 --> 00:15:29,880
+But just this is really quite intuitive.
+
+287
+00:15:29,880 --> 00:15:33,720
+It uses colors here to tell us where the slow parts of our code are
+
+288
+00:15:33,720 --> 00:15:36,760
+and this nice diagram shows us our dependent,
+
+289
+00:15:36,760 --> 00:15:38,520
+like what ran after what.
+
+290
+00:15:39,160 --> 00:15:41,160
+So you could just look at this and see where a hot,
+
+291
+00:15:41,800 --> 00:15:44,040
+warm-colored hot code path is
+
+292
+00:15:44,040 --> 00:15:45,560
+and that's where you can start investigating.
+
+293
+00:15:48,840 --> 00:15:52,280
+But like I said, a lot of time has passed since those were invented.
+
+294
+00:15:52,280 --> 00:15:56,360
+We definitely have new, better ways of visualizing profiling data.
+
+295
+00:15:56,360 --> 00:15:59,400
+So one of those ways are flame graphs.
+
+296
+00:16:00,840 --> 00:16:02,440
+This is an example flame graph.
+
+297
+00:16:02,520 --> 00:16:05,560
+Flame graphs were invented by this guy, Brandon Gregg,
+
+298
+00:16:05,560 --> 00:16:09,320
+in like 2016, I think, when he was working at Netflix.
+
+299
+00:16:09,320 --> 00:16:11,640
+So these have also been around for a while,
+
+300
+00:16:11,640 --> 00:16:14,920
+but at least I wasn't familiar with them personally as a dev
+
+301
+00:16:14,920 --> 00:16:16,120
+until pretty recently.
+
+302
+00:16:18,360 --> 00:16:22,200
+Yeah, so his idea for these were to make it easier
+
+303
+00:16:22,200 --> 00:16:24,280
+to interpret profiling data.
+
+304
+00:16:24,280 --> 00:16:26,280
+I think that's maybe a little bit subjective.
+
+305
+00:16:26,280 --> 00:16:27,720
+I don't know, when I look at this,
+
+306
+00:16:28,440 --> 00:16:31,320
+I don't think anything about this looks easier to understand
+
+307
+00:16:31,320 --> 00:16:32,360
+than just the call graph.
+
+308
+00:16:32,920 --> 00:16:37,240
+But we're going to talk a little bit about what the parts of this are
+
+309
+00:16:37,240 --> 00:16:38,920
+so that you can get a little bit more familiar
+
+310
+00:16:38,920 --> 00:16:41,560
+and I'll give you some tips for interpreting these,
+
+311
+00:16:41,560 --> 00:16:44,680
+although it's definitely a skill that you have to build up over time.
+
+312
+00:16:45,560 --> 00:16:47,160
+So yeah, this is a flame graph.
+
+313
+00:16:47,160 --> 00:16:49,720
+And first of all, the reason why it's called a flame graph
+
+314
+00:16:49,720 --> 00:16:51,400
+is because it looks like flames.
+
+315
+00:16:51,400 --> 00:16:53,080
+It's really not that deep.
+
+316
+00:16:53,080 --> 00:16:56,840
+It's red and there's little licks that look kind of like fire coming off of it.
+
+317
+00:16:56,840 --> 00:17:01,880
+So what you're actually looking at is the stack traces of a profile here.
+
+318
+00:17:01,880 --> 00:17:05,800
+So a stack trace is a column of rectangles
+
+319
+00:17:05,800 --> 00:17:08,200
+and each rectangle you're seeing on there
+
+320
+00:17:08,200 --> 00:17:11,560
+represents one function or a stack frame.
+
+321
+00:17:12,360 --> 00:17:15,080
+So that's like what the y-axis shows.
+
+322
+00:17:15,080 --> 00:17:16,680
+It shows the stack depth.
+
+323
+00:17:16,680 --> 00:17:20,680
+So anything that's at the top is basically what was on the CPU
+
+324
+00:17:20,680 --> 00:17:23,160
+when a profile was collected.
+
+325
+00:17:23,160 --> 00:17:25,800
+And then anything under that is that function's parent.
+
+326
+00:17:27,160 --> 00:17:31,160
+Really importantly here, and it's not necessarily intuitive,
+
+327
+00:17:31,160 --> 00:17:33,960
+the x-axis does not show time.
+
+328
+00:17:33,960 --> 00:17:35,240
+It doesn't show time.
+
+329
+00:17:35,240 --> 00:17:39,000
+The x-axis kind of like doesn't really show much.
+
+330
+00:17:39,000 --> 00:17:41,560
+It's just a good grouping of the frames.
+
+331
+00:17:42,200 --> 00:17:46,760
+So the way that things are organized left to right here
+
+332
+00:17:46,760 --> 00:17:50,360
+is actually almost always alphabetically by the function name.
+
+333
+00:17:51,160 --> 00:17:54,440
+And then if two rectangles next together had the same function name,
+
+334
+00:17:54,440 --> 00:17:57,240
+they get combined into one bigger rectangle.
+
+335
+00:17:57,240 --> 00:17:58,680
+So that's what you're seeing here.
+
+336
+00:18:00,040 --> 00:18:01,480
+Yeah, they just get merged together.
+
+337
+00:18:01,480 --> 00:18:04,200
+And then the width of these rectangles up here
+
+338
+00:18:04,200 --> 00:18:09,160
+shows the frequency with which that function was seen in the sample data.
+
+339
+00:18:09,800 --> 00:18:13,640
+So that's kind of a really precise thing and I want to emphasize it.
+
+340
+00:18:13,640 --> 00:18:17,800
+The wider the rectangle, the more often that function showed up.
+
+341
+00:18:17,800 --> 00:18:21,800
+It doesn't mean that that function takes longer necessarily.
+
+342
+00:18:21,800 --> 00:18:23,960
+It just means it was seen more often.
+
+343
+00:18:23,960 --> 00:18:26,200
+It often means that it was slower.
+
+344
+00:18:26,200 --> 00:18:27,320
+That's not exactly what it means.
+
+345
+00:18:27,320 --> 00:18:29,640
+It could just be called like five million times
+
+346
+00:18:30,280 --> 00:18:31,320
+and it would show up the same way.
+
+347
+00:18:33,240 --> 00:18:35,640
+And yeah, the colors here, while it's very colorful
+
+348
+00:18:35,640 --> 00:18:36,600
+and kind of pretty to look at,
+
+349
+00:18:36,600 --> 00:18:38,840
+the colors are actually basically meaningless.
+
+350
+00:18:38,840 --> 00:18:41,800
+They're just random colors that were picked that looked nice.
+
+351
+00:18:41,800 --> 00:18:45,960
+Brendan liked this color scheme, I guess, and everyone's stuck with it since.
+
+352
+00:18:46,760 --> 00:18:50,680
+Yeah, they're literally just different colors to help your eye differentiate them.
+
+353
+00:18:50,680 --> 00:18:55,160
+But different kind of people have built upon this and used colors
+
+354
+00:18:55,160 --> 00:18:58,760
+in a way that's more informational rather than just cool looking.
+
+355
+00:19:01,560 --> 00:19:06,280
+Okay, so we kind of know what the parts of a flame graph mean,
+
+356
+00:19:06,280 --> 00:19:09,480
+but how do you actually look at one of these flame graphs
+
+357
+00:19:09,480 --> 00:19:12,120
+and get any information about where your code is slow?
+
+358
+00:19:12,920 --> 00:19:13,800
+It's not obvious.
+
+359
+00:19:14,360 --> 00:19:16,920
+So like I said, it is a skill and the more you do it,
+
+360
+00:19:16,920 --> 00:19:19,240
+the kind of more you'll just intuitively understand
+
+361
+00:19:19,240 --> 00:19:22,680
+what flame graphs are telling you, especially when it's your code base.
+
+362
+00:19:23,320 --> 00:19:27,480
+But some like tips that you can try to apply if you're getting started,
+
+363
+00:19:28,200 --> 00:19:32,520
+obvious stuff would be look for large plateaus along the top edge.
+
+364
+00:19:32,520 --> 00:19:36,680
+So if there's a big function with a big exposed top edge,
+
+365
+00:19:36,680 --> 00:19:41,480
+that means that function was running really frequently on the CPU.
+
+366
+00:19:41,480 --> 00:19:44,280
+So in this example, we can see that our function G,
+
+367
+00:19:45,240 --> 00:19:46,920
+it's the widest thing on the top.
+
+368
+00:19:48,120 --> 00:19:52,040
+D, which is it's like grandparent is wider overall,
+
+369
+00:19:52,040 --> 00:19:56,200
+but like the exposed top edge on D is shorter than G.
+
+370
+00:19:56,200 --> 00:19:59,800
+So we would be more suspicious of G of taking a long time.
+
+371
+00:20:01,240 --> 00:20:01,640
+Cool.
+
+372
+00:20:01,640 --> 00:20:02,120
+Oh, yeah.
+
+373
+00:20:02,120 --> 00:20:05,960
+And then also like, you know, C and B are like more parents,
+
+374
+00:20:05,960 --> 00:20:07,400
+they don't have any exposed edge at all.
+
+375
+00:20:07,400 --> 00:20:09,080
+So they were not really taking any time.
+
+376
+00:20:11,000 --> 00:20:12,600
+A couple other things you can do,
+
+377
+00:20:12,680 --> 00:20:15,080
+you can read top down to see ancestry.
+
+378
+00:20:15,080 --> 00:20:16,120
+We've kind of covered that.
+
+379
+00:20:16,120 --> 00:20:17,800
+So I think that's obvious.
+
+380
+00:20:17,800 --> 00:20:20,440
+But yeah, you can scan them, see who called what,
+
+381
+00:20:21,080 --> 00:20:23,160
+or you could kind of look at this and read bottom up
+
+382
+00:20:23,160 --> 00:20:26,200
+to get more of a big picture view of how your code flow is happening.
+
+383
+00:20:28,200 --> 00:20:28,440
+Yeah.
+
+384
+00:20:28,440 --> 00:20:31,720
+And then obviously look for wide function boxes.
+
+385
+00:20:31,720 --> 00:20:37,080
+So our big boys here, we can see B on this code path
+
+386
+00:20:37,080 --> 00:20:41,080
+was called about like four times more than H.
+
+387
+00:20:41,080 --> 00:20:43,960
+So big wide function boxes are suspicious
+
+388
+00:20:43,960 --> 00:20:45,480
+and you'd want to start looking at them
+
+389
+00:20:45,480 --> 00:20:48,040
+to maybe understand if that's a long running function.
+
+390
+00:20:48,920 --> 00:20:50,440
+So I don't know.
+
+391
+00:20:50,440 --> 00:20:53,560
+Is it reasonable that B is taking four times longer than H?
+
+392
+00:20:53,560 --> 00:20:54,200
+I'm not sure.
+
+393
+00:20:54,200 --> 00:20:56,360
+These are just boxes that were drawn.
+
+394
+00:20:56,360 --> 00:20:59,320
+It's not real code, but you might know that about your own code
+
+395
+00:20:59,320 --> 00:21:00,200
+and that's what's important.
+
+396
+00:21:01,720 --> 00:21:03,880
+The last thing that's kind of interesting
+
+397
+00:21:03,880 --> 00:21:06,520
+that you can look at here are like big forks.
+
+398
+00:21:06,520 --> 00:21:09,480
+So we have two big forks here.
+
+399
+00:21:09,480 --> 00:21:12,120
+We have like the B fork and H fork.
+
+400
+00:21:12,120 --> 00:21:16,680
+So again, we maybe want to understand why is our code forking.
+
+401
+00:21:16,680 --> 00:21:18,600
+So it could be something really obvious.
+
+402
+00:21:18,600 --> 00:21:20,360
+Like there's a conditional in A.
+
+403
+00:21:20,360 --> 00:21:21,400
+It's like an if statement.
+
+404
+00:21:22,120 --> 00:21:24,040
+If one thing B, if the other H.
+
+405
+00:21:24,040 --> 00:21:25,080
+But it might not be that.
+
+406
+00:21:25,080 --> 00:21:26,840
+It might actually be that something in A
+
+407
+00:21:27,400 --> 00:21:29,240
+is being processed in two stages.
+
+408
+00:21:29,240 --> 00:21:32,040
+Like maybe first it has to go through the B stage
+
+409
+00:21:32,040 --> 00:21:34,280
+and then it goes through the H stage.
+
+410
+00:21:34,280 --> 00:21:37,480
+So yeah, just another thing to help you understand
+
+411
+00:21:37,480 --> 00:21:38,760
+how your code is working.
+
+412
+00:21:38,760 --> 00:21:40,520
+And point you in the right direction
+
+413
+00:21:40,520 --> 00:21:41,720
+when you're trying to find problems.
+
+414
+00:21:43,800 --> 00:21:44,300
+Cool.
+
+415
+00:21:44,300 --> 00:21:44,800
+Okay.
+
+416
+00:21:45,640 --> 00:21:47,720
+Flame graphs versus flame charts.
+
+417
+00:21:48,920 --> 00:21:51,800
+This is like a lot of the same looking stuff on one slide.
+
+418
+00:21:51,800 --> 00:21:54,440
+So I'm going to try to explain it the best I can.
+
+419
+00:21:54,440 --> 00:21:57,480
+First of all, flame graphs and flame charts
+
+420
+00:21:57,480 --> 00:22:00,760
+are usually are very commonly used interchangeably.
+
+421
+00:22:00,760 --> 00:22:01,800
+And they're actually different.
+
+422
+00:22:01,800 --> 00:22:03,800
+They're different data visualizations.
+
+423
+00:22:03,800 --> 00:22:05,320
+They're specialized in different ways
+
+424
+00:22:05,320 --> 00:22:08,120
+and are like better or worse for different kinds of tasks.
+
+425
+00:22:09,240 --> 00:22:13,080
+Um, so let me check.
+
+426
+00:22:13,080 --> 00:22:13,580
+Okay.
+
+427
+00:22:13,580 --> 00:22:16,120
+So basically what we're seeing here
+
+428
+00:22:16,120 --> 00:22:21,480
+is a flame graph on the left and a flame chart on the right.
+
+429
+00:22:21,480 --> 00:22:22,840
+And don't stress out.
+
+430
+00:22:24,680 --> 00:22:26,440
+The flame graph here is flipped upside down.
+
+431
+00:22:27,720 --> 00:22:29,320
+So flame graphs can be like right,
+
+432
+00:22:29,320 --> 00:22:31,880
+like pointy parts up or pointy parts down.
+
+433
+00:22:31,880 --> 00:22:32,840
+It's the same thing.
+
+434
+00:22:32,840 --> 00:22:33,880
+Some people like it one way.
+
+435
+00:22:33,880 --> 00:22:35,080
+Some people like it the other.
+
+436
+00:22:35,080 --> 00:22:36,520
+But this is showing a flame graph
+
+437
+00:22:36,520 --> 00:22:38,280
+and a flame chart for the same program.
+
+438
+00:22:38,280 --> 00:22:39,560
+It's actually Fibonacci.
+
+439
+00:22:39,560 --> 00:22:41,000
+So it's not that interesting.
+
+440
+00:22:41,000 --> 00:22:43,560
+But you guys can't read the function names anyway, I'm sure.
+
+441
+00:22:43,560 --> 00:22:44,760
+Especially in the back.
+
+442
+00:22:44,760 --> 00:22:47,080
+So it's not that big of a deal.
+
+443
+00:22:48,280 --> 00:22:51,400
+The big difference between flame charts and flame graphs
+
+444
+00:22:51,400 --> 00:22:55,480
+is that flame charts actually do show time on the x-axis.
+
+445
+00:22:56,120 --> 00:23:00,600
+So this is really more intuitive in a lot of ways.
+
+446
+00:23:01,240 --> 00:23:04,840
+Instead of just showing how frequently a function was being called,
+
+447
+00:23:04,840 --> 00:23:07,800
+it really does show how long that function was running for.
+
+448
+00:23:07,880 --> 00:23:10,600
+And it can be more approachable if you're just getting started
+
+449
+00:23:10,600 --> 00:23:12,920
+with these types of visualizations.
+
+450
+00:23:14,520 --> 00:23:18,280
+Yeah, otherwise the relationship of parent-child, it's all the same.
+
+451
+00:23:19,240 --> 00:23:23,000
+So one other interesting thing about these in particular,
+
+452
+00:23:23,000 --> 00:23:24,280
+these are pulled from Sentry.
+
+453
+00:23:25,080 --> 00:23:26,920
+We are using color meaningful here.
+
+454
+00:23:26,920 --> 00:23:29,240
+So you'll see it's not just a random rainbow of reds.
+
+455
+00:23:30,040 --> 00:23:34,760
+Here we have system calls in red and our own application calls in blue.
+
+456
+00:23:34,760 --> 00:23:37,480
+And this is helpful so you know where to focus.
+
+457
+00:23:37,480 --> 00:23:40,760
+Obviously you're not going to make the system calls speed up at all.
+
+458
+00:23:40,760 --> 00:23:42,040
+So just focus on your own.
+
+459
+00:23:43,160 --> 00:23:46,600
+There are other possible ways that you can color code these.
+
+460
+00:23:46,600 --> 00:23:48,600
+Some useful ones would be by package.
+
+461
+00:23:48,600 --> 00:23:51,160
+So you could color code your functions by package
+
+462
+00:23:51,160 --> 00:23:54,200
+or you could color code the functions by frequency
+
+463
+00:23:54,200 --> 00:23:55,160
+with which they were called.
+
+464
+00:23:55,960 --> 00:23:59,080
+All of those might be more helpful ways of using color
+
+465
+00:23:59,080 --> 00:24:00,280
+other than just randomly.
+
+466
+00:24:02,040 --> 00:24:02,760
+Cool.
+
+467
+00:24:02,760 --> 00:24:07,240
+Okay, oh yeah, I was going to say flame charts were based on flame graphs.
+
+468
+00:24:07,240 --> 00:24:09,320
+So they came second and they were made by Google.
+
+469
+00:24:09,320 --> 00:24:12,280
+But I think a lot of people actually prefer flame charts.
+
+470
+00:24:12,280 --> 00:24:15,480
+I don't know, they're somewhat more common these days in my experience.
+
+471
+00:24:16,840 --> 00:24:17,560
+Great.
+
+472
+00:24:17,560 --> 00:24:20,200
+Okay, that's a big profiling primer.
+
+473
+00:24:20,200 --> 00:24:23,400
+I hope you absorbed every single ounce of information.
+
+474
+00:24:24,680 --> 00:24:27,960
+Indruji is going to come up now and he's going to run through some
+
+475
+00:24:27,960 --> 00:24:30,280
+hands-on examples of using different profiling tools.
+
+476
+00:24:31,960 --> 00:24:32,600
+Come on up.
+
+477
+00:24:32,600 --> 00:24:37,480
+All right, thanks, Shanna.
+
+478
+00:24:38,280 --> 00:24:39,880
+So let me switch over to my other workspace.
+
+479
+00:24:40,840 --> 00:24:44,920
+So the first thing I want to show you is the examples app
+
+480
+00:24:44,920 --> 00:24:46,760
+that we're going to use for the rest of this workshop.
+
+481
+00:24:47,320 --> 00:24:48,360
+It's extremely simple.
+
+482
+00:24:48,360 --> 00:24:52,040
+So what we have here is an iterative implementation of the Fibonacci.
+
+483
+00:24:52,040 --> 00:24:54,600
+So we're actually sticking with the Fibonacci stuff from the previous slide.
+
+484
+00:24:55,640 --> 00:24:57,880
+And we're doing it iteratively instead of recursively
+
+485
+00:24:57,880 --> 00:25:00,920
+because of Python's recursive depth limit.
+
+486
+00:25:01,880 --> 00:25:05,080
+It makes it a little bit easier to get into this.
+
+487
+00:25:05,080 --> 00:25:08,920
+So the Fibonacci sequence is the fib function there,
+
+488
+00:25:08,920 --> 00:25:12,040
+and then we have a Flask server that just wraps it.
+
+489
+00:25:12,040 --> 00:25:13,240
+There's a single endpoint.
+
+490
+00:25:13,240 --> 00:25:15,320
+You hit the endpoint with the Fibonacci number you want,
+
+491
+00:25:15,320 --> 00:25:18,920
+and then it computes the Fibonacci value and it returns a response.
+
+492
+00:25:19,880 --> 00:25:22,040
+So really simple, really easy to grok.
+
+493
+00:25:23,000 --> 00:25:24,120
+So I'm going to come back to this.
+
+494
+00:25:24,120 --> 00:25:29,160
+But first, let's take a look at the documentation here.
+
+495
+00:25:29,160 --> 00:25:32,280
+So Shannon mentioned Cprofile and profile,
+
+496
+00:25:32,280 --> 00:25:35,320
+and many of you raised your hands when she asked if people had used them.
+
+497
+00:25:35,320 --> 00:25:36,840
+So you're probably very familiar with this.
+
+498
+00:25:37,560 --> 00:25:40,360
+One thing I want to note is the distinction between the two.
+
+499
+00:25:40,360 --> 00:25:42,520
+So they implement the exact same interface.
+
+500
+00:25:42,520 --> 00:25:46,200
+Cprofile is a little different in that it's implemented in C as a native extension.
+
+501
+00:25:46,200 --> 00:25:49,640
+And so the reason for that is overhead has more reasonable performance overhead.
+
+502
+00:25:50,360 --> 00:25:52,280
+Profile is implemented in pure Python,
+
+503
+00:25:52,280 --> 00:25:54,440
+so it's more extensible in the C implementation,
+
+504
+00:25:54,440 --> 00:25:57,480
+but it does come with the cost of significantly higher overhead.
+
+505
+00:25:58,360 --> 00:26:01,560
+So for the purposes of this demo, I'm just going to stick with Cprofile,
+
+506
+00:26:02,280 --> 00:26:03,880
+and we'll kind of just try it and see how it works.
+
+507
+00:26:05,960 --> 00:26:10,840
+So going back to my code, there's two ways you can invoke Cprofile.
+
+508
+00:26:10,840 --> 00:26:16,120
+So you can actually just do it by passing dash m Cprofile as a command line argument to Python,
+
+509
+00:26:16,120 --> 00:26:18,680
+which will just run your script with Cprofile attached.
+
+510
+00:26:19,400 --> 00:26:22,520
+Or you can actually use the API directly.
+
+511
+00:26:22,520 --> 00:26:26,120
+So I have a second version of this code that uses the Cprofile API directly.
+
+512
+00:26:26,120 --> 00:26:31,560
+So here I'm wrapping my main function with a call to profiler.run call,
+
+513
+00:26:31,560 --> 00:26:33,960
+which will essentially enable profiling, run that function,
+
+514
+00:26:33,960 --> 00:26:35,800
+and then disable profiling when it finishes.
+
+515
+00:26:36,440 --> 00:26:39,960
+And then after main exits, we're just going to create a stats object,
+
+516
+00:26:39,960 --> 00:26:42,760
+and then we're going to dump the stats to the console.
+
+517
+00:26:44,120 --> 00:26:46,600
+So let's take a look at what happens when I run this right now.
+
+518
+00:26:47,160 --> 00:26:51,240
+So what I'm going to do is I'm just going to run my Flask Vib Cprofile script.
+
+519
+00:26:51,240 --> 00:26:54,680
+It'll start the Flask server, and then I'm going to hit it with a request
+
+520
+00:26:55,160 --> 00:26:59,320
+so that it computes a Fibonacci value, and like a sufficiently high sort of value,
+
+521
+00:26:59,320 --> 00:27:01,880
+300,000, so it takes a little bit of time.
+
+522
+00:27:01,880 --> 00:27:04,440
+So you can see here it printed the value, which is crazy long,
+
+523
+00:27:04,440 --> 00:27:08,600
+we received a request, and then if we exit the process,
+
+524
+00:27:08,600 --> 00:27:11,480
+you can see here it printed the output of Cprofile.
+
+525
+00:27:12,360 --> 00:27:14,760
+So I'm going to scroll to the top here, and you'll notice a couple things.
+
+526
+00:27:14,760 --> 00:27:18,920
+So first of all, random listing order was used,
+
+527
+00:27:18,920 --> 00:27:21,480
+so the ordering of the stuff in this table doesn't have any meaning.
+
+528
+00:27:22,360 --> 00:27:25,160
+And then second, you'll notice that it's a little bit harder to parse here,
+
+529
+00:27:25,160 --> 00:27:29,000
+because we have these really long directory paths in the way.
+
+530
+00:27:29,000 --> 00:27:31,960
+So you can see the functions at the end, like list comprehensions and stuff,
+
+531
+00:27:32,680 --> 00:27:34,600
+but a lot of it is this prefix.
+
+532
+00:27:34,600 --> 00:27:37,720
+So we can make this a little bit easier to parse by doing two things.
+
+533
+00:27:37,720 --> 00:27:41,000
+One is we can strip the directory paths,
+
+534
+00:27:41,640 --> 00:27:44,520
+and then we can sort the statistics by something meaningful.
+
+535
+00:27:44,520 --> 00:27:48,120
+So I'm going to sort, in this case, by the cumulative time.
+
+536
+00:27:48,840 --> 00:27:52,440
+So save that change, we're going to try this again.
+
+537
+00:27:59,240 --> 00:28:01,880
+And immediately here you can see that the output is a lot nicer.
+
+538
+00:28:01,880 --> 00:28:04,680
+So you're not getting those crazy long file paths.
+
+539
+00:28:04,680 --> 00:28:06,280
+And then if I scroll to the top here again,
+
+540
+00:28:06,840 --> 00:28:08,920
+this time it's ordered by cumulative time.
+
+541
+00:28:08,920 --> 00:28:12,200
+And then we can see here that the function with the most cumulative time
+
+542
+00:28:12,200 --> 00:28:13,000
+here is at the top.
+
+543
+00:28:14,120 --> 00:28:17,560
+Something interesting you'll note here is we're not even seeing
+
+544
+00:28:17,560 --> 00:28:18,520
+the Fibonacci function.
+
+545
+00:28:18,520 --> 00:28:21,240
+So we'd expect this to actually take most of the time here.
+
+546
+00:28:21,240 --> 00:28:23,400
+What we're seeing here is that the main function,
+
+547
+00:28:23,400 --> 00:28:27,080
+which just starts the server, that's the one that has taking 4.3 seconds.
+
+548
+00:28:28,280 --> 00:28:32,200
+And so the key thing to learn about Cprofile from this example
+
+549
+00:28:32,200 --> 00:28:36,040
+is that Cprofile does not profile all threads in an application by default.
+
+550
+00:28:36,040 --> 00:28:39,000
+So we started Cprofile on the main thread,
+
+551
+00:28:39,000 --> 00:28:41,080
+and so it only captured a profile for the main thread,
+
+552
+00:28:41,080 --> 00:28:43,720
+whereas Flask will spin up additional threads to handle requests.
+
+553
+00:28:44,280 --> 00:28:47,320
+And so the way to do this manually would be you need to set up
+
+554
+00:28:48,520 --> 00:28:50,680
+start Cprofile on each request handling thread,
+
+555
+00:28:50,680 --> 00:28:52,680
+end it when the request starts and ends.
+
+556
+00:28:52,680 --> 00:28:55,400
+And there's a little bit of manual work you have to do there
+
+557
+00:28:55,400 --> 00:28:58,920
+to get it to actually show you the profiling data for what you're looking for,
+
+558
+00:28:58,920 --> 00:29:02,440
+which is what took the longest when serving the request.
+
+559
+00:29:02,440 --> 00:29:05,560
+But for Flask in particular, there is an easier way to do this.
+
+560
+00:29:08,440 --> 00:29:10,520
+So if we go back here,
+
+561
+00:29:11,400 --> 00:29:16,360
+Flask's WSGI server has a built-in middleware that does exactly what we want.
+
+562
+00:29:16,360 --> 00:29:19,880
+And so it profiles each request with the Cprofile modules.
+
+563
+00:29:19,880 --> 00:29:21,240
+You just add this middleware,
+
+564
+00:29:21,240 --> 00:29:25,400
+give it a path to where you want it to dump the profile output.
+
+565
+00:29:25,400 --> 00:29:27,800
+You can add some other arguments like the sort order and so on,
+
+566
+00:29:27,800 --> 00:29:30,520
+and it'll just profile all the requests for you.
+
+567
+00:29:30,520 --> 00:29:32,440
+So we'll take a look and try that next.
+
+568
+00:29:33,640 --> 00:29:38,360
+So here I have a second variation of the same server,
+
+569
+00:29:38,360 --> 00:29:41,160
+except this time instead of starting Cprofile myself,
+
+570
+00:29:41,160 --> 00:29:45,560
+I'm just adding the profile and middleware and dumping it into this directory.
+
+571
+00:29:46,360 --> 00:29:49,080
+And I've used this time sort order.
+
+572
+00:29:49,640 --> 00:29:50,840
+So if I run this one,
+
+573
+00:29:54,520 --> 00:29:56,760
+and then I'll run a request.
+
+574
+00:29:59,320 --> 00:30:04,840
+You can see here it actually outputs the dump for each request as you send them.
+
+575
+00:30:04,840 --> 00:30:08,440
+So if I go up here to the top,
+
+576
+00:30:11,160 --> 00:30:15,400
+you'll notice the fib function now actually is at the very top of the list.
+
+577
+00:30:15,400 --> 00:30:17,960
+So you can be sure that this is actually profiling the request,
+
+578
+00:30:17,960 --> 00:30:23,880
+because you see fib with the largest total time here at the top of the list.
+
+579
+00:30:25,000 --> 00:30:28,600
+So that's sort of how you would use Cprofile with a Flask setup.
+
+580
+00:30:28,600 --> 00:30:30,520
+If you're using Django or some other framework,
+
+581
+00:30:30,520 --> 00:30:31,800
+there's probably similar middleware,
+
+582
+00:30:32,440 --> 00:30:34,600
+but this is sort of like one easy way to do it.
+
+583
+00:30:35,800 --> 00:30:38,040
+So the next problem I'm going to try to address is the fact that
+
+584
+00:30:38,040 --> 00:30:41,880
+this output here in this table is very difficult to parse.
+
+585
+00:30:41,880 --> 00:30:44,040
+So if you're just looking for like the first function or two,
+
+586
+00:30:44,040 --> 00:30:45,000
+this is probably good enough.
+
+587
+00:30:45,560 --> 00:30:49,960
+But if you want to kind of assess the data more comprehensively,
+
+588
+00:30:51,000 --> 00:30:53,080
+there's different ways to do that.
+
+589
+00:30:53,080 --> 00:30:57,640
+So Shanna already showed an example of a call visualization graph.
+
+590
+00:30:57,640 --> 00:30:58,920
+And so we'll do that next.
+
+591
+00:30:58,920 --> 00:31:01,080
+We'll generate one of those for this profiling data.
+
+592
+00:31:02,040 --> 00:31:05,720
+So one of the tools that we can use to do this is called Gprof2Dot.
+
+593
+00:31:06,920 --> 00:31:10,440
+So this is a script that takes in profiling data
+
+594
+00:31:10,440 --> 00:31:13,800
+from a bunch of different types of profiling file formats.
+
+595
+00:31:14,680 --> 00:31:15,960
+Python's format is one of them,
+
+596
+00:31:15,960 --> 00:31:18,600
+but it takes in other common profile formats,
+
+597
+00:31:18,600 --> 00:31:19,880
+and then it outputs a dot graph.
+
+598
+00:31:20,600 --> 00:31:21,960
+So you can basically take this output,
+
+599
+00:31:21,960 --> 00:31:22,920
+pipe it into the dot tool,
+
+600
+00:31:22,920 --> 00:31:25,400
+and then generate a visualization of your choice.
+
+601
+00:31:26,200 --> 00:31:31,080
+So what I'm going to do here is I have...
+
+602
+00:31:31,080 --> 00:31:32,200
+I'm going to quit this.
+
+603
+00:31:32,200 --> 00:31:34,680
+So I have this profile file that was generated here.
+
+604
+00:31:35,320 --> 00:31:37,480
+So this was created by the profiler middleware.
+
+605
+00:31:38,440 --> 00:31:41,880
+So what I'm going to do is I will run Gprof2Dot,
+
+606
+00:31:41,880 --> 00:31:44,040
+give it the path to my profile,
+
+607
+00:31:44,040 --> 00:31:47,720
+and then I will pipe that into the dot command to generate...
+
+608
+00:31:49,560 --> 00:31:50,120
+I'm sorry.
+
+609
+00:31:50,120 --> 00:31:50,920
+Oops.
+
+610
+00:31:50,920 --> 00:31:51,400
+My mistake.
+
+611
+00:31:51,400 --> 00:31:52,680
+So I have to pass in a format.
+
+612
+00:31:52,680 --> 00:31:54,680
+So this is the PStats format,
+
+613
+00:31:54,680 --> 00:31:56,360
+which is the format that Python outputs in.
+
+614
+00:31:57,080 --> 00:31:59,320
+And then it's outputted this PNG file.
+
+615
+00:31:59,320 --> 00:32:00,120
+So if I look at this...
+
+616
+00:32:01,720 --> 00:32:04,760
+Which maybe I'll want to show this in Finder.
+
+617
+00:32:04,760 --> 00:32:05,320
+Open it up.
+
+618
+00:32:06,040 --> 00:32:08,280
+So you can see here all of that table data
+
+619
+00:32:08,280 --> 00:32:11,080
+has been condensed into an extremely simple visualization,
+
+620
+00:32:11,160 --> 00:32:14,200
+where you can see that the fib function was called here.
+
+621
+00:32:14,200 --> 00:32:16,360
+It's about 80% of the runtime.
+
+622
+00:32:16,360 --> 00:32:19,240
+And we can see that it calls this append function on list
+
+623
+00:32:19,240 --> 00:32:20,200
+a whole bunch of times,
+
+624
+00:32:21,240 --> 00:32:24,120
+which is because we're appending to this sequence here.
+
+625
+00:32:24,120 --> 00:32:26,520
+So that's one way to visualize the data.
+
+626
+00:32:27,640 --> 00:32:32,120
+The other way to do it is there's a tool called Tuna,
+
+627
+00:32:32,120 --> 00:32:33,160
+which is lesser known.
+
+628
+00:32:34,040 --> 00:32:37,240
+But this one sort of renders it in more of a call tree
+
+629
+00:32:37,240 --> 00:32:38,680
+representation that looks like this.
+
+630
+00:32:38,680 --> 00:32:39,720
+So instead of a dot graph,
+
+631
+00:32:40,600 --> 00:32:43,080
+you're rendering the same data with a call tree instead.
+
+632
+00:32:44,600 --> 00:32:47,720
+One of the key limitations to note here,
+
+633
+00:32:47,720 --> 00:32:50,520
+not of Tuna, but of CProfile and Profile in general,
+
+634
+00:32:50,520 --> 00:32:53,400
+is they don't contain complete call tree information.
+
+635
+00:32:53,400 --> 00:32:55,400
+So for each function,
+
+636
+00:32:55,400 --> 00:32:58,040
+it stores the information about the immediate parent,
+
+637
+00:32:58,040 --> 00:33:00,440
+but not information about every possible path
+
+638
+00:33:00,440 --> 00:33:02,520
+that that parent can take to call the child.
+
+639
+00:33:02,520 --> 00:33:07,880
+So if you're calling function C from function A,
+
+640
+00:33:07,880 --> 00:33:09,400
+maybe it goes through B in some cases,
+
+641
+00:33:09,400 --> 00:33:11,240
+maybe it goes through D in other cases.
+
+642
+00:33:11,240 --> 00:33:13,400
+You cannot distinguish between those two cases
+
+643
+00:33:13,400 --> 00:33:14,680
+in the output data.
+
+644
+00:33:14,680 --> 00:33:16,520
+And so what it's actually rendering is,
+
+645
+00:33:16,520 --> 00:33:18,440
+it's sort of a best effort of what it knows.
+
+646
+00:33:19,080 --> 00:33:19,960
+And if you look at this readme,
+
+647
+00:33:19,960 --> 00:33:22,360
+it'll give you more of a contrived example
+
+648
+00:33:22,360 --> 00:33:23,720
+of how that limitation works.
+
+649
+00:33:24,280 --> 00:33:26,520
+But for our purposes, this isn't that relevant,
+
+650
+00:33:26,520 --> 00:33:27,800
+so we can go ahead and just use it.
+
+651
+00:33:27,800 --> 00:33:33,560
+So I'll pass in the path to the same profile output into Tuna,
+
+652
+00:33:33,560 --> 00:33:36,120
+and it'll start a server and render this page,
+
+653
+00:33:36,120 --> 00:33:37,880
+which shows me the same data that I was looking at
+
+654
+00:33:37,880 --> 00:33:39,800
+in the call graph visualization,
+
+655
+00:33:39,800 --> 00:33:44,360
+which is that the fib function here takes 1.47 seconds.
+
+656
+00:33:45,880 --> 00:33:49,880
+So that's sort of the summary of the C profile part of this.
+
+657
+00:33:49,880 --> 00:33:52,680
+So in short, like C profile, deterministic profiler,
+
+658
+00:33:52,680 --> 00:33:54,280
+it's great for local profiling,
+
+659
+00:33:56,200 --> 00:33:58,280
+and maybe not as suitable for production profiling
+
+660
+00:33:58,280 --> 00:34:00,120
+because of the higher sort of overhead
+
+661
+00:34:00,120 --> 00:34:01,240
+of deterministic profiling.
+
+662
+00:34:02,040 --> 00:34:04,680
+But it's sort of a great way to get it like a first look
+
+663
+00:34:04,680 --> 00:34:06,760
+at how your application performs.
+
+664
+00:34:07,880 --> 00:34:10,680
+And so now I'm going to go into some different profiling tools
+
+665
+00:34:10,680 --> 00:34:12,600
+that are used more in production
+
+666
+00:34:12,600 --> 00:34:14,680
+because they have sort of different performance tradeoffs.
+
+667
+00:34:15,800 --> 00:34:18,280
+So one of them is PySpy.
+
+668
+00:34:19,080 --> 00:34:21,000
+So there's a couple of interesting things about PySpy.
+
+669
+00:34:21,560 --> 00:34:23,320
+One, it's a sampling profiler,
+
+670
+00:34:23,320 --> 00:34:25,960
+and they actually document it's extremely low overhead.
+
+671
+00:34:26,840 --> 00:34:28,920
+It's written in Rust for performance reasons,
+
+672
+00:34:29,480 --> 00:34:32,760
+and most notably, it doesn't run in the same process
+
+673
+00:34:32,760 --> 00:34:34,360
+as the profiled Python program.
+
+674
+00:34:34,680 --> 00:34:36,680
+So in addition to the distinction between sampling
+
+675
+00:34:36,680 --> 00:34:39,800
+and deterministic, you also have this decision
+
+676
+00:34:39,800 --> 00:34:42,040
+that profilers make to run either in process
+
+677
+00:34:42,040 --> 00:34:42,920
+or out of process.
+
+678
+00:34:44,200 --> 00:34:45,480
+There's tradeoffs to that.
+
+679
+00:34:45,480 --> 00:34:47,960
+So if you're running in process, it's easy.
+
+680
+00:34:47,960 --> 00:34:49,560
+You don't have to spawn a separate process.
+
+681
+00:34:49,560 --> 00:34:52,600
+You don't have to use elevated privileges.
+
+682
+00:34:52,600 --> 00:34:54,200
+You might be running in an environment
+
+683
+00:34:54,200 --> 00:34:56,360
+that's highly constrained where you don't have control over,
+
+684
+00:34:57,640 --> 00:34:59,960
+you know, like adding an agent or whatever.
+
+685
+00:35:01,000 --> 00:35:03,480
+So that, it makes it easier to integrate,
+
+686
+00:35:03,480 --> 00:35:05,080
+but then the downside is that it is running
+
+687
+00:35:05,080 --> 00:35:05,960
+in the same process.
+
+688
+00:35:05,960 --> 00:35:07,240
+So if, you know, something goes wrong,
+
+689
+00:35:07,240 --> 00:35:09,480
+it's more prone to breakage, it can crash the process.
+
+690
+00:35:09,480 --> 00:35:12,520
+Whereas the outer process profilers, they run outside,
+
+691
+00:35:12,520 --> 00:35:16,600
+so they're more safe, can be more performant,
+
+692
+00:35:16,600 --> 00:35:19,560
+but of course, in some cases, they require elevated permissions
+
+693
+00:35:19,560 --> 00:35:21,560
+to invoke the Python process from outside.
+
+694
+00:35:22,360 --> 00:35:24,760
+So in this case, this is a out of process profiler,
+
+695
+00:35:25,560 --> 00:35:27,000
+and it's a sampling profiler.
+
+696
+00:35:27,000 --> 00:35:28,600
+And you can see here, like a visualization
+
+697
+00:35:28,600 --> 00:35:31,240
+of the same kind of flame graph that Shannon mentioned earlier.
+
+698
+00:35:31,240 --> 00:35:35,480
+Another option is PyInstrument,
+
+699
+00:35:35,480 --> 00:35:37,720
+which again is another sampling profiler.
+
+700
+00:35:38,840 --> 00:35:42,600
+This one is different in that it is an in-process profiler.
+
+701
+00:35:42,600 --> 00:35:44,280
+So if you go here, there's actually an example.
+
+702
+00:35:45,080 --> 00:35:47,400
+You can just invoke the profiler directly in your code,
+
+703
+00:35:47,400 --> 00:35:50,360
+so you can like profile around a particular section of code
+
+704
+00:35:50,360 --> 00:35:51,000
+and things like that.
+
+705
+00:35:51,000 --> 00:35:53,640
+So you get like sort of like more like in-process control
+
+706
+00:35:53,640 --> 00:35:55,400
+over how the profiler runs.
+
+707
+00:35:55,400 --> 00:35:56,920
+And it's similarly low overhead
+
+708
+00:35:56,920 --> 00:35:58,360
+because it is a sampling profiler.
+
+709
+00:35:58,920 --> 00:36:03,080
+And then the last example that I wanted to kind of show
+
+710
+00:36:03,080 --> 00:36:06,520
+before I go into more demo stuff is Austin,
+
+711
+00:36:07,400 --> 00:36:10,280
+which again is a sampling profiler.
+
+712
+00:36:10,280 --> 00:36:12,680
+This one also runs out of process.
+
+713
+00:36:12,680 --> 00:36:14,200
+It also supports memory profiling,
+
+714
+00:36:14,200 --> 00:36:15,240
+which the other ones don't.
+
+715
+00:36:16,520 --> 00:36:17,800
+And it's just another option.
+
+716
+00:36:17,800 --> 00:36:18,760
+It's also written in C.
+
+717
+00:36:20,280 --> 00:36:22,440
+So yeah, anyway, there's lots of options for this.
+
+718
+00:36:22,440 --> 00:36:24,840
+One read that I would recommend later on,
+
+719
+00:36:25,480 --> 00:36:27,160
+if you're interested in sort of like comparing
+
+720
+00:36:27,160 --> 00:36:29,880
+and contrasting these options more in-depth,
+
+721
+00:36:29,880 --> 00:36:33,960
+is this article, a survey of open source Python profilers.
+
+722
+00:36:33,960 --> 00:36:37,240
+So this kind of a medium length write-up
+
+723
+00:36:37,240 --> 00:36:39,240
+about the built-in Python profiler
+
+724
+00:36:39,240 --> 00:36:41,160
+is various open source options,
+
+725
+00:36:41,160 --> 00:36:43,560
+Py Instrument, PySpy, and Austin,
+
+726
+00:36:43,560 --> 00:36:44,520
+which we just looked at here.
+
+727
+00:36:44,520 --> 00:36:46,440
+So this will compare them more in-depth.
+
+728
+00:36:47,320 --> 00:36:50,040
+I don't have time to get into all of the reasoning described here,
+
+729
+00:36:50,040 --> 00:36:52,440
+so this is sort of just an extra thing you can read later.
+
+730
+00:36:54,040 --> 00:36:56,040
+For this demo, I'm just going to pick one of them.
+
+731
+00:36:56,040 --> 00:36:59,320
+So I'm going to pick PySpy, and we'll run with PySpy
+
+732
+00:36:59,320 --> 00:37:03,160
+and see what it does and how it compares to C profile.
+
+733
+00:37:05,080 --> 00:37:08,120
+So for the purposes of running under PySpy,
+
+734
+00:37:09,080 --> 00:37:12,040
+I'm just going to go back to like the original script.
+
+735
+00:37:12,680 --> 00:37:15,640
+So this is the Flask fib script.
+
+736
+00:37:18,840 --> 00:37:22,040
+And the first thing I'm going to do is I'm going to invoke PySpy
+
+737
+00:37:22,040 --> 00:37:25,720
+to generate an SVG version of the flame graph.
+
+738
+00:37:26,520 --> 00:37:29,000
+So if I run this.
+
+739
+00:37:38,280 --> 00:37:38,840
+All right, cool.
+
+740
+00:37:39,560 --> 00:37:40,920
+So now the server's running.
+
+741
+00:37:40,920 --> 00:37:42,360
+I'll send a request again.
+
+742
+00:37:45,880 --> 00:37:49,240
+And then it'll just create an SVG.
+
+743
+00:37:50,760 --> 00:37:52,440
+So this is kind of interactive.
+
+744
+00:37:52,440 --> 00:37:54,840
+You can hover over each of the frames
+
+745
+00:37:54,840 --> 00:37:57,720
+and see the number of samples that were registered
+
+746
+00:37:57,720 --> 00:37:58,680
+for each of those functions.
+
+747
+00:37:59,240 --> 00:38:01,000
+And you can see pretty clearly here
+
+748
+00:38:01,000 --> 00:38:04,440
+that it is properly profiling our request handling thread
+
+749
+00:38:04,440 --> 00:38:11,880
+because you see the fib call here with 155 samples
+
+750
+00:38:11,880 --> 00:38:17,240
+or sort of 75.9% of the total runtime of the profile.
+
+751
+00:38:17,240 --> 00:38:17,560
+Sorry?
+
+752
+00:38:17,560 --> 00:38:19,400
+Can you zoom in a little bit?
+
+753
+00:38:19,400 --> 00:38:20,200
+Zoom in, yeah, sorry.
+
+754
+00:38:20,200 --> 00:38:21,160
+Yeah, good point.
+
+755
+00:38:21,880 --> 00:38:22,440
+Yeah, there you go.
+
+756
+00:38:23,400 --> 00:38:25,240
+So yeah, so this is what I was pointing out earlier.
+
+757
+00:38:25,240 --> 00:38:28,040
+So you can see at the top here, like when I hover over the function,
+
+758
+00:38:28,040 --> 00:38:31,000
+it shows 155 sample, 75.9%.
+
+759
+00:38:32,440 --> 00:38:34,200
+And then above this, you can see all the parent stuff.
+
+760
+00:38:34,200 --> 00:38:36,600
+So this is just the WSGI stuff.
+
+761
+00:38:36,600 --> 00:38:39,480
+All of the WSGI server internals are all here.
+
+762
+00:38:41,320 --> 00:38:43,080
+So this visualization is cool.
+
+763
+00:38:43,080 --> 00:38:45,640
+But like Shana mentioned, there's two ways to look at this data.
+
+764
+00:38:45,640 --> 00:38:48,440
+One is flame graph, which shows this basically.
+
+765
+00:38:48,440 --> 00:38:49,800
+It's just the frequency information
+
+766
+00:38:49,800 --> 00:38:51,080
+of how often something was called
+
+767
+00:38:51,880 --> 00:38:55,400
+or how often a sample of one of these functions showed up in the profile.
+
+768
+00:38:55,400 --> 00:38:57,320
+And then the other one is a flame chart, which is,
+
+769
+00:38:58,200 --> 00:39:00,680
+it shows the duration on the x-axis.
+
+770
+00:39:00,680 --> 00:39:03,800
+So you can kind of more easily understand how long something actually took.
+
+771
+00:39:04,440 --> 00:39:06,760
+And so this flame graph visualization doesn't do that,
+
+772
+00:39:06,760 --> 00:39:09,400
+but there's an alternative visualization that does.
+
+773
+00:39:09,400 --> 00:39:11,480
+And we're going to use a different tool for doing that.
+
+774
+00:39:12,440 --> 00:39:14,840
+So for anyone who hasn't heard of it,
+
+775
+00:39:15,480 --> 00:39:18,520
+there's a tool called SpeedScope, which is fully open source.
+
+776
+00:39:19,320 --> 00:39:23,640
+It's an open source WebGL-based flame chart and flame graph renderer.
+
+777
+00:39:23,640 --> 00:39:26,600
+So it supports a whole bunch of different file formats.
+
+778
+00:39:27,240 --> 00:39:29,080
+You can import those directly into the tool,
+
+779
+00:39:29,080 --> 00:39:33,800
+or you can output your profiling data in SpeedScope's own file format
+
+780
+00:39:33,800 --> 00:39:34,840
+and then render it with the tool.
+
+781
+00:39:35,960 --> 00:39:37,960
+So if I just click into the example profile here,
+
+782
+00:39:37,960 --> 00:39:40,760
+you can see this is a pretty involved flame chart.
+
+783
+00:39:41,400 --> 00:39:42,520
+Or it's the flame graph, actually.
+
+784
+00:39:42,520 --> 00:39:47,800
+You see this is the frequency on the x-axis, I think.
+
+785
+00:39:47,800 --> 00:39:50,440
+This isn't Python. This is just a random sort of profiling example.
+
+786
+00:39:50,440 --> 00:39:53,800
+So you can see how quickly it zooms and pans and stuff.
+
+787
+00:39:53,800 --> 00:39:56,440
+It's really good for looking at really detailed profiles.
+
+788
+00:39:57,880 --> 00:40:03,160
+And it turns out that PySpy can generate this format directly.
+
+789
+00:40:03,160 --> 00:40:05,240
+And so I'm going to go back to the code here,
+
+790
+00:40:05,800 --> 00:40:09,720
+and I'm going to run PySpy with a format argument
+
+791
+00:40:09,720 --> 00:40:12,280
+that tells it to output in the SpeedScope format.
+
+792
+00:40:12,920 --> 00:40:17,160
+So if I do this, and then I send a request,
+
+793
+00:40:17,240 --> 00:40:19,240
+I'm actually going to send a couple requests for this one.
+
+794
+00:40:19,240 --> 00:40:21,800
+I'll just do three with different values of n,
+
+795
+00:40:21,800 --> 00:40:25,480
+so you can see more data show up.
+
+796
+00:40:26,840 --> 00:40:29,000
+I'll do 3,000.
+
+797
+00:40:29,000 --> 00:40:34,040
+And then here, you can see it wrote the SpeedScope file to profile.json.
+
+798
+00:40:34,040 --> 00:40:35,880
+It captured 295 samples.
+
+799
+00:40:35,880 --> 00:40:39,960
+So I go back, and then I import the profile.json into this tool.
+
+800
+00:40:41,160 --> 00:40:44,040
+And you can see here very clearly my three fib functions.
+
+801
+00:40:44,040 --> 00:40:46,040
+The first one that was the longest,
+
+802
+00:40:46,040 --> 00:40:47,320
+second one, and then the third one.
+
+803
+00:40:48,280 --> 00:40:52,520
+And so this also gives you the time on the x-axis.
+
+804
+00:40:52,520 --> 00:40:56,680
+You can see here actually the units there in milliseconds and seconds.
+
+805
+00:40:56,680 --> 00:41:01,480
+So from here, you can directly see that this took 1.43 seconds
+
+806
+00:41:01,480 --> 00:41:05,720
+instead of looking at the flame graph, which just gives you a frequency.
+
+807
+00:41:05,720 --> 00:41:07,880
+So this is a bit of a nicer way to look at it.
+
+808
+00:41:07,880 --> 00:41:09,320
+The other benefit that this gives you
+
+809
+00:41:10,120 --> 00:41:12,760
+is it does capture all threads in the same profile.
+
+810
+00:41:12,760 --> 00:41:14,760
+So if I wanted to go and see what the main thread was doing,
+
+811
+00:41:14,760 --> 00:41:18,200
+which was not that interesting because all it's doing is just running the server,
+
+812
+00:41:18,840 --> 00:41:22,280
+you can switch over and see that, which you couldn't with the flame graph.
+
+813
+00:41:22,280 --> 00:41:26,200
+Because the flame graph aggregates the data from every thread into a single aggregate,
+
+814
+00:41:26,200 --> 00:41:27,720
+whereas this separates them by thread.
+
+815
+00:41:30,440 --> 00:41:33,080
+Yeah, so that's a little bit about PySpy.
+
+816
+00:41:33,080 --> 00:41:37,640
+The other profilers, PyInstrument and Austin, they work very similarly to this.
+
+817
+00:41:37,640 --> 00:41:39,560
+They can output some of the same formats.
+
+818
+00:41:39,560 --> 00:41:42,440
+So regardless of which one you use, you can get the same experience.
+
+819
+00:41:42,440 --> 00:41:45,000
+And the choice of which one you might want to use
+
+820
+00:41:45,000 --> 00:41:47,080
+depends on your specific production use case.
+
+821
+00:41:49,320 --> 00:41:53,800
+So we talked a lot about performance trade-offs and performance overhead
+
+822
+00:41:53,800 --> 00:41:55,400
+of various types of profilers.
+
+823
+00:41:55,960 --> 00:42:00,040
+So the next topic that I wanted to cover is a little bit on overhead measurement
+
+824
+00:42:00,040 --> 00:42:05,720
+and quantifying what we say when we say we have a high overhead profiler.
+
+825
+00:42:05,720 --> 00:42:09,640
+So what I'm going to do is I'm going to benchmark a bunch of these scenarios
+
+826
+00:42:10,600 --> 00:42:14,040
+using Hyperfine, which is a benchmarking tool.
+
+827
+00:42:15,160 --> 00:42:18,920
+And so the first benchmark that I'm going to run is a baseline,
+
+828
+00:42:19,720 --> 00:42:22,680
+so no profiling at all with Cprofile.
+
+829
+00:42:22,680 --> 00:42:28,040
+And I'm just going to use a kind of shorter version of the same code.
+
+830
+00:42:28,040 --> 00:42:30,280
+It's just the Fibonacci function with no flask
+
+831
+00:42:30,280 --> 00:42:32,920
+because we don't want it to be interactive when running the benchmark.
+
+832
+00:42:32,920 --> 00:42:36,600
+So this is just a benchmark that runs fib directly and sees how long it takes.
+
+833
+00:42:37,560 --> 00:42:39,960
+So I'm going to run Hyperfine.
+
+834
+00:42:39,960 --> 00:42:42,360
+The first argument is just like the base case.
+
+835
+00:42:42,360 --> 00:42:46,520
+And then the second argument is with Cprofile by passing dash m Cprofile.
+
+836
+00:42:47,640 --> 00:42:50,920
+And I'm giving it one warm-up run just to warm the caches
+
+837
+00:42:50,920 --> 00:42:53,240
+because that can impact the accuracy of the results.
+
+838
+00:42:55,240 --> 00:42:58,840
+So it's going to run like a bunch of iterations of this
+
+839
+00:42:58,840 --> 00:43:03,480
+and kind of give you the difference with some error bars.
+
+840
+00:43:03,480 --> 00:43:08,040
+So we can see here there's exactly 15% overhead
+
+841
+00:43:08,600 --> 00:43:10,600
+from running Cprofile on this script.
+
+842
+00:43:10,600 --> 00:43:14,040
+So compared to no profiling, Cprofile adds 15% overhead.
+
+843
+00:43:14,920 --> 00:43:17,320
+We mentioned earlier deterministic profilers,
+
+844
+00:43:17,320 --> 00:43:22,040
+their overhead can increase depending on the number of function calls.
+
+845
+00:43:22,040 --> 00:43:24,040
+So even though in this case it is 15%,
+
+846
+00:43:24,040 --> 00:43:27,480
+you might see drastically different results depending on the particular workload.
+
+847
+00:43:29,000 --> 00:43:30,840
+So 15% actually is not too bad.
+
+848
+00:43:31,480 --> 00:43:35,080
+And then going back to the whole Cprofile versus profile thing,
+
+849
+00:43:35,080 --> 00:43:37,160
+they mentioned the docs that the profile version,
+
+850
+00:43:37,160 --> 00:43:41,320
+the pure Python implementation takes significantly higher overhead
+
+851
+00:43:41,320 --> 00:43:42,280
+because it's written in Python.
+
+852
+00:43:42,280 --> 00:43:43,960
+So we can actually try and validate that.
+
+853
+00:43:43,960 --> 00:43:47,480
+So we're going to run the exact same benchmark except this time using
+
+854
+00:43:47,480 --> 00:43:51,880
+profile instead of Cprofile compared to the no profiling baseline.
+
+855
+00:43:51,880 --> 00:44:03,880
+So this one you can pretty clearly see this is 106% overhead.
+
+856
+00:44:03,880 --> 00:44:07,800
+So it's an order of magnitude more overhead than the C-based implementation.
+
+857
+00:44:07,800 --> 00:44:11,880
+So this is an example of the kind of performance overhead you can sort of see from
+
+858
+00:44:13,080 --> 00:44:16,520
+certain deterministic profiling tools that are not intended for production use case.
+
+859
+00:44:16,520 --> 00:44:19,720
+So this is still probably perfectly fine to use for local debugging,
+
+860
+00:44:19,720 --> 00:44:23,320
+but you would never want to launch something that has 100% plus overhead in production.
+
+861
+00:44:25,320 --> 00:44:28,280
+And then we can also now try like PySpy.
+
+862
+00:44:29,000 --> 00:44:32,040
+And there's two variations of PySpy that I want to try here.
+
+863
+00:44:32,040 --> 00:44:35,160
+So we mentioned that for sampling profilers,
+
+864
+00:44:35,160 --> 00:44:40,840
+we have a profiler that collects a snapshot of the stack at particular intervals.
+
+865
+00:44:40,840 --> 00:44:43,480
+So the interval is essentially the profiling frequency.
+
+866
+00:44:43,480 --> 00:44:48,120
+So a typical profiling frequency to use in production is something like 100 Hz.
+
+867
+00:44:48,200 --> 00:44:51,800
+And so that means you're capturing the call stack 100 times a second,
+
+868
+00:44:51,800 --> 00:44:55,960
+which means that you get 10 millisecond resolution on your durations.
+
+869
+00:44:55,960 --> 00:44:58,360
+So if a function takes less than 10 milliseconds to run,
+
+870
+00:44:59,080 --> 00:45:04,520
+that resolution is not significant enough to give you accurate insight into how long that function takes.
+
+871
+00:45:04,520 --> 00:45:08,760
+But for like for most workloads, like 10 milliseconds is probably enough granularity
+
+872
+00:45:08,760 --> 00:45:10,920
+to find like really bad performing code.
+
+873
+00:45:11,640 --> 00:45:13,000
+So that's typically the default.
+
+874
+00:45:13,000 --> 00:45:20,440
+And then for more local profiling tools, a decent, like a pretty common standard is 1000 Hz.
+
+875
+00:45:20,440 --> 00:45:22,440
+So if you've used like Chrome DevTools or something,
+
+876
+00:45:22,440 --> 00:45:26,680
+like most of those profilers run on 1000 Hz, they collect 1000 samples per second,
+
+877
+00:45:26,680 --> 00:45:30,760
+and they will get you a one millisecond granularity.
+
+878
+00:45:31,720 --> 00:45:35,160
+So the sampling frequency does have an impact on overhead.
+
+879
+00:45:35,160 --> 00:45:39,960
+So if I try and run PySpy with the default 100 Hz resolution,
+
+880
+00:45:43,400 --> 00:45:46,200
+let's see what the overhead would be in this case.
+
+881
+00:45:50,520 --> 00:45:51,160
+Oh, oops.
+
+882
+00:45:52,840 --> 00:45:53,160
+Correct.
+
+883
+00:45:54,520 --> 00:45:55,640
+Yeah, okay, this is good.
+
+884
+00:45:55,640 --> 00:45:56,520
+So we're seeing 9%.
+
+885
+00:45:57,240 --> 00:46:01,640
+9% overhead from running PySpy with the default 100 Hz sampling frequency.
+
+886
+00:46:02,200 --> 00:46:04,440
+So 9% is actually really good.
+
+887
+00:46:04,440 --> 00:46:07,320
+You could comfortably run this in production without,
+
+888
+00:46:07,320 --> 00:46:10,680
+you know, a significant impact on your application's production performance.
+
+889
+00:46:11,640 --> 00:46:14,280
+And then what happens, let's see if we bump it up to 1000.
+
+890
+00:46:23,240 --> 00:46:27,080
+So you can see here with 1000, you're looking at roughly 25% overhead.
+
+891
+00:46:27,080 --> 00:46:28,840
+So the change is from 9% to 25%.
+
+892
+00:46:29,480 --> 00:46:34,360
+So it's not a 10x increase in overhead just because you increase the number of samples by 10 times.
+
+893
+00:46:35,400 --> 00:46:37,560
+But it is a significant jump.
+
+894
+00:46:38,200 --> 00:46:40,760
+So those are some of the tradeoffs involved.
+
+895
+00:46:40,760 --> 00:46:43,800
+So you'll want to be careful about picking sampling versus deterministic.
+
+896
+00:46:44,360 --> 00:46:48,040
+You'll want to be careful about picking a reasonable sampling frequency.
+
+897
+00:46:48,040 --> 00:46:51,640
+And in most profilers, that sampling frequency is configurable.
+
+898
+00:46:51,640 --> 00:46:55,320
+So you can choose a value that makes sense for the kind of code
+
+899
+00:46:55,320 --> 00:46:56,680
+that you're trying to profile in production.
+
+900
+00:46:58,040 --> 00:47:01,560
+But yeah, that was sort of like a short overview of Python profiling tools
+
+901
+00:47:01,560 --> 00:47:02,920
+and visualizations and how they work.
+
+902
+00:47:03,880 --> 00:47:07,880
+And so just finally, one thing I wanted to say,
+
+903
+00:47:09,000 --> 00:47:12,280
+just kind of a brief mention of what Sentry has been doing in this space.
+
+904
+00:47:12,280 --> 00:47:15,640
+So my team has been building out profiling at Sentry for about the last year and a half.
+
+905
+00:47:17,240 --> 00:47:23,000
+We've been doing this in beta with a few thousand customers over the last year or so.
+
+906
+00:47:23,000 --> 00:47:25,640
+And so we do have a production-grade Python profiler
+
+907
+00:47:26,280 --> 00:47:29,880
+and lots of tools to view flame charts from production, aggregate data,
+
+908
+00:47:29,880 --> 00:47:32,360
+kind of give you automated insights into the performance of your code.
+
+909
+00:47:33,400 --> 00:47:37,320
+We're going to be at the Sentry booth answering questions and walking through demos and stuff.
+
+910
+00:47:37,320 --> 00:47:40,040
+So if you're interested in learning more about this, just come stop by.
+
+911
+00:47:41,560 --> 00:47:45,080
+And with that, I think I'll open the floor for any questions.
+
+912
+00:47:45,080 --> 00:47:48,760
+And there's a mic at the center of the room if anyone has any questions.
+
+913
+00:48:03,880 --> 00:48:11,960
+I was wondering if there is any way to combine the data from multiple calls to this,
+
+914
+00:48:11,960 --> 00:48:16,120
+so multiple files to create one flame chart.
+
+915
+00:48:16,840 --> 00:48:21,880
+Yeah, so if you were to take a flame chart and aggregate it to a single file, you can do that.
+
+916
+00:48:21,880 --> 00:48:25,320
+What you would get is a flame graph, basically,
+
+917
+00:48:25,320 --> 00:48:28,280
+because flame charts track duration, right?
+
+918
+00:48:28,280 --> 00:48:32,280
+But aggregating durations is not typically useful.
+
+919
+00:48:32,760 --> 00:48:34,360
+There's a lot of noise in those durations.
+
+920
+00:48:34,360 --> 00:48:37,400
+So what ends up happening is you basically take the frequencies,
+
+921
+00:48:37,400 --> 00:48:40,280
+how often the functions are called in each flame chart,
+
+922
+00:48:40,280 --> 00:48:42,120
+and you aggregate them into a single flame graph.
+
+923
+00:48:42,120 --> 00:48:45,480
+So when you look at a flame graph visualization from a typical continuous profiler,
+
+924
+00:48:45,480 --> 00:48:48,840
+what that does is it runs the profiler on a bunch of different machines in the fleet
+
+925
+00:48:48,840 --> 00:48:52,440
+across a bunch of different runs and dumps it into the same output.
+
+926
+00:48:53,080 --> 00:48:58,360
+As for how you would do that manually, you could write a script to do it.
+
+927
+00:48:58,360 --> 00:49:01,640
+There are probably scripts available already to sort of merge flame chart data.
+
+928
+00:49:02,360 --> 00:49:04,680
+But yeah, you would merge the flame charts into a flame graph,
+
+929
+00:49:04,680 --> 00:49:06,200
+and then you'd do like a frequency analysis.
+
+930
+00:49:06,200 --> 00:49:12,200
+And the format that the C profile or these profile tools use for the raw data,
+
+931
+00:49:12,200 --> 00:49:17,880
+is that a Python-specific thing or other languages have tooling that is compatible with it?
+
+932
+00:49:17,880 --> 00:49:19,640
+Yeah, so it is a Python-specific thing.
+
+933
+00:49:20,200 --> 00:49:22,840
+So they have their own file format that it's dumped into.
+
+934
+00:49:24,120 --> 00:49:26,840
+You are able to open the file format with PStats,
+
+935
+00:49:26,840 --> 00:49:30,200
+and actually in Python 3.9, they added some additional APIs
+
+936
+00:49:30,200 --> 00:49:33,720
+to extract the raw data from a PStats file.
+
+937
+00:49:33,720 --> 00:49:36,920
+And so in theory, you could use those APIs to extract the raw data
+
+938
+00:49:36,920 --> 00:49:40,920
+and output it into a format that is kind of more portable.
+
+939
+00:49:41,560 --> 00:49:44,680
+So the Brendan Gregg flame graph format or SpeedScope or something,
+
+940
+00:49:44,680 --> 00:49:45,800
+you could do the output.
+
+941
+00:49:45,800 --> 00:49:48,600
+But the thing that's difficult about it is that it would,
+
+942
+00:49:48,600 --> 00:49:51,480
+you could only generate flame graph data from the C profile data,
+
+943
+00:49:51,480 --> 00:49:55,320
+because I mentioned there's this limitation where it doesn't capture like full call tree information.
+
+944
+00:49:55,320 --> 00:49:58,760
+But yes, you could definitely dump the C profile data into a flame graph
+
+945
+00:49:59,720 --> 00:50:01,320
+manually by writing a little bit of code.
+
+946
+00:50:01,320 --> 00:50:01,720
+Thank you.
+
+947
+00:50:06,920 --> 00:50:16,680
+I might have missed, but how do you make such a flame graph for generators or like proteins,
+
+948
+00:50:16,680 --> 00:50:21,160
+which have intermediate yield periods?
+
+949
+00:50:22,120 --> 00:50:24,440
+Yeah, so this is a complicated topic.
+
+950
+00:50:25,960 --> 00:50:28,360
+Yeah, it kind of depends on your sort of concurrency mechanism.
+
+951
+00:50:28,360 --> 00:50:32,040
+Like for example, our profiler does support some like greenlets to some extent.
+
+952
+00:50:32,760 --> 00:50:36,280
+Async IO is sort of a work in progress depending on how you use Async IO.
+
+953
+00:50:36,280 --> 00:50:40,760
+So I would say that story is very much a work in progress.
+
+954
+00:50:40,760 --> 00:50:41,960
+It'll work in some cases.
+
+955
+00:50:42,760 --> 00:50:47,800
+So if we do like an all thread sort of capture in a profiler,
+
+956
+00:50:47,800 --> 00:50:51,720
+you can probably see some of the additional threads that your workloads,
+
+957
+00:50:51,720 --> 00:50:53,480
+your async workloads are running on.
+
+958
+00:50:53,480 --> 00:50:56,600
+But you wouldn't really get like a really clean sort of like async stack trace.
+
+959
+00:50:56,600 --> 00:50:59,240
+Like you wouldn't see a bunch of like async functions that are
+
+960
+00:50:59,240 --> 00:51:02,040
+kind of ordered properly like in the same flame chart and easy to parse.
+
+961
+00:51:02,040 --> 00:51:04,120
+You would see work distributed across different threads.
+
+962
+00:51:04,120 --> 00:51:07,160
+You kind of have to go and find that work happening on different threads.
+
+963
+00:51:07,160 --> 00:51:09,960
+And so basically it's possible to get the data,
+
+964
+00:51:09,960 --> 00:51:12,360
+but the user experience for actually analyzing it
+
+965
+00:51:12,360 --> 00:51:16,600
+and kind of conceptually visualizing async stacks is difficult right now.
+
+966
+00:51:16,600 --> 00:51:18,040
+So that's yeah.
+
+967
+00:51:19,080 --> 00:51:19,400
+Thank you.
+
+968
+00:51:23,480 --> 00:51:29,720
+Just a quick question about the sampling window.
+
+969
+00:51:30,360 --> 00:51:36,680
+So if the window is too big and there's a process that is smaller than the start and the end
+
+970
+00:51:36,680 --> 00:51:39,240
+period, does that process not get captured?
+
+971
+00:51:39,240 --> 00:51:40,680
+Yeah, this is a really good question actually.
+
+972
+00:51:40,680 --> 00:51:41,880
+So yeah, you're exactly right.
+
+973
+00:51:41,880 --> 00:51:44,920
+So it almost depends on the randomness of the profiler, right?
+
+974
+00:51:44,920 --> 00:51:48,520
+Like let's say your function takes one millisecond and your window is 10, right?
+
+975
+00:51:48,520 --> 00:51:52,600
+In most cases that one millisecond function will start and stop in the middle of the window.
+
+976
+00:51:52,600 --> 00:51:55,000
+And so your profile will never see it.
+
+977
+00:51:55,000 --> 00:52:00,120
+On the rare occasion that the sampler lands exactly on the one millisecond mark
+
+978
+00:52:00,120 --> 00:52:03,160
+where your function is still on the stack, then it'll get captured.
+
+979
+00:52:03,160 --> 00:52:06,520
+So for a sampling profiler, if you're tracking frequency of functions,
+
+980
+00:52:07,880 --> 00:52:13,560
+statistically if you're running this across thousands of sessions,
+
+981
+00:52:13,560 --> 00:52:17,400
+you will get some data for it because you'll see it hit that mark occasionally,
+
+982
+00:52:17,400 --> 00:52:20,120
+but it just won't hit it very frequently because of the size of the window.
+
+983
+00:52:20,840 --> 00:52:23,960
+So it's not really like a reliable way of measuring it,
+
+984
+00:52:24,680 --> 00:52:27,800
+but you will in some cases with enough data be able to see something.
+
+985
+00:52:28,440 --> 00:52:34,680
+And is there some like fundamental like minimum length that you've seen
+
+986
+00:52:34,680 --> 00:52:38,840
+like throughout the different functions like within Python that,
+
+987
+00:52:38,840 --> 00:52:40,920
+you know, like we don't want to sample too much, right?
+
+988
+00:52:40,920 --> 00:52:44,520
+So is there some fundamental like smallest size that you've seen?
+
+989
+00:52:44,520 --> 00:52:47,640
+Yeah, so I don't know if there's like a fundamental one that I could describe,
+
+990
+00:52:47,640 --> 00:52:52,680
+but we in production, we typically use 10 milliseconds at the granularity.
+
+991
+00:52:52,680 --> 00:52:58,040
+We find that most of our, so especially like in kind of like service level use cases,
+
+992
+00:52:58,040 --> 00:53:02,120
+right? A lot of your workload is IO bound.
+
+993
+00:53:02,120 --> 00:53:07,080
+So you're often like tracing the call to some SDK that contacts AWS or GCP
+
+994
+00:53:07,080 --> 00:53:08,600
+or your database or whatever.
+
+995
+00:53:08,600 --> 00:53:11,960
+And those calls are often measured in the hundreds of milliseconds, not tens.
+
+996
+00:53:11,960 --> 00:53:16,360
+So 10 milliseconds is perfectly like good enough for us to be measuring production workloads.
+
+997
+00:53:16,840 --> 00:53:20,120
+But in the case where you have a CPU bound workload where like,
+
+998
+00:53:20,120 --> 00:53:24,360
+you know, optimizing every millisecond worth of performance is actually worth it,
+
+999
+00:53:24,360 --> 00:53:28,680
+that's sort of the case where you would probably want to use a local profiling tool first with
+
+1000
+00:53:28,680 --> 00:53:33,080
+say like a thousand hertz granularity one millisecond for those cases.
+
+1001
+00:53:33,080 --> 00:53:36,440
+But like I said, for typical sort of like Python server cases,
+
+1002
+00:53:36,440 --> 00:53:38,200
+10 milliseconds is pretty sufficient.
+
+1003
+00:53:41,800 --> 00:53:43,720
+This could be a question for the booth maybe,
+
+1004
+00:53:43,720 --> 00:53:48,600
+but is this essentially profiling new feature going to be in process or out of process?
+
+1005
+00:53:49,320 --> 00:53:52,520
+Ours is in process. So our SDK ships an in process profiler.
+
+1006
+00:54:00,040 --> 00:54:02,200
+Hello. Thanks for the talk. Just a question.
+
+1007
+00:54:02,200 --> 00:54:07,320
+Do you have any kind of automatic analysis tool for the profile or continuous analysis?
+
+1008
+00:54:07,320 --> 00:54:11,080
+Because as far as I know, you have to manually analyze them.
+
+1009
+00:54:11,080 --> 00:54:13,160
+So do you have anything like this?
+
+1010
+00:54:13,160 --> 00:54:18,200
+Yeah, we do. So this is sort of one of the benefits of using like a cloud-based
+
+1011
+00:54:19,160 --> 00:54:21,960
+continuous profiling tool. So Sentry in particular will do,
+
+1012
+00:54:23,160 --> 00:54:27,160
+we'll collect a bunch of profiling data from production across sort of like different
+
+1013
+00:54:27,160 --> 00:54:31,000
+machines, different devices, and we'll run a bunch of aggregations. So one thing, for example,
+
+1014
+00:54:31,000 --> 00:54:34,920
+that we can tell you is we'll aggregate a ton of profiles and then we'll show you
+
+1015
+00:54:34,920 --> 00:54:38,200
+your hottest code paths in terms of like function names. So we'll be like, we saw this function
+
+1016
+00:54:38,200 --> 00:54:44,200
+appear n times and it's taking like roughly p75 of x milliseconds every time. And so here's a
+
+1017
+00:54:44,200 --> 00:54:48,600
+bunch of example profiles where this function is present, but you can look at in more detail.
+
+1018
+00:54:49,320 --> 00:54:54,760
+Another thing that we do that is sort of a newer idea is so we have like the Sentry error issues,
+
+1019
+00:54:54,760 --> 00:54:58,840
+which are generated whenever an exception or an error occurs. We're extending that concept to
+
+1020
+00:54:58,840 --> 00:55:03,880
+performance with profiling data. And so we'll automatically like take in the firehose of
+
+1021
+00:55:03,880 --> 00:55:07,400
+profiling data and we'll actually analyze for particular bad performance patterns.
+
+1022
+00:55:08,280 --> 00:55:14,840
+So we have this for mobile as well. So for one example, on mobile we have particular places where
+
+1023
+00:55:14,840 --> 00:55:19,160
+there's main thread code running on the UI thread that is expensive, like you're doing an image
+
+1024
+00:55:19,160 --> 00:55:23,800
+decode or a really large JSON decode. So we'll be able to flag that for you as an issue instead of
+
+1025
+00:55:23,800 --> 00:55:27,640
+you having to go through all the flame charts and find it yourself. We're also going to be
+
+1026
+00:55:27,640 --> 00:55:33,480
+extending that stuff to the backend. So that's the sort of like the more reactive use case instead
+
+1027
+00:55:33,480 --> 00:55:37,240
+of having to proactively go in and look at data. Okay, cool. Thank you.
+
+1028
+00:55:45,640 --> 00:55:53,240
+Great. I think we're done. Thanks everybody. Really appreciate your time.
+

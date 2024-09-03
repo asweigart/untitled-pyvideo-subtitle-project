@@ -1,0 +1,1256 @@
+1
+00:00:00,000 --> 00:00:05,000
+Okay. Hi, my name is Bianca Henderson and this is my first Python talk.
+
+2
+00:00:05,000 --> 00:00:07,000
+I am here today to show you...
+
+3
+00:00:07,000 --> 00:00:09,000
+Thank you!
+
+4
+00:00:09,000 --> 00:00:15,000
+I am here today to show you how to make your established Python code base pluggable.
+
+5
+00:00:15,000 --> 00:00:20,000
+In this talk, we're going to discuss what plugins are, generally speaking.
+
+6
+00:00:20,000 --> 00:00:23,000
+I'll talk a bit about the Pluggy Python framework.
+
+7
+00:00:23,000 --> 00:00:29,000
+We'll dive into a real-world example of plugin implementation with Conda and Pluggy.
+
+8
+00:00:29,000 --> 00:00:32,000
+I'll cover different reasons for implementing plugins,
+
+9
+00:00:32,000 --> 00:00:36,000
+and you'll get some links to tutorials and reference materials.
+
+10
+00:00:36,000 --> 00:00:39,000
+This presentation will have a mix of technical and non-technical parts,
+
+11
+00:00:39,000 --> 00:00:46,000
+so hopefully it's accessible for everyone, no matter what your level of expertise is with APIs or software development in general.
+
+12
+00:00:46,000 --> 00:00:48,000
+I'm not standing too close to my platform.
+
+13
+00:00:48,000 --> 00:00:50,000
+I'm talking...okay.
+
+14
+00:00:50,000 --> 00:00:53,000
+That QR code links directly to my GitHub page.
+
+15
+00:00:53,000 --> 00:00:56,000
+You can navigate from there to my Python 2023 repo,
+
+16
+00:00:56,000 --> 00:01:00,000
+which contains this presentation as well as the code examples that I'll cover.
+
+17
+00:01:00,000 --> 00:01:03,000
+Anyway, before we start, a little bit about me.
+
+18
+00:01:03,000 --> 00:01:05,000
+I work as a developer in a Conda.
+
+19
+00:01:05,000 --> 00:01:13,000
+I've been there since 2021, and the team I'm on maintains and develops new features for open source projects such as Conda as well as Conda Build.
+
+20
+00:01:13,000 --> 00:01:16,000
+I am 100% self-taught.
+
+21
+00:01:16,000 --> 00:01:19,000
+I love working on and creating command line interfaces,
+
+22
+00:01:19,000 --> 00:01:21,000
+and I have lots and lots of hobbies.
+
+23
+00:01:21,000 --> 00:01:23,000
+Maybe even too many.
+
+24
+00:01:23,000 --> 00:01:29,000
+So if you're into things like games and music and all the other stuff I listed there, please come say hello.
+
+25
+00:01:29,000 --> 00:01:33,000
+You don't have to fit this criteria to gain knowledge from this presentation,
+
+26
+00:01:33,000 --> 00:01:39,000
+but generally speaking, this talk is for Python dogs who want to know more about plugin APIs,
+
+27
+00:01:39,000 --> 00:01:44,000
+anyone who wants to learn about Conda and or Pluggy,
+
+28
+00:01:44,000 --> 00:01:49,000
+and folks who maintain Python projects who are interested in expanding their application functionality.
+
+29
+00:01:49,000 --> 00:01:54,000
+So for my own curiosity, I'm wondering, raise your hand if you've written a plugin before.
+
+30
+00:01:54,000 --> 00:01:56,000
+Awesome.
+
+31
+00:01:56,000 --> 00:01:59,000
+Who here has developed software that supports plugins?
+
+32
+00:01:59,000 --> 00:02:01,000
+Oh, I love you.
+
+33
+00:02:01,000 --> 00:02:06,000
+How many of you here have specific plugin ideas that you want to implement?
+
+34
+00:02:06,000 --> 00:02:09,000
+Awesome.
+
+35
+00:02:09,000 --> 00:02:12,000
+Alright, so let's get started.
+
+36
+00:02:12,000 --> 00:02:14,000
+What are plugins?
+
+37
+00:02:14,000 --> 00:02:16,000
+First, here's a quote.
+
+38
+00:02:16,000 --> 00:02:18,000
+Let's see if you've heard this before.
+
+39
+00:02:18,000 --> 00:02:23,000
+With a sufficient number of users of an API, it does not matter what you promise in the contract.
+
+40
+00:02:23,000 --> 00:02:27,000
+All observable behaviors of your system will be dependent on by somebody.
+
+41
+00:02:27,000 --> 00:02:30,000
+I promise that's the only time I'll read a paragraph straight out the slide.
+
+42
+00:02:30,000 --> 00:02:33,000
+Anyone familiar with this quote?
+
+43
+00:02:33,000 --> 00:02:35,000
+Alright, which one is it?
+
+44
+00:02:35,000 --> 00:02:37,000
+That's right, harm's law.
+
+45
+00:02:37,000 --> 00:02:40,000
+So how is this related to plugins?
+
+46
+00:02:40,000 --> 00:02:43,000
+Well, the reality for software is whenever anything changes,
+
+47
+00:02:43,000 --> 00:02:46,000
+something tends to break for at least a portion of the end users.
+
+48
+00:02:46,000 --> 00:02:49,000
+This is what harm's law is talking about.
+
+49
+00:02:49,000 --> 00:02:52,000
+The good news is plugins can provide a guardrail against that breakage
+
+50
+00:02:52,000 --> 00:02:56,000
+and can make changes to your codebase less painful for the end user,
+
+51
+00:02:56,000 --> 00:03:00,000
+whether those changes are new features or upgrades to existing functionality.
+
+52
+00:03:00,000 --> 00:03:03,000
+Before we get into some more technical bits,
+
+53
+00:03:03,000 --> 00:03:07,000
+I'd like to explain what plugins are and what they use for analogy.
+
+54
+00:03:07,000 --> 00:03:10,000
+Let's say that you have a house.
+
+55
+00:03:10,000 --> 00:03:12,000
+It has electricity.
+
+56
+00:03:12,000 --> 00:03:14,000
+And running water.
+
+57
+00:03:14,000 --> 00:03:18,000
+Which means there's hardwired lighting and fully integrated plumbing,
+
+58
+00:03:18,000 --> 00:03:22,000
+so this house is livable and serves some basic needs.
+
+59
+00:03:22,000 --> 00:03:26,000
+But what if the resident of this house wants a cup of coffee
+
+60
+00:03:26,000 --> 00:03:29,000
+without having to go all the way out to a coffee shop?
+
+61
+00:03:29,000 --> 00:03:34,000
+The problem is this house has no power outlets.
+
+62
+00:03:34,000 --> 00:03:37,000
+So how can we solve this problem?
+
+63
+00:03:37,000 --> 00:03:41,000
+Well, one way to get some coffee would be to build a whole new attachment to the house
+
+64
+00:03:41,000 --> 00:03:45,000
+that hardwired electricity and plumbing into a big roasting machine
+
+65
+00:03:45,000 --> 00:03:48,000
+and an industrial sized coffee brewing setup.
+
+66
+00:03:48,000 --> 00:03:51,000
+However, just thinking about how to implement and execute this solution
+
+67
+00:03:51,000 --> 00:03:54,000
+is going to face nothing.
+
+68
+00:03:54,000 --> 00:03:56,000
+I won't bother you.
+
+69
+00:03:56,000 --> 00:03:59,000
+So what if instead of attaching a permanent and overpowered coffee making factory room,
+
+70
+00:03:59,000 --> 00:04:03,000
+we just retrofit the house with some standard power outlets
+
+71
+00:04:03,000 --> 00:04:07,000
+into which the resident can plug in a coffee maker?
+
+72
+00:04:07,000 --> 00:04:09,000
+And voila.
+
+73
+00:04:09,000 --> 00:04:12,000
+The resident can have coffee without needing to step out of the house,
+
+74
+00:04:12,000 --> 00:04:15,000
+and the resident can be caffeinated to their heart's content
+
+75
+00:04:15,000 --> 00:04:18,000
+without needing to construct a whole new attachment to their house.
+
+76
+00:04:18,000 --> 00:04:21,000
+Hopefully you all enjoyed this little story.
+
+77
+00:04:21,000 --> 00:04:24,000
+So in this analogy, the house is the code base.
+
+78
+00:04:24,000 --> 00:04:27,000
+The need for coffee is a missing feature,
+
+79
+00:04:27,000 --> 00:04:29,000
+divided by a user of that code base,
+
+80
+00:04:29,000 --> 00:04:31,000
+while the electrical outlet is a plug-in API,
+
+81
+00:04:31,000 --> 00:04:34,000
+and the coffee maker is the actual plug-in itself.
+
+82
+00:04:34,000 --> 00:04:38,000
+The complicated coffee room addition is the equivalent of fulfilling a user's specific needs
+
+83
+00:04:38,000 --> 00:04:43,000
+by implementing a whole new feature that's going to require extensive maintenance and planning.
+
+84
+00:04:43,000 --> 00:04:47,000
+Solving the problem via plug-ins is a much more extendable and reasonable solution
+
+85
+00:04:47,000 --> 00:04:49,000
+than you compare the two options.
+
+86
+00:04:49,000 --> 00:04:53,000
+A plug-in setup also enables the usage of different coffee machine types
+
+87
+00:04:53,000 --> 00:04:55,000
+or upgrades to better ones.
+
+88
+00:04:55,000 --> 00:04:59,000
+All around, it's a much simpler and more scurable way to achieve the end goal
+
+89
+00:04:59,000 --> 00:05:01,000
+of acquiring a cup of coffee
+
+90
+00:05:01,000 --> 00:05:06,000
+compared to attaching a permanent industrial coffee making factory room to the house.
+
+91
+00:05:07,000 --> 00:05:11,000
+Alright, so let's recap what plug-ins are and what they're used for.
+
+92
+00:05:11,000 --> 00:05:16,000
+They're a customization or extra feature, sometimes called extensions.
+
+93
+00:05:16,000 --> 00:05:20,000
+They can be shipped as part of a code base, but they don't have to be.
+
+94
+00:05:20,000 --> 00:05:23,000
+They can be packaged separately to be downloaded
+
+95
+00:05:23,000 --> 00:05:26,000
+and distributed.
+
+96
+00:05:26,000 --> 00:05:30,000
+And they take the pressure off the core maintainers of the host program,
+
+97
+00:05:30,000 --> 00:05:33,000
+since plug-ins can be maintained by whoever creates them.
+
+98
+00:05:33,000 --> 00:05:37,000
+One additional note here is that host programs can operate independently of the plug-in,
+
+99
+00:05:37,000 --> 00:05:41,000
+but plug-ins don't usually operate separately from the host program.
+
+100
+00:05:41,000 --> 00:05:45,000
+It's almost guaranteed that you've installed and used plug-ins
+
+101
+00:05:45,000 --> 00:05:47,000
+or extensions in your daily life.
+
+102
+00:05:47,000 --> 00:05:50,000
+Some examples are rather expensive things,
+
+103
+00:05:50,000 --> 00:05:53,000
+limited support, media players, or more.
+
+104
+00:05:53,000 --> 00:05:58,000
+You all will probably recognize these logos as belonging to software that is very much plug-able.
+
+105
+00:05:59,000 --> 00:06:01,000
+So, why plug-ins?
+
+106
+00:06:01,000 --> 00:06:06,000
+Well, plug-ins encourage innovation, which allow end users to better customize the tools
+
+107
+00:06:06,000 --> 00:06:08,000
+to meet their specific needs.
+
+108
+00:06:08,000 --> 00:06:11,000
+They also enforce the separation of concern.
+
+109
+00:06:11,000 --> 00:06:16,000
+What I mean by this is that each component of the host program can become more modular
+
+110
+00:06:16,000 --> 00:06:21,000
+and thus achieve increased freedom to simplify the code and make it more straightforward to maintain.
+
+111
+00:06:22,000 --> 00:06:27,000
+Plug-ins can additionally enable collaboration across organizations or large groups of people.
+
+112
+00:06:27,000 --> 00:06:29,000
+We are at Tycoon after all.
+
+113
+00:06:29,000 --> 00:06:33,000
+They can also increase security via use cases such as auth-specific extensions.
+
+114
+00:06:33,000 --> 00:06:38,000
+And in general, they can improve the user experience for the host program.
+
+115
+00:06:39,000 --> 00:06:44,000
+There are a few key things to keep in mind that are fundamental concepts for all plug-in architectures.
+
+116
+00:06:45,000 --> 00:06:49,000
+Discovery is how a run-in application can find out which plug-ins it can use.
+
+117
+00:06:49,000 --> 00:06:54,000
+To discover a plug-in, the software needs to look in specific places and know what to look for.
+
+118
+00:06:54,000 --> 00:06:58,000
+Registration is how a plug-in tells the host program, hey, I'm available to do work.
+
+119
+00:06:59,000 --> 00:07:03,000
+Plug-ins can attach themselves to the host program by application hooks.
+
+120
+00:07:03,000 --> 00:07:09,000
+This attachment signals that it wants to know about certain events and to participate in the program execution flow.
+
+121
+00:07:10,000 --> 00:07:15,000
+Finally, exposure of the plug-in API by the host program is the way that any available plug-in
+
+122
+00:07:15,000 --> 00:07:18,000
+can make themselves known to that host application.
+
+123
+00:07:19,000 --> 00:07:23,000
+All right, I'm going to go ahead and show you a few examples of plug-ins.
+
+124
+00:07:23,000 --> 00:07:27,000
+All right, so we're going to get into a general overview, as well as some details,
+
+125
+00:07:27,000 --> 00:07:33,000
+for a specific plug-in framework called Pluggy, so that we can see how it enables those fundamental concepts we just covered.
+
+126
+00:07:34,000 --> 00:07:39,000
+First off, Pluggy is a Python framework, a new API resource.
+
+127
+00:07:40,000 --> 00:07:44,000
+It provides a system that the host program can use to expose hooks to the plug-in.
+
+128
+00:07:44,000 --> 00:07:47,000
+So if you recall, I mentioned API exposure in the previous slide.
+
+129
+00:07:48,000 --> 00:07:52,000
+It lies at the core of projects like PyChest, which some of you all may have heard of.
+
+130
+00:07:52,000 --> 00:07:57,000
+In case you haven't, as mentioned before, it's a very popular library for writing tests in Python.
+
+131
+00:07:57,000 --> 00:08:01,000
+It's also got excellent and straightforward documentation.
+
+132
+00:08:03,000 --> 00:08:06,000
+All right, let's cover the basics of how to use Pluggy.
+
+133
+00:08:07,000 --> 00:08:09,000
+You start with a host program.
+
+134
+00:08:09,000 --> 00:08:12,000
+That's the Python codebase that you want to make plugable.
+
+135
+00:08:13,000 --> 00:08:19,000
+Then you have a plug-in, which is an executable program that you want to integrate with your host program.
+
+136
+00:08:19,000 --> 00:08:25,000
+Pluggy connects those two by using hook specifications that define all signatures provided by the host program.
+
+137
+00:08:25,000 --> 00:08:29,000
+So in other words, going back to our analogy, that's the wall-summit.
+
+138
+00:08:30,000 --> 00:08:36,000
+Along with hook implementations provided by the registered plug-ins, that's the appliance you're going to plug into that socket.
+
+139
+00:08:37,000 --> 00:08:43,000
+To quote directly from the Pluggy docs, Pluggy enables function-clicking to build plugable systems.
+
+140
+00:08:44,000 --> 00:08:47,000
+So what are some reasons to use Pluggy?
+
+141
+00:08:47,000 --> 00:08:52,000
+Well, some of the more typically relied-upon ways to modify the behavior of Python libraries and programs,
+
+142
+00:08:52,000 --> 00:09:01,000
+for example, method overriding or multi-catching, can become problematic when several parties want to participate in the modification of the same program.
+
+143
+00:09:01,000 --> 00:09:07,000
+So instead, Pluggy enables a much more loosely coupled relationship between the host program and its plug-ins.
+
+144
+00:09:07,000 --> 00:09:14,000
+If you haven't heard that term before, in programming, coupling refers to the degree of direct knowledge that one component has of another.
+
+145
+00:09:14,000 --> 00:09:24,000
+Thus, loosely coupled systems enable changes in one component of the software or system to affect the existence or performance of another component either trivially or not at all.
+
+146
+00:09:24,000 --> 00:09:30,000
+This goes back to Hermes' law from earlier in this presentation referring to Gragriels' Against API Breaking.
+
+147
+00:09:31,000 --> 00:09:38,000
+Also, Pluggy picks a lean burden by designing a successfully plugable system on the designer of the host program,
+
+148
+00:09:38,000 --> 00:09:43,000
+who has to be really intentional about which objects are truly necessary in the hook implementation.
+
+149
+00:09:44,000 --> 00:09:53,000
+Because of this, the Pluggin creators get a clear framework for how to customize the host via a well-defined set of functions and objects to work with.
+
+150
+00:09:53,000 --> 00:09:59,000
+On the host program side, the implementation of Pluggy can be as simple and close to the docs as possible,
+
+151
+00:09:59,000 --> 00:10:06,000
+or customized to fulfill any complex or specific needs that the host program might benefit from.
+
+152
+00:10:07,000 --> 00:10:16,000
+I'm just going to quickly walk you through an example based on the Pluggy docs to cover some basics and get you used to the terminology I'll be referring to later in our real-world news case.
+
+153
+00:10:16,000 --> 00:10:21,000
+This example is very simple. It's a single one file, which I call example.ui.
+
+154
+00:10:21,000 --> 00:10:27,000
+I have to split the file into two parts for this presentation, just to be able to find these slides. I want you to be able to read it.
+
+155
+00:10:28,000 --> 00:10:31,000
+So here, we start by importing Pluggy.
+
+156
+00:10:31,000 --> 00:10:36,000
+Quick note, at the time of this presentation, I'm using Pluggy version 1.0.0.
+
+157
+00:10:37,000 --> 00:10:42,000
+Every Pluggy application needs a hook-spec object to register any plugin hooks.
+
+158
+00:10:42,000 --> 00:10:47,000
+So, here we define our hook specification. In other words, our well-defined template.
+
+159
+00:10:47,000 --> 00:10:54,000
+Sorry. Can you all still hear me? I'm like, I can't hear myself. Okay, cool.
+
+160
+00:10:54,000 --> 00:10:59,000
+So, alright. So, every Pluggy application needs a hook-spec object to register any plugin hooks.
+
+161
+00:10:59,000 --> 00:11:04,000
+So, here we define a hook specification. In other words, our well-marked template.
+
+162
+00:11:04,000 --> 00:11:10,000
+We also create the hook-imple object here to mark implementations of the hooks that we've defined.
+
+163
+00:11:10,000 --> 00:11:16,000
+Just a note on naming markers. Hook-spec marker and hook-imple marker must be initialized with the name of the first project.
+
+164
+00:11:16,000 --> 00:11:21,000
+So, this is the same as the project's name parameter and packaging-related metadata.
+
+165
+00:11:21,000 --> 00:11:27,000
+So, in this case, the name is example for Python, as we'll see there in the parentheses.
+
+166
+00:11:27,000 --> 00:11:33,000
+Here, we can see that a hook specification namespace is defined in a single class called example-spec.
+
+167
+00:11:33,000 --> 00:11:39,000
+And, each individual hook method gets registered with the hook-spec decorator, as you can see there, underlined in red.
+
+168
+00:11:39,000 --> 00:11:45,000
+Now, we're moving along to the second half of that example.py file.
+
+169
+00:11:45,000 --> 00:11:52,000
+Here, we see the hook-imple decorator used to mark the implementation of this example, myHook plugin.
+
+170
+00:11:52,000 --> 00:11:59,000
+Note that the function with the hook implementation decorator must have the same name as the hook specification.
+
+171
+00:11:59,000 --> 00:12:04,000
+You see what I mean here? You see how it says myHook in that function name?
+
+172
+00:12:04,000 --> 00:12:09,000
+If it said my underscore hook and the arrow on it said myHook, it's not going to know what you're talking about.
+
+173
+00:12:09,000 --> 00:12:12,000
+You're going to need exactly the same thing.
+
+174
+00:12:12,000 --> 00:12:16,000
+This is all along good, but how do we actually utilize this plugin?
+
+175
+00:12:16,000 --> 00:12:19,000
+We need to register it with the plugin manager.
+
+176
+00:12:19,000 --> 00:12:24,000
+The plugin manager stands for hook functions, but they're not necessarily the same thing.
+
+177
+00:12:24,000 --> 00:12:29,000
+This allows for multiple plugin managers from multiple projects to define hooks alongside each other.
+
+178
+00:12:29,000 --> 00:12:37,000
+If you recall from the first part of this file, the hook-spec marker and hook-imple marker were both initialized with the name of the host project,
+
+179
+00:12:37,000 --> 00:12:40,000
+which in our case is example4.pycon.
+
+180
+00:12:40,000 --> 00:12:44,000
+So, that's what we're specifically registering here.
+
+181
+00:12:44,000 --> 00:12:49,000
+So, just reminding you again, here's an example of myHook plugin.
+
+182
+00:12:49,000 --> 00:12:56,000
+As the text box says, here we are registering the plugin, myPlugin, that was defined in the class highlighted above.
+
+183
+00:12:56,000 --> 00:13:03,000
+Here we're calling the myHook plugin function to take in two integers as arguments and then add them together, printing the results.
+
+184
+00:13:03,000 --> 00:13:10,000
+When we run this example file directly on the command line, you can do this too with the example that you'll find on the repo,
+
+185
+00:13:10,000 --> 00:13:13,000
+and then add them together, printing the results.
+
+186
+00:13:13,000 --> 00:13:20,000
+When we run this example file directly on the command line, you can do this too with the example that you'll find on the repo,
+
+187
+00:13:20,000 --> 00:13:26,000
+you get the print statement and the expected output of what the plugin is doing, which is adding the two specified integers together.
+
+188
+00:13:26,000 --> 00:13:29,000
+So, in my case, one and two will show you where that was happening.
+
+189
+00:13:29,000 --> 00:13:34,000
+So, it printed that and then it added those two integers together.
+
+190
+00:13:34,000 --> 00:13:42,000
+Now we're ready to go over a real-life example that shows how my team and I used PuGy to expand on this functionality.
+
+191
+00:13:42,000 --> 00:13:46,000
+Before we get into the details though, let's talk a bit about Conda.
+
+192
+00:13:46,000 --> 00:13:51,000
+In case you don't know, Conda is a package and environment management system.
+
+193
+00:13:51,000 --> 00:13:57,000
+It's written in Python that runs on macOS, Windows, and Linux.
+
+194
+00:13:57,000 --> 00:13:59,000
+It's also open source.
+
+195
+00:13:59,000 --> 00:14:03,000
+Conda installs, runs, and updates packages and their dependencies.
+
+196
+00:14:03,000 --> 00:14:08,000
+It also creates, saves loads, and switches between environments on your local computer.
+
+197
+00:14:08,000 --> 00:14:13,000
+It was created primarily for Python programs, but it's actually language-agnostic.
+
+198
+00:14:13,000 --> 00:14:16,000
+It means that it can package and distribute software for any language.
+
+199
+00:14:16,000 --> 00:14:22,000
+A few examples are Lua, Java, C++, Fortran, whatever's out there really.
+
+200
+00:14:22,000 --> 00:14:26,000
+It has quite a few active users, over 35 million.
+
+201
+00:14:26,000 --> 00:14:32,000
+And it's a very well-established campus. It's over 10 years old.
+
+202
+00:14:32,000 --> 00:14:36,000
+As the title of that slide says, this is by no means an exhaustive list.
+
+203
+00:14:36,000 --> 00:14:42,000
+But here are just a few of the use cases my teammates and I brainstormed when we first started to consider making Conda plugable.
+
+204
+00:14:42,000 --> 00:14:48,000
+You'll see stuff like request handlers, faster solvers, cell integration, authentication plugins,
+
+205
+00:14:48,000 --> 00:14:52,000
+and specific as well as general use case subcommands.
+
+206
+00:14:52,000 --> 00:14:58,000
+Speaking of, for the sake of simplicity, we're going to get into subcommands for our use case deep dive,
+
+207
+00:14:58,000 --> 00:15:03,000
+since it's the most straightforward and easy to explain plugin API that we ended up implementing.
+
+208
+00:15:03,000 --> 00:15:08,000
+All right, so now we're about to get into some technical details again.
+
+209
+00:15:08,000 --> 00:15:13,000
+The slides are a bit challenging for going over code, and project structures will please bear with me.
+
+210
+00:15:13,000 --> 00:15:20,000
+Just so you know, these slides are available on GitHub, and there will be a QR code at the end of this presentation that will lead you to where the slide upgrades.
+
+211
+00:15:20,000 --> 00:15:27,000
+The repository will also be, as I said before, where you can find the example.py file from earlier in this talk.
+
+212
+00:15:27,000 --> 00:15:32,000
+I covered this previously. These are the same exact concepts we'll apply to Conda in the following deep dive.
+
+213
+00:15:32,000 --> 00:15:38,000
+So here, the host is going to be Conda. The plugin is a custom subcommand.
+
+214
+00:15:38,000 --> 00:15:45,000
+And we'll see how we define both a hook specification as well as the hook implementation.
+
+215
+00:15:45,000 --> 00:15:49,000
+Before we get into any files, I want to show you Conda's plugin project structure.
+
+216
+00:15:49,000 --> 00:15:54,000
+We set up the project in a way that enables better scaling and easier maintainability.
+
+217
+00:15:54,000 --> 00:16:02,000
+How well something scales and how maintainable it is are both important design parameters to keep in mind when you go on your own plugin related journey.
+
+218
+00:16:02,000 --> 00:16:09,000
+Different plugin types that Flipply codebase can all live in their own directory can be shipped and registered by default.
+
+219
+00:16:09,000 --> 00:16:13,000
+Virtual packages specifically were came into plugins as a refactoring effort.
+
+220
+00:16:13,000 --> 00:16:23,000
+What I mean by this is that we had a lot of stuff going on in an index file, and we decided to extract out the virtual package bits and put them into their own specific plugins with their own hook specifications.
+
+221
+00:16:23,000 --> 00:16:31,000
+Not only did this clean up our codebase, it also enabled users to create their own virtual package plugins in the future as necessary.
+
+222
+00:16:31,000 --> 00:16:40,000
+Here you can see we created a file called Mamos.py to implement our own desired custom behavior in addition to PluginsDefaultPluginManager.
+
+223
+00:16:40,000 --> 00:16:47,000
+So things like how you load the plugins and what sort of error messages you want to surface are all able to be customized for your particular project.
+
+224
+00:16:48,000 --> 00:16:56,000
+We're not going to look at this file in depth, but I want to mention that you can subclass PluginsDefaultPluginManager class and customize it as you see fit.
+
+225
+00:16:56,000 --> 00:17:02,000
+To get into details about how we use Plugins features, we're going to take a closer look at this HookBack file.
+
+226
+00:17:02,000 --> 00:17:08,000
+And here it is. Just as a reminder, HookBack is short for Hook Specification.
+
+227
+00:17:08,000 --> 00:17:14,000
+Just like in the example file earlier in this talk, we start by importing Plugin.
+
+228
+00:17:14,000 --> 00:17:21,000
+Every Plugin application needs a HookSpec object to register any plugin hooks, so here we define our Hook specification.
+
+229
+00:17:21,000 --> 00:17:24,000
+Once again, it's our wall socket.
+
+230
+00:17:24,000 --> 00:17:30,000
+Also, we create the Hook implementation object here to mark implementations of the hooks that we have defined.
+
+231
+00:17:32,000 --> 00:17:37,000
+Here we can see that we keep our hooks organized in a single class called Condescripts.
+
+232
+00:17:38,000 --> 00:17:45,000
+And we register each individual hook function or method with the HookSpec decorator, as you can see they're underlined in red.
+
+233
+00:17:47,000 --> 00:17:52,000
+We establish the specifics of the data exchanged for the class you're using tight-tapes.
+
+234
+00:17:52,000 --> 00:17:57,000
+Next, we're going to take a look at where this highlighted Condescripts subcommand class is actually defined.
+
+235
+00:17:58,000 --> 00:18:04,000
+Back to our project structure. This TypeStack.py file is where we decided to design our plugin classes.
+
+236
+00:18:04,000 --> 00:18:09,000
+We'll specifically look at the Condescripts subcommand line, because that's the most straightforward and accessible example.
+
+237
+00:18:10,000 --> 00:18:16,000
+Here we see the Condescripts subcommand class. Let's take a look at the anatomy of a custom Condescripts subcommand.
+
+238
+00:18:17,000 --> 00:18:24,000
+It's got a name in the form of a string. The example there shows one being invoked as MySubcommandName.
+
+239
+00:18:25,000 --> 00:18:32,000
+There's also a summary, which is a brief description of what the subcommand does. So this is like what shows up when you invoke the help text.
+
+240
+00:18:32,000 --> 00:18:38,000
+Right, help menu. And finally, there's a call about action, which is what happens when the plugin code is executed.
+
+241
+00:18:39,000 --> 00:18:43,000
+We've covered what we had to add to Conda in order to enable it to work with plugins.
+
+242
+00:18:43,000 --> 00:18:48,000
+Now we're going to take a look at how to implement a custom subcommand plugin via a separate Python file.
+
+243
+00:18:50,000 --> 00:18:55,000
+I'll go over this plugin's target structure in a bit, but before we do that, here's the top part of that plugin file.
+
+244
+00:18:55,000 --> 00:19:05,000
+It's called ASCIIGRAPH.py. Here we're importing Conda and its plugin infrastructure so that we can properly register this plugin and have it be understood by Conda.
+
+245
+00:19:07,000 --> 00:19:12,000
+In this function, we can see what gets executed whenever the plugin is called by the host program.
+
+246
+00:19:12,000 --> 00:19:18,000
+There are three measures that the user can pass into the command line and get an output in the form of a graph using ASCIIART.
+
+247
+00:19:18,000 --> 00:19:21,000
+It's actually a pretty visually fun plugin.
+
+248
+00:19:21,000 --> 00:19:28,000
+This is the second half of that plugin file. Here we see the hook-info decorator used to mark the implementation of this subcommand.
+
+249
+00:19:30,000 --> 00:19:35,000
+I'll remind you again that these decorative functions must have the same name as the hook spec.
+
+250
+00:19:36,000 --> 00:19:40,000
+So it's like conda underscore subcommands, conda underscore hook commands.
+
+251
+00:19:40,000 --> 00:19:46,000
+If one of them do not have the s50 on or there's no underscored, it's just not going to know what you're talking about.
+
+252
+00:19:47,000 --> 00:19:51,000
+Now, how do we actually use this plugin and have it get recognized by Conda?
+
+253
+00:19:51,000 --> 00:19:57,000
+Well, the great thing about plugins is that they can be your own standalone packages, which you can utilize and develop as such.
+
+254
+00:19:57,000 --> 00:20:04,000
+Previously, I showed you how to register a plugin with the plugin manager. Now, I'll show you how to package a plugin.
+
+255
+00:20:04,000 --> 00:20:13,000
+Unless you're stripping your plugin as a default part of the code base, your project structure is probably going to look like a pretty straightforward Python package, as shown here.
+
+256
+00:20:14,000 --> 00:20:22,000
+The pyproject.toml file contains the project metadata and plays a crucial role in turning the executable plugin module into a distributable package.
+
+257
+00:20:22,000 --> 00:20:25,000
+Let's take a closer look at what's in that file.
+
+258
+00:20:26,000 --> 00:20:36,000
+Here are the contents of that particular conda subcommand's packaging metadata, where we specify our build system requirements, project information, dependencies, and other relevant information.
+
+259
+00:20:37,000 --> 00:20:44,000
+You can see here that we specify our requirements and dependencies and generally distribute this plugin just like any other Python package.
+
+260
+00:20:45,000 --> 00:20:49,000
+And here, we assign the command sdgraph as our entry point.
+
+261
+00:20:50,000 --> 00:20:55,000
+While developing this conda subcommand, I worked on it as an editable install.
+
+262
+00:20:55,000 --> 00:21:04,000
+In this case, this is the first time you've seen about editable installs, so they're also known as working in development mode and operate very similarly to a regular PIP installation,
+
+263
+00:21:04,000 --> 00:21:10,000
+except that it only installs your package dependencies, metadata, and wrappers for console and graphical user interface scripts.
+
+264
+00:21:10,000 --> 00:21:19,000
+This means that whenever you make any changes to the Python module that got installed in editable mode, those changes will be reflected immediately in the behavior of the executable code.
+
+265
+00:21:20,000 --> 00:21:27,000
+So, on the command line, if I run pip install-e dot at the level of the directory where the pyproject.toml file lives,
+
+266
+00:21:27,000 --> 00:21:34,000
+then all of those dependencies that were specified in the metadata will get installed along with the custom subcommand plugin.
+
+267
+00:21:35,000 --> 00:21:42,000
+After we do that, we can invoke conda call menu to see that our new subcommand plugin is available for use.
+
+268
+00:21:42,000 --> 00:21:47,000
+You'll see there that the name sdgraph shows up as well as the summary of what the subcommand does.
+
+269
+00:21:48,000 --> 00:21:59,000
+On the command line, if we invoke that new subcommand and pass m3-imgrs, so in this case, negative 5 and 3, and hit enter, we get, yay, sdgraph.
+
+270
+00:21:59,000 --> 00:22:01,000
+So, hooray, the plugin works.
+
+271
+00:22:01,000 --> 00:22:03,000
+I didn't want to do that one.
+
+272
+00:22:03,000 --> 00:22:12,000
+To go back to our copy analogy, let's say that these copy machines are each their own plugins, and the fancier they are, the more complex the plugins are.
+
+273
+00:22:12,000 --> 00:22:15,000
+The matter is the code is complex or simple, though.
+
+274
+00:22:15,000 --> 00:22:22,000
+As long as the plugin hooks are set up correctly, you can use any of these with the same outlet type, which is our plugin API.
+
+275
+00:22:24,000 --> 00:22:34,000
+Standard appliances are great, but what if you need to use your outlet for something like a dryer or whatever other appliances and machines that aren't compatible with the outlets that you already have?
+
+276
+00:22:34,000 --> 00:22:37,000
+Well, then you implement new outlets.
+
+277
+00:22:38,000 --> 00:22:51,000
+If you have special use case plugins that you need, for example, for something like authentication, cell integration, or anything that's more involved than a subcommand, then you simply write new hook specifications for them.
+
+278
+00:22:51,000 --> 00:22:56,000
+Let's briefly cover some other use cases and ideas for plugins.
+
+279
+00:22:57,000 --> 00:23:01,000
+Let's briefly cover some other use cases and ideas for plugins.
+
+280
+00:23:01,000 --> 00:23:11,000
+You can use them for things like gender or client-specific extensions, code-enhancing integrations, experimental features, refactoring, and more.
+
+281
+00:23:11,000 --> 00:23:24,000
+Speaking of refactoring, you might remember me mentioning earlier that during the Conda plugin initiative, we took the virtual practice-related code out of our InVex file and took it on separate plugins as part of a big refactoring effort.
+
+282
+00:23:24,000 --> 00:23:31,000
+This not only simplified our code base, it also enables community members to create and maintain their own virtual package plugins as needed.
+
+283
+00:23:31,000 --> 00:23:39,000
+No matter what, though, make sure that you carefully tone the plugin each supposed to be plugin hooks and ensure that you have use cases to back them up.
+
+284
+00:23:39,000 --> 00:23:46,000
+Also, as with any other technical project, always prioritize creating clear, oversized document keystream to go along with it.
+
+285
+00:23:46,000 --> 00:23:50,000
+Never underestimate the importance of good dots.
+
+286
+00:23:51,000 --> 00:23:56,000
+Also, guess what? Non-Python languages can be used to create plugins for Python code bases.
+
+287
+00:23:56,000 --> 00:24:03,000
+You can write the plugin for some, so in other words, the file with the function decorated with a hook input decorator in Python,
+
+288
+00:24:03,000 --> 00:24:06,000
+write a program in another language,
+
+289
+00:24:06,000 --> 00:24:13,000
+and call it from the plugin module written in Python using a foreign function interface, also known as FFIs.
+
+290
+00:24:13,000 --> 00:24:16,000
+An example of an FFI is in-turning for Rust.
+
+291
+00:24:17,000 --> 00:24:24,000
+This type of flexibility is super useful for working with a code base like Conda, which is by nature a very language-amassed.
+
+292
+00:24:24,000 --> 00:24:28,000
+Some of you visiting from overseas will be familiar with this type of app outlet adapter.
+
+293
+00:24:28,000 --> 00:24:33,000
+This is kind of like what foreign function interfaces do between two different languages.
+
+294
+00:24:33,000 --> 00:24:39,000
+Alright, so here's the QR code for the template repository, where you'll find the ASCII graph example we just walked through in detail.
+
+295
+00:24:39,000 --> 00:24:45,000
+There are also instructions for creating plugins that work with Conda that are written in Rust as well as Seed.
+
+296
+00:24:45,000 --> 00:24:50,000
+So you'll be able to get some guidance on how to incorporate foreign function interfaces with a Python code base,
+
+297
+00:24:50,000 --> 00:24:52,000
+if you've never used one before.
+
+298
+00:24:52,000 --> 00:24:54,000
+So learn multiple things.
+
+299
+00:24:54,000 --> 00:24:59,000
+Here's the QR code for the GitHub repository, where you can find the slide deck,
+
+300
+00:24:59,000 --> 00:25:02,000
+as well as the example file from the very beginning of this talk.
+
+301
+00:25:03,000 --> 00:25:10,000
+There's also my email addresses and GitHub account and element matrix handle, and contact information.
+
+302
+00:25:10,000 --> 00:25:12,000
+So, alright.
+
+303
+00:25:12,000 --> 00:25:18,000
+I hope this talk inspired you to create plugins for your own Python code base, whether it's very well established or brand new.
+
+304
+00:25:18,000 --> 00:25:24,000
+I also hope you come away from this challenge with lots of ideas for what possibilities are available and achievable.
+
+305
+00:25:24,000 --> 00:25:28,000
+Pluggy is a really great framework, and I can't recommend it enough.
+
+306
+00:25:29,000 --> 00:25:36,000
+Now, let's all grow and build new life and force software, and enable more community collaboration via plugins.
+
+307
+00:25:36,000 --> 00:25:38,000
+Thank you for attending this talk.
+
+308
+00:25:38,000 --> 00:25:39,000
+Cheers.
+
+309
+00:25:45,000 --> 00:25:52,000
+I also want to mention I'm not going to do a live Q&A because there is a Conda Open Space Meetup happening this afternoon from 3 to 4.
+
+310
+00:25:52,000 --> 00:25:55,000
+It's at room 251, I think?
+
+311
+00:25:55,000 --> 00:25:56,000
+C?
+
+312
+00:25:56,000 --> 00:25:58,000
+Okay, it's at room 251C.
+
+313
+00:25:58,000 --> 00:26:00,000
+So, hope to see you there.
+
+314
+00:26:00,000 --> 00:26:01,000
+Thank you.
+

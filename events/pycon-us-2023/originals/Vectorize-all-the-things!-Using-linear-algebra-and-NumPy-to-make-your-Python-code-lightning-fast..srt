@@ -1,0 +1,1260 @@
+1
+00:00:00,000 --> 00:00:07,040
+Good afternoon everybody. Our next speaker is Jodie Pritchell who will be talking about
+
+2
+00:00:07,040 --> 00:00:12,320
+vectorizing all the things using linear algebra and NumPy to make your Python problems easier.
+
+3
+00:00:12,320 --> 00:00:14,560
+Please give her a warm warm of applause.
+
+4
+00:00:14,560 --> 00:00:16,560
+Thank you so much.
+
+5
+00:00:20,560 --> 00:00:28,560
+So, big audience, thank you so much for coming to my talk. So, as you said, I am Jodie Pritchell,
+
+6
+00:00:28,560 --> 00:00:42,560
+I am the Developer Advocate in Data Science at JetBrains, and in today's talk I'm going to be showing you some ways in which vectorized operations in Python can help you improve your Python code, as well as explaining a little bit of the linear algebra behind it.
+
+7
+00:00:42,560 --> 00:00:57,560
+So, why did I decide to give this talk? Well, I'm a self-taught programmer from a non-technical background, my PhD is actually in psychology, and my first language that I ever taught myself was Python, looking for something to correct me during my thesis.
+
+8
+00:00:57,560 --> 00:01:12,560
+So, when I first started in Python, I really loved full-whips, they were my bread and butter. But what I really quickly learned, and unfortunately I learned the hard way, is when you hit any sort of scale with data, loops get really really slack.
+
+9
+00:01:12,560 --> 00:01:19,560
+And initially I didn't really understand how to deal with this, and I was Googling around and it didn't make any sense to me.
+
+10
+00:01:19,560 --> 00:01:33,560
+But then I ended up doing a linear algebra course, and I understood the theory behind non-pipetrized operations, and I realized that this was going to give me the performance gains that I'd been looking for.
+
+11
+00:01:33,560 --> 00:01:48,560
+So, what are we going to cover in this talk? What I'd like to do is give an overview of a few ways that you can use vectorized operations to speed up your Python code, and what we're going to be doing is iteratively improving a data science or machine learning algorithm called the K-Python.
+
+12
+00:01:48,560 --> 00:02:01,560
+So, I chose this algorithm especially because I'm a data scientist, but also because I think it's a really good showcase of a way that you can get stuck using loops in your code, it's probably like the most obvious first way to do it.
+
+13
+00:02:01,560 --> 00:02:08,560
+But also how you can replace those loops in some other operations, is something vectorized and faster.
+
+14
+00:02:08,560 --> 00:02:16,560
+So, we'll start with going over the basics of linear algebra, and then we're going to quickly go through how K-Nearest-Napis works.
+
+15
+00:02:16,560 --> 00:02:24,560
+We'll then start with an unoptimized implementation of K-Nearest-Napis using loops in lists, and we're going to time how long it takes to get a baseline.
+
+16
+00:02:24,560 --> 00:02:35,560
+And then for the remainder of the talk, I'm going to be going through three different iterations of K-Nearest-Napis, and at each stage we're going to replace something inefficient with something vectorized and faster.
+
+17
+00:02:35,560 --> 00:02:41,560
+And then at each stage, I'm going to be explaining the mathematical principles behind each of these operations.
+
+18
+00:02:41,560 --> 00:02:44,560
+So, let's start from the beginning with opening an algebra.
+
+19
+00:02:44,560 --> 00:02:49,560
+So, the most basic unit in linear algebra, for our purposes, is a vector.
+
+20
+00:02:49,560 --> 00:02:58,560
+So, you can see here three different examples of vectors that basically sequence, sorry, ordered sequences of values.
+
+21
+00:02:58,560 --> 00:03:04,560
+So, in the context of machine learning, vectors are used to represent data, and we can see that here.
+
+22
+00:03:04,560 --> 00:03:08,560
+On the right-hand side, I have an excerpt of a data set that I'm going to be using throughout this analysis.
+
+23
+00:03:09,560 --> 00:03:13,560
+It describes physical characteristics of pictures of beams.
+
+24
+00:03:13,560 --> 00:03:19,560
+It's a pretty weird data set that has some excellent properties to show what I want to show in this talk, so I've just gone with it.
+
+25
+00:03:19,560 --> 00:03:27,560
+So, what you can see here are two of the columns from this data set and three beams, three rows from that data set.
+
+26
+00:03:27,560 --> 00:03:31,560
+And I hope what you can see is each of the vectors actually represents a beam.
+
+27
+00:03:31,560 --> 00:03:39,560
+And the first element in each of the vectors is that major axis length column, and the second is that minor axis length column.
+
+28
+00:03:39,560 --> 00:03:43,560
+So, what do these vectors represent in terms of linear algebra?
+
+29
+00:03:43,560 --> 00:03:50,560
+Well, for the purposes of this talk, we can think of vectors as coordinates in an n-dimensional vector space.
+
+30
+00:03:50,560 --> 00:03:53,560
+That's not that helpful, so let me illustrate.
+
+31
+00:03:53,560 --> 00:04:00,560
+Let's start here with a scatter plot of some beams against their values for the minor and major axis length.
+
+32
+00:04:00,560 --> 00:04:07,560
+What this plot illustrates is a two-dimensional vector space with the major axis length representing the first dimension
+
+33
+00:04:07,560 --> 00:04:10,560
+and the minor axis length representing the second dimension.
+
+34
+00:04:10,560 --> 00:04:17,560
+And what you can see is those vectors we were looking at in the last slide represented as coordinates in that vector space.
+
+35
+00:04:17,560 --> 00:04:22,560
+So, this beam data set we're going to be looking at has 16 feature columns in total,
+
+36
+00:04:22,560 --> 00:04:29,560
+and I can represent each of those beams as a 16-elanobrector that lives in a 16-dimension vector space.
+
+37
+00:04:29,560 --> 00:04:34,560
+So, that's obviously impossible to visualise, it's also impossible to really imagine.
+
+38
+00:04:34,560 --> 00:04:40,560
+But what I want to stress is that the principles we can apply to two-dimensional vector spaces that are much easier to understand
+
+39
+00:04:40,560 --> 00:04:45,560
+extend to any length of vector or any size of vector space.
+
+40
+00:04:46,560 --> 00:04:50,560
+So, now that we've covered vectors, matrices are pretty easy to understand.
+
+41
+00:04:50,560 --> 00:04:54,560
+They're simply a collection of vectors that lives in the same vector space.
+
+42
+00:04:54,560 --> 00:04:58,560
+So, what you can see here is we have the three vectors we looked at before,
+
+43
+00:04:58,560 --> 00:05:03,560
+and I can put them all in the same matrix because they all come from the same vector space.
+
+44
+00:05:03,560 --> 00:05:09,560
+And then if we bring that back to the data set concept, the matrix is conceptually equivalent to a data frame.
+
+45
+00:05:10,560 --> 00:05:15,560
+So, NumPy represents matrices and vectors in data types called arrays.
+
+46
+00:05:15,560 --> 00:05:19,560
+So, NumPy arrays unfortunately have their own concept of dimension,
+
+47
+00:05:19,560 --> 00:05:23,560
+and it differs from how we've just been discussing it in the context of linear algebra.
+
+48
+00:05:23,560 --> 00:05:29,560
+I think of dimensions in NumPy arrays as the number of directions in which an array can change size.
+
+49
+00:05:29,560 --> 00:05:32,560
+So, let me illustrate this a little bit more concretely.
+
+50
+00:05:32,560 --> 00:05:36,560
+So, vectors are unsurprisingly represented as a one-dimensional array.
+
+51
+00:05:36,560 --> 00:05:43,560
+And this is because vectors, or one-dimensional arrays, can only ever change size in terms of the number of elements they have.
+
+52
+00:05:43,560 --> 00:05:45,560
+So, you can see that here.
+
+53
+00:05:46,560 --> 00:05:49,560
+So, arrays also have a property called shape.
+
+54
+00:05:49,560 --> 00:05:53,560
+And a shape is a tuple which tells you the size of each of the dimensions.
+
+55
+00:05:53,560 --> 00:05:57,560
+So, a one-dimensional array obviously only has one value in the shape tuple.
+
+56
+00:05:58,560 --> 00:06:05,560
+Matrices are unsurprisingly represented in the two-dimensional array because they can change size in terms of the number of vectors and the number of elements.
+
+57
+00:06:06,560 --> 00:06:12,560
+And then finally, NumPy arrays have a more complicated concept called n-dimensional arrays.
+
+58
+00:06:12,560 --> 00:06:18,560
+And these are basically where you take one or two-dimensional arrays and you reshape them so they sit in a higher dimensional vector space.
+
+59
+00:06:19,560 --> 00:06:22,560
+So, you can see I've done that here with this two-dimensional array.
+
+60
+00:06:22,560 --> 00:06:25,560
+I've now reshaped it so it's a three-dimensional array.
+
+61
+00:06:25,560 --> 00:06:29,560
+And that first dimension now represents the number of matrices.
+
+62
+00:06:29,560 --> 00:06:33,560
+The second is the number of vectors and the third is the number of elements.
+
+63
+00:06:33,560 --> 00:06:37,560
+So, we're going to use this concept of n-dimensional arrays quite heavily later on, so just hold on to it.
+
+64
+00:06:38,560 --> 00:06:41,560
+So, let's go ahead and take the pain-errors and matrices now.
+
+65
+00:06:41,560 --> 00:06:48,560
+So, a very useful property of vector spaces is that vectors that are close to each other tend to be similar and those that are far apart tend to be similar.
+
+66
+00:06:48,560 --> 00:06:50,560
+It makes a lot of sense, right?
+
+67
+00:06:50,560 --> 00:06:57,560
+So, you can see that here, beams that are of the same type are close together and those that are of different types tend to be far away from each other.
+
+68
+00:06:58,560 --> 00:07:06,560
+So, there are many, many different ways of measuring distance within vector spaces, but one of the simplest is the Manhattan distance, and that's the one we're going to look at today.
+
+69
+00:07:07,560 --> 00:07:17,560
+So, the way I like to think of the Manhattan distance is, I imagine I'm in a two-dimensional vector space and I'm locked to only travelling between two points along the x and the y-axis.
+
+70
+00:07:17,560 --> 00:07:19,560
+So, we can see that here.
+
+71
+00:07:19,560 --> 00:07:31,560
+If I want to travel between this point B to point A, I can travel two units along the x-axis, another two along the y-axis, and I add that together to get a total Manhattan distance of four.
+
+72
+00:07:32,560 --> 00:07:42,560
+And then we don't want to do that manually every time, so if we do that computationally, we just take the absolute difference of the x and the y values, add them together, and we get a total of four.
+
+73
+00:07:42,560 --> 00:07:52,560
+And then we extend that to the Manhattan distance formula, and this tells us that we take the sum of all of those absolute differences of the first, of the second, up to the nth.
+
+74
+00:07:52,560 --> 00:08:02,560
+So again, what I want to stress is I've shown you in two dimensions how to calculate the Manhattan distance, but we can do this for vectors with any number of dimensions or elements.
+
+75
+00:08:02,560 --> 00:08:05,560
+And then finally, let's get to k-nearest neighbours.
+
+76
+00:08:05,560 --> 00:08:13,560
+So, k-nearest neighbours is a machine learning algorithm to help you find the labels for an unknown dataset based on the labels of a known dataset.
+
+77
+00:08:13,560 --> 00:08:16,560
+So, again, obviously we need to start with a dataset.
+
+78
+00:08:16,560 --> 00:08:22,560
+So what we do is we divide it into that trained dataset with the known labels and the test dataset which doesn't have known labels.
+
+79
+00:08:22,560 --> 00:08:32,560
+And we take one of the test points at a time, sorry, is represented by this orange dot, and we measure its distance to every single one of those training points.
+
+80
+00:08:32,560 --> 00:08:35,560
+So it's a bit computationally expensive, you can already see after that.
+
+81
+00:08:35,560 --> 00:08:45,560
+And then what we do is we take the k-nearest of those points, hence the name of the algorithm, and we find the k-nearest neighbours.
+
+82
+00:08:45,560 --> 00:08:51,560
+And we find out what their labels are. So we can see here that Kali is the most frequent label.
+
+83
+00:08:51,560 --> 00:08:57,560
+So what we then do is assign that to the test point, and that's how we get the label of every single one of these test points.
+
+84
+00:08:57,560 --> 00:09:03,560
+And we iterate through that test set in order to complete this. So again, computationally expensive.
+
+85
+00:09:04,560 --> 00:09:14,560
+So, with that covered, now we can have a look at how we might do a naive implementation of this in PyTor, and see how long it's going to take to do that.
+
+86
+00:09:15,560 --> 00:09:17,560
+Oops, wrong way.
+
+87
+00:09:17,560 --> 00:09:25,560
+Okay, so what you can see here is first a function to calculate the Manhattan distance between two pairs of vectors.
+
+88
+00:09:25,560 --> 00:09:36,560
+I've represented each of them as a list, and therefore in order to calculate the differences between each of the elements, I'm looping over that list and doing it one at a time.
+
+89
+00:09:36,560 --> 00:09:41,560
+I then take the absolute value of those distances and add them together, just like I showed you in the point.
+
+90
+00:09:42,560 --> 00:09:47,560
+We then need to apply that to every single one of the test and train points, the combinations of each of those.
+
+91
+00:09:47,560 --> 00:09:52,560
+So I pass in those test and train sets as lists of lists.
+
+92
+00:09:52,560 --> 00:10:06,560
+I then use this absolutely horrific nested, oh no, don't do that, absolutely horrific nested for loop in order to get the permutation of every single one of those test and train points and calculate the Manhattan distance.
+
+93
+00:10:06,560 --> 00:10:11,560
+Next I need to find the label for every single one of the test points.
+
+94
+00:10:11,560 --> 00:10:16,560
+I pass in my distances to every train point as a list and the labels.
+
+95
+00:10:16,560 --> 00:10:23,560
+I then zip them together and I sort them based on the distance to a train and to the test point.
+
+96
+00:10:23,560 --> 00:10:29,560
+I then extract the labels and I keep the top K.
+
+97
+00:10:30,560 --> 00:10:36,560
+And then finally what I need to do is repeat that for every single one of the test points.
+
+98
+00:10:36,560 --> 00:10:42,560
+So I loop over every single one of the training points and that completes the Manhattan distance calculation.
+
+99
+00:10:42,560 --> 00:10:43,560
+So what's the looping here?
+
+100
+00:10:43,560 --> 00:10:46,560
+So let's see the data we're going to use to test this.
+
+101
+00:10:46,560 --> 00:10:50,560
+So I'm going to use this Binns data set. It has around 27,000 observations.
+
+102
+00:10:50,560 --> 00:10:54,560
+And what I've done is I've actually divided it up into three different data sets for testing.
+
+103
+00:10:55,560 --> 00:11:00,560
+I have a small data set which has three feature columns and around 4,000 observations.
+
+104
+00:11:00,560 --> 00:11:05,560
+A medium data set with the same three feature columns and 27,000 observations.
+
+105
+00:11:05,560 --> 00:11:08,560
+And then I have the large data set which is just the full data set.
+
+106
+00:11:08,560 --> 00:11:14,560
+And the reason I've done this is because what I want to show you is the effect of increasing both the number of features
+
+107
+00:11:14,560 --> 00:11:20,560
+and the number of observations on the cost of loops and how we can improve on that.
+
+108
+00:11:20,560 --> 00:11:22,560
+So let's have a look at the timings.
+
+109
+00:11:22,560 --> 00:11:26,560
+For the small data set we're already up to 15 seconds. This is bad.
+
+110
+00:11:26,560 --> 00:11:29,560
+For the medium data set we're up to 12 minutes.
+
+111
+00:11:29,560 --> 00:11:32,560
+And for the large data set we're up to almost 40 minutes.
+
+112
+00:11:32,560 --> 00:11:35,560
+And yes I did set and time all of these for you.
+
+113
+00:11:36,560 --> 00:11:41,560
+So let's have a look at how we can improve some improvements.
+
+114
+00:11:42,560 --> 00:11:47,560
+One of the problems we have is that we're doing sequential calculations in this loop here.
+
+115
+00:11:47,560 --> 00:11:52,560
+And one of the reasons it takes so much longer in the large data set compared to the medium data set
+
+116
+00:11:52,560 --> 00:11:55,560
+is because we just have so many more elements in the vector.
+
+117
+00:11:55,560 --> 00:11:59,560
+So the first improvement we're going to do is obviously try to get rid of this loop.
+
+118
+00:11:59,560 --> 00:12:02,560
+And we just need to cover a tiny bit more theory first.
+
+119
+00:12:03,560 --> 00:12:07,560
+So the first thing is vector subtraction.
+
+120
+00:12:07,560 --> 00:12:13,560
+When you have two vectors or matrices of the same size you can do a subtraction between them.
+
+121
+00:12:13,560 --> 00:12:14,560
+It's very simple.
+
+122
+00:12:14,560 --> 00:12:21,560
+Basically each of the elements line up and you end up with a vector or a matrix of the same size and return
+
+123
+00:12:21,560 --> 00:12:23,560
+containing various different series.
+
+124
+00:12:24,560 --> 00:12:33,560
+Another nice thing that we can do with vectors or matrices is we can apply functions to every single element in the vector matrix.
+
+125
+00:12:33,560 --> 00:12:35,560
+So you can see that I've done that here.
+
+126
+00:12:35,560 --> 00:12:39,560
+I've passed in this matrix to an absolute value function.
+
+127
+00:12:40,560 --> 00:12:44,560
+That absolute value function is then applied to every single one of those elements.
+
+128
+00:12:44,560 --> 00:12:52,560
+And in return what I get is a matrix or a vector which contains the absolute value of every single one of the elements.
+
+129
+00:12:52,560 --> 00:12:53,560
+So that's it.
+
+130
+00:12:53,560 --> 00:12:57,560
+That's all the theory you need to understand to get rid of that loop.
+
+131
+00:12:57,560 --> 00:12:59,560
+Let's see how we're going to do it.
+
+132
+00:13:00,560 --> 00:13:06,560
+So if we go to this second notebook you can see the improvement I've done is in the first function.
+
+133
+00:13:06,560 --> 00:13:13,560
+Instead of representing each of the vectors as lists and now representing them as one dimensional non-pi arrays
+
+134
+00:13:13,560 --> 00:13:23,560
+I can now do this absolutely elegant subtraction notation which allows me to get rid of that sequential processing that I was bound to with the loop.
+
+135
+00:13:23,560 --> 00:13:29,560
+I can then apply the absolute value function from non-pi to this vector and then take the sum.
+
+136
+00:13:29,560 --> 00:13:30,560
+And that's it.
+
+137
+00:13:30,560 --> 00:13:34,560
+So let's have a look at the difference that that's made to our canvas.
+
+138
+00:13:34,560 --> 00:13:38,560
+So we're now down to about 8 seconds for the small data set.
+
+139
+00:13:38,560 --> 00:13:42,560
+We're down to around 7 minutes for the medium data set.
+
+140
+00:13:42,560 --> 00:13:47,560
+And fantastically we're down to around 9 minutes for the large data set.
+
+141
+00:13:49,560 --> 00:13:57,560
+So if we look at this as a function of the baseline timings we're down to around 1.8 times faster for the small and the medium data sets.
+
+142
+00:13:57,560 --> 00:14:01,560
+And around 4 times faster for the large data set.
+
+143
+00:14:01,560 --> 00:14:05,560
+The gain is not that good for the small and the medium data sets though.
+
+144
+00:14:05,560 --> 00:14:07,560
+So what can we do here?
+
+145
+00:14:07,560 --> 00:14:12,560
+Well the next call-pro that we can get rid of is that horrible nested for loop that I showed you.
+
+146
+00:14:12,560 --> 00:14:24,560
+The problem with nested for loops is the number of sequential calculations that you need to do grows as a function of the product, the length of list 1 and the length of list 2.
+
+147
+00:14:24,560 --> 00:14:28,560
+So you're basically calculating the primatation between each of them.
+
+148
+00:14:28,560 --> 00:14:36,560
+So if we look at the data sets we're working with, with our small data set we're already up to 3 million sequential calculations.
+
+149
+00:14:36,560 --> 00:14:43,560
+And for the medium and the large data set we push up to 140 million sequential calculations.
+
+150
+00:14:43,560 --> 00:14:46,560
+So this is a tiny data set by machine learning standards.
+
+151
+00:14:46,560 --> 00:14:50,560
+Usually you have hundreds of thousands, probably millions of observations.
+
+152
+00:14:50,560 --> 00:14:55,560
+So nested for loops quickly become a very expensive choice.
+
+153
+00:14:55,560 --> 00:14:57,560
+So what can we do here?
+
+154
+00:14:57,560 --> 00:15:00,560
+We're going to get rid of this nested for loop.
+
+155
+00:15:00,560 --> 00:15:11,560
+But in order to know how we're going to do this we need to extend a bit of this theory around subtraction and we're going to do some tricks that NumPy can do to help us.
+
+156
+00:15:11,560 --> 00:15:16,560
+So to start let's imagine that we have these three vectors, x, y and z.
+
+157
+00:15:16,560 --> 00:15:19,560
+And we want to find out the pairwise differences between them.
+
+158
+00:15:19,560 --> 00:15:22,560
+We've been doing that with our nested for loops so far.
+
+159
+00:15:22,560 --> 00:15:25,560
+So let's think about some ways we can make this more efficient.
+
+160
+00:15:25,560 --> 00:15:33,560
+Well we can put x, y and z all in the same matrix because we know they come from the same vector space.
+
+161
+00:15:33,560 --> 00:15:40,560
+What we can also do is we can actually replicate the x vectors three times and chuck that in the same matrix.
+
+162
+00:15:40,560 --> 00:15:46,560
+So now we have two matrices of the same size, they're minor element-wise, so we can do a subtraction.
+
+163
+00:15:46,560 --> 00:15:51,560
+So this saves us some time but you're probably thinking well we're still stuck with at least one loop right?
+
+164
+00:15:51,560 --> 00:15:55,560
+Because we need to repeat this exercise for the y and the z vector.
+
+165
+00:15:55,560 --> 00:16:01,560
+Well this would be the case if we were bound to only using two-dimensional arrays.
+
+166
+00:16:01,560 --> 00:16:05,560
+But we know that NumPy can work with three-dimensional and higher arrays.
+
+167
+00:16:05,560 --> 00:16:08,560
+So let's see how we can use this to our advantage.
+
+168
+00:16:08,560 --> 00:16:17,560
+Let's say we start with this matrix containing x, y and z and we represent it as a two-dimensional array.
+
+169
+00:16:17,560 --> 00:16:26,560
+We then reshape it so it's now a three-dimensional array, a size 1 by 3 by 4, one copy of that matrix sitting in the first dimension.
+
+170
+00:16:26,560 --> 00:16:35,560
+We then replicate it twice and squash those copies together so we have a single 3 by 3 by 4 three-dimensional array.
+
+171
+00:16:35,560 --> 00:16:40,560
+We then do a similar thing with our matrix containing three copies of the x vector.
+
+172
+00:16:40,560 --> 00:16:47,560
+We reshape it so it's now a three-dimensional array and we do the same thing with the y and the z vectors.
+
+173
+00:16:47,560 --> 00:16:51,560
+Squash them together and we have another 3 by 3 by 4 array.
+
+174
+00:16:51,560 --> 00:16:55,560
+We now have two objects that are the same size. They line up on every dimension.
+
+175
+00:16:55,560 --> 00:17:02,560
+So we can do a straightforward vector subtraction and what we've now eliminated is computational inefficiency.
+
+176
+00:17:02,560 --> 00:17:04,560
+We're no longer bound to sequential processing.
+
+177
+00:17:04,560 --> 00:17:14,560
+We've unfortunately created another inefficiency, a memory inefficiency, because we've explicitly replicated our data and we now need to hold all of that in memory.
+
+178
+00:17:14,560 --> 00:17:19,560
+So luckily NumPy helps us out here with a trick called broadcasting.
+
+179
+00:17:19,560 --> 00:17:28,560
+Broadcasting is essentially a memory-efficient way for NumPy to do this sort of operation we just did without a need for this explicit replication of data within the array.
+
+180
+00:17:28,560 --> 00:17:36,560
+So the way it works is if we want to do an operation with two arrays, NumPy will first compare them and check whether they have the same number of dimensions.
+
+181
+00:17:36,560 --> 00:17:44,560
+If it does, then great. It doesn't need to do anything. It can just do a straightforward subtraction or operation just like we did in the last slide.
+
+182
+00:17:44,560 --> 00:17:49,560
+But if not, it will check whether one of those dimensions has a size of one.
+
+183
+00:17:50,560 --> 00:17:59,560
+And what it will do is under the hood, implicitly replicate the smaller array so it's now the same size in that dimension as the larger array.
+
+184
+00:17:59,560 --> 00:18:03,560
+So it's a bit of a weird concept, so let's have a look at it more explicitly.
+
+185
+00:18:03,560 --> 00:18:12,560
+So if we take our little example, what we can do is we can start again with that 2D array containing one copy of x, y, and z.
+
+186
+00:18:12,560 --> 00:18:17,560
+What we can do in the first pass is we can reshape it, sorry, on that top row.
+
+187
+00:18:17,560 --> 00:18:24,560
+So again, we have one copy of that matrix sitting in the first dimension of the three-dimensional array.
+
+188
+00:18:24,560 --> 00:18:27,560
+We then go down here and we reshape it again.
+
+189
+00:18:27,560 --> 00:18:34,560
+But this time we reshape it so we have one copy of that matrix sitting in the second dimension of the three-dimensional array.
+
+190
+00:18:34,560 --> 00:18:42,560
+When we then go to do the vector subtraction, what NumPy will do is compare the size of each of the dimensions.
+
+191
+00:18:43,560 --> 00:18:51,560
+In the third dimension it's fine, it's the same size, but in the first and the second dimension, Zz has a size of one.
+
+192
+00:18:51,560 --> 00:19:01,560
+So in the first dimension of the first little array, it will now stretch it to size three, and in the second dimension of the second array, it will now stretch it to size three.
+
+193
+00:19:01,560 --> 00:19:09,560
+So then it can do this subtraction and we end up in return with another three by three by four three-dimensional array containing all of those differences.
+
+194
+00:19:09,560 --> 00:19:12,560
+So that's the theory, now let's jump over to practice.
+
+195
+00:19:12,560 --> 00:19:17,560
+God, I keep doing this. Oh, I gave her with a surprise.
+
+196
+00:19:19,560 --> 00:19:25,560
+Okay, so what we've done is a lot of changes.
+
+197
+00:19:25,560 --> 00:19:36,560
+Instead of having two separate functions to calculate the pairwise Manhattan distances and then apply it to every train pass pair, we've now combined it into one very elegant function.
+
+198
+00:19:36,560 --> 00:19:44,560
+So what we've done is we're now passing in all the train observations and all the test observations as two-dimensional NumPy arrays.
+
+199
+00:19:44,560 --> 00:19:49,560
+What we then do is we do this broadcaster subtraction on this line.
+
+200
+00:19:49,560 --> 00:20:01,560
+We use this splicing notation to reshape these two-dimensional arrays to three-dimensional objects with NumSet where we want a size of one to be in that dimension.
+
+201
+00:20:01,560 --> 00:20:08,560
+Then what we have is the same size in the last dimension, a size of one in the second tier and a size of one in the first tier.
+
+202
+00:20:08,560 --> 00:20:16,560
+We can now do the broadcaster subtraction and what we end up with is a three-dimensional array containing all of the differences.
+
+203
+00:20:16,560 --> 00:20:25,560
+Again, we just apply the absolute value function to those and sum them and we end up with a two-dimensional array containing all of these distance calculations and that's it.
+
+204
+00:20:25,560 --> 00:20:28,560
+So let's have a look at the difference we've made here.
+
+205
+00:20:28,560 --> 00:20:39,560
+We're now down to one and a half seconds for the small data set, one minute for the medium data set and three minutes for the large data set.
+
+206
+00:20:39,560 --> 00:20:48,560
+So now having already spoiled the surprise, we're now down to 10 to 13 times faster with just a couple of simple changes.
+
+207
+00:20:48,560 --> 00:20:51,560
+But there's still quite a lot of work we can do here.
+
+208
+00:20:51,560 --> 00:20:54,560
+We've only messed around with vectorizing the distance calculations.
+
+209
+00:20:55,560 --> 00:20:58,560
+We still have all this work we could do with k nearest neighbors.
+
+210
+00:20:58,560 --> 00:21:03,560
+And who are the two biggest culprits in terms of time lag that we could target?
+
+211
+00:21:03,560 --> 00:21:05,560
+Well, these two lines here.
+
+212
+00:21:05,560 --> 00:21:10,560
+The one where we're sorting all of the distances between a test point and every claim point.
+
+213
+00:21:10,560 --> 00:21:21,560
+And the second one where we're basically extracting the label associated with those nearest claim points and then doing that in that risk comprehension.
+
+214
+00:21:21,560 --> 00:21:23,560
+So why are these problematic?
+
+215
+00:21:23,560 --> 00:21:25,560
+Well, let's start with sorting.
+
+216
+00:21:25,560 --> 00:21:30,560
+Sorting lists in Python is locked to a single sorting algorithm called Tonsort.
+
+217
+00:21:30,560 --> 00:21:35,560
+In contrast, NumPy sort and unsort both have a bit more flexibility.
+
+218
+00:21:35,560 --> 00:21:43,560
+So for example, when you do not select a method for sorting, NumPy will default to a faster method called quicksort.
+
+219
+00:21:43,560 --> 00:21:49,560
+And then another advantage that NumPy has is that every single element is the same data type.
+
+220
+00:21:49,560 --> 00:21:55,560
+So the algorithm NumPy can use can optimize the specific data type of the array.
+
+221
+00:21:55,560 --> 00:21:59,560
+And then the second problem is the list comprehension.
+
+222
+00:21:59,560 --> 00:22:04,560
+List comprehension can essentially function as loops.
+
+223
+00:22:04,560 --> 00:22:06,560
+In this case, they are.
+
+224
+00:22:06,560 --> 00:22:10,560
+So they can be a blocker because essentially you're bound to sequential processing.
+
+225
+00:22:10,560 --> 00:22:15,560
+So let's have a look at how we're going to do our final code improvement.
+
+226
+00:22:15,560 --> 00:22:20,560
+So for this second function, now this pretty simple third function,
+
+227
+00:22:20,560 --> 00:22:24,560
+what we're doing is instead of passing in the distances and labels at list,
+
+228
+00:22:24,560 --> 00:22:28,560
+we're passing them in as one dimensional NumPy arrays.
+
+229
+00:22:28,560 --> 00:22:34,560
+What we're going to do is use this vstack method in order to convert them into a two dimensional array.
+
+230
+00:22:34,560 --> 00:22:37,560
+And then this line here is where all the magic happens.
+
+231
+00:22:37,560 --> 00:22:43,560
+What we do is we sort that column or that vector of the column.
+
+232
+00:22:43,560 --> 00:22:48,560
+We sort that column or that vector containing all of the distance calculations.
+
+233
+00:22:48,560 --> 00:23:00,560
+We extract the top K and then we use this beautiful slicing notation in order to shear off or detach the vector that contains the labels rather than needing to loop through everything.
+
+234
+00:23:00,560 --> 00:23:04,560
+So let's see what this has gained us.
+
+235
+00:23:04,560 --> 00:23:09,560
+So for the small data set, we are now down to 13 milliseconds.
+
+236
+00:23:09,560 --> 00:23:12,560
+For the large data set, we're down to 15 seconds.
+
+237
+00:23:12,560 --> 00:23:18,560
+And for the medium and then for the large data set, we're now down to two and a half minutes.
+
+238
+00:23:18,560 --> 00:23:29,560
+So then if we look at this as a function of baseline, we're between 15 for the large data set up to more than one thousand times faster for the small data set.
+
+239
+00:23:29,560 --> 00:23:33,560
+And these seem like pretty extreme improvements in speed.
+
+240
+00:23:33,560 --> 00:23:39,560
+But from looking around at this, I've seen that most people can get very comfortable numbers.
+
+241
+00:23:39,560 --> 00:23:44,560
+So with some small changes to your code, I'm pretty sure you'll be able to replicate these results.
+
+242
+00:23:44,560 --> 00:23:47,560
+And that is it. Here are my contact details.
+
+243
+00:23:47,560 --> 00:23:49,560
+I'm on Twitter and Mastodon.
+
+244
+00:23:49,560 --> 00:23:55,560
+I have a data science blog I've been running for about seven years now showing my age.
+
+245
+00:23:55,560 --> 00:24:00,560
+A lot of topics on there, but I do have a series on exactly this topic if you want to go into a bit more detail.
+
+246
+00:24:00,560 --> 00:24:05,560
+And this QR code here will take you straight to the GitHub repo where the same notebooks are showing in the presentation.
+
+247
+00:24:05,560 --> 00:24:07,560
+So thank you so much.
+
+248
+00:24:17,560 --> 00:24:18,560
+Thanks very much, Sherry.
+
+249
+00:24:18,560 --> 00:24:22,560
+You do have a few minutes for some quick questions if anyone would rather just come up here.
+
+250
+00:24:22,560 --> 00:24:26,560
+Would you mind just heading down to the microphones just there?
+
+251
+00:24:26,560 --> 00:24:27,560
+Yeah, thank you.
+
+252
+00:24:27,560 --> 00:24:28,560
+Thank you.
+
+253
+00:24:33,560 --> 00:24:36,560
+I was going to try and restart the last optimization.
+
+254
+00:24:36,560 --> 00:24:39,560
+You mentioned that the list comprehension was eliminated.
+
+255
+00:24:39,560 --> 00:24:40,560
+How?
+
+256
+00:24:41,560 --> 00:24:43,560
+So essentially, instead of...
+
+257
+00:24:43,560 --> 00:24:50,560
+So where the list comprehension came from is what we did initially was we created a list of lists.
+
+258
+00:24:50,560 --> 00:24:55,560
+So we took the list containing the labels and the list containing the distances and zipped them together.
+
+259
+00:24:55,560 --> 00:24:57,560
+So the structure is now a list of lists.
+
+260
+00:24:57,560 --> 00:25:05,560
+So in order to get those labels back out at the end, I was iterating over every single one of the components of the list of lists,
+
+261
+00:25:05,560 --> 00:25:10,560
+taking out the first element or the second element, whatever it was, and then only leaving that.
+
+262
+00:25:10,560 --> 00:25:19,560
+So in order to eliminate that, what we've now done is numpy arrays essentially get contained, like combined almost like data frames with columns.
+
+263
+00:25:19,560 --> 00:25:27,560
+So instead of looping through every row, what I'm doing is I'm just detaching the column containing the labels.
+
+264
+00:25:27,560 --> 00:25:29,560
+So you eliminate that link for the loop.
+
+265
+00:25:29,560 --> 00:25:32,560
+You can just say, I just want that column as a subsetting instead.
+
+266
+00:25:33,560 --> 00:25:34,560
+Thanks.
+
+267
+00:25:34,560 --> 00:25:35,560
+No problem.
+
+268
+00:25:37,560 --> 00:25:38,560
+Oh, hi.
+
+269
+00:25:38,560 --> 00:25:39,560
+Hi.
+
+270
+00:25:39,560 --> 00:25:40,560
+Okay.
+
+271
+00:25:46,560 --> 00:25:47,560
+Hi.
+
+272
+00:25:47,560 --> 00:25:48,560
+Hi.
+
+273
+00:25:48,560 --> 00:25:49,560
+Excellent talk.
+
+274
+00:25:49,560 --> 00:25:50,560
+Thank you.
+
+275
+00:25:50,560 --> 00:25:59,560
+I myself have been trying to optimize my team's code base, moving away from a pride to vectorized formulas.
+
+276
+00:25:59,560 --> 00:26:00,560
+Yes.
+
+277
+00:26:00,560 --> 00:26:09,560
+One pushback I've gotten recently is that optimized vectorized numpy code can be hard to read.
+
+278
+00:26:09,560 --> 00:26:10,560
+Yes.
+
+279
+00:26:10,560 --> 00:26:11,560
+It's hard to understand.
+
+280
+00:26:11,560 --> 00:26:12,560
+Yes.
+
+281
+00:26:12,560 --> 00:26:18,560
+So what tips or recommendations you have for making that easier to read?
+
+282
+00:26:18,560 --> 00:26:20,560
+This is a super, super good point.
+
+283
+00:26:20,560 --> 00:26:29,560
+I would sort of say, okay, let's take the first example where in the first function, let's go back to it,
+
+284
+00:26:31,560 --> 00:26:34,560
+I used the subtract notation.
+
+285
+00:26:34,560 --> 00:26:36,560
+There's also a subtract method.
+
+286
+00:26:36,560 --> 00:26:42,560
+So small changes, like I'm thinking, you know, to start with, is you could agree between your team,
+
+287
+00:26:42,560 --> 00:26:46,560
+do you find this more explicit or do you find the subtraction more explicit?
+
+288
+00:26:46,560 --> 00:26:52,560
+But then what I would also say is I didn't understand this stuff until I understood the linear algebra.
+
+289
+00:26:52,560 --> 00:26:56,560
+But I think, I hope what you guys can see is I did not show you much linear algebra.
+
+290
+00:26:56,560 --> 00:26:58,560
+It was really, really simple.
+
+291
+00:26:58,560 --> 00:27:05,560
+So potentially what you can do is just explicitly in comments, maybe, I know there's controversial comments in code,
+
+292
+00:27:05,560 --> 00:27:07,560
+Yeah, I'm part of that.
+
+293
+00:27:07,560 --> 00:27:10,560
+Potentially maybe it's part of the documentation then.
+
+294
+00:27:10,560 --> 00:27:14,560
+You could say, what we're doing here is vectorized operation.
+
+295
+00:27:14,560 --> 00:27:16,560
+It represents a subtraction between two vectors.
+
+296
+00:27:16,560 --> 00:27:19,560
+Here's a small link if you don't understand.
+
+297
+00:27:19,560 --> 00:27:21,560
+It is a bit of a clunky way.
+
+298
+00:27:21,560 --> 00:27:25,560
+If anyone else has any suggestions, please feel free to jump in.
+
+299
+00:27:25,560 --> 00:27:30,560
+But yeah, definitely from my perspective, I really kind of needed to understand what they were doing
+
+300
+00:27:30,560 --> 00:27:33,560
+before I could implement this in read it.
+
+301
+00:27:33,560 --> 00:27:35,560
+So I feel okay.
+
+302
+00:27:35,560 --> 00:27:39,560
+And I guess the comment, because I hear what you're saying.
+
+303
+00:27:39,560 --> 00:27:45,560
+If someone sees vectorized code, the first thing you ask, what does this do?
+
+304
+00:27:45,560 --> 00:27:46,560
+Exactly.
+
+305
+00:27:46,560 --> 00:27:52,560
+And then there is this question of whose responsibility is it?
+
+306
+00:27:52,560 --> 00:27:59,560
+Is it the person reading the code to understand it or is it the person who wrote the code to make it as easy as possible?
+
+307
+00:27:59,560 --> 00:28:03,560
+But then when you're vectorizing, it's math.
+
+308
+00:28:03,560 --> 00:28:07,560
+Math was not made to be read as easy.
+
+309
+00:28:07,560 --> 00:28:11,560
+Yes, yes. Tell me about any encounter with a math textbook.
+
+310
+00:28:11,560 --> 00:28:12,560
+Yeah.
+
+311
+00:28:12,560 --> 00:28:16,560
+I think we may unfortunately be out of time and I don't want to eat into Calvin's time.
+
+312
+00:28:16,560 --> 00:28:18,560
+But please do come and find me afterwards.
+
+313
+00:28:18,560 --> 00:28:22,560
+I'm also going to be around for the next few days for Sprint, so I would love to chat about this topic.
+
+314
+00:28:22,560 --> 00:28:24,560
+Thank you so much for coming.
+
+315
+00:28:29,560 --> 00:28:31,560
+Thank you.
+

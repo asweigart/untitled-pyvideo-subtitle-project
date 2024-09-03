@@ -1,0 +1,744 @@
+1
+00:00:00,000 --> 00:00:11,120
+Hi everyone. For this next session our speaker will talk about consistency and isolation
+
+2
+00:00:11,120 --> 00:00:18,120
+for pipeline programmers. Let us all welcome Jesse Davis.
+
+3
+00:00:18,120 --> 00:00:36,840
+Hello. So when you use a database you need to choose an isolation level like serializable
+
+4
+00:00:36,840 --> 00:00:46,120
+or read-uncommitted. And if you use a distributed database like MongoDB then you need a consistency
+
+5
+00:00:46,120 --> 00:00:55,240
+level like eventually consistent or linearizable. There are dozens of options. And to make things
+
+6
+00:00:55,240 --> 00:01:03,400
+worse, consistency and isolation are easy to confuse with each other and people don't
+
+7
+00:01:03,400 --> 00:01:10,960
+really use those terms very consistently. In all of computer science I think that this
+
+8
+00:01:11,440 --> 00:01:18,440
+is one of the most difficult subjects to learn. But it's important to learn this because
+
+9
+00:01:18,440 --> 00:01:27,440
+if we get it wrong we can lose money or data or worse. When you start learning about consistency
+
+10
+00:01:27,440 --> 00:01:35,440
+and isolation it's easy to get lost in the weeds. So what's the bottom line? We're going
+
+11
+00:01:35,640 --> 00:01:42,640
+to start off with a simple world where your transactions run on one machine, one transaction
+
+12
+00:01:43,320 --> 00:01:50,320
+at a time. But in the real world of course we're still going to say for now that your
+
+13
+00:01:50,320 --> 00:01:55,320
+transactions run on one machine. We'll deal with distributed databases later in this talk.
+
+14
+00:01:55,320 --> 00:02:02,320
+But in the real world transactions run in parallel and that can lead to different outcomes
+
+15
+00:02:03,040 --> 00:02:08,040
+than if they were running one at a time. And these visible differences are called anomalies.
+
+16
+00:02:08,040 --> 00:02:15,040
+An anomaly is when a client sees a phenomenon that reveals that the database is running
+
+17
+00:02:15,040 --> 00:02:22,040
+transactions in parallel. This is my understanding of what an anomaly is. It's not defined at
+
+18
+00:02:23,280 --> 00:02:28,280
+the SQL standard. The SQL standard just lists a bunch of things and says these are anomalies.
+
+19
+00:02:28,840 --> 00:02:35,840
+My understanding of what anomalies are in general is this one. Isolation and anomalies
+
+20
+00:02:38,000 --> 00:02:45,000
+took me years to really learn this. But I have an idea for what we can do today to make
+
+21
+00:02:45,000 --> 00:02:52,000
+this easy. We're going to build a database in Taiwan. It's not the final frontier. People
+
+22
+00:02:52,800 --> 00:02:57,800
+have gone here before. But I think it's going to be helpful for understanding isolation.
+
+23
+00:02:57,800 --> 00:03:02,800
+Here's how the database is going to work. It's going to be a telnet server because telnet
+
+24
+00:03:02,800 --> 00:03:09,800
+is almost as old as Star Trek. And it's got two commands get and set. When you get a key
+
+25
+00:03:12,440 --> 00:03:18,440
+that doesn't exist, it says not found. You can set any key to any value and then you
+
+26
+00:03:18,440 --> 00:03:25,440
+can get it back. That's it. That's the whole database. So let's look at the code. It stores
+
+27
+00:03:25,440 --> 00:03:32,440
+its data. It's not the whole code. It stores its data in memory in a dict. And whenever
+
+28
+00:03:32,440 --> 00:03:39,440
+a client connects the server starts a thread and processes commands. If a command is set,
+
+29
+00:03:41,280 --> 00:03:48,280
+then we store the data in the dict. And if it's a get, then we try to retain a value
+
+30
+00:03:48,440 --> 00:03:55,440
+and say not found. Now, obviously this is just demo code. It has lots of problems. The
+
+31
+00:03:58,960 --> 00:04:04,400
+only problems that we're going to focus on today are the anomalies. If two people use
+
+32
+00:04:04,400 --> 00:04:11,400
+this database at the same time, what anomalies are they going to see? We'll start off with
+
+33
+00:04:11,640 --> 00:04:17,640
+the lowest isolation level. We'll read uncommitted and let's see some anomalies. So let's say
+
+34
+00:04:17,640 --> 00:04:22,640
+Kirk is down on the planet and McCoy wants to beam them up. So he updates the ship's
+
+35
+00:04:22,640 --> 00:04:29,640
+computer. First of all, Kirk's on planet is equal to one, Enterprise is zero. Scotty updates
+
+36
+00:04:31,040 --> 00:04:38,040
+Kirk's on planet to zero, Kirk's on Enterprise to one. But McCoy, meanwhile, is wondering
+
+37
+00:04:38,040 --> 00:04:44,040
+where is Jim? So he checks the ship's computer. He gets Kirk's on planet zero because that's
+
+38
+00:04:44,160 --> 00:04:48,360
+where Scotty's already updated that. Then he also gets Kirk's on Enterprise and sees
+
+39
+00:04:48,360 --> 00:04:54,520
+zero there too because Scotty hasn't updated that. This is an anomaly called a dirty
+
+40
+00:04:54,520 --> 00:05:01,520
+domain. He is seeing data from a transaction that Scotty has not yet completed. We need
+
+41
+00:05:03,040 --> 00:05:10,040
+a stronger isolation level to prohibit this anomaly. So let's try the next level up called
+
+42
+00:05:10,040 --> 00:05:14,120
+the
+
+43
+00:05:14,120 --> 00:05:21,120
+Debted Locks. So we've got a Debted Locks that's a default Debt so it creates locks on demand.
+
+44
+00:05:22,040 --> 00:05:29,040
+When a thread starts up it creates an empty transaction that holds no locks. Then it's
+
+45
+00:05:29,040 --> 00:05:36,040
+got a utility function called Acquire Lock which gets or creates a lock for this key,
+
+46
+00:05:36,040 --> 00:05:43,040
+locks it and sticks it in the list. Then we've got the standard command loop. So if the command
+
+47
+00:05:44,200 --> 00:05:51,200
+is set then we acquire a lock for the rest of the transaction added to the list. If the
+
+48
+00:05:51,480 --> 00:05:58,480
+command is a get then we just hold the lock briefly to check the dict and return the value
+
+49
+00:05:59,160 --> 00:06:05,720
+to the user. We've also got a new command commit which drops all the locks so that this
+
+50
+00:06:05,720 --> 00:06:12,720
+transaction's rights are visible to other transactions. So let's run the story again
+
+51
+00:06:12,720 --> 00:06:19,720
+with read committed. Scotty strikes his transaction. McCoy gets Curves on Planet but now he blocks
+
+52
+00:06:19,760 --> 00:06:26,760
+because Scotty is holding a lock on this key. Scotty finishes his transaction and commits.
+
+53
+00:06:28,280 --> 00:06:35,280
+He drops his locks so that unblocks McCoy so now he sees that Curves on Planet is zero.
+
+54
+00:06:35,280 --> 00:06:41,280
+McCoy finishes his transaction and he sees that Curves is on the Enterprise. So there's
+
+55
+00:06:41,280 --> 00:06:48,280
+no anomaly. This works in read committed partly because Scotty and McCoy are accessing keys
+
+56
+00:06:51,760 --> 00:06:58,760
+in the same order. So let's see what happens though if McCoy swaps the order with his reads.
+
+57
+00:06:58,760 --> 00:07:05,760
+Alright, same story but McCoy checks Curves on Enterprise first. Scotty doesn't have a
+
+58
+00:07:06,440 --> 00:07:10,640
+lock on this yet because he hasn't written to it so McCoy is allowed to see that it's
+
+59
+00:07:10,640 --> 00:07:17,640
+zero. Scotty then updates it, finishes his transaction and McCoy finishes his. Once again
+
+60
+00:07:19,000 --> 00:07:24,680
+it's an anomaly but it's a different one. It's called a read skew. McCoy is seeing data
+
+61
+00:07:24,680 --> 00:07:31,680
+that were both from before and after Scotty's transaction which wouldn't be allowed if they
+
+62
+00:07:31,680 --> 00:07:38,680
+were doing their transactions one at a time. So let's get in there and fix the problem.
+
+63
+00:07:39,120 --> 00:07:46,120
+We need a stronger isolation level like snapshot isolation. This is going to be a lot of code
+
+64
+00:07:47,680 --> 00:07:52,680
+because it's going to be the worst slide. Alright, so let's just get through it here.
+
+65
+00:07:52,680 --> 00:07:59,680
+To start off we need some more global state and we'll see in a minute how all of this
+
+66
+00:07:59,680 --> 00:08:06,680
+is used. When a server thread starts up it gets the lock that lock, protects a global
+
+67
+00:08:09,960 --> 00:08:16,960
+state like the DB and this local transaction is a copy of all of the data into a local
+
+68
+00:08:17,960 --> 00:08:24,960
+snapshot. It also makes an empty list of writes for this transaction. It sets its start time
+
+69
+00:08:25,880 --> 00:08:32,880
+as the current timestamp and it increments the global timestamp. Alright, we start the
+
+70
+00:08:33,720 --> 00:08:40,720
+command loop. If there is a set we don't affect global state. We only update the local snapshot
+
+71
+00:08:40,720 --> 00:08:47,720
+and we record the fact that we've written a list key. If it's a get we also don't touch
+
+72
+00:08:47,880 --> 00:08:54,880
+global state. We read from the local snapshot. And then commit, this is the complicated part.
+
+73
+00:08:54,880 --> 00:09:01,520
+Alright, so we lock the global state and we choose a commit time which is larger than
+
+74
+00:09:01,520 --> 00:09:08,520
+any timestamp used so far for either a start or a commit time for another transaction.
+
+75
+00:09:08,520 --> 00:09:14,880
+And then we check, is any other transaction writing the same keys that we want to write
+
+76
+00:09:14,880 --> 00:09:19,640
+while this transaction's not running? And the specific way we do that is by checking,
+
+77
+00:09:19,640 --> 00:09:26,640
+has any key in the global state, does it have a write time between our start time and our
+
+78
+00:09:27,640 --> 00:09:34,640
+commit time? So then we abort this transaction. Otherwise we can commit and we do that by
+
+79
+00:09:35,640 --> 00:09:42,640
+updating the global write times with our commit time and copying all of the writes into the
+
+80
+00:09:42,640 --> 00:09:49,640
+global database. And finally whether we committed or aborted we reset the local state with a
+
+81
+00:09:49,640 --> 00:09:56,640
+new snapshot and a new start time. Alright, that was the worst. A real database would
+
+82
+00:09:58,640 --> 00:10:03,640
+do cover copy on write stuff so it doesn't have to copy the entire contents of the database
+
+83
+00:10:03,640 --> 00:10:10,640
+and be a part of the whole process. So that's the way we do it. So, we don't need to worry
+
+84
+00:10:11,640 --> 00:10:14,640
+about that kind of thing. What we're here for is to understand what snapshot isolation
+
+85
+00:10:14,640 --> 00:10:21,640
+means and I think that this is useful for that. So, how does this story go under snapshot
+
+86
+00:10:22,640 --> 00:10:29,640
+isolation? Scotty starts his transaction. McCoy reads Curbside Enterprise from his snapshot.
+
+87
+00:10:29,640 --> 00:10:36,640
+Scotty finishes his transaction. McCoy reads Curbside Planet and he sees one. Even though
+
+88
+00:10:37,640 --> 00:10:42,640
+Scotty set it to zero. That's what snapshot isolation means. It means that you're reading
+
+89
+00:10:42,640 --> 00:10:49,640
+from a consistent snapshot of the data into practice. So it could be stale. But there's
+
+90
+00:10:49,640 --> 00:10:56,640
+no read scale. Snapshot isolation has a few anomalies that it still allows. Let's look
+
+91
+00:10:56,640 --> 00:11:03,640
+at that. So, new story. New characters. It's time for some short leave but there's only
+
+92
+00:11:06,640 --> 00:11:12,640
+one shuttle in the shuttle bay. Sulu and Uhura, they've both won it. So, Sulu checks whether
+
+93
+00:11:12,640 --> 00:11:19,640
+Uhura has claimed it. No, she hasn't. Uhura checks if Sulu has. Sulu then claims the shuttle
+
+94
+00:11:19,640 --> 00:11:26,640
+and so does Uhura. Sulu commits and thinks he has claimed the shuttle and so does Uhura.
+
+95
+00:11:26,640 --> 00:11:33,640
+This is an anomaly called right skew. You can see how this couldn't happen if the transactions
+
+96
+00:11:34,640 --> 00:11:41,640
+were happening one at a time. But snapshot isolation allows this anomaly. To prohibit
+
+97
+00:11:42,640 --> 00:11:49,640
+right skew we're going to need an even stronger isolation level like serializable, which is
+
+98
+00:11:51,640 --> 00:11:58,640
+one of the strongest. This code is going to be almost the same as the previous isolation
+
+99
+00:11:59,640 --> 00:12:04,640
+level we committed. So it's much simpler. We have a dip to blocks. We start off with
+
+100
+00:12:04,640 --> 00:12:10,640
+an empty list of blocks for this transaction. We've got the same utility function which
+
+101
+00:12:10,640 --> 00:12:17,640
+gets or creates a lock for a key, locks it, adds it to the list. The set command is the
+
+102
+00:12:20,640 --> 00:12:25,640
+same as for read committed where we just lock the key for the rest of the transaction.
+
+103
+00:12:25,640 --> 00:12:32,640
+The get command, this is where this is different from the read committed implementation. With
+
+104
+00:12:32,640 --> 00:12:39,640
+read committed we only locked that key briefly to return it to the client. We've got the
+
+105
+00:12:40,640 --> 00:12:45,640
+same thing with serializable isolation. We're actually locking this key for the rest of
+
+106
+00:12:45,640 --> 00:12:52,640
+the transaction even for a get. We lock it to make sure that no other transaction is
+
+107
+00:12:53,640 --> 00:12:58,640
+allowed to modify this value until this transaction finishes. That includes even if the key doesn't
+
+108
+00:12:58,640 --> 00:13:05,640
+exist, no other transaction is allowed to create it. If it did, that would be called
+
+109
+00:13:05,640 --> 00:13:11,640
+a phantom. So this lock prevents phantoms. And then the commit command is the same as
+
+110
+00:13:11,640 --> 00:13:17,640
+for read committed where we just drop off the locks. So how does this story go under
+
+111
+00:13:17,640 --> 00:13:24,640
+serializability? Sulu checks if Uhera has the shuttle. Uhera checks if Sulu does. Sulu
+
+112
+00:13:24,640 --> 00:13:31,640
+tries to update. Sulu has shuttle and he blocks because Uhera has that key locked. And the
+
+113
+00:13:31,640 --> 00:13:38,640
+same happens to Uhera. So now we have something called a deadlock which serializability has
+
+114
+00:13:38,640 --> 00:13:43,640
+come to. Kirk would probably have to come in and arbitrate this conflict. In real databases
+
+115
+00:13:43,640 --> 00:13:50,640
+there are deadlock detection algorithms. So we have a deadlock detection algorithm. And
+
+116
+00:13:50,640 --> 00:13:56,640
+in real databases there are deadlock detection algorithms which abort at least one of these
+
+117
+00:13:56,640 --> 00:14:02,640
+transactions to prove the deadlock. Despite the deadlock that I showed you, serializability
+
+118
+00:14:02,640 --> 00:14:10,640
+is actually a great escalation of them. It means that transactions appear to have happened
+
+119
+00:14:10,640 --> 00:14:17,640
+atomically in some total order. It might not be the actual order that you did the operations
+
+120
+00:14:17,640 --> 00:14:23,640
+or committed the transactions, but it's as if the transactions happened one at a time in some
+
+121
+00:14:23,640 --> 00:14:32,640
+total order and that order appears to be the same to all of the clients. These four isolation
+
+122
+00:14:32,640 --> 00:14:40,640
+levels are in order of increasing strength from the bottom where there's more parallelism to the
+
+123
+00:14:40,640 --> 00:14:46,640
+top where there are fewer anomalies. The higher you go generally the slower you get and the less
+
+124
+00:14:46,640 --> 00:14:54,640
+parallelism is possible. Take your pick. You have to think about what your application actually
+
+125
+00:14:54,640 --> 00:15:03,640
+needs and when in doubt choose the strongest. Okay, so we've been talking about isolation this
+
+126
+00:15:03,640 --> 00:15:09,640
+whole time and I also promised that we would talk about consistency. These are easy to confuse with
+
+127
+00:15:09,640 --> 00:15:17,640
+each other and people don't always use these terms consistently. So isolation, it prohibits
+
+128
+00:15:17,640 --> 00:15:26,640
+anomalies in transactions of multiple items on one machine due to concurrency. The new concept
+
+129
+00:15:26,640 --> 00:15:31,640
+that we're going to talk about now is consistency, which prohibits anomalies in transactions on
+
+130
+00:15:31,640 --> 00:15:49,640
+single data items on a cluster of machines due to distributed execution. So a security database,
+
+131
+00:15:49,640 --> 00:15:55,640
+it's deployed on a cluster of machines. You send an update to one of those machines. Some kinds of
+
+132
+00:15:55,640 --> 00:16:02,640
+databases, there's a one leader on others, you can send the update to any machine. Regardless, that
+
+133
+00:16:02,640 --> 00:16:10,640
+update has to be eventually replicated to some or all of the other machines and then you can read the
+
+134
+00:16:10,640 --> 00:16:16,640
+data, either just from the leader or from any machine that has a copy of the data. Again, it depends.
+
+135
+00:16:16,640 --> 00:16:25,640
+The important thing for us right now is replication. It's slow. There's a lag between the update being
+
+136
+00:16:25,640 --> 00:16:35,640
+received and reaching all of the other machines and when this lag is visible, that's an anomaly. So
+
+137
+00:16:35,640 --> 00:16:41,640
+the anomaly, the distributed database version, is when a client sees a phenomenon that reveals the
+
+138
+00:16:41,640 --> 00:16:49,640
+machine, the database is distributed, not single machining. And again, this is my understanding of what
+
+139
+00:16:49,640 --> 00:16:59,640
+this term means. Eventually, consistency is the weakest consistency level. Let's tell a new story.
+
+140
+00:16:59,640 --> 00:17:08,640
+So McCoy is on the surface. He makes a tricorder reading and he uploads it to one of the machines.
+
+141
+00:17:08,640 --> 00:17:16,640
+That applies the update, replicates it to one of the machines, but the other machine, the one at the top,
+
+142
+00:17:16,640 --> 00:17:25,640
+is laggy. It hasn't replicated yet. McCoy sends a message saying, I've uploaded the tricorder data and that
+
+143
+00:17:25,640 --> 00:17:34,640
+is also replicated. And then Uvura checks her inbox. She sees McCoy's message saying, I've uploaded the
+
+144
+00:17:34,640 --> 00:17:43,640
+data. So she fetches the data and it happens that she sends that request to the laggy machine. This is common in
+
+145
+00:17:43,640 --> 00:17:52,640
+distributed databases that clients can randomly load bounds or randomly choose various machines. And this is
+
+146
+00:17:52,640 --> 00:18:00,640
+one of the sources of anomalies, which is that in this case the tricorder data isn't there. And this anomaly is
+
+147
+00:18:00,640 --> 00:18:11,640
+called a causal violation. We'll define causal in a second. So Uvura has once again seen an anomaly, so we need a
+
+148
+00:18:11,640 --> 00:18:20,640
+stronger consistency level. Let's choose causal consistency. With causal consistency, all clients observe
+
+149
+00:18:20,640 --> 00:18:28,640
+causally related operations in the same order. McCoy's two operations are causally related. He first uploaded the data and
+
+150
+00:18:28,640 --> 00:18:38,640
+then because he did that, he then updated the message saying that he had done so. In causal consistency, Uvura, if she
+
+151
+00:18:38,640 --> 00:18:46,640
+sees operation two, she must also be able to see operation one. Somebody else could be doing causally unrelated
+
+152
+00:18:46,640 --> 00:18:56,640
+operations and Uvura could see those before or after she sees McCoy's. This is not a total order. Any of those is possible.
+
+153
+00:18:56,640 --> 00:19:07,640
+A common way to implement causal consistency is to have a time stamp on every server. It's not an actual clock time, it's just a
+
+154
+00:19:07,640 --> 00:19:17,640
+number. In this case, they all start with t equals zero. So McCoy uploads his data and his local machine increments its
+
+155
+00:19:17,640 --> 00:19:27,640
+time stamp. That's replicated to another machine, which also increments its time stamp. The lagging machine still has t
+
+156
+00:19:27,640 --> 00:19:37,640
+equals zero. Now McCoy uploads his message, his local machine updates its time stamp, and the replicating machine also updates its
+
+157
+00:19:37,640 --> 00:19:47,640
+time stamp. Now Uvura checks her inbox and she gets McCoy's message, but she also gets the latest time stamp from the server she
+
+158
+00:19:47,640 --> 00:19:57,640
+talked to, which is two. So now when she gets the tri-quarter data, she asks for data that's at least as recent as time stamp two.
+
+159
+00:19:57,640 --> 00:20:07,640
+So that means she has to wait because this server hasn't reached time stamp two yet. Eventually it replicates and gets the correct
+
+160
+00:20:07,640 --> 00:20:17,640
+answer, so there's no anomaly. So causal consistency is a great consistency level, but it allows a lot of anomalies still, so we might want a
+
+161
+00:20:17,640 --> 00:20:25,640
+stronger consistency level called linearizability. Linearizability means that each operation happens atomically, it's not a single
+
+162
+00:20:25,640 --> 00:20:31,640
+request and not the reply, and all clients see the same total order of operations. When I say atomically, I mean that the operation seems to happen at some
+
+163
+00:20:31,640 --> 00:20:41,640
+instant between the time that you've sent it and got the message. So that's a great consistency level.
+
+164
+00:20:41,640 --> 00:20:49,640
+So now we're going to talk about linearizability. So we're going to talk about linearizability.
+
+165
+00:20:49,640 --> 00:20:59,640
+So we'll start off by saying that the operation seems to happen at some instant between the time that you've sent it and got the reply, so nobody ever sees
+
+166
+00:20:59,640 --> 00:21:09,640
+partial operations. Notice that in linearizability, unlike serializability, the system has to do the operations in approximately the order that
+
+167
+00:21:09,640 --> 00:21:23,640
+the clients sent them. Implementing linearizability, and not that we'll show you the implementation, it's complicated. People often use consensus algorithms
+
+168
+00:21:23,640 --> 00:21:37,640
+like Paxos or Raft to implement this. Usually there is a one leader machine at a time that clients have to send all of their operations to.
+
+169
+00:21:37,640 --> 00:21:51,640
+The leader then does some sort of coordination magic, like maybe Paxos or Raft, to guarantee that this data is available to anybody who asks for it.
+
+170
+00:21:51,640 --> 00:21:59,640
+Once that coordination magic is complete, then the leader acknowledges to the client that it's done.
+
+171
+00:22:00,640 --> 00:22:08,640
+Linearizability is particularly useful if you've got some out of band communications that don't go through the database.
+
+172
+00:22:08,640 --> 00:22:15,640
+So here, let's say McCoy flips open his communicator and he calls you about directly and says,
+
+173
+00:22:15,640 --> 00:22:27,640
+Lieutenant Uhura, I've updated the data. Linearizability guarantees that Uhura can then ask the leader for this data and it will be available and there won't be any anomaly.
+
+174
+00:22:27,640 --> 00:22:37,640
+But the order of operations within the database is roughly what people expect based on their real world order of things that they do.
+
+175
+00:22:38,640 --> 00:22:46,640
+With all of these consistency levels, there guarantees hold even if a machine dies.
+
+176
+00:22:46,640 --> 00:22:52,640
+So with linearizability, let's say that the leader dies and some other leader takes over.
+
+177
+00:22:52,640 --> 00:23:00,640
+It is guaranteed that this leader has the data if Uhura asks for it so it can give her the correct answer.
+
+178
+00:23:01,640 --> 00:23:10,640
+So putting it all together. On the left, we have isolation levels for transactions on single machines.
+
+179
+00:23:10,640 --> 00:23:16,640
+And on the right, we have consistency levels for distributed databases.
+
+180
+00:23:16,640 --> 00:23:26,640
+If you want to prohibit all of the anomalies that we saw in a distributed database, then you want strict serializability,
+
+181
+00:23:26,640 --> 00:23:40,640
+which is the slowest of these levels. And the system is most likely to go unavailable to refuse to respond to you if it can't make these guarantees.
+
+182
+00:23:40,640 --> 00:23:46,640
+But it will pretty much do what you expect under all circumstances.
+
+183
+00:23:46,640 --> 00:23:52,640
+You don't have to memorize this chart or anything that I said today.
+
+184
+00:23:52,640 --> 00:24:05,640
+There's lots of things that you can read. The link here will include links to the code that I showed you and lots of things that you can read about consistency and isolation.
+
+185
+00:24:05,640 --> 00:24:12,640
+I'm not going to take questions up here, but I'm going to be at the hall in a minute if you want to talk.
+
+186
+00:24:12,640 --> 00:24:14,640
+Thanks very much.
+

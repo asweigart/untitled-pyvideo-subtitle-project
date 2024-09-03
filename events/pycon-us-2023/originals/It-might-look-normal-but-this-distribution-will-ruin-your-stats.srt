@@ -1,0 +1,1484 @@
+1
+00:00:00,000 --> 00:00:06,000
+Next talk here is by Alan Campociano and it is, it might look normal,
+
+2
+00:00:06,000 --> 00:00:08,200
+but this distribution will ruin your stats.
+
+3
+00:00:08,440 --> 00:00:10,280
+So let's give a nice welcome to Alan.
+
+4
+00:00:10,760 --> 00:00:16,040
+Hi everyone.
+
+5
+00:00:16,180 --> 00:00:16,920
+Thanks for being here.
+
+6
+00:00:17,620 --> 00:00:20,560
+Right, it might look normal, but this distribution will ruin your stats.
+
+7
+00:00:20,560 --> 00:00:26,500
+So you are at a stats talk, but don't worry, and this is really intended for a general audience.
+
+8
+00:00:27,220 --> 00:00:32,540
+I'll do my best to avoid the stats jargon that can come along with this material.
+
+9
+00:00:34,300 --> 00:00:36,260
+A little bit about me before we get started.
+
+10
+00:00:38,100 --> 00:00:39,660
+I'm a data scientist at Deep Note.
+
+11
+00:00:39,780 --> 00:00:46,940
+We build a fully collaborative data science notebook and I'll be analyzing some data in Deep Note a little bit later on.
+
+12
+00:00:49,380 --> 00:00:51,220
+I have a background in cognitive neuroscience.
+
+13
+00:00:51,260 --> 00:00:54,460
+That's where I learned the code and sort of fell in love with all things data.
+
+14
+00:00:55,460 --> 00:00:58,460
+And in my spare time, I like to develop stats software.
+
+15
+00:00:58,620 --> 00:01:04,500
+Mostly to try to make newer stats methods a little bit more accessible to newcomers.
+
+16
+00:01:06,300 --> 00:01:08,540
+All right, obligatory, why are we here slide.
+
+17
+00:01:09,540 --> 00:01:14,940
+So look, we use statistics all the time to make decisions based on our data, right?
+
+18
+00:01:14,940 --> 00:01:15,980
+It's a very useful tool.
+
+19
+00:01:16,900 --> 00:01:23,620
+And you know, if you look closely, we see stats everywhere and pretty much every domain you can think of, right?
+
+20
+00:01:23,620 --> 00:01:31,780
+Business, social sciences, natural sciences, engineering, healthcare, you name it, stats are everywhere.
+
+21
+00:01:32,220 --> 00:01:35,460
+So it pays to know how to use them properly.
+
+22
+00:01:36,300 --> 00:01:48,860
+And in general, this presentation is really a look at some of the pitfalls of traditional statistics and some of the newer tools that I'm going to introduce in Python that can help you overcome those challenges.
+
+23
+00:01:49,820 --> 00:01:59,500
+I want to give a respectful warning because in about 20 minutes I'm going to analyze some data from a social science study on sexual attitudes.
+
+24
+00:01:59,780 --> 00:02:01,900
+So I want to give a fair warning about that.
+
+25
+00:02:02,260 --> 00:02:11,820
+There's certainly no imagery, no, no discussion of non-consensual behavior and no discussion of assault or anything like that.
+
+26
+00:02:11,820 --> 00:02:12,820
+It's at a very high level.
+
+27
+00:02:12,820 --> 00:02:16,820
+But I want to give you a warning and I'll warn again before I get into that.
+
+28
+00:02:16,820 --> 00:02:19,820
+So let's take a look at our roadmap for this presentation.
+
+29
+00:02:22,660 --> 00:02:27,180
+In part one, we're going to look at the distributions we actually find in nature.
+
+30
+00:02:27,660 --> 00:02:30,700
+And you may already have some idea of that, right?
+
+31
+00:02:30,700 --> 00:02:32,940
+You may already have some intuition about that.
+
+32
+00:02:32,940 --> 00:02:41,580
+If you were to go out into the world and collect many, many samples and plot them, what shape do you think they would be?
+
+33
+00:02:41,580 --> 00:02:47,420
+If you were to go out into the world and collect many, many samples and plot them, what shape do you think they would take?
+
+34
+00:02:47,420 --> 00:02:51,180
+We're going to talk about that because people have studied this empirically.
+
+35
+00:02:54,380 --> 00:03:00,380
+In part two, we're going to look at why being close to normally distributed is not really enough.
+
+36
+00:03:00,780 --> 00:03:10,140
+And what I mean by that is how do small departures from normality affect our statistics, affect our ability to interpret our data?
+
+37
+00:03:12,380 --> 00:03:19,420
+In the Python part, comes last, in part three, I'll introduce a new Python library for robust statistics,
+
+38
+00:03:19,420 --> 00:03:27,020
+as well as some resources for learning how to reason about modern methods and some of the challenges with traditional methods.
+
+39
+00:03:27,020 --> 00:03:28,020
+Okay? Sound good?
+
+40
+00:03:30,220 --> 00:03:31,220
+Alright.
+
+41
+00:03:32,140 --> 00:03:36,340
+So, part one, the distributions we find in nature.
+
+42
+00:03:38,500 --> 00:03:39,860
+I'll start with a question.
+
+43
+00:03:42,220 --> 00:03:46,420
+Just raise your hand if you think the yellow curve here is normally distributed.
+
+44
+00:03:48,220 --> 00:03:49,500
+Any hands for yellow?
+
+45
+00:03:51,860 --> 00:03:54,340
+Quite a bit. Yellow, we populate today.
+
+46
+00:03:55,340 --> 00:03:57,340
+Alright. And how about blue?
+
+47
+00:03:58,740 --> 00:04:00,100
+Wow, that's actually more.
+
+48
+00:04:00,820 --> 00:04:05,140
+That's amazing. I've given similar talks so I'm keeping track of all of this data.
+
+49
+00:04:06,500 --> 00:04:11,140
+This is fascinating. So, the yellow curve is actually normally distributed.
+
+50
+00:04:11,580 --> 00:04:15,420
+So, everyone who said yellow gets a prize at the end of this talk, no, I'm just kidding.
+
+51
+00:04:17,540 --> 00:04:23,620
+The blue curve is something that's referred to as a contaminated normal distribution.
+
+52
+00:04:25,980 --> 00:04:35,140
+And contamination is really just a way of saying there's a higher proportion of outliers in the blue curve here, the blue population, let's call it.
+
+53
+00:04:36,140 --> 00:04:48,140
+And you can tell this, if you look closely, you can tell that the tails, the edges of the distribution are slightly higher on the y-axis for the blue curve.
+
+54
+00:04:48,140 --> 00:04:49,620
+I don't know if you can see that.
+
+55
+00:04:49,620 --> 00:04:57,380
+But that's, we would say the blue curve has heavier tails relative to the yellow curve.
+
+56
+00:04:57,380 --> 00:05:01,660
+And so that's an indication of a higher proportion of outliers.
+
+57
+00:05:02,660 --> 00:05:04,660
+Okay, so that's what we call contamination.
+
+58
+00:05:04,660 --> 00:05:09,660
+It's quite fascinating, isn't it? It looks normal. It's bell-shaped, it's symmetrical.
+
+59
+00:05:09,660 --> 00:05:15,660
+Right, but it definitely does not behave like a normal curve and we're going to get into some examples of that.
+
+60
+00:05:18,660 --> 00:05:28,660
+So, it turns out that contamination, as well as other characteristics like skew and multiple modes,
+
+61
+00:05:28,660 --> 00:05:35,660
+those are actually the characteristics that we tend to find in nature when we collect very, very large datasets.
+
+62
+00:05:35,660 --> 00:05:45,660
+And I think this runs counter to common thinking that the normal curve is built into nature.
+
+63
+00:05:45,660 --> 00:05:48,660
+It's God's curve, so to speak.
+
+64
+00:05:48,660 --> 00:05:53,660
+And there's been several papers on this, which is very interesting.
+
+65
+00:05:53,660 --> 00:06:01,660
+This is like the classic one by Theodore Michieri, The Unicorn, the Normal Curve, and Other Improbable Creatures.
+
+66
+00:06:01,660 --> 00:06:03,660
+It's an amazing title.
+
+67
+00:06:03,660 --> 00:06:08,660
+So, but definitely check this paper out. It's super fascinating.
+
+68
+00:06:08,660 --> 00:06:13,660
+At the end of the paper, Theodore says, look, normality in nature doesn't exist.
+
+69
+00:06:13,660 --> 00:06:19,660
+And all of the normality-assuming statistics could be questioned.
+
+70
+00:06:19,660 --> 00:06:25,660
+And maybe we should look for some other robust methods, you know.
+
+71
+00:06:25,660 --> 00:06:30,660
+So, that's partly what we're going to talk about today.
+
+72
+00:06:30,660 --> 00:06:35,660
+This starts on the side because I think it's really interesting.
+
+73
+00:06:35,660 --> 00:06:42,660
+I don't know if you noticed, but the normal curve has an absolutely fascinating history and oftentimes very controversial history.
+
+74
+00:06:43,660 --> 00:06:51,660
+I put together some quotes here and how they sort of depict the attitude towards normal curve over time.
+
+75
+00:06:51,660 --> 00:06:57,660
+And I just wanted to share it with you because it's really interesting to me.
+
+76
+00:06:57,660 --> 00:07:00,660
+I'll read these, though. It's okay if you can't read that.
+
+77
+00:07:00,660 --> 00:07:08,660
+But in 1888, Galton said that if the Greeks had known about the normal curve, they would have made it a god.
+
+78
+00:07:08,660 --> 00:07:12,660
+And it brings order to payoffs.
+
+79
+00:07:12,660 --> 00:07:18,660
+And if you know anything about the central limit theory, you can kind of understand why people would say this.
+
+80
+00:07:18,660 --> 00:07:23,660
+But love for the normal curve weakens a little bit.
+
+81
+00:07:23,660 --> 00:07:29,660
+And, you know, towards the end of the 19th century, Kirsten says, you know what, this is a great mathematical convenient,
+
+82
+00:07:29,660 --> 00:07:33,660
+but I don't see any reason why we should assume the normal curve.
+
+83
+00:07:33,660 --> 00:07:35,660
+I'm paraphrasing.
+
+84
+00:07:36,660 --> 00:07:44,660
+And then love is kind of like at its all-time lowest for the normal curve when gossip under the student came up with the t-tests
+
+85
+00:07:44,660 --> 00:07:48,660
+to deal with small sample sizes and small departures from normality.
+
+86
+00:07:48,660 --> 00:07:54,660
+And I think at that time, there was a lot of excitement about methods that could overcome this assumption
+
+87
+00:07:54,660 --> 00:07:58,660
+that everybody kind of felt like was maybe not the right assumption to make.
+
+88
+00:07:58,660 --> 00:08:03,660
+But you know what? The normal curve has this strange grip on us.
+
+89
+00:08:03,660 --> 00:08:07,660
+And love for it started to come back.
+
+90
+00:08:07,660 --> 00:08:11,660
+Fischer showed that when universal normality could be assumed,
+
+91
+00:08:11,660 --> 00:08:17,660
+inferences of the widest practical usefulness could be drawn from samples of any size.
+
+92
+00:08:17,660 --> 00:08:19,660
+Fascinating statement.
+
+93
+00:08:19,660 --> 00:08:24,660
+So we were kind of getting away from the normal curve, but it like pulled us back in.
+
+94
+00:08:24,660 --> 00:08:30,660
+And then towards the 80s, and I would suspect even to this day, we see sentiments like this.
+
+95
+00:08:30,660 --> 00:08:35,660
+Measurements of many variables are good approximations of the normal distribution.
+
+96
+00:08:35,660 --> 00:08:37,660
+God loves the normal curve.
+
+97
+00:08:37,660 --> 00:08:40,660
+And here we are back at this idea.
+
+98
+00:08:40,660 --> 00:08:42,660
+God's back into the picture.
+
+99
+00:08:42,660 --> 00:08:46,660
+It's like the normal curve is built into nature somehow.
+
+100
+00:08:46,660 --> 00:08:52,660
+And you know, I do suspect that if you were to open any introductory statistics book,
+
+101
+00:08:52,660 --> 00:08:58,660
+you would find this kind of sentiment, maybe implicitly,
+
+102
+00:08:58,660 --> 00:09:03,660
+but that the normal curve is built into nature.
+
+103
+00:09:03,660 --> 00:09:05,660
+All right.
+
+104
+00:09:05,660 --> 00:09:08,660
+I've been giving the normal curve like a really bad rat here,
+
+105
+00:09:08,660 --> 00:09:13,660
+but I haven't yet shown you what happens with universal normality,
+
+106
+00:09:13,660 --> 00:09:16,660
+and how big of a problem is that.
+
+107
+00:09:16,660 --> 00:09:24,660
+So let me show you one of many striking examples I could show you.
+
+108
+00:09:24,660 --> 00:09:25,660
+All right.
+
+109
+00:09:25,660 --> 00:09:29,660
+So let's just focus our attention on the yellow distributions,
+
+110
+00:09:29,660 --> 00:09:34,660
+the yellow populations, let's call them, on the left.
+
+111
+00:09:34,660 --> 00:09:39,660
+Now, you can see those are definitely two different populations.
+
+112
+00:09:39,660 --> 00:09:42,660
+They're split by about 0.8, so it's a sizable effect.
+
+113
+00:09:42,660 --> 00:09:48,660
+Now if I were to reach into the yellow curve on the right, so take a sample,
+
+114
+00:09:48,660 --> 00:09:51,660
+and take a sample from the yellow curve on the left,
+
+115
+00:09:51,660 --> 00:09:56,660
+and conduct a t-test to test if there's a statistical difference between those samples,
+
+116
+00:09:56,660 --> 00:09:59,660
+I could do that, you know, I could use Python and use a computer
+
+117
+00:09:59,660 --> 00:10:03,660
+and do this simulation many, many, many, many, many times, right?
+
+118
+00:10:03,660 --> 00:10:10,660
+And then I could simply ask myself, what's the proportion of significant results?
+
+119
+00:10:10,660 --> 00:10:12,660
+Right?
+
+120
+00:10:12,660 --> 00:10:13,660
+Easy to do.
+
+121
+00:10:13,660 --> 00:10:19,660
+And it turns out that about 90% of the time, I will find a difference,
+
+122
+00:10:19,660 --> 00:10:20,660
+a statistical difference.
+
+123
+00:10:20,660 --> 00:10:23,660
+Now I know I'm leaving out some details here,
+
+124
+00:10:23,660 --> 00:10:27,660
+but if you want to know more about the parameters that go into a simulation like this,
+
+125
+00:10:27,660 --> 00:10:30,660
+well, I'll be sharing all of those resources.
+
+126
+00:10:30,660 --> 00:10:34,660
+But it basically means, hey, 90% of the time I find a difference,
+
+127
+00:10:34,660 --> 00:10:40,660
+and it's good because it's a reflection of an actual true difference in the population.
+
+128
+00:10:40,660 --> 00:10:44,660
+In real life, you never know what your population shapes are,
+
+129
+00:10:44,660 --> 00:10:50,660
+but when you use simulations, you know, it can really help you understand interesting patterns of effect.
+
+130
+00:10:50,660 --> 00:10:57,660
+So what happens when we do the same thing, but we do it with the contaminated normal distributions,
+
+131
+00:10:57,660 --> 00:11:02,660
+these two populations that are also separated by the same effect?
+
+132
+00:11:02,660 --> 00:11:08,660
+It turns out that we could only find an effect about 20% of the time.
+
+133
+00:11:09,660 --> 00:11:13,660
+That means 80% of the time we're basically saying,
+
+134
+00:11:13,660 --> 00:11:17,660
+ah, we don't have any evidence here for an effect, right?
+
+135
+00:11:17,660 --> 00:11:20,660
+And that would be a false negative.
+
+136
+00:11:20,660 --> 00:11:25,660
+So this is really a reflection of something called power, right?
+
+137
+00:11:25,660 --> 00:11:29,660
+Which is the probability of finding an effect if there is an effect,
+
+138
+00:11:29,660 --> 00:11:31,660
+and there definitely is an effect here.
+
+139
+00:11:31,660 --> 00:11:34,660
+This is one of many striking examples I can show you,
+
+140
+00:11:34,660 --> 00:11:39,660
+and I'll show you all the code for this a little bit later.
+
+141
+00:11:39,660 --> 00:11:45,660
+All right. This is the Python conference after all, so we've probably talked about Python.
+
+142
+00:11:45,660 --> 00:11:55,660
+You know, one of the criticisms of modern tools for dealing with robust statistics is that the software is just not any good,
+
+143
+00:11:55,660 --> 00:12:00,660
+and it's not that accessible, which might contribute to why, you know,
+
+144
+00:12:00,660 --> 00:12:03,660
+we still see traditional statistics being leaked quite frequently.
+
+145
+00:12:03,660 --> 00:12:12,660
+So I tried to help with this problem, and I wrote this paper and this library called Hypothesize,
+
+146
+00:12:12,660 --> 00:12:18,660
+which to my knowledge is the only Python library dedicated solely to robust statistics.
+
+147
+00:12:18,660 --> 00:12:21,660
+It's a new library.
+
+148
+00:12:21,660 --> 00:12:26,660
+I had the great honor of publishing this paper and the software
+
+149
+00:12:26,660 --> 00:12:32,660
+with the eminent statistician and expert in the field of robust statistics, Rand R. Wilcox,
+
+150
+00:12:32,660 --> 00:12:36,660
+and I'm going to tell you a little bit more about him later.
+
+151
+00:12:36,660 --> 00:12:37,660
+But it's really cool.
+
+152
+00:12:37,660 --> 00:12:44,660
+Rand has curated like hundreds and hundreds of unbelievably cool robust functions,
+
+153
+00:12:44,660 --> 00:12:49,660
+and they're all just sitting in a text file, and they're all written in R.
+
+154
+00:12:50,660 --> 00:12:57,660
+So I did nothing other than take the ones that I wanted out and write them in Python,
+
+155
+00:12:57,660 --> 00:13:02,660
+put a nice API around it, write some docs, and then make it part of the Python library ecosystem,
+
+156
+00:13:02,660 --> 00:13:06,660
+and now we have robust statistics for Python.
+
+157
+00:13:06,660 --> 00:13:08,660
+All right.
+
+158
+00:13:08,660 --> 00:13:13,660
+Just another note about this, what the staff spoke about there.
+
+159
+00:13:13,660 --> 00:13:18,660
+If you like t-tests and ANOVAs and regressions and correlations,
+
+160
+00:13:18,660 --> 00:13:25,660
+all of those methods have an analog that basically works very similar in Hypothesize.
+
+161
+00:13:25,660 --> 00:13:30,660
+So it's not like you could be dealing with like super weird methods that you won't recognize.
+
+162
+00:13:30,660 --> 00:13:32,660
+All right.
+
+163
+00:13:32,660 --> 00:13:33,660
+Okay.
+
+164
+00:13:33,660 --> 00:13:34,660
+Demo.
+
+165
+00:13:34,660 --> 00:13:35,660
+So I'll give you a demo.
+
+166
+00:13:35,660 --> 00:13:39,660
+You know how live demos go.
+
+167
+00:13:39,660 --> 00:13:46,660
+Also, I wanted to give a respectful warning as well because we will be talking about that study on sexual attitudes.
+
+168
+00:13:46,660 --> 00:13:47,660
+Okay.
+
+169
+00:13:47,660 --> 00:13:53,660
+And again, this is spoken at a very high level, so there's certainly nothing graphic.
+
+170
+00:13:53,660 --> 00:13:55,660
+All right.
+
+171
+00:13:55,660 --> 00:13:56,660
+Okay.
+
+172
+00:13:56,660 --> 00:13:59,660
+I'm going to get out of my Google slides.
+
+173
+00:13:59,660 --> 00:14:00,660
+Wish me luck.
+
+174
+00:14:00,660 --> 00:14:01,660
+Say some prayers.
+
+175
+00:14:01,660 --> 00:14:04,660
+You know how these things go.
+
+176
+00:14:04,660 --> 00:14:05,660
+All right.
+
+177
+00:14:05,660 --> 00:14:08,660
+Let's bear with me for a second.
+
+178
+00:14:08,660 --> 00:14:11,660
+This is my repo for Hypothesize.
+
+179
+00:14:11,660 --> 00:14:12,660
+Okay.
+
+180
+00:14:12,660 --> 00:14:13,660
+So come and find it.
+
+181
+00:14:13,660 --> 00:14:15,660
+It's really starving for stars right now.
+
+182
+00:14:15,660 --> 00:14:19,660
+So, you know, if you have a second.
+
+183
+00:14:19,660 --> 00:14:22,660
+All right.
+
+184
+00:14:22,660 --> 00:14:31,660
+As I hinted at earlier, like part of the motivation for writing this kind of software is to make it easier for people to onboard to new methods.
+
+185
+00:14:31,660 --> 00:14:32,660
+You know?
+
+186
+00:14:32,660 --> 00:14:42,660
+And one example of how I can do that is, so if you look at this little code snippet here, this is just simply a code snippet to run a robust correlation.
+
+187
+00:14:42,660 --> 00:14:47,660
+So instead of Pearson's R, you can run a randomized correlation instead.
+
+188
+00:14:47,660 --> 00:14:56,660
+But what's cool is that all of the hypothesis tests in this library are associated with their own live running Python notebook.
+
+189
+00:14:56,660 --> 00:15:01,660
+So this way you don't have to worry about writing all the boilerplate code and some stats and everything.
+
+190
+00:15:01,660 --> 00:15:05,660
+You can just click a link and then you're in a notebook and you're ready to go.
+
+191
+00:15:05,660 --> 00:15:18,660
+So, for example, if I click this launch and deep note button, it'll launch this randomized correlation.
+
+192
+00:15:18,660 --> 00:15:23,660
+And it'll like fire up a machine and you'll be able to collect, basically, just run the notebook from start to finish.
+
+193
+00:15:23,660 --> 00:15:28,660
+It'll even create sample data for you in the structure that the function expects.
+
+194
+00:15:28,660 --> 00:15:34,660
+And it kind of is there to teach you what the inputs look like based on fake data.
+
+195
+00:15:34,660 --> 00:15:37,660
+Then you can just drag your own data in there and use it as you like.
+
+196
+00:15:37,660 --> 00:15:38,660
+Now, I already have one.
+
+197
+00:15:38,660 --> 00:15:42,660
+I'm going to close this because I already have one here.
+
+198
+00:15:42,660 --> 00:15:48,660
+And if I run the notebook, it'll open stall hypothesize.
+
+199
+00:15:48,660 --> 00:15:49,660
+Okay.
+
+200
+00:15:49,660 --> 00:15:51,660
+Nothing too crazy about that.
+
+201
+00:15:51,660 --> 00:15:54,660
+Let me just zoom in a little bit more.
+
+202
+00:15:54,660 --> 00:15:57,660
+All right.
+
+203
+00:15:57,660 --> 00:16:04,660
+I can import the function that I need for sample data and import the actual correlation function itself.
+
+204
+00:16:04,660 --> 00:16:06,660
+I can create some fake data.
+
+205
+00:16:06,660 --> 00:16:07,660
+No big deal.
+
+206
+00:16:07,660 --> 00:16:11,660
+I can pass each of those columns into the function and print out my results.
+
+207
+00:16:11,660 --> 00:16:13,660
+Now I get a dictionary.
+
+208
+00:16:13,660 --> 00:16:15,660
+And this dictionary gives me a p-value.
+
+209
+00:16:15,660 --> 00:16:16,660
+It gives me the n.
+
+210
+00:16:16,660 --> 00:16:18,660
+It gives me the covariance.
+
+211
+00:16:18,660 --> 00:16:19,660
+It gives me the correlation.
+
+212
+00:16:19,660 --> 00:16:20,660
+Okay.
+
+213
+00:16:20,660 --> 00:16:24,660
+Now, this is just fake data, so it's not that exciting.
+
+214
+00:16:24,660 --> 00:16:25,660
+Right?
+
+215
+00:16:25,660 --> 00:16:28,660
+But remember I told you about that cool study?
+
+216
+00:16:28,660 --> 00:16:33,660
+Let's talk about that now because it represents a very interesting challenge for us.
+
+217
+00:16:33,660 --> 00:16:40,660
+So this is a study on sexual attitudes collected by the author Miller.
+
+218
+00:16:40,660 --> 00:16:49,660
+And basically what this study is all about was they asked thousands of people how many sexual partners do you want in the next 30 years?
+
+219
+00:16:49,660 --> 00:16:56,660
+Now if you think about that for a second, you can only imagine the number of outliers in this dataset.
+
+220
+00:16:56,660 --> 00:17:01,660
+And it's very difficult to know how to even deal with it.
+
+221
+00:17:01,660 --> 00:17:06,660
+So let me show you a little bit how the data looks and then we can run some stats.
+
+222
+00:17:06,660 --> 00:17:10,660
+But what's interesting is that we'll run a traditional p-test compare group.
+
+223
+00:17:10,660 --> 00:17:14,660
+Then we'll run a robust p-test, a percentile bootstrap test.
+
+224
+00:17:14,660 --> 00:17:16,660
+No, it's actually called a bootstrap t-test.
+
+225
+00:17:16,660 --> 00:17:19,660
+Anyway, there's lots of flavors of bootstrapping.
+
+226
+00:17:19,660 --> 00:17:23,660
+Okay, so we'll do this and we'll see how all the results take out.
+
+227
+00:17:23,660 --> 00:17:26,660
+So I'm just going to run these blocks, import everything.
+
+228
+00:17:26,660 --> 00:17:28,660
+Got a function for cleaning some data.
+
+229
+00:17:28,660 --> 00:17:30,660
+I'm going to clean it.
+
+230
+00:17:30,660 --> 00:17:32,660
+Then I can print the data out.
+
+231
+00:17:32,660 --> 00:17:38,660
+And let's see if I can get in here close enough so I can give you some sense of what's going on.
+
+232
+00:17:38,660 --> 00:17:39,660
+Okay.
+
+233
+00:17:39,660 --> 00:17:44,660
+So the max value for the male group is 2 million.
+
+234
+00:17:44,660 --> 00:17:49,660
+The max value for the female group is 3,000.
+
+235
+00:17:49,660 --> 00:17:55,660
+If I filter this column by just any value, let's just say I throw a 1 in here,
+
+236
+00:17:55,660 --> 00:17:57,660
+and we can look at some of the other values.
+
+237
+00:17:57,660 --> 00:18:00,660
+There's actually lots of 1s in this dataset.
+
+238
+00:18:00,660 --> 00:18:02,660
+There's lots of 0s as well.
+
+239
+00:18:02,660 --> 00:18:03,660
+There's a 12.
+
+240
+00:18:03,660 --> 00:18:04,660
+There's a 10.
+
+241
+00:18:04,660 --> 00:18:07,660
+There's a 1572.
+
+242
+00:18:07,660 --> 00:18:11,660
+I don't understand it, but it's a really interesting dataset.
+
+243
+00:18:11,660 --> 00:18:15,660
+So, let's get to the good stuff.
+
+244
+00:18:15,660 --> 00:18:22,660
+I'll pass all of this data into a traditional Qtest, okay, and we'll take a look at the results.
+
+245
+00:18:22,660 --> 00:18:27,660
+Alright, I think they just all printed out here anyway because I just ran this notebook.
+
+246
+00:18:27,660 --> 00:18:31,660
+But you can see this confidence interval definitely includes 0.
+
+247
+00:18:31,660 --> 00:18:32,660
+Okay.
+
+248
+00:18:32,660 --> 00:18:37,660
+You can see the p-value is very low and the p-value is very high.
+
+249
+00:18:37,660 --> 00:18:41,660
+So what this means is that we cannot reject the male.
+
+250
+00:18:41,660 --> 00:18:45,660
+We cannot claim that there's a difference between these two groups.
+
+251
+00:18:45,660 --> 00:18:48,660
+Okay, we have no evidence for that.
+
+252
+00:18:48,660 --> 00:18:50,660
+Okay.
+
+253
+00:18:50,660 --> 00:18:59,660
+And if I do the same thing with U-N Bootstrap Qtest, which is a function that's in the hypothesis library,
+
+254
+00:18:59,660 --> 00:19:01,660
+let me run that.
+
+255
+00:19:01,660 --> 00:19:09,660
+Okay, and then there's some parameters here like a trend mean and some bootstrapping samples here.
+
+256
+00:19:09,660 --> 00:19:14,660
+And if you're interested, by the way, we can talk about all of these parameters and it's really interesting.
+
+257
+00:19:14,660 --> 00:19:20,660
+But in this case, you can see that the confidence interval looks very different.
+
+258
+00:19:20,660 --> 00:19:23,660
+It does not include 0.
+
+259
+00:19:23,660 --> 00:19:28,660
+The test statistic is very high and the p-value is very low.
+
+260
+00:19:28,660 --> 00:19:29,660
+It's actually 0.
+
+261
+00:19:29,660 --> 00:19:36,660
+So in this case, using a robust method against the same data, we can actually reject the male.
+
+262
+00:19:36,660 --> 00:19:40,660
+We can actually claim that there's a statistical difference here.
+
+263
+00:19:40,660 --> 00:19:50,660
+And in this case, with this test, we would interpret the data as males want more sexual partners in the next 30 years compared to females.
+
+264
+00:19:50,660 --> 00:19:56,660
+Now, I want to be very careful here.
+
+265
+00:19:56,660 --> 00:20:03,660
+I'm not saying that robust statistics will always give you a significant result.
+
+266
+00:20:03,660 --> 00:20:09,660
+Sometimes they both come out non-significant.
+
+267
+00:20:09,660 --> 00:20:18,660
+Sometimes it's the opposite result that the bootstrap test or a robust test at some time will come out non-significant
+
+268
+00:20:18,660 --> 00:20:20,660
+and the traditional test will come out significant.
+
+269
+00:20:20,660 --> 00:20:24,660
+And there's a good reason for that because traditional tests, under some circumstances,
+
+270
+00:20:24,660 --> 00:20:27,660
+lead to incredible inflation as type 1 error.
+
+271
+00:20:27,660 --> 00:20:31,660
+And I'm going to show you a bit about that soon.
+
+272
+00:20:31,660 --> 00:20:36,660
+So I want to be very careful about what I'm saying here.
+
+273
+00:20:36,660 --> 00:20:44,660
+I'm also not saying that robust methods solve all problems we might encounter in the real world.
+
+274
+00:20:44,660 --> 00:20:53,660
+But we want to try to – this is my logic anyway, this is the logic that I think makes sense –
+
+275
+00:20:53,660 --> 00:21:00,660
+we want to try to find methods that work well under normality, just in case,
+
+276
+00:21:00,660 --> 00:21:05,660
+but continue to perform well when distributions are not normal.
+
+277
+00:21:05,660 --> 00:21:07,660
+Right? That makes sense, right?
+
+278
+00:21:07,660 --> 00:21:12,660
+We want to use methods that are protective across a wide range of scenarios.
+
+279
+00:21:12,660 --> 00:21:17,660
+And the whole subfield of robust statistics is all about that.
+
+280
+00:21:17,660 --> 00:21:21,660
+And so there are lots of methods that keep seeing strength to help me.
+
+281
+00:21:21,660 --> 00:21:23,660
+Okay.
+
+282
+00:21:23,660 --> 00:21:26,660
+All right. One demo done successfully.
+
+283
+00:21:26,660 --> 00:21:29,660
+Let's move on to the next one.
+
+284
+00:21:29,660 --> 00:21:37,660
+It's all fine and well to have this library for robust hypothesis testing.
+
+285
+00:21:37,660 --> 00:21:43,660
+But what I have found over the years is that a lot of the patterns of effects,
+
+286
+00:21:43,660 --> 00:21:50,660
+a lot of the counterintuitive things that you discover are just not apparent
+
+287
+00:21:50,660 --> 00:21:56,660
+to people who are new to these concepts like bootstrapping and 10-dimin and standard error,
+
+288
+00:21:56,660 --> 00:21:59,660
+and how does it all work together.
+
+289
+00:21:59,660 --> 00:22:05,660
+So when you're talking to reviewers, for example, they may not know this literature.
+
+290
+00:22:05,660 --> 00:22:12,660
+And so it's helpful to have an interactive tool where you can learn to reason about these patterns
+
+291
+00:22:12,660 --> 00:22:16,660
+because, as I mentioned, they're not always counterintuitive.
+
+292
+00:22:16,660 --> 00:22:20,660
+I mean, they're not always intuitive.
+
+293
+00:22:20,660 --> 00:22:25,660
+So this notebook, and I'll spare a link to this notebook after,
+
+294
+00:22:25,660 --> 00:22:29,660
+it's basically a way of designing your own populations
+
+295
+00:22:29,660 --> 00:22:36,660
+and seeing how all the statistics and metrics shake out when you start with a particular shape of a population.
+
+296
+00:22:36,660 --> 00:22:38,660
+It's really cool.
+
+297
+00:22:38,660 --> 00:22:42,660
+So just to go through it very quickly, I won't go through every section.
+
+298
+00:22:42,660 --> 00:22:49,660
+You can, for example, select from some predefined, let me zoom in here,
+
+299
+00:22:49,660 --> 00:22:55,660
+some predefined distribution shapes like this is an amazing one, contaminated cross-square.
+
+300
+00:22:55,660 --> 00:22:58,660
+Oh my gosh, we thought contaminated normal curve was bad.
+
+301
+00:22:58,660 --> 00:23:06,660
+If you check out contaminated cross-square, you give it some contamination, you plot it, it means remote.
+
+302
+00:23:06,660 --> 00:23:09,660
+So that's how it looks.
+
+303
+00:23:09,660 --> 00:23:13,660
+And then you can start doing things like, hey, how does the mean perform?
+
+304
+00:23:13,660 --> 00:23:15,660
+Is the mean robust?
+
+305
+00:23:15,660 --> 00:23:20,660
+How robust is it compared to the 10-dimin or the one-step estimator or the median
+
+306
+00:23:20,660 --> 00:23:23,660
+or whatever else you want to build into this software.
+
+307
+00:23:23,660 --> 00:23:29,660
+You can set the sample size, look at the sampling distribution, examine the standard error of all of those things,
+
+308
+00:23:29,660 --> 00:23:34,660
+and then you can start to build up an understanding of the patterns
+
+309
+00:23:34,660 --> 00:23:39,660
+because they don't always come out the way you'd expect.
+
+310
+00:23:39,660 --> 00:23:44,660
+Anyway, I can talk more about that if you want, but pretty cool stuff.
+
+311
+00:23:44,660 --> 00:23:47,660
+Just for convenience, I've lined them all up here into a little heat map
+
+312
+00:23:47,660 --> 00:23:51,660
+so you can see like all the distribution shapes and all the measures of central tendency
+
+313
+00:23:51,660 --> 00:23:55,660
+and how well they perform in terms of standard error.
+
+314
+00:23:55,660 --> 00:24:00,660
+I realize I did not describe what standard error was, but it is one way of assessing robustness
+
+315
+00:24:00,660 --> 00:24:02,660
+of a measure of central tendency.
+
+316
+00:24:02,660 --> 00:24:09,660
+Long story short, the mean is not robust, especially when distributions are skewed and or contaminated,
+
+317
+00:24:09,660 --> 00:24:16,660
+but something more robust like the 10-dimin actually holds its ground pretty well across a wide range of scenarios.
+
+318
+00:24:16,660 --> 00:24:22,660
+Then I have a section on the distribution of T, which has its own set of big problems.
+
+319
+00:24:22,660 --> 00:24:30,660
+It's a presentation all on its own, the problems that you can encounter with assuming the T curve.
+
+320
+00:24:30,660 --> 00:24:37,660
+And then, just checking the time, and then in the last section, my favorite section,
+
+321
+00:24:37,660 --> 00:24:39,660
+it's kind of like build your own distribution.
+
+322
+00:24:39,660 --> 00:24:44,660
+So rather than selecting from some predefined shape like I showed earlier,
+
+323
+00:24:44,660 --> 00:24:49,660
+you can actually define the skewness and the heaviness or contamination,
+
+324
+00:24:49,660 --> 00:24:53,660
+and then this way you're kind of building a population just based on those two parameters.
+
+325
+00:24:53,660 --> 00:24:54,660
+And this is pretty cool.
+
+326
+00:24:54,660 --> 00:24:59,660
+And once you do that, you can assess type one error comparing a traditional test to a robust test.
+
+327
+00:24:59,660 --> 00:25:01,660
+So I will give you an example of that.
+
+328
+00:25:01,660 --> 00:25:06,660
+If I leave skewness and heaviness at zero, that's basically a normal distribution,
+
+329
+00:25:06,660 --> 00:25:12,660
+and I run this block, I can basically see that the T tests and the robust analog percentile bootstrap tests
+
+330
+00:25:12,660 --> 00:25:14,660
+do pretty well in terms of type one error.
+
+331
+00:25:14,660 --> 00:25:17,660
+Probability coverage in both tails is pretty equal,
+
+332
+00:25:17,660 --> 00:25:23,660
+and they're both kind of panning around the nominal value of .05, which is good.
+
+333
+00:25:23,660 --> 00:25:29,660
+Now, if I run this a bunch of times, I'll get slightly different answers because it's a simulation,
+
+334
+00:25:29,660 --> 00:25:33,660
+but you'll see that actually that's the pattern there.
+
+335
+00:25:33,660 --> 00:25:38,660
+If I increase the skewness a bunch and leave heaviness alone,
+
+336
+00:25:39,660 --> 00:25:44,660
+the T test shows massive inflation of type one error, especially in the left tail.
+
+337
+00:25:44,660 --> 00:25:49,660
+And if you were looking at this distribution here, this blue distribution here,
+
+338
+00:25:49,660 --> 00:25:54,660
+which is a whole bunch of T's plotted, you might be able to get a sense of why that might be the case.
+
+339
+00:25:54,660 --> 00:26:01,660
+And then if you increase heaviness and keep skew at zero,
+
+340
+00:26:01,660 --> 00:26:06,660
+what you find is similar to what I showed you earlier,
+
+341
+00:26:06,660 --> 00:26:10,660
+where the percentile bootstrap test again has great probability coverage,
+
+342
+00:26:10,660 --> 00:26:15,660
+it still hangs around the nominal value of .05 for type one error, but the T test will be a lot lower.
+
+343
+00:26:15,660 --> 00:26:19,660
+This is like an indication of a lack of power under contamination.
+
+344
+00:26:19,660 --> 00:26:22,660
+So this is similar to what I showed you before.
+
+345
+00:26:22,660 --> 00:26:27,660
+Interestingly enough, if you ramp up both of these values, heaviness and skew,
+
+346
+00:26:27,660 --> 00:26:30,660
+then all hell breaks loose for the T test.
+
+347
+00:26:30,660 --> 00:26:34,660
+It has massive type one error, really brutal probability coverage,
+
+348
+00:26:34,660 --> 00:26:39,660
+but if you look at the percentile bootstrap test, again, very good probability coverage,
+
+349
+00:26:39,660 --> 00:26:42,660
+and still hanging around .05.
+
+350
+00:26:42,660 --> 00:26:44,660
+Okay, I got four minutes left.
+
+351
+00:26:44,660 --> 00:26:48,660
+Let me take you through some conclusions.
+
+352
+00:26:48,660 --> 00:26:53,660
+I'm going to go back, see a little slide show here.
+
+353
+00:26:53,660 --> 00:26:57,660
+All right.
+
+354
+00:26:57,660 --> 00:27:02,660
+So the normal curve is probably not God's curve.
+
+355
+00:27:02,660 --> 00:27:07,660
+At least that's what the data seemed to suggest.
+
+356
+00:27:07,660 --> 00:27:14,660
+So it makes sense to change methods that don't assume that.
+
+357
+00:27:14,660 --> 00:27:20,660
+Even small departures from normality can have a big effect on our downstream statistics.
+
+358
+00:27:20,660 --> 00:27:25,660
+I showed you a pretty striking example of power being affected earlier in the presentation,
+
+359
+00:27:25,660 --> 00:27:30,660
+and then just now I showed you what can happen with the T test in terms of type one error.
+
+360
+00:27:30,660 --> 00:27:35,660
+So, you know, like even visually when you're looking at something,
+
+361
+00:27:35,660 --> 00:27:39,660
+it might visually look like a small difference, but it can have a really big impact.
+
+362
+00:27:39,660 --> 00:27:43,660
+So just be aware of that.
+
+363
+00:27:43,660 --> 00:27:49,660
+The good news is that Python resources, like Hypothesize and like these interactive simulations,
+
+364
+00:27:49,660 --> 00:27:56,660
+they're here, they're here to help, and they're easy to use and available.
+
+365
+00:27:56,660 --> 00:28:01,660
+Please check out Rand R. Wilcox's papers and book.
+
+366
+00:28:01,660 --> 00:28:06,660
+They're life-changing if you want to learn about the field of robust statistics.
+
+367
+00:28:06,660 --> 00:28:13,660
+Most of the ideas I presented to you today are actually from Rand's papers and Rand's book,
+
+368
+00:28:13,660 --> 00:28:16,660
+so please take a look.
+
+369
+00:28:16,660 --> 00:28:21,660
+And yeah, if you want access to that simulation notebook,
+
+370
+00:28:21,660 --> 00:28:26,660
+just point your camera at this QR code and you'll be off to the races.
+
+371
+00:28:26,660 --> 00:28:28,660
+Thank you very much. That's everything.
+

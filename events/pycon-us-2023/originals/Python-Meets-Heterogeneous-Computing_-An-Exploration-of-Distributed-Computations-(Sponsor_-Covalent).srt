@@ -1,0 +1,2220 @@
+1
+00:00:00,000 --> 00:00:15,000
+Okay, should we get started?
+
+2
+00:00:15,000 --> 00:00:18,000
+Yeah, let's do it.
+
+3
+00:00:18,000 --> 00:00:19,000
+Great.
+
+4
+00:00:19,000 --> 00:00:21,000
+Okay, so my name is Will Cunningham.
+
+5
+00:00:21,000 --> 00:00:25,720
+I'm the head of high performance computing at Agnostic, and today I'm going to be talking
+
+6
+00:00:26,720 --> 00:00:31,720
+about a workflow orchestration platform that we're developing called Covalent.
+
+7
+00:00:31,720 --> 00:00:38,720
+So I'm going to start off by laying out some of the current challenges that we see in the broader community
+
+8
+00:00:38,720 --> 00:00:43,720
+to sort of set the stage for why we're even working on this tool in the first place.
+
+9
+00:00:43,720 --> 00:00:49,720
+So today's most important problems require high performance computing solutions.
+
+10
+00:00:49,720 --> 00:00:52,720
+This is pretty obvious if you think about it.
+
+11
+00:00:52,720 --> 00:00:56,720
+We're going to be modeling complex systems, dynamic behavior.
+
+12
+00:00:56,720 --> 00:01:01,720
+In many of these cases, we're working with approximate solutions, so we need really good approximations
+
+13
+00:01:01,720 --> 00:01:06,720
+because we don't have any analytical formulas in order to understand these phenomena.
+
+14
+00:01:06,720 --> 00:01:13,720
+And oftentimes, if you're doing scientific computing, you understand that the solution to your problem
+
+15
+00:01:13,720 --> 00:01:17,720
+and your actual understanding of the problem can come at the same time.
+
+16
+00:01:17,720 --> 00:01:25,720
+And so what this means is that if you're using, you know, Python, for instance, in scientific computing,
+
+17
+00:01:25,720 --> 00:01:30,720
+you're going to be working in a very highly iterative process, sweeping over different parameters,
+
+18
+00:01:30,720 --> 00:01:35,720
+understanding how different models perform for a particular data set, et cetera.
+
+19
+00:01:35,720 --> 00:01:41,720
+And the main sort of challenge underpinning all of this is that you're spending money the entire time,
+
+20
+00:01:41,720 --> 00:01:45,720
+and so it can be very expensive to do this iterative process,
+
+21
+00:01:45,720 --> 00:01:49,720
+very expensive to simulate and optimize these different problems.
+
+22
+00:01:49,720 --> 00:01:56,720
+So let me just give you three examples that we've seen when we're talking to clients.
+
+23
+00:01:56,720 --> 00:02:04,720
+Battery simulation in electric vehicles is a clear case where we're interested in increasing the battery life.
+
+24
+00:02:04,720 --> 00:02:10,720
+It's very difficult to simulate and optimize, and oftentimes organizations are using high performance computers
+
+25
+00:02:10,720 --> 00:02:14,720
+or even cloud computing these days to simulate it.
+
+26
+00:02:14,720 --> 00:02:20,720
+Protein folding for drug discovery follows a similar pattern where there are many different steps in this process,
+
+27
+00:02:20,720 --> 00:02:28,720
+and organizations need to understand which structures, which molecules are going to be most suitable to continue studying.
+
+28
+00:02:28,720 --> 00:02:35,720
+And portfolio optimization for financial organizations, of course, is very important for understanding risk management
+
+29
+00:02:35,720 --> 00:02:38,720
+and risk analysis in the broader economy.
+
+30
+00:02:38,720 --> 00:02:44,720
+So in all of these cases, there are very high value solutions, but it's very difficult to get these solutions,
+
+31
+00:02:44,720 --> 00:02:49,720
+especially in this age of distributed computing.
+
+32
+00:02:49,720 --> 00:02:58,720
+So there are a few different broad market forces that are promoting heterogenous as well as distributed applications.
+
+33
+00:02:58,720 --> 00:03:04,720
+So how many of you guys are familiar with the top 500 list for supercomputers?
+
+34
+00:03:04,720 --> 00:03:10,720
+The handful. So the top 500 is a ranking of all of the supercomputers in the world.
+
+35
+00:03:10,720 --> 00:03:14,720
+It's compiled twice a year for a very long time now.
+
+36
+00:03:14,720 --> 00:03:21,720
+And this is important to understand because it gives us an insight into where things are going in distributed computing.
+
+37
+00:03:21,720 --> 00:03:31,720
+So if you look at this curve right here, any one of the three, you can see that we start out with exponential growth,
+
+38
+00:03:31,720 --> 00:03:37,720
+but it's really tapering off here about since 2010.
+
+39
+00:03:37,720 --> 00:03:43,720
+And so what we're realizing is that the scaling is not infinite, even though we can pack more cores, more transistors,
+
+40
+00:03:43,720 --> 00:03:48,720
+more devices into a particular data center. There are fundamental limitations.
+
+41
+00:03:48,720 --> 00:03:53,720
+We can't fabricate chips any smaller anymore.
+
+42
+00:03:53,720 --> 00:03:57,720
+There are power considerations, cooling considerations,
+
+43
+00:03:57,720 --> 00:04:07,720
+and really the main barrier that's going to hit about the middle of this decade is that it will become impossible to build larger supercomputers
+
+44
+00:04:07,720 --> 00:04:09,720
+because it's impossible to cool them and power them.
+
+45
+00:04:09,720 --> 00:04:17,720
+It would require a hydroelectric plant or a nuclear plant right next to the facility in order to actually power the thing.
+
+46
+00:04:17,720 --> 00:04:25,720
+And so very soon we're going to see that heterogeneous and distributed computing is going to become very,
+
+47
+00:04:25,720 --> 00:04:31,720
+very essential in order to solve some of these challenges.
+
+48
+00:04:31,720 --> 00:04:43,720
+The top 500, if you look at the sum of it on this green line here, you'll notice already that it's four times larger than the most powerful supercomputer.
+
+49
+00:04:43,720 --> 00:04:49,720
+So if you say to me, well, I like Frontier, but it's not enough for me,
+
+50
+00:04:49,720 --> 00:04:56,720
+you can already get some sort of advantage by distributing your application over multiple supercomputers.
+
+51
+00:04:56,720 --> 00:05:02,720
+Now, likely you're not going to be in that situation, but if you're doing any sort of scientific computing,
+
+52
+00:05:02,720 --> 00:05:06,720
+it's not so uncommon to have access to multiple clusters.
+
+53
+00:05:06,720 --> 00:05:12,720
+Each of them is going to have different queue times, different resources, different software.
+
+54
+00:05:12,720 --> 00:05:17,720
+And if you're an end user, you spend a lot of time thinking about where am I going to send my jobs?
+
+55
+00:05:17,720 --> 00:05:23,720
+How am I going to run my applications? How am I going to keep track of all the versions of this?
+
+56
+00:05:23,720 --> 00:05:29,720
+And interestingly, the cloud is starting to play a very important role in this.
+
+57
+00:05:29,720 --> 00:05:37,720
+So I was just at the HPC user forum earlier this week, and one of the major trends that is expected for 2023 and beyond
+
+58
+00:05:37,720 --> 00:05:44,720
+is that cloud HPC is going to become increasingly suitable for high performance workloads across the board.
+
+59
+00:05:44,720 --> 00:05:52,720
+And notably, Python is the de facto language of choice that end users want to use to interact with these devices.
+
+60
+00:05:52,720 --> 00:06:00,720
+Because as they become larger, as they become more complex, users do not need to know or understand all of the complexities of the backend.
+
+61
+00:06:00,720 --> 00:06:03,720
+They need to understand how to write their applications.
+
+62
+00:06:03,720 --> 00:06:11,720
+And so we do see that cloud HPC is expected to grow at approximately 18% per year over the next five years in terms of spend.
+
+63
+00:06:11,720 --> 00:06:17,720
+Distributed computing is, of course, a necessity for a variety of reasons.
+
+64
+00:06:17,720 --> 00:06:24,720
+If you're doing big data analysis, you're going to see that you might want to split your data set over multiple computers to analyze it.
+
+65
+00:06:24,720 --> 00:06:32,720
+In organizations that are beginning the transition to cloud, it's very, very common to have some compute in on-prem resources in clusters,
+
+66
+00:06:32,720 --> 00:06:37,720
+perhaps it's a dedicated Kubernetes cluster, and then other resources are going to be on the cloud.
+
+67
+00:06:37,720 --> 00:06:43,720
+There are all sorts of challenges in managing this hybrid cloud scenario.
+
+68
+00:06:43,720 --> 00:06:49,720
+Organizations that are doing edge computing, for instance with sensors in oil fields,
+
+69
+00:06:49,720 --> 00:06:57,720
+then need to collect this data and bring it onto the cloud or bring it onto some on-prem server in order to analyze it.
+
+70
+00:06:57,720 --> 00:07:00,720
+And so distributed computing is a factor there as well.
+
+71
+00:07:00,720 --> 00:07:09,720
+In cases where users are writing embarrassingly parallel algorithms, in this case the software is what makes it suitable for distributed computing.
+
+72
+00:07:09,720 --> 00:07:12,720
+However, this is not the case for all applications.
+
+73
+00:07:12,720 --> 00:07:21,720
+Quantum computing, which is increasingly becoming popular and has a growing user base, is hybrid by nature.
+
+74
+00:07:21,720 --> 00:07:24,720
+And I'll speak about that in a couple slides.
+
+75
+00:07:25,720 --> 00:07:31,720
+And of course, there's an increasingly large resource usage in machine learning and generative AI.
+
+76
+00:07:31,720 --> 00:07:40,720
+And as everybody is probably familiar with by now, there is a shortage of GPUs on basically every cloud platform, and it is difficult to get resources.
+
+77
+00:07:40,720 --> 00:07:46,720
+And I, the end user, don't particularly care where they're located, I just care that they're available.
+
+78
+00:07:46,720 --> 00:07:51,720
+And so this is a challenge that we're working to resolve.
+
+79
+00:07:51,720 --> 00:07:55,720
+There's also the aspect of growing costs of machine learning.
+
+80
+00:07:55,720 --> 00:08:05,720
+Again, as different platforms and hardware become available, we want to be able to distribute our applications in order to minimize and manage these costs.
+
+81
+00:08:05,720 --> 00:08:11,720
+So now I'll speak a little bit about heterogeneity of hardware and software resources.
+
+82
+00:08:11,720 --> 00:08:18,720
+So in many organizations, you have different teams that work on different portions of a project.
+
+83
+00:08:18,720 --> 00:08:23,720
+They're going to use different software stacks. They're going to have different operational challenges.
+
+84
+00:08:23,720 --> 00:08:29,720
+So as an example here, I've just given a toy schematic for what this might look like in a particular organization.
+
+85
+00:08:29,720 --> 00:08:32,720
+You're going to have cloud and HPC engineers managing infrastructure.
+
+86
+00:08:32,720 --> 00:08:37,720
+Data engineers are going to scrape and clean data. ML engineers are going to build and train models.
+
+87
+00:08:37,720 --> 00:08:40,720
+And researchers will identify novel solutions.
+
+88
+00:08:40,720 --> 00:08:46,720
+And each of these teams is going to be passing information to members of the other teams.
+
+89
+00:08:46,720 --> 00:08:50,720
+So the collaborative aspect of this is very important as well.
+
+90
+00:08:50,720 --> 00:08:57,720
+In the quantum space, as I was mentioning before, it's really driving the need for heterogeneity.
+
+91
+00:08:57,720 --> 00:09:06,720
+So this is an example of a very simple quantum machine learning workflow, something that I was introduced to when I entered this space.
+
+92
+00:09:06,720 --> 00:09:12,720
+And what you can see here is that you're already working with a few different types of resources.
+
+93
+00:09:12,720 --> 00:09:18,720
+So say you're working on your laptop, you're writing your code in Jupyter Notebook.
+
+94
+00:09:18,720 --> 00:09:23,720
+You might do some pre-processing of your data, maybe some visualization.
+
+95
+00:09:23,720 --> 00:09:26,720
+And eventually you're going to want to send it off to train the model.
+
+96
+00:09:26,720 --> 00:09:34,720
+Now, oftentimes it's the case that you're going to be using a GPU in combination with a quantum computer in order to do this.
+
+97
+00:09:34,720 --> 00:09:43,720
+What this looks like simply is that the GPU is going to be optimizing over a set of parameters that you're sending to a quantum computer to evaluate a circuit.
+
+98
+00:09:43,720 --> 00:09:52,720
+So this back and forth here in the blue box can happen tens of thousands of times for a particular invocation of your application.
+
+99
+00:09:52,720 --> 00:09:57,720
+And of course, both of those devices are very, very expensive to use.
+
+100
+00:09:57,720 --> 00:10:02,720
+GPUs can be a few dollars to a few dozens of dollars per hour.
+
+101
+00:10:02,720 --> 00:10:10,720
+Quantum computers are tens of thousands of dollars per hour, sometimes hundreds, depending on which you're using.
+
+102
+00:10:10,720 --> 00:10:18,720
+And so it's very important that if one of them is running, it's not waiting for the result on the other and vice versa.
+
+103
+00:10:18,720 --> 00:10:25,720
+So the point here is there's a scheduling problem and an occupancy problem that you want to solve in order to minimize your costs.
+
+104
+00:10:25,720 --> 00:10:31,720
+And the other point is that it's very common for these resources to be geographically distributed.
+
+105
+00:10:31,720 --> 00:10:38,720
+So no longer are you running everything on your laptop or logging into one machine remotely and all of these devices are available.
+
+106
+00:10:38,720 --> 00:10:43,720
+But rather, I might be working on my laptop for part of this, running certain pieces of code.
+
+107
+00:10:43,720 --> 00:10:48,720
+I might have a cloud-based GPU that's going to be doing another part of my simulation.
+
+108
+00:10:48,720 --> 00:10:52,720
+Maybe this is located at a particular data center, say an AWS.
+
+109
+00:10:52,720 --> 00:10:57,720
+And then I send it off to a quantum computer, which could be located in an entirely different country.
+
+110
+00:10:57,720 --> 00:11:02,720
+And so if you start to think about what's happening here, you realize there's a lot of data movement.
+
+111
+00:11:02,720 --> 00:11:04,720
+There's a lot of operational challenges.
+
+112
+00:11:04,720 --> 00:11:11,720
+And as the APIs for each of these things can change, especially in the quantum space, because it's so new,
+
+113
+00:11:11,720 --> 00:11:17,720
+it can be difficult to have a piece of code that you wrote and have it last over a period of time.
+
+114
+00:11:17,720 --> 00:11:23,720
+So if you want to rerun something that somebody wrote a year ago, or if you find a nice tutorial that makes a lot of sense,
+
+115
+00:11:23,720 --> 00:11:27,720
+it's very helpful, but you can't run it, this is a big challenge right now.
+
+116
+00:11:27,720 --> 00:11:34,720
+So this is sort of an example of a quantum research workflow that we've worked on at Agnostic.
+
+117
+00:11:34,720 --> 00:11:39,720
+I've sort of abstracted it a little bit here just to demonstrate that these can become very large.
+
+118
+00:11:39,720 --> 00:11:43,720
+You can use a whole bunch of different devices, different platforms.
+
+119
+00:11:43,720 --> 00:11:49,720
+You'll have different requirements based on who you're working with, where your data is going, et cetera.
+
+120
+00:11:49,720 --> 00:11:58,720
+Oftentimes, this is going to be involving the cloud, because most quantum devices today are accessed over the cloud.
+
+121
+00:11:58,720 --> 00:12:02,720
+So now I'll talk a little bit about Covalent.
+
+122
+00:12:02,720 --> 00:12:10,720
+Covalent is a workflow orchestration platform designed to help out with some of these challenges for heterogeneous and distributed computing.
+
+123
+00:12:10,720 --> 00:12:14,720
+So you can think of Covalent as a Pythonic SDK.
+
+124
+00:12:14,720 --> 00:12:24,720
+It acts as a single entry point to the broader landscape of compute, so that no matter how complex each of these pieces on the back becomes
+
+125
+00:12:24,720 --> 00:12:30,720
+over the next year or several years, it's not going to impact end users.
+
+126
+00:12:30,720 --> 00:12:37,720
+And this is something that's very, very important, especially as there is a lack of standardization right now.
+
+127
+00:12:37,720 --> 00:12:40,720
+So suppose that you're working with supercomputers.
+
+128
+00:12:40,720 --> 00:12:46,720
+There are a handful of different schedulers that you might need to interact with, depending on who has set it up.
+
+129
+00:12:46,720 --> 00:12:52,720
+If you're working with cloud resources, there are, of course, a handful of different clouds that you could work with,
+
+130
+00:12:52,720 --> 00:12:55,720
+a whole bunch of different regions that you could work with.
+
+131
+00:12:55,720 --> 00:13:00,720
+The point is there are lots and lots of places where resources are available,
+
+132
+00:13:00,720 --> 00:13:04,720
+but if you actually want to take advantage of the entire landscape of compute,
+
+133
+00:13:04,720 --> 00:13:10,720
+it can be difficult without some sort of interface that allows you to offload your work.
+
+134
+00:13:10,720 --> 00:13:20,720
+The last point I'll mention here that I'll come back to is that we support not only heterogeneous hardware, but also the software.
+
+135
+00:13:20,720 --> 00:13:27,720
+And this is really important because, again, this is motivated by our experience in the quantum space.
+
+136
+00:13:27,720 --> 00:13:31,720
+We see that all of the newer stuff is in Python, of course.
+
+137
+00:13:31,720 --> 00:13:34,720
+It's the language of choice for scientific computing right now.
+
+138
+00:13:34,720 --> 00:13:39,720
+But all of the legacy codes are written in C or Fortran.
+
+139
+00:13:39,720 --> 00:13:44,720
+Sometimes now even we have Julia entering the space, which is sort of in between these.
+
+140
+00:13:44,720 --> 00:13:51,720
+And so if we want to actually have a tool that's useful where we're not saying, okay, throw away all of your old code, rewrite it in Python,
+
+141
+00:13:51,720 --> 00:13:56,720
+but actually integrate this so that you have legacy codes running together with newer codes,
+
+142
+00:13:56,720 --> 00:14:01,720
+then it becomes important to have workflows which support multiple languages.
+
+143
+00:14:01,720 --> 00:14:08,720
+So Covalent is designed to unify this into a single scalable framework.
+
+144
+00:14:08,720 --> 00:14:13,720
+So we really emphasize minimal code changes to existing code bases.
+
+145
+00:14:13,720 --> 00:14:17,720
+And I'll show you an example of this in a notebook in just a few minutes.
+
+146
+00:14:17,720 --> 00:14:24,720
+The server design that we've created promotes the rapid iteration over the workflow instances.
+
+147
+00:14:24,720 --> 00:14:29,720
+So what this means compared to other workflow tools that you might be familiar with,
+
+148
+00:14:29,720 --> 00:14:35,720
+we treat the workflow invocation as the first class citizen as opposed to the workflow itself.
+
+149
+00:14:35,720 --> 00:14:42,720
+So in some workflow tools you're going to define a workflow, you're going to upload it to a server, you're going to run it on a schedule.
+
+150
+00:14:42,720 --> 00:14:48,720
+This would be very appropriate, for instance, if you're doing model training for a production model.
+
+151
+00:14:48,720 --> 00:14:56,720
+Maybe it's a recommender system on Amazon or Netflix, and you need to just update it periodically in order to keep it in tune with user interests.
+
+152
+00:14:56,720 --> 00:15:02,720
+But with scientific computing, it's much more exploratory and iterative.
+
+153
+00:15:02,720 --> 00:15:06,720
+And so it's slightly different. There are different requirements.
+
+154
+00:15:06,720 --> 00:15:15,720
+And as we found, different architectural requirements in order to actually make that efficient in the server.
+
+155
+00:15:15,720 --> 00:15:19,720
+We also have self-documenting and versioned experiments.
+
+156
+00:15:19,720 --> 00:15:28,720
+So what this means is that as you run workflows, as you run your code through the covalent server, it's going to self-document everything.
+
+157
+00:15:28,720 --> 00:15:36,720
+What that means is that information like benchmarking data will automatically be collected, run time information.
+
+158
+00:15:36,720 --> 00:15:40,720
+For instance, this function requires this version of NumPy.
+
+159
+00:15:40,720 --> 00:15:44,720
+This other function requires this version of PyTorch or TensorFlow.
+
+160
+00:15:44,720 --> 00:15:50,720
+All of this will be contained in the metadata that's stored with the invocation of the workflow.
+
+161
+00:15:50,720 --> 00:15:57,720
+The point being, if you want to rerun something at a later point, what do you as the end user need to do?
+
+162
+00:15:57,720 --> 00:16:03,720
+What do you need to remember or document outside of the actual code that you've written?
+
+163
+00:16:03,720 --> 00:16:07,720
+And the answer is, with a tool like this, not a whole lot.
+
+164
+00:16:07,720 --> 00:16:17,720
+You click redispatch where you enter it on the SDK, and it's going to rerun it a year from now, two years from now, exactly as it ran before.
+
+165
+00:16:17,720 --> 00:16:27,720
+So for me, as somebody who works with a lot of scientific codes, a lot of times I find something from three years ago that I love, but I have no idea which version of Python it used.
+
+166
+00:16:27,720 --> 00:16:30,720
+I have no idea which version of different packages it used.
+
+167
+00:16:30,720 --> 00:16:43,720
+And I find myself spending a lot of time updating the code, trying to debug it, trying to understand how exactly do I just get the basic example to run, not actually using it in my end application.
+
+168
+00:16:43,720 --> 00:16:49,720
+And so this is an area that we found we can improve upon.
+
+169
+00:16:49,720 --> 00:16:58,720
+And of course, the last point here, covalent is free and open source, and we encourage contributions from the community as well.
+
+170
+00:16:58,720 --> 00:17:03,720
+So I'll just highlight a few different features and functionalities here.
+
+171
+00:17:03,720 --> 00:17:06,720
+There are, of course, a lot more than this.
+
+172
+00:17:06,720 --> 00:17:10,720
+It's Python-ic. That goes without saying, given where we are.
+
+173
+00:17:10,720 --> 00:17:19,720
+So the orchestration itself is done with the Python language, but the tasks within the workflow can be of any other language.
+
+174
+00:17:19,720 --> 00:17:23,720
+If you're familiar with Python bindings to other languages, this isn't surprising.
+
+175
+00:17:23,720 --> 00:17:31,720
+We're just leveraging that so that you can call a C function from Python, you can call a for training function from Python, Julia, bash, et cetera.
+
+176
+00:17:31,720 --> 00:17:37,720
+And so with these few bindings, it enables a great degree of flexibility.
+
+177
+00:17:37,720 --> 00:17:40,720
+We also support real-time monitoring of workflows.
+
+178
+00:17:40,720 --> 00:17:52,720
+So what this means is that as your workflow is executing across different devices and different platforms, you're actually able to monitor the status in real time in order to understand how your application is executed.
+
+179
+00:17:53,720 --> 00:18:03,720
+If you're familiar with other scheduling tools, perhaps Kubernetes or Slurm or Dask, within each of those you can do this.
+
+180
+00:18:03,720 --> 00:18:06,720
+But again, this is operating at a layer above those other tools.
+
+181
+00:18:06,720 --> 00:18:13,720
+And so when you interact with each of these platforms, you still need some sort of visibility into how your application is performing.
+
+182
+00:18:13,720 --> 00:18:21,720
+And related to that, if there is a problem and you need to trace back errors through these different devices and understand where the error originated,
+
+183
+00:18:21,720 --> 00:18:29,720
+which exact variable was perhaps incorrectly configured, then a tool like this will make it easier to do that.
+
+184
+00:18:29,720 --> 00:18:33,720
+The reproducibility aspect, I think, are already covered.
+
+185
+00:18:33,720 --> 00:18:37,720
+The only other thing I'd want to mention here is that there's native checkpointing.
+
+186
+00:18:37,720 --> 00:18:50,720
+So what this means is that if you have a set of functions, anything that's an input or an output to one of these functions is going to be checkpointed, stored by the covalent server.
+
+187
+00:18:51,720 --> 00:19:02,720
+So what this means, and I'll show this in an example, if you have a machine learning workflow and one of the outputs in your steps is the trained model, or perhaps it's partially trained,
+
+188
+00:19:02,720 --> 00:19:11,720
+then you would be able to take this after the fact and either retrain it or reuse it or give it to somebody else.
+
+189
+00:19:11,720 --> 00:19:19,720
+But you as the end user don't need to do anything aside from return it in a function, as you might already if you write functionalized code.
+
+190
+00:19:19,720 --> 00:19:24,720
+And of course the last point here is about scalability across devices.
+
+191
+00:19:24,720 --> 00:19:35,720
+Oftentimes when we're writing code, of course we're going to write it on our laptops, run it on the laptops, validate that it's correct, that it runs with maybe a small set of parameters.
+
+192
+00:19:35,720 --> 00:19:48,720
+And we want to do this before we deploy it to anything that's expensive, of course, because we don't want to send buggy code to something where it's going to run for a few hours and then crash and then all of that money is wasted.
+
+193
+00:19:50,720 --> 00:20:02,720
+There's a lot more. I'm not going to cover it, but just reemphasize that it's an open source tool and we encourage feedback and contributions from the community here.
+
+194
+00:20:02,720 --> 00:20:10,720
+So I want to point out now, where does Covalent fit in the stack of other similar software tools?
+
+195
+00:20:10,720 --> 00:20:14,720
+We get asked this question a lot, so we made a slide to explain it.
+
+196
+00:20:14,720 --> 00:20:22,720
+So on the bottom here, you might be familiar with a handful of tools that are designed essentially to make your computation faster.
+
+197
+00:20:22,720 --> 00:20:37,720
+So if you have a particular algorithm and it can run on multiple CPU cores or multiple GPUs, you might use a tool like Joblit or Scython or PaiKuda in order to take your application and run it on all of the devices.
+
+198
+00:20:38,720 --> 00:20:52,720
+If you then want to expand that, say maybe you're working with a cluster, maybe it's a Dask cluster or maybe it's something in an HPC system or maybe it's Kubernetes cluster,
+
+199
+00:20:52,720 --> 00:20:59,720
+you can use other tools in order to distribute your computation. But essentially these are identical copies of the same machine.
+
+200
+00:20:59,720 --> 00:21:09,720
+This is a big assumption in this. You're not working with one machine has four cores, another machine has 32 cores, another machine has 128 cores.
+
+201
+00:21:09,720 --> 00:21:18,720
+There's sort of an assumption going on here. If you're from the scientific computing space, you're probably familiar with OpenMP and MPI.
+
+202
+00:21:18,720 --> 00:21:22,720
+That's essentially the equivalent of what we're looking at here.
+
+203
+00:21:22,720 --> 00:21:30,720
+On the top of the stack above Covalent, we have tools which are broadly designed to manage computations.
+
+204
+00:21:30,720 --> 00:21:37,720
+So these are typically production enterprise tools that are designed to run workflows on a schedule.
+
+205
+00:21:37,720 --> 00:21:45,720
+They have different operational requirements than we have in an iterative and pre-production space.
+
+206
+00:21:45,720 --> 00:21:56,720
+One of the key differentiators that I think describes it well is that things on this top layer of the stack are for production workflows and things at this middle layer are for pre-production workflows.
+
+207
+00:21:56,720 --> 00:22:01,720
+Where you're iterating on what the workflow may be, which parameters you might want to use.
+
+208
+00:22:01,720 --> 00:22:12,720
+We do not see this as competitive with these other tools, but rather something where you might use these each for different purposes throughout your research process.
+
+209
+00:22:13,720 --> 00:22:17,720
+Covalent sits at the middle at what we call the distributed workflow level.
+
+210
+00:22:17,720 --> 00:22:26,720
+Where you have a workflow, you need to distribute it to different devices and run it as such.
+
+211
+00:22:26,720 --> 00:22:31,720
+I'll just give you a flavor now of what it's like to get started before I go into a notebook.
+
+212
+00:22:31,720 --> 00:22:37,720
+There are just three concepts to learn if you're getting started with a tool like Covalent.
+
+213
+00:22:37,720 --> 00:22:39,720
+The first is that of the electron.
+
+214
+00:22:39,720 --> 00:22:43,720
+The electron is what we call one of the tasks in a workflow.
+
+215
+00:22:43,720 --> 00:22:49,720
+It is a regular Python function, except it has a little decorator on top, ct.electron.
+
+216
+00:22:49,720 --> 00:22:55,720
+Here I've explicitly marked it, maybe you can see with my cursor, as local execution.
+
+217
+00:22:55,720 --> 00:23:03,720
+This is just to reemphasize that it's going to run locally on my workstation, although this is not explicitly necessary.
+
+218
+00:23:03,720 --> 00:23:06,720
+The electron is a unit of work.
+
+219
+00:23:06,720 --> 00:23:18,720
+Typically we recommend that functions are defined such that the data and resource dependencies are going to be uniform across anything that happens inside that function.
+
+220
+00:23:18,720 --> 00:23:25,720
+For instance, if you have, and I'll show this in an example, if you have part of your code that has CPU requirements,
+
+221
+00:23:25,720 --> 00:23:34,720
+perhaps multi-core CPU, and a different part that has a GPU requirement, we would recommend breaking that into two functions so that you can deploy each of them to different devices.
+
+222
+00:23:34,720 --> 00:23:37,720
+The second concept is that of the lattice.
+
+223
+00:23:37,720 --> 00:23:40,720
+The lattice is the workflow definition itself.
+
+224
+00:23:40,720 --> 00:23:45,720
+In many other workflow tools, if you're familiar with them, you might use a YAML file to define this.
+
+225
+00:23:45,720 --> 00:23:47,720
+We don't like that.
+
+226
+00:23:47,720 --> 00:23:54,720
+We say, well, we want the Jupyter Notebook to be the place that you go to write your code, to execute your code.
+
+227
+00:23:54,720 --> 00:24:07,720
+Really all you're doing here is you're writing just another Python function, no restrictions, you can have dynamic logic, conditional logic, you can have iterators, et cetera.
+
+228
+00:24:07,720 --> 00:24:13,720
+This one is going to be another Python function with a lattice decorator on top.
+
+229
+00:24:13,720 --> 00:24:20,720
+All it's going to be doing is calling all of these other task functions and piping data around.
+
+230
+00:24:20,720 --> 00:24:25,720
+So when it all runs locally, it's not that impressive because it's just doing what Python does already.
+
+231
+00:24:25,720 --> 00:24:27,720
+It's just moving data around in memory.
+
+232
+00:24:27,720 --> 00:24:41,720
+But you can imagine if these tasks are actually running on different devices, it's going to be doing a lot of the overhead for you in terms of data transfer, software transfer, environment setup, resource scheduling, et cetera.
+
+233
+00:24:41,720 --> 00:24:44,720
+The third concept here is that of the dispatch.
+
+234
+00:24:44,720 --> 00:25:00,720
+This is simply an asynchronous deployment of your code so that you can send it off, close your Jupyter Notebook, you don't need to keep your kernel alive while this is running, and the covalent server is going to monitor and manage your tasks as they run.
+
+235
+00:25:00,720 --> 00:25:04,720
+This example here is showing what we mean by minimal code changes.
+
+236
+00:25:04,720 --> 00:25:09,720
+So as I mentioned on the previous slide, this is really just one line decorator.
+
+237
+00:25:09,720 --> 00:25:14,720
+It can become a little bit more complex depending on how complex your experiment is.
+
+238
+00:25:14,720 --> 00:25:21,720
+But as an example here, we have one task which is being sent off to AWS batch.
+
+239
+00:25:21,720 --> 00:25:24,720
+We're specifying just the number of CPU cores.
+
+240
+00:25:24,720 --> 00:25:28,720
+Another task which is being sent off to an HPC cluster managed by SLURM.
+
+241
+00:25:28,720 --> 00:25:31,720
+We specify a different number of CPU cores.
+
+242
+00:25:31,720 --> 00:25:39,720
+Another task here is a hybrid quantum task, so we send it off to Qiskit Runtime, which is a service by IBM.
+
+243
+00:25:39,720 --> 00:25:43,720
+And then all of this is stitched together using the workflow function here.
+
+244
+00:25:43,720 --> 00:25:56,720
+So you can kind of imagine the experience that we're going for is that the end user, when interacting with these backends, is only thinking about what are the resource requirements.
+
+245
+00:25:56,720 --> 00:26:03,720
+How many CPU cores do I need? How many GPUs do I need? Don't care where it runs or really how it runs.
+
+246
+00:26:03,720 --> 00:26:16,720
+I have specified which platform it's going to use, but you can imagine that there is even a further abstraction layer on top of that, which is something that we're working on at the moment.
+
+247
+00:26:16,720 --> 00:26:23,720
+So the design of covalent is constructed as a client server architecture.
+
+248
+00:26:23,720 --> 00:26:27,720
+The client is just a Python package that you install on your local machine.
+
+249
+00:26:27,720 --> 00:26:35,720
+And the server contains a dispatch service and a user interface, as well as a whole host of different executor plugins.
+
+250
+00:26:35,720 --> 00:26:43,720
+So the advantage of this design, first of all, is that because it's a client server architecture, you can deploy the server anywhere.
+
+251
+00:26:43,720 --> 00:26:45,720
+We provide it in a lot of different forms.
+
+252
+00:26:45,720 --> 00:26:50,720
+Natively, out of the box, it's going to run on your local machine.
+
+253
+00:26:50,720 --> 00:26:58,720
+But it can also be deployed as a Docker container, as a machine image on the cloud, as a system deservice.
+
+254
+00:26:58,720 --> 00:27:01,720
+There are lots of different ways to deploy and manage this.
+
+255
+00:27:01,720 --> 00:27:15,720
+The advantage of having the plugin system is that you can keep the entire server very lean, meaning tiny container, and only add the integrations to services that you know you want to use.
+
+256
+00:27:15,720 --> 00:27:25,720
+So it's very common, for instance, that somebody who's only a cloud user is not going to care about PBS or Slurm or some of these others.
+
+257
+00:27:25,720 --> 00:27:29,720
+Somebody who's only a quantum user may not care about Kubernetes.
+
+258
+00:27:29,720 --> 00:27:32,720
+So it allows you to really customize the deployment.
+
+259
+00:27:32,720 --> 00:27:38,720
+And each of these is just a simple pip install and restart the server.
+
+260
+00:27:38,720 --> 00:27:45,720
+The last thing I want to mention here is that we also provide a custom executor repository.
+
+261
+00:27:45,720 --> 00:27:57,720
+So if there is a service that we haven't imagined or haven't gotten around to supporting, what we've done is we've crafted a template for one of these executors with a function that the user modifies, a run function.
+
+262
+00:27:57,720 --> 00:28:02,720
+And that's where the user defines the API interaction between Covalent and the backend service.
+
+263
+00:28:02,720 --> 00:28:06,720
+So it's about 50 to 100 lines of code on the part of the end user.
+
+264
+00:28:06,720 --> 00:28:10,720
+And then it can be installed as a plugin as any of the other plugins would be installed.
+
+265
+00:28:10,720 --> 00:28:16,720
+So we really want to make it easy to integrate new systems into Covalent.
+
+266
+00:28:16,720 --> 00:28:25,720
+The right-hand side here is showing the user interface, but I'm going to come back to this when I show the actual live user interface.
+
+267
+00:28:25,720 --> 00:28:28,720
+We support a growing ecosystem of both hardware and software.
+
+268
+00:28:28,720 --> 00:28:32,720
+I've gone over some of the classical and quantum resources.
+
+269
+00:28:32,720 --> 00:28:41,720
+We're expanding this list essentially as in the order that people ask for it, depending on level of interest and degree of complexity.
+
+270
+00:28:41,720 --> 00:28:48,720
+We support all of the most popular software packages in data science, machine learning, and quantum computing.
+
+271
+00:28:48,720 --> 00:28:53,720
+And this is because Covalent is operating at a layer above these other packages in the stack.
+
+272
+00:28:53,720 --> 00:29:00,720
+So just as you'd be able to import any of these inside a regular Python function, you can import them inside a Covalent task as well.
+
+273
+00:29:00,720 --> 00:29:05,720
+Decorate your function with the runtime requirements, and it will be good to go.
+
+274
+00:29:05,720 --> 00:29:08,720
+It'll be packaged inside a container with your task.
+
+275
+00:29:08,720 --> 00:29:12,720
+And of course, we support a handful of languages.
+
+276
+00:29:12,720 --> 00:29:20,720
+And again, this is something that we're expanding based on the ask, the demand from customers.
+
+277
+00:29:20,720 --> 00:29:31,720
+So just to summarize what I've said here, Covalent enables teams to work on high value, differentiated work instead of the operations.
+
+278
+00:29:31,720 --> 00:29:40,720
+We found that our team, before having this tool, we were doing a lot of the same things that other startups and other teams were doing.
+
+279
+00:29:40,720 --> 00:29:48,720
+Setting up and managing infrastructure, debugging that infrastructure, but not really spending enough time on research.
+
+280
+00:29:48,720 --> 00:29:56,720
+And so this tool has enabled us and it has enabled other teams to really change that resource allocation.
+
+281
+00:29:56,720 --> 00:30:06,720
+So before I go into the notebooks, I'll just mention here we have a nice documentation page on Covalent.readthedocs.io.
+
+282
+00:30:06,720 --> 00:30:13,720
+It's going to contain a lot of what I'm going to talk about, both on the quick start and the tutorials.
+
+283
+00:30:13,720 --> 00:30:17,720
+So I'll just pause for a minute if anyone wants to scan the QR code.
+
+284
+00:30:33,720 --> 00:30:34,720
+Okay.
+
+285
+00:30:34,720 --> 00:30:38,720
+So next I'm going to go into a few different notebooks.
+
+286
+00:30:38,720 --> 00:30:41,720
+This is another QR code for our GitHub page.
+
+287
+00:30:41,720 --> 00:30:44,720
+Again, I'm going to just pause if anyone wants to scan it.
+
+288
+00:30:44,720 --> 00:30:45,720
+You can.
+
+289
+00:30:45,720 --> 00:30:47,720
+It's also pretty easy to find.
+
+290
+00:30:47,720 --> 00:30:50,720
+It's just agnostic HQ slash Covalent on GitHub.
+
+291
+00:30:56,720 --> 00:30:57,720
+Okay.
+
+292
+00:30:58,720 --> 00:30:59,720
+Good.
+
+293
+00:31:03,720 --> 00:31:08,720
+So the first thing I'm going to take a look at here.
+
+294
+00:31:11,720 --> 00:31:13,720
+Is our quick start.
+
+295
+00:31:13,720 --> 00:31:16,720
+So let me make this a little bit bigger.
+
+296
+00:31:21,720 --> 00:31:22,720
+Can everyone see that?
+
+297
+00:31:22,720 --> 00:31:23,720
+Good enough?
+
+298
+00:31:23,720 --> 00:31:24,720
+Okay.
+
+299
+00:31:24,720 --> 00:31:34,720
+So the quick start is designed to give you a really crisp idea of how much work do you have to go through to install the tool, to get started with it, and actually run it.
+
+300
+00:31:34,720 --> 00:31:39,720
+And we really iterated on this to minimize the amount of time.
+
+301
+00:31:39,720 --> 00:31:43,720
+I think it should be about five minutes of time, if that, maybe less.
+
+302
+00:31:43,720 --> 00:31:48,720
+So the first thing that we recommend always is to create a virtual environment.
+
+303
+00:31:48,720 --> 00:31:53,720
+Almost always when people ask, something went wrong, I don't know what to do.
+
+304
+00:31:53,720 --> 00:31:54,720
+It's not responding.
+
+305
+00:31:54,720 --> 00:32:01,720
+It's because the Python version is not right or it's not pointing to the right thing.
+
+306
+00:32:01,720 --> 00:32:12,720
+And so we recommend either use virtualenv or pyenv or conda or docker, whatever you want to use in order to isolate this from the rest of your system.
+
+307
+00:32:12,720 --> 00:32:17,720
+The second step is going to be pip install Covalent, as you would for any other Python package.
+
+308
+00:32:17,720 --> 00:32:22,720
+This is going to natively install both SDK and the server on your system.
+
+309
+00:32:22,720 --> 00:32:23,720
+There are other ways.
+
+310
+00:32:23,720 --> 00:32:30,720
+If you just want to install the SDK, if you've already deployed the server somewhere else, this would give you a very, very lean installation of Covalent.
+
+311
+00:32:31,720 --> 00:32:40,720
+The third step is to just run Covalent start on the command line, and it's going to start the server on your local host.
+
+312
+00:32:40,720 --> 00:32:45,720
+So at that point, you can navigate in your browser to see the user interface.
+
+313
+00:32:45,720 --> 00:32:51,720
+And you can also start dispatching workflows, and it will point to this address.
+
+314
+00:32:51,720 --> 00:33:03,720
+So this workflow here that I've constructed is a type of hello world style workflow, which is going to give you a flavor of how you actually execute something here.
+
+315
+00:33:03,720 --> 00:33:14,720
+So again, I've specified explicitly that execution is going to be local, but you could just as easily remove this entire part, and it would be the exact same syntax.
+
+316
+00:33:14,720 --> 00:33:19,720
+So I've defined an add function here, a multiply function, divide function.
+
+317
+00:33:19,720 --> 00:33:22,720
+And then I've also defined a workflow function.
+
+318
+00:33:22,720 --> 00:33:30,720
+And you can see that this is just calling the other functions, piping around data using some loops here.
+
+319
+00:33:30,720 --> 00:33:33,720
+And it's going to return a particular value.
+
+320
+00:33:33,720 --> 00:33:38,720
+In this case, I've chosen to return a number, but it doesn't have to be a number.
+
+321
+00:33:38,720 --> 00:33:40,720
+It could be any Python object.
+
+322
+00:33:40,720 --> 00:33:53,720
+So something that's really critical here is that all of the checkpointing, all of the information passed around, it's all purely Python-ic, and this is achieved through serialization.
+
+323
+00:33:53,720 --> 00:33:56,720
+So finally, we're going to dispatch this to the local server.
+
+324
+00:33:56,720 --> 00:33:59,720
+This is the syntax that you would use in order to dispatch it.
+
+325
+00:33:59,720 --> 00:34:02,720
+So you have your function name here, you have your arguments here.
+
+326
+00:34:02,720 --> 00:34:07,720
+I haven't specified any server address or anything, so it's just going to target local host.
+
+327
+00:34:07,720 --> 00:34:10,720
+And then I'm going to query the result.
+
+328
+00:34:10,720 --> 00:34:16,720
+And because I have issued a non-blocking call, it is just going to tell me that it's running.
+
+329
+00:34:16,720 --> 00:34:18,720
+Of course, this is going to run very quickly.
+
+330
+00:34:18,720 --> 00:34:26,720
+But in the case that this is a much larger experiment, interacting with many different devices, schedulers, queues, et cetera,
+
+331
+00:34:26,720 --> 00:34:35,720
+it's often the case that it's useful to have this asynchronous call so that I can close my notebook and not worry about, you know, if this kernel crashes,
+
+332
+00:34:35,720 --> 00:34:40,720
+how do I retrieve my information, how do I resume my work, so on and so forth.
+
+333
+00:34:40,720 --> 00:34:47,720
+So I can switch to the user interface, and I would see this in my browser.
+
+334
+00:34:47,720 --> 00:34:53,720
+So this is visualization of the code that I showed you in the notebook.
+
+335
+00:34:53,720 --> 00:35:03,720
+You can see that there are a few different tasks here, multiply function, divide function, these are defined in the loop.
+
+336
+00:35:03,720 --> 00:35:08,720
+In this case, it's actually using, looks like it's using the Dask executor.
+
+337
+00:35:08,720 --> 00:35:13,720
+So something to note is that out of the box covalent comes with a Dask cluster that's going to run on your system.
+
+338
+00:35:13,720 --> 00:35:19,720
+And this is designed to make it easier to run parallel computations.
+
+339
+00:35:19,720 --> 00:35:25,720
+It can also plug into a remote Dask cluster, so there are really no limitations there.
+
+340
+00:35:25,720 --> 00:35:30,720
+On the left-hand nav bar here, we're going to see all of the metadata at the workflow level.
+
+341
+00:35:30,720 --> 00:35:35,720
+So this includes the source code or the particular iteration of the source code for this workflow.
+
+342
+00:35:35,720 --> 00:35:40,720
+It includes pythonic inputs and outputs that are copyable.
+
+343
+00:35:40,720 --> 00:35:44,720
+It includes where my logs are stored.
+
+344
+00:35:44,720 --> 00:35:48,720
+So if I'm interested in understanding after the fact, where did my logs go?
+
+345
+00:35:48,720 --> 00:35:52,720
+Are they here? Are they on some remote system? Where did they end up?
+
+346
+00:35:52,720 --> 00:35:55,720
+It's easy to actually find it.
+
+347
+00:35:55,720 --> 00:36:01,720
+I can click on one of these tasks, and on the right-hand nav bar, I'm going to see some of the task-level metadata.
+
+348
+00:36:01,720 --> 00:36:05,720
+So again, this is benchmarking information, pythonic inputs and outputs.
+
+349
+00:36:05,720 --> 00:36:09,720
+So this is the information that was check-pointed in this particular task.
+
+350
+00:36:09,720 --> 00:36:15,720
+And if I copy this, it's going to give me the serialized Base64 encoded version of this.
+
+351
+00:36:15,720 --> 00:36:18,720
+I can copy it back into my notebook and start interacting with it.
+
+352
+00:36:18,720 --> 00:36:24,720
+So if this is something more complex than just a number, it's actually very easy to take it back, interact with it,
+
+353
+00:36:24,720 --> 00:36:29,720
+if something went wrong, if it's not the result I expected, I can go back a few steps in the graph
+
+354
+00:36:29,720 --> 00:36:33,720
+and start to inspect those intermediate results.
+
+355
+00:36:33,720 --> 00:36:40,720
+And it really is designed to promote this iterative process that users experience when coding.
+
+356
+00:36:40,720 --> 00:36:44,720
+And of course, again, the source code is provided here.
+
+357
+00:36:44,720 --> 00:36:50,720
+This is very, very useful in the case that not every change you make is checked into version control.
+
+358
+00:36:51,720 --> 00:36:58,720
+So if you say, well, my code ran a few steps back, now I can't get it to run again, I don't know what I did.
+
+359
+00:36:58,720 --> 00:37:02,720
+Something like this might help with that.
+
+360
+00:37:02,720 --> 00:37:08,720
+So the second notebook, I guess I'll just pause here before I go to the next notebook.
+
+361
+00:37:08,720 --> 00:37:10,720
+Are there any questions?
+
+362
+00:37:10,720 --> 00:37:15,720
+You know, I don't necessarily want to wait until the very end for questions.
+
+363
+00:37:15,720 --> 00:37:18,720
+Yes, please.
+
+364
+00:37:18,720 --> 00:37:25,720
+Do you have a pre-reviewed notebook that you can run on your PC or do you have a general one that's not on your PC?
+
+365
+00:37:25,720 --> 00:37:29,720
+Or do you use Cloud Pickle?
+
+366
+00:37:29,720 --> 00:37:33,720
+Ah, that's a good question and it will be answered in the next notebook.
+
+367
+00:37:33,720 --> 00:37:35,720
+Do you use Cloud Pickle?
+
+368
+00:37:35,720 --> 00:37:37,720
+Anything else before I continue? Yes.
+
+369
+00:37:37,720 --> 00:37:39,720
+All right, so your question is what?
+
+370
+00:37:39,720 --> 00:37:40,720
+We're using Cloud Pickle.
+
+371
+00:37:40,720 --> 00:37:44,720
+And so we use Cloud Pickle plus a few customizations on top of that.
+
+372
+00:37:44,720 --> 00:37:53,720
+There are limitations, of course, but I would say we're not any more limited than any other tool that's out there.
+
+373
+00:37:53,720 --> 00:38:01,720
+And this is something, you know, one of the things on our roadmap is even custom serialization formats so that we can really keep everything in Python.
+
+374
+00:38:01,720 --> 00:38:03,720
+That's the goal. Everything's in Python.
+
+375
+00:38:03,720 --> 00:38:10,720
+You don't have intermediate files that accumulate on your system, et cetera.
+
+376
+00:38:10,720 --> 00:38:12,720
+Yes.
+
+377
+00:38:12,720 --> 00:38:18,720
+How do you know which libraries that I'm using and which versions?
+
+378
+00:38:18,720 --> 00:38:20,720
+Yeah, that's a good question.
+
+379
+00:38:20,720 --> 00:38:24,720
+So we went through a few different iterations of how to solve this problem.
+
+380
+00:38:24,720 --> 00:38:33,720
+One iteration was, well, we can just sort of inspect what has been imported in the notebook, what has been used.
+
+381
+00:38:33,720 --> 00:38:42,720
+There are challenges to that because oftentimes it will pull in a whole bunch of extra stuff, right, that you don't want to actually explicitly define.
+
+382
+00:38:42,720 --> 00:38:48,720
+So what we've also provided is a way to actually annotate which packages you're going to require.
+
+383
+00:38:48,720 --> 00:38:56,720
+And so that's another thing that I will show in the next notebook to clarify.
+
+384
+00:38:56,720 --> 00:38:58,720
+OK, I'm going to continue on to the next notebook.
+
+385
+00:38:58,720 --> 00:39:01,720
+I think this is a good time.
+
+386
+00:39:01,720 --> 00:39:12,720
+So in this second notebook, I'm looking at a slightly more interesting problem, more applicable to what some of you guys might be actually doing.
+
+387
+00:39:12,720 --> 00:39:26,720
+So here I'm taking four different DNN models and I'm going to use them, I'm going to compare them on a particular time series data in order to understand which one I want to proceed with in the research process.
+
+388
+00:39:26,720 --> 00:39:36,720
+So the output of this will be a few different plots that show me training and validation losses so that I can understand which one's training fastest,
+
+389
+00:39:36,720 --> 00:39:44,720
+which model is going to be least expensive to use, which one works best with the particular data set that I'm using.
+
+390
+00:39:44,720 --> 00:39:50,720
+And so the point is it's four different things happening in parallel.
+
+391
+00:39:50,720 --> 00:39:59,720
+Each of them is going to require some high compute for the step, for the training step, and I want to be able to offload that somewhere else.
+
+392
+00:39:59,720 --> 00:40:07,720
+And at the same time, because I'm using some machine learning packages, I'm going to need to specify exactly what goes inside those containers when they are deployed.
+
+393
+00:40:07,720 --> 00:40:10,720
+So the particular models aren't that important.
+
+394
+00:40:10,720 --> 00:40:20,720
+So I'm using an MLP model, a CNN model, an LSTM model, and a hybrid model at the end, just as an example of how this might work.
+
+395
+00:40:20,720 --> 00:40:31,720
+So we're going to take some historical data, train on this, and then attempt to predict the next 30 days of data from this time series.
+
+396
+00:40:31,720 --> 00:40:39,720
+So it's a much larger workflow that we're working with this time. There's a little GIF of it here, but I'll go into the UI in just a moment.
+
+397
+00:40:39,720 --> 00:40:46,720
+There are a few different features that I'm going to highlight in this notebook that I just want to emphasize now.
+
+398
+00:40:46,720 --> 00:40:55,720
+So the first is the file transfer functionality. So oftentimes you're going to want to work with data that's already in the cloud.
+
+399
+00:40:55,720 --> 00:41:00,720
+In the case of large machine learning models, sometimes you want to keep this data in the cloud.
+
+400
+00:41:00,720 --> 00:41:07,720
+You don't want it all coming back to the covalent server for checkpointing because you're going to be paying for egress costs.
+
+401
+00:41:07,720 --> 00:41:21,720
+And so the file transfer functionality makes it easy to either transfer from one cloud bucket to another cloud bucket, from local to remote, from remote to local, et cetera.
+
+402
+00:41:21,720 --> 00:41:29,720
+The second thing I'm going to be highlighting here is how to actually specify the particular packages that we're working with.
+
+403
+00:41:29,720 --> 00:41:33,720
+So of course there are lots of different ways to specify runtime environments.
+
+404
+00:41:33,720 --> 00:41:39,720
+The primary ways that we're focusing on right now are through PIP and through Conda and through Docker.
+
+405
+00:41:39,720 --> 00:41:47,720
+So if you are able to specify your runtime environment through one of these methods, then it will be compatible with covalent.
+
+406
+00:41:47,720 --> 00:41:55,720
+And then finally, here I'm going to be using Azure Batch and AWS Batch in order to train these models.
+
+407
+00:41:55,720 --> 00:41:59,720
+So two of them are going to go to one cloud, two of them will go to another cloud.
+
+408
+00:41:59,720 --> 00:42:03,720
+There are a few different iterations of this particular notebook.
+
+409
+00:42:03,720 --> 00:42:09,720
+In some it's a hybrid cloud scenario where you're simulating cloud bursting.
+
+410
+00:42:09,720 --> 00:42:14,720
+So this would be, for instance, if you're using Slurm and one of the cloud batch resources.
+
+411
+00:42:14,720 --> 00:42:17,720
+Here I'm doing multi-cloud.
+
+412
+00:42:17,720 --> 00:42:26,720
+But the point is oftentimes you submit something to one of these backend schedulers and then you find out, well, the queue time is actually much longer than I anticipated.
+
+413
+00:42:26,720 --> 00:42:29,720
+Or it's not provisioning, it's failing to provision.
+
+414
+00:42:29,720 --> 00:42:36,720
+And so I want to pull it out from one and send it off to another without messing up my entire workflow.
+
+415
+00:42:36,720 --> 00:42:39,720
+It's heterogeneous in several ways.
+
+416
+00:42:39,720 --> 00:42:46,720
+So for task scheduling on the backends, we're going to be using Dask, Azure Batch, AWS Batch.
+
+417
+00:42:46,720 --> 00:42:54,720
+And for the actual execution backends, we're going to be using My Local Workstation, Azure Cloud, and AWS Cloud.
+
+418
+00:42:54,720 --> 00:42:58,720
+So this is a very standard machine learning workflow here.
+
+419
+00:42:58,720 --> 00:43:01,720
+If you've done machine learning, you're probably familiar with these steps.
+
+420
+00:43:01,720 --> 00:43:05,720
+We're just going to fetch and validate a training data set from a remote machine.
+
+421
+00:43:05,720 --> 00:43:14,720
+We're going to be exploring this data set, visualizing some of the trends, feeling around for maybe what we want to do with it.
+
+422
+00:43:14,720 --> 00:43:22,720
+We're going to clean and transform the data, split it for training and validation, construct some models, train some models, and visualize the results.
+
+423
+00:43:22,720 --> 00:43:28,720
+So for each of these steps, they can run on any of the devices that I've described already.
+
+424
+00:43:28,720 --> 00:43:34,720
+But for simplicity, I've sort of dialed it down a little bit.
+
+425
+00:43:34,720 --> 00:43:42,720
+So most of it's going to be running on Dask, except for step six here, training the models, which is going to be offloaded to the cloud.
+
+426
+00:43:42,720 --> 00:43:50,720
+So I'm using a pretty typical stack here, TensorFlow, Pandas, Keras, and Plotly.
+
+427
+00:43:50,720 --> 00:43:53,720
+A little bit of map plot lib here.
+
+428
+00:43:53,720 --> 00:43:58,720
+And the first thing I want to highlight here is how we're going to be doing file transfers.
+
+429
+00:43:58,720 --> 00:44:02,720
+So I've specified here a particular S3 bucket on AWS.
+
+430
+00:44:02,720 --> 00:44:05,720
+I've specified the region that it lives in.
+
+431
+00:44:05,720 --> 00:44:09,720
+And here I am specifying file names.
+
+432
+00:44:09,720 --> 00:44:15,720
+And I'm also specifying that this is going to be piped into my task before it executes.
+
+433
+00:44:15,720 --> 00:44:22,720
+The implication being you can also create files during the course of the task and then pipe them out to the cloud afterwards.
+
+434
+00:44:22,720 --> 00:44:33,720
+So if this task were running on AWS, for instance, then it would be very easy to move data around and everything would be very fast and efficient.
+
+435
+00:44:33,720 --> 00:44:41,720
+Because I'm running this locally, of course, you have to start to think about network transfer speeds.
+
+436
+00:44:41,720 --> 00:44:52,720
+So another thing I want to point out here in this cell, why have I chosen to construct it this way as opposed to having a few steps inside my function,
+
+437
+00:44:52,720 --> 00:45:02,720
+which are just going to essentially do the same thing, interact with the S3 or the Boto3 SDK and do it inside there.
+
+438
+00:45:02,720 --> 00:45:12,720
+One of the advantages of writing your code like this is that you can separate out the operational logic from the actual business logic that's happening inside your code.
+
+439
+00:45:12,720 --> 00:45:22,720
+So all of your stuff needed that's about how to run the function is going to be up here outside of your function.
+
+440
+00:45:22,720 --> 00:45:26,720
+Everything down here is the actual logic of what you're trying to run.
+
+441
+00:45:26,720 --> 00:45:38,720
+So one of the advantages of this, for instance, is that because I've decorated this with CT del electron, it's still an executable as a regular Python function.
+
+442
+00:45:38,720 --> 00:45:48,720
+So if somebody else doesn't want to run this through Covalent, supposing that this instruction is at least recognized that they've pip installed Covalent,
+
+443
+00:45:48,720 --> 00:45:53,720
+you don't have to send it to the Covalent server. You can just execute it as a regular Python function.
+
+444
+00:45:53,720 --> 00:45:59,720
+It's going to skip all of this stuff up here and it's going to run this stuff down here.
+
+445
+00:45:59,720 --> 00:46:04,720
+And the point is it becomes easier to write tests for your code this way.
+
+446
+00:46:04,720 --> 00:46:19,720
+So if you're interested in writing unit tests for your code, you can really separate out this portion of what you're testing from the operational logic above.
+
+447
+00:46:19,720 --> 00:46:25,720
+So I'm going to go through, skip over a little bit of this. The details aren't super important.
+
+448
+00:46:25,720 --> 00:46:33,720
+We have a function to explore the data. It's going to return some plots. I'll come back to this later.
+
+449
+00:46:33,720 --> 00:46:41,720
+We're going to clean and transform the data. This is an example of how I'm going to specify pip dependencies.
+
+450
+00:46:41,720 --> 00:46:48,720
+So here I've said I'm going to require pandas for this and I give a specific version.
+
+451
+00:46:48,720 --> 00:46:56,720
+And so when I actually run this through the Covalent server, it's going to store this information so that at a later point,
+
+452
+00:46:56,720 --> 00:47:08,720
+a year from now, two years from now when 1.4.4 is on nobody's radar, I'm able to actually rerun this exactly as it ran the first time.
+
+453
+00:47:08,720 --> 00:47:17,720
+So here I've included both some package dependencies as well as some details about file movement for this particular task.
+
+454
+00:47:17,720 --> 00:47:22,720
+And as I mentioned before, you can specify an after flag here.
+
+455
+00:47:22,720 --> 00:47:32,720
+And this is going to indicate that I'm going to have one file that's piped in before the task runs and a second file that's piped out to the cloud after the task runs.
+
+456
+00:47:32,720 --> 00:47:41,720
+So scrolling down a little bit more, I split the data for training and validation. Nothing too fancy here.
+
+457
+00:47:41,720 --> 00:47:52,720
+I'm going to construct my models. So I pretty much have four functions which are doing very similar things here.
+
+458
+00:47:52,720 --> 00:48:03,720
+Scrolling down. And now I want to highlight to your question about how do you actually offload this to a remote device?
+
+459
+00:48:03,720 --> 00:48:13,720
+How much information do you need to specify? So as I mentioned before, each of these is accessed through a particular plugin.
+
+460
+00:48:13,720 --> 00:48:19,720
+So you would do something like pip install, in this case, covalent AWS plugins, batch.
+
+461
+00:48:19,720 --> 00:48:27,720
+There are lots of other AWS services that we interface with. In this case, covalent Azure Batch plugin.
+
+462
+00:48:27,720 --> 00:48:35,720
+And that will give you access, it'll give the covalent SDK access to these new executor classes.
+
+463
+00:48:35,720 --> 00:48:41,720
+So here I've shown an example of the Azure Batch executor and below the AWS Batch executor.
+
+464
+00:48:41,720 --> 00:48:52,720
+Now I want to sort of clarify what's being shown here. So there's all this information up here which is typically going to live in a configuration file somewhere.
+
+465
+00:48:52,720 --> 00:49:00,720
+I've shown it here for clarity just to show you all of the options that are available in case you really want fine-tuned control over it.
+
+466
+00:49:00,720 --> 00:49:06,720
+But likely the infrastructure is going to be set up. You're going to be interacting with it after the fact.
+
+467
+00:49:06,720 --> 00:49:14,720
+And you're going to interact with it many, many multiple times. And so you're not actually going to be interested in things like which credentials am I using?
+
+468
+00:49:14,720 --> 00:49:22,720
+That's going to stay fixed. So at the end of the day, you should be focusing on the dynamic information down here.
+
+469
+00:49:22,720 --> 00:49:30,720
+How many CPU cores does it need? What are the memory requirements? What's the time limit? How many retries, etc.?
+
+470
+00:49:31,720 --> 00:49:41,720
+And so once this is set up, it becomes very easy to swap this out and say, well, instead of four CPU cores, I'm going to use four GPUs instead.
+
+471
+00:49:41,720 --> 00:49:50,720
+And so this is the idea, the philosophy behind it is that once the infrastructure is provisioned, it becomes very easy to interact with it.
+
+472
+00:49:50,720 --> 00:50:00,720
+Similar for AWS, there's static and dynamic parameters.
+
+473
+00:50:00,720 --> 00:50:05,720
+The UX is largely the same for the dynamic parameters.
+
+474
+00:50:05,720 --> 00:50:13,720
+But for anybody who's an existing user of any of these cloud services, some of these parameters should make sense.
+
+475
+00:50:14,720 --> 00:50:20,720
+So here I'm actually given the first example of how I'm going to train one of these models.
+
+476
+00:50:20,720 --> 00:50:29,720
+I'm using all three of these features together, package dependencies, executor information, files that are going to be created after the fact.
+
+477
+00:50:29,720 --> 00:50:38,720
+So these are trained models. And I'm going to be using TensorFlow, Pandas and Cloud Pickle on the remote machine.
+
+478
+00:50:38,720 --> 00:50:45,720
+So the way this works is if those packages exist on the remote machine, nothing's going to happen.
+
+479
+00:50:45,720 --> 00:50:54,720
+If they don't exist, it's going to attempt to install them or retrieve them through a different location as specified by the user.
+
+480
+00:50:54,720 --> 00:51:00,720
+So now I'm going to do this four different times. You can see this one goes to Azure Batch.
+
+481
+00:51:00,720 --> 00:51:04,720
+This one also goes to Azure Batch.
+
+482
+00:51:04,720 --> 00:51:07,720
+This one is going to go to AWS Batch.
+
+483
+00:51:07,720 --> 00:51:15,720
+And this one now goes to AWS Batch.
+
+484
+00:51:15,720 --> 00:51:23,720
+And so at the end of this, I'm going to visualize the results, compare the models.
+
+485
+00:51:23,720 --> 00:51:30,720
+The last thing I want to highlight before I show you the user interface is that we also have some extra conditional logic here.
+
+486
+00:51:30,720 --> 00:51:40,720
+So because, as I mentioned, these workflows are constructed through inspecting data dependencies, how information is passed back and forth through your functions,
+
+487
+00:51:40,720 --> 00:51:44,720
+in some cases, not all of the dependencies will be specified that way.
+
+488
+00:51:44,720 --> 00:51:53,720
+As an example, if you're not returning a piece of data to another function, but rather you're storing it on the cloud and then something else is going to go read that file later,
+
+489
+00:51:53,720 --> 00:51:56,720
+you need to actually mark that there is a dependency there.
+
+490
+00:51:56,720 --> 00:52:05,720
+And so this is an example using the wait function where you can mark explicit dependencies that one function should not run until another function completes.
+
+491
+00:52:05,720 --> 00:52:11,720
+So this is similar to barriers in some lower level logic.
+
+492
+00:52:11,720 --> 00:52:16,720
+So now we're going to run this on the cloud.
+
+493
+00:52:16,720 --> 00:52:19,720
+I've specified that it's going to run on a cloud server instead.
+
+494
+00:52:19,720 --> 00:52:23,720
+And this is the workflow that gets created.
+
+495
+00:52:23,720 --> 00:52:27,720
+So it's a little bit larger. I'm going to zoom in a little bit here.
+
+496
+00:52:30,720 --> 00:52:35,720
+So you can see up here there's the first portion of my workflow.
+
+497
+00:52:35,720 --> 00:52:41,720
+I don't know if you can see it here, but there's, for instance, no marked dependency between this upper portion and the lower portion.
+
+498
+00:52:41,720 --> 00:52:47,720
+And this is because, again, there are files being passed across.
+
+499
+00:52:47,720 --> 00:52:54,720
+But when this actually goes to run, when you execute it, the stuff down here is going to wait for the stuff above to run.
+
+500
+00:52:54,720 --> 00:52:58,720
+There's also native parallelism in this.
+
+501
+00:52:58,720 --> 00:53:04,720
+So anything visually where you say, oh, these two pieces don't depend on each other, they're going to run in parallel.
+
+502
+00:53:04,720 --> 00:53:15,720
+And so this is another small advantage that you get from using a tool like Covalent is that you get this sort of native parallelization out of the box.
+
+503
+00:53:16,720 --> 00:53:21,720
+So the output of this is going to be a visualization.
+
+504
+00:53:21,720 --> 00:53:26,720
+And so the result, you can see it's a history object here.
+
+505
+00:53:26,720 --> 00:53:33,720
+So if I go back to my notebook and you can see that there's a plot that comes out of this.
+
+506
+00:53:33,720 --> 00:53:38,720
+And so it becomes very easy to not have to think about, you know, where did I store this plot?
+
+507
+00:53:38,720 --> 00:53:43,720
+What's the file format? Can I open it? How do I open it?
+
+508
+00:53:43,720 --> 00:53:47,720
+It's just there. It's ready to be inspected and ready to be used.
+
+509
+00:53:47,720 --> 00:53:53,720
+All of this is stored in both a database and a data store, depending on the type of metadata.
+
+510
+00:53:53,720 --> 00:53:58,720
+And so, you know, again, it's designed for high reproducibility and high iteration.
+
+511
+00:53:58,720 --> 00:54:01,720
+So I think I'm just about out of time here.
+
+512
+00:54:01,720 --> 00:54:06,720
+So I'll pause here. If there are any questions, I'd love to hear them.
+
+513
+00:54:06,720 --> 00:54:10,720
+And I'll also mention that we have a booth in the expo hall.
+
+514
+00:54:10,720 --> 00:54:13,720
+So please do come visit later. Yes.
+
+515
+00:54:19,720 --> 00:54:24,720
+Yep. So in our documentation page, there's a tutorials section.
+
+516
+00:54:24,720 --> 00:54:26,720
+We have a few different tutorials there.
+
+517
+00:54:26,720 --> 00:54:33,720
+A lot of them are focused on classical and quantum machine learning just based on our own roots.
+
+518
+00:54:33,720 --> 00:54:39,720
+We also have some other stuff geared towards other scientific computing.
+
+519
+00:54:39,720 --> 00:54:43,720
+I'll also mention that even though a lot of what I've talked about is scientific computing,
+
+520
+00:54:43,720 --> 00:54:46,720
+this type of tool is not limited to scientific computing.
+
+521
+00:54:46,720 --> 00:54:50,720
+It is a generalized Python tool. Yes.
+
+522
+00:54:58,720 --> 00:55:01,720
+Windows is not something we support.
+
+523
+00:55:01,720 --> 00:55:06,720
+Through WSL, you can interact with Covalent.
+
+524
+00:55:06,720 --> 00:55:11,720
+There we do get requests here and there.
+
+525
+00:55:11,720 --> 00:55:16,720
+It's a lot easier for us to, you know, all of us develop on either Mac or Linux.
+
+526
+00:55:16,720 --> 00:55:21,720
+Typically, the back end platforms that we interact with are very heavily Linux based.
+
+527
+00:55:21,720 --> 00:55:24,720
+So that's sort of the motivation behind that.
+
+528
+00:55:24,720 --> 00:55:35,720
+If you are a Windows user, most likely you'd want to use WSL and deploy the server either in a container or somewhere else.
+
+529
+00:55:35,720 --> 00:55:44,720
+The other note, since I mentioned containers, it reminded me both the SDK and the server are available as containers,
+
+530
+00:55:44,720 --> 00:55:46,720
+as separate containers.
+
+531
+00:55:46,720 --> 00:55:52,720
+So if you can spin up both of those, then you can use Covalent through that.
+
+532
+00:55:56,720 --> 00:55:58,720
+Yes.
+
+533
+00:56:00,720 --> 00:56:01,720
+That's a good question.
+
+534
+00:56:01,720 --> 00:56:07,720
+So we have an unreleased GCP batch executor right now.
+
+535
+00:56:07,720 --> 00:56:10,720
+It's going through some final testing.
+
+536
+00:56:10,720 --> 00:56:22,720
+We're interacting with the Google batch team in order to understand exactly for their roadmap, for their services, how do we want to position it.
+
+537
+00:56:22,720 --> 00:56:30,720
+But yes, so if that's something you're interested in, again, a lot of this is as we're a small team, it's based on who asks for what.
+
+538
+00:56:30,720 --> 00:56:32,720
+But that should be coming in the near future.
+
+539
+00:56:35,720 --> 00:56:36,720
+Yes.
+
+540
+00:56:37,720 --> 00:56:38,720
+Which one?
+
+541
+00:56:40,720 --> 00:56:42,720
+Yes, yes, type hints are supported.
+
+542
+00:56:42,720 --> 00:56:45,720
+We always encourage type hinting.
+
+543
+00:56:57,720 --> 00:56:58,720
+Yes.
+
+544
+00:57:00,720 --> 00:57:09,720
+In terms of things like your data is highly sensitive or whatnot, we talked about network isolation, things like that.
+
+545
+00:57:09,720 --> 00:57:20,720
+Obviously, we have to do with compute environments, data transfer between those, assuming that's not on the user to figure out how to move those across there without necessarily going ahead.
+
+546
+00:57:20,720 --> 00:57:21,720
+Yes.
+
+547
+00:57:21,720 --> 00:57:41,720
+So we are not, we obviously do not want to get into the security side of things too much because people who have sensitive data and security requirements often have their own setup and configuration for this.
+
+548
+00:57:41,720 --> 00:57:47,720
+What we do support is recommending how to construct the workflow to be compatible with that.
+
+549
+00:57:47,720 --> 00:57:52,720
+So as an example, sensitive data lives in AWS in a particular region.
+
+550
+00:57:52,720 --> 00:57:56,720
+You deploy your tasks to AWS batch in that region.
+
+551
+00:57:56,720 --> 00:58:02,720
+Data goes back and forth between that bucket and the task, doesn't touch the covalent server at all.
+
+552
+00:58:02,720 --> 00:58:08,720
+So that would be an example of how I would recommend this.
+
+553
+00:58:08,720 --> 00:58:18,720
+Because a lot of it, I mean because it's open source and because it's very customizable, there's almost always a way to meet those security requirements.
+
+554
+00:58:18,720 --> 00:58:38,720
+There are no other questions, then I'll thank everybody for coming.
+
+555
+00:58:38,720 --> 00:58:40,720
+And again, please come to our booth.
+

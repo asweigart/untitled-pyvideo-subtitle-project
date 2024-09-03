@@ -1,0 +1,1412 @@
+1
+00:00:00,000 --> 00:00:06,800
+Okay, we are in this time now to start our second to last talk of Python 2023.
+
+2
+00:00:06,800 --> 00:00:13,280
+The talk will be Supercharging Pipeline Efficiency with ML Performance Prediction with Boaz Wisner
+
+3
+00:00:13,280 --> 00:00:16,240
+and Geren Maron and they will be taking questions after the talk.
+
+4
+00:00:16,240 --> 00:00:19,840
+So if your questions after the presentation is over, please line up at the microphone
+
+5
+00:00:19,840 --> 00:00:21,800
+right here in the center and ask your questions.
+
+6
+00:00:21,800 --> 00:00:25,440
+So please join me in giving a warm round of applause to our speakers.
+
+7
+00:00:31,000 --> 00:00:33,000
+Thank you very much.
+
+8
+00:00:33,000 --> 00:00:36,000
+Okay, so hi everyone.
+
+9
+00:00:36,000 --> 00:00:41,000
+I'm sure all of you out there have some dear Python at work, right, and you've been busy these days
+
+10
+00:00:41,000 --> 00:00:46,000
+and I'm sure most of you have also experienced heavy loads and high queues in your system.
+
+11
+00:00:46,000 --> 00:00:50,000
+Well, today we're going to talk about how we supercharge our pipeline's efficiency
+
+12
+00:00:50,000 --> 00:00:53,000
+using machine learning performance prediction.
+
+13
+00:00:54,000 --> 00:00:56,000
+So my name is Karen Lavon.
+
+14
+00:00:56,000 --> 00:00:58,000
+I'm a software engineer at Cingular.
+
+15
+00:00:58,000 --> 00:01:02,000
+I live in San Antonio and I just got married just a month ago.
+
+16
+00:01:03,000 --> 00:01:04,000
+Thank you.
+
+17
+00:01:04,000 --> 00:01:06,000
+And I'm Boaz Wisner.
+
+18
+00:01:06,000 --> 00:01:09,000
+I'm a DevOps engineer at Cingular and also as an employee.
+
+19
+00:01:09,000 --> 00:01:10,000
+Thank you for doing life events.
+
+20
+00:01:10,000 --> 00:01:13,000
+I had a first born daughter three months ago.
+
+21
+00:01:13,000 --> 00:01:14,000
+Thank you.
+
+22
+00:01:15,000 --> 00:01:16,000
+I'm so glad.
+
+23
+00:01:18,000 --> 00:01:21,000
+Okay, so in order to understand what we're going to talk about today,
+
+24
+00:01:21,000 --> 00:01:25,000
+I just want to tell you what Cingular does and just the fun things.
+
+25
+00:01:25,000 --> 00:01:28,000
+So our clients are companies with marketing teams.
+
+26
+00:01:28,000 --> 00:01:32,000
+We need to pull their marketing data from over a dozen of ad networks
+
+27
+00:01:32,000 --> 00:01:38,000
+and combine that all into one big table in order to view and analyze their marketing data.
+
+28
+00:01:38,000 --> 00:01:40,000
+So at Cingular we do just that.
+
+29
+00:01:40,000 --> 00:01:44,000
+We pull ad campaign insights from over a thousand of ad networks,
+
+30
+00:01:44,000 --> 00:01:50,000
+process it through a pipeline which does things such as interpolation and combining of data.
+
+31
+00:01:50,000 --> 00:01:54,000
+And then all this in order to show our clients full knowledge of their marketing efforts
+
+32
+00:01:54,000 --> 00:01:57,000
+and their return on investment all in one.
+
+33
+00:01:59,000 --> 00:02:03,000
+So each server in our data pipeline consists of dedicated workers
+
+34
+00:02:03,000 --> 00:02:06,000
+which run tasks which are logically grouped.
+
+35
+00:02:06,000 --> 00:02:12,000
+So for example, all tasks pulling or pushing data for our Snowflake database are labeled Snowflake.
+
+36
+00:02:12,000 --> 00:02:14,000
+And then our workers are salary workers.
+
+37
+00:02:14,000 --> 00:02:20,000
+And for those of you who are not familiar with salary, salary is a task to implementation
+
+38
+00:02:20,000 --> 00:02:23,000
+which is used to execute tasks as an assignment.
+
+39
+00:02:23,000 --> 00:02:28,000
+And this we have now as right to the notice which is a containerized application
+
+40
+00:02:28,000 --> 00:02:33,000
+which is used for automating management, deployment, and scaling of containerized execution.
+
+41
+00:02:34,000 --> 00:02:39,000
+So it's important to note that our clients rely on their data from us on a timely matter
+
+42
+00:02:39,000 --> 00:02:44,000
+so they come to work at eight in the morning and they need to view their marketing data on Cingular
+
+43
+00:02:44,000 --> 00:02:49,000
+in order to make decisions on their current campaigns which they're writing.
+
+44
+00:02:49,000 --> 00:02:54,000
+So that means that all the tasks if you're running in our pipeline need to be finished on time
+
+45
+00:02:54,000 --> 00:02:56,000
+and they can't really be buried.
+
+46
+00:02:56,000 --> 00:03:02,000
+If there is, if there are any queues in our system, then at eight in the morning they won't have their data.
+
+47
+00:03:02,000 --> 00:03:07,000
+So what was our problem and what are we here to talk about in the first place anyways?
+
+48
+00:03:07,000 --> 00:03:14,000
+Well, we did experience queues in our system and when we investigated those queues, we saw something interesting.
+
+49
+00:03:14,000 --> 00:03:20,000
+We noticed that 90% of our tasks are light tasks in terms of duration and required memory,
+
+50
+00:03:20,000 --> 00:03:22,000
+and only 10% are heavy tasks.
+
+51
+00:03:22,000 --> 00:03:27,000
+This means that story tasks were getting stuck in the queue behind the longer tasks
+
+52
+00:03:27,000 --> 00:03:32,000
+and then smaller tasks were being affected by bigger tasks because their tasks wouldn't otherwise
+
+53
+00:03:32,000 --> 00:03:35,000
+finish on time and they wouldn't have had a data jury.
+
+54
+00:03:35,000 --> 00:03:42,000
+So we started thinking how we would solve this issue and the first thing we did actually
+
+55
+00:03:42,000 --> 00:03:44,000
+was humanly scale our workers.
+
+56
+00:03:44,000 --> 00:03:50,000
+The problem with that is that it's very expensive and it increases our cost and it's really not a scalable
+
+57
+00:03:50,000 --> 00:03:55,000
+and sustainable solution because we'd have to have our engineers scale the workers up and down all the time
+
+58
+00:03:55,000 --> 00:03:59,000
+because we don't really want to have an infinite amount of workers all the time.
+
+59
+00:03:59,000 --> 00:04:03,000
+So it really is not a big long-term solution.
+
+60
+00:04:03,000 --> 00:04:09,000
+The next thing we found was putting our tasks into smaller tasks which is a great design for this one,
+
+61
+00:04:09,000 --> 00:04:16,000
+but also here we realized that some of our tasks are already pretty small in terms of what we can do.
+
+62
+00:04:16,000 --> 00:04:21,000
+For example, if we have a task pulling data from a facelift API, first one is time-based,
+
+63
+00:04:21,000 --> 00:04:24,000
+then we're already pulling some one-day data from the minimum amount allowed,
+
+64
+00:04:24,000 --> 00:04:27,000
+and then one thing with more information.
+
+65
+00:04:27,000 --> 00:04:32,000
+So we finally realized what we really need to do and what would help us is have better resource management.
+
+66
+00:04:32,000 --> 00:04:38,000
+We need to be able to split up our tasks between the light tasks and the heavy tasks
+
+67
+00:04:38,000 --> 00:04:43,000
+in order to then better optimize each one of these groups according to their properties.
+
+68
+00:04:43,000 --> 00:04:49,000
+So for example, one of the things we could do is auto-scan and we'll talk more about that later on.
+
+69
+00:04:49,000 --> 00:04:56,000
+Okay, but how will we do this? So how will we differentiate between the light tasks and the heavy tasks?
+
+70
+00:04:56,000 --> 00:05:00,000
+Well, you could tell me what's the problem. Let's just create some static function which,
+
+71
+00:05:00,000 --> 00:05:06,000
+given some tasks, will tag it as light or heavy, and then obviously the tasks will have some input parameters.
+
+72
+00:05:06,000 --> 00:05:10,000
+So we can take those into account, take some pieces into account.
+
+73
+00:05:10,000 --> 00:05:14,000
+Well, that's not so simple because obviously we can have a very long list of parameters,
+
+74
+00:05:14,000 --> 00:05:20,000
+making it quite hard, but also some of these parameters have very high cardinality and variance,
+
+75
+00:05:20,000 --> 00:05:24,000
+meaning that a lot of possible values which could go in,
+
+76
+00:05:24,000 --> 00:05:29,000
+making that decision to be very, very impossible to do.
+
+77
+00:05:29,000 --> 00:05:35,000
+Another thing which makes this kind of hard to do is that we came together as tasks
+
+78
+00:05:35,000 --> 00:05:41,000
+so that the tasks are running together and the output of one task will be the input to the next task.
+
+79
+00:05:41,000 --> 00:05:45,000
+So that means that something which only happens during runtime,
+
+80
+00:05:45,000 --> 00:05:49,000
+and we can't possibly know how to statically know that ahead of time.
+
+81
+00:05:49,000 --> 00:05:58,000
+And obviously, not obviously, but the input to the task will have very significant effect on how long it's running for.
+
+82
+00:05:58,000 --> 00:06:01,000
+So then how will we solve this classification problem after all?
+
+83
+00:06:01,000 --> 00:06:04,000
+Well, we did decide to use machine learning.
+
+84
+00:06:04,000 --> 00:06:08,000
+So we played around with different models to see which one gave us the best results.
+
+85
+00:06:08,000 --> 00:06:10,000
+And in fact, it was a fairly simple model.
+
+86
+00:06:10,000 --> 00:06:13,000
+We used the support vector regression, SVL, model,
+
+87
+00:06:13,000 --> 00:06:17,000
+which is a supervised learning algorithm which is used to predict discrete values.
+
+88
+00:06:17,000 --> 00:06:21,000
+And what it does is try to find the helpful line in an n-dimensional space
+
+89
+00:06:21,000 --> 00:06:24,000
+which matches the necessary number of data points.
+
+90
+00:06:24,000 --> 00:06:30,000
+So the pros of the SVL are that it's robust to outliers, it's very effective in high dimension,
+
+91
+00:06:30,000 --> 00:06:33,000
+it's very easy to implement, and this is very important since we're trying to actually
+
+92
+00:06:33,000 --> 00:06:37,000
+productionize the model and not just only using the research.
+
+93
+00:06:37,000 --> 00:06:42,000
+On the other hand, the cons of the SVL are that it's not very suitable for large data sets
+
+94
+00:06:42,000 --> 00:06:47,000
+because it has fairly high training time and it doesn't perform well with noise.
+
+95
+00:06:47,000 --> 00:06:51,000
+So noise, in our case, would be, for example, a bug in the code,
+
+96
+00:06:51,000 --> 00:06:54,000
+which obviously is something which we should not have very often
+
+97
+00:06:54,000 --> 00:06:57,000
+and when it does happen, not exist for a very long time.
+
+98
+00:06:57,000 --> 00:07:00,000
+So that's why we're okay with noise.
+
+99
+00:07:01,000 --> 00:07:03,000
+Here you can see how we set up our model configuration.
+
+100
+00:07:03,000 --> 00:07:05,000
+So this is one test, for example.
+
+101
+00:07:05,000 --> 00:07:09,000
+We set this up for each task which we want to be able to differentiate
+
+102
+00:07:09,000 --> 00:07:11,000
+between the red and the heavy task.
+
+103
+00:07:11,000 --> 00:07:15,000
+So this is a straight supplement test which pulls data from third party networks.
+
+104
+00:07:15,000 --> 00:07:18,000
+And you can see we set up the parameters for this task,
+
+105
+00:07:18,000 --> 00:07:23,000
+the parameter feed down on epsilon which we played around featuring it while training our model.
+
+106
+00:07:23,000 --> 00:07:26,000
+The features, which are number of days and number of accounts.
+
+107
+00:07:26,000 --> 00:07:30,000
+And a deep parameter name, which is custom ID.
+
+108
+00:07:30,000 --> 00:07:34,000
+So this means that we train the model per customer.
+
+109
+00:07:34,000 --> 00:07:39,000
+Now we did start out trying to train one big model for all the customers together,
+
+110
+00:07:39,000 --> 00:07:45,000
+but that gave us not so good results because you can see how each customer's data
+
+111
+00:07:45,000 --> 00:07:47,000
+is very different from each other.
+
+112
+00:07:47,000 --> 00:07:52,000
+And then getting the series of values do not get good results.
+
+113
+00:07:52,000 --> 00:07:55,000
+And therefore we set up the model per customer.
+
+114
+00:07:56,000 --> 00:07:58,000
+So how did we choose our model, our features?
+
+115
+00:07:58,000 --> 00:08:03,000
+Well, we started out with the longest possible parameters for the task.
+
+116
+00:08:03,000 --> 00:08:05,000
+And here's an example of some of them.
+
+117
+00:08:05,000 --> 00:08:08,000
+And then played around with different combinations, feeding them to our model,
+
+118
+00:08:08,000 --> 00:08:10,000
+training them to see if they were the best results.
+
+119
+00:08:10,000 --> 00:08:13,000
+And we could get the number of days and number of accounts.
+
+120
+00:08:13,000 --> 00:08:19,000
+And since we're pulling data of customers, then you can see how that would have an immediate effect
+
+121
+00:08:19,000 --> 00:08:23,000
+in the amount of data pulled and how much time we take to process it.
+
+122
+00:08:24,000 --> 00:08:31,000
+So we did productionize the model, trained it for some time, and then use it in our pipeline.
+
+123
+00:08:31,000 --> 00:08:35,000
+Then after a while we were starting to see not so good results,
+
+124
+00:08:35,000 --> 00:08:38,000
+and we had to investigate what was happening, what did we forget?
+
+125
+00:08:39,000 --> 00:08:43,000
+And we found out that we did forget about something called an account.
+
+126
+00:08:43,000 --> 00:08:47,000
+So sort of an account, really big clients have a lot of apps,
+
+127
+00:08:47,000 --> 00:08:51,000
+so what they do is they split up the apps between accounts.
+
+128
+00:08:51,000 --> 00:08:54,000
+So each account is responsible for a certain number of apps.
+
+129
+00:08:54,000 --> 00:08:56,000
+And then at the end of the day we do something similar.
+
+130
+00:08:56,000 --> 00:09:02,000
+Instead of pulling data of the clients' data on one task, we pull data for a certain number of accounts.
+
+131
+00:09:02,000 --> 00:09:05,000
+So not only will the number of accounts change from task,
+
+132
+00:09:05,000 --> 00:09:08,000
+which is why we have the feature of the number of accounts,
+
+133
+00:09:08,000 --> 00:09:11,000
+but also the combination of accounts will change.
+
+134
+00:09:11,000 --> 00:09:14,000
+And some accounts can be really big, but some can be really small.
+
+135
+00:09:14,000 --> 00:09:19,000
+So that is why if we just take into account the number of accounts,
+
+136
+00:09:19,000 --> 00:09:23,000
+then if it's two accounts that sometimes are big, sometimes they're small,
+
+137
+00:09:23,000 --> 00:09:25,000
+we're not going to get good results.
+
+138
+00:09:25,000 --> 00:09:31,000
+So we were thinking, okay, how will we use the actual account as a feature to our model
+
+139
+00:09:31,000 --> 00:09:33,000
+and not only the number of accounts?
+
+140
+00:09:33,000 --> 00:09:37,000
+The first thing we found doing was leaving all permutations of the account empty.
+
+141
+00:09:37,000 --> 00:09:42,000
+The problem with this is that the account is a number, but it has no numerical significance.
+
+142
+00:09:42,000 --> 00:09:46,000
+So if you're using a number, the model will probably keep it as a number.
+
+143
+00:09:46,000 --> 00:09:50,000
+Therefore, getting really, you know, not so good results.
+
+144
+00:09:50,000 --> 00:09:54,000
+So next we tried to do something smarter.
+
+145
+00:09:54,000 --> 00:09:56,000
+We tried to take into account the total size of an account,
+
+146
+00:09:56,000 --> 00:10:00,000
+meaning how much friends is allocated to this account by the client.
+
+147
+00:10:00,000 --> 00:10:06,000
+The problem with this is that we can have one row of data with a total spend of $1,000,
+
+148
+00:10:06,000 --> 00:10:10,000
+or we could also have a thousand rows of data with a total spend of $10.
+
+149
+00:10:10,000 --> 00:10:15,000
+And if we're doing operations such as aggregations and several other data,
+
+150
+00:10:15,000 --> 00:10:19,000
+then it's taking more time to process this value of data.
+
+151
+00:10:19,000 --> 00:10:24,000
+So finally, we realized what we really need to do is know the expected row count,
+
+152
+00:10:24,000 --> 00:10:27,000
+which we're going to pull for the account.
+
+153
+00:10:27,000 --> 00:10:32,000
+So if we're pulling from third-party networks, we can't really know how much data we're going to pull.
+
+154
+00:10:32,000 --> 00:10:36,000
+I mean, if you're a fortune teller, that might work, but we're not.
+
+155
+00:10:36,000 --> 00:10:43,000
+So what we did is look into our database and see how much data we pulled for those accounts into these studies.
+
+156
+00:10:43,000 --> 00:10:46,000
+And then we used that as a feature to our model.
+
+157
+00:10:46,000 --> 00:10:51,000
+And we did do that, and we were getting kind of a model and we were getting good results.
+
+158
+00:10:51,000 --> 00:10:52,000
+So that was great.
+
+159
+00:10:52,000 --> 00:10:56,000
+So now Buzz will tell us a bit more about how we product-trived our data.
+
+160
+00:10:56,000 --> 00:10:59,000
+And then we'll talk a little bit more about how we product-trived the model,
+
+161
+00:10:59,000 --> 00:11:06,000
+and then how did we actually use this differentiation to lie in heavy tests in order to improve our 5 times efficiency.
+
+162
+00:11:06,000 --> 00:11:08,000
+Cool.
+
+163
+00:11:08,000 --> 00:11:09,000
+Hey, everyone.
+
+164
+00:11:09,000 --> 00:11:11,000
+That's Buzz, the proud guy here.
+
+165
+00:11:11,000 --> 00:11:15,000
+And so the first thing that's most important, product-triving the model,
+
+166
+00:11:15,000 --> 00:11:19,000
+is that we can't have the model's decision capability on your laptop time at all.
+
+167
+00:11:19,000 --> 00:11:23,000
+Because in that case, we're just slowing down all of our tests.
+
+168
+00:11:23,000 --> 00:11:27,000
+So we're going to have to do a lot of training architecture, and infrastructure has to happen, you know,
+
+169
+00:11:27,000 --> 00:11:31,000
+de-task or asygnomacy from data-saving process.
+
+170
+00:11:31,000 --> 00:11:33,000
+And it looks at it like this.
+
+171
+00:11:33,000 --> 00:11:36,000
+I hope it's not too scary of a graph, but we're going to break it down step by step.
+
+172
+00:11:36,000 --> 00:11:42,000
+So the first thing that happens at the end of every celery task, we have something called a task info collector.
+
+173
+00:11:42,000 --> 00:11:48,000
+And it's just some custom code that we wrote that collects the relevant metadata for each task.
+
+174
+00:11:48,000 --> 00:11:52,000
+Things like the duration or memory, which is what we actually want to use this anyway.
+
+175
+00:11:52,000 --> 00:11:59,000
+It then takes that metadata and puts it into S3, which is AWS's object storage.
+
+176
+00:11:59,000 --> 00:12:08,000
+AWS also has a neat tool called Asena, which allows you to use SQL queries and run SQL queries over data settings in S3.
+
+177
+00:12:08,000 --> 00:12:14,000
+And we'll utilize that actually right now in kind of a meat and potatoes of this whole infrastructure,
+
+178
+00:12:14,000 --> 00:12:16,000
+the performance predictors train runner.
+
+179
+00:12:16,000 --> 00:12:23,000
+This is a celery task that we run periodically, once a day, for each customer.
+
+180
+00:12:23,000 --> 00:12:27,000
+And it is responsible for actually creating and recreating the model.
+
+181
+00:12:27,000 --> 00:12:30,000
+And the way that it works is as such.
+
+182
+00:12:30,000 --> 00:12:38,000
+First, it queries S3 using Asena, gathers the data for the past day, and builds a data set out of it.
+
+183
+00:12:38,000 --> 00:12:48,000
+It then takes the existing model and takes the new data and trains and retrains the model to have all the updated information.
+
+184
+00:12:48,000 --> 00:12:55,000
+So in this way, if something changes or something would become heavier instead of light,
+
+185
+00:12:55,000 --> 00:12:58,000
+then it would pick up on this, since we run this task periodically.
+
+186
+00:12:58,000 --> 00:13:05,000
+Now, finally, once a performance predictor train runner is done, it saves the entire model into a Redis database.
+
+187
+00:13:05,000 --> 00:13:13,000
+Now, since the model is per customer, then the serialized model can be pretty small and actually fit into the value of a Redis.
+
+188
+00:13:13,000 --> 00:13:19,000
+So we just have the key being the customer ID and the value just being the entire serialized model.
+
+189
+00:13:19,000 --> 00:13:23,000
+Now, the last piece of the puzzle is the celery router.
+
+190
+00:13:23,000 --> 00:13:29,000
+The celery router is the bit of celery code that runs every time that a new task is received,
+
+191
+00:13:29,000 --> 00:13:33,000
+and it tries to decide to which queue to send the celery task.
+
+192
+00:13:33,000 --> 00:13:40,000
+And we wrote some custom code there that all it does is it gets the task, it takes the customer ID from the task,
+
+193
+00:13:40,000 --> 00:13:47,000
+gets the model from Redis, and runs the task parameters to the model and makes the decision based on the output of the model,
+
+194
+00:13:47,000 --> 00:13:54,000
+should it be a classified as light or heavy, and then sends it to the light queue or the heavy queue,
+
+195
+00:13:54,000 --> 00:13:57,000
+which have dedicated workers consuming from them.
+
+196
+00:13:57,000 --> 00:14:03,000
+Now, finally, for all this to take, we need to monitor our model predictions and make sure they stay accurate.
+
+197
+00:14:03,000 --> 00:14:11,000
+So we compare the predicted duration of memory with the actual duration of memory using RNSE, or Root Mean Square Error.
+
+198
+00:14:11,000 --> 00:14:15,000
+This error level gets too high, but we're alerted and we dive in to investigate.
+
+199
+00:14:15,000 --> 00:14:22,000
+So, I mean, it works, right? We have split our tasks into light and heavy queues.
+
+200
+00:14:22,000 --> 00:14:28,000
+We have dedicated celery workers for each type of queue, and in that way we solve a problem,
+
+201
+00:14:28,000 --> 00:14:31,000
+no balling task load up, and data delay for our customers.
+
+202
+00:14:31,000 --> 00:14:39,000
+So that's great. And we decided to start looking a bit more into the future and start talking maybe a bit about auto scaling.
+
+203
+00:14:39,000 --> 00:14:45,000
+So auto scaling in general is the ability to increase and decrease capacity based on real-time parameters.
+
+204
+00:14:45,000 --> 00:14:50,000
+So, an example of classical auto scaling is that a bunch of web servers behind a load balancer,
+
+205
+00:14:50,000 --> 00:14:57,000
+and my web server is running hot and will run to load, then auto scaling would just automatically spin up a few more web servers to handle the load, and that would be that.
+
+206
+00:14:57,000 --> 00:15:01,000
+In celery, we need to scale the number of workers up and down,
+
+207
+00:15:01,000 --> 00:15:05,000
+since those are the things that are actually consuming from the queue and doing the actual work.
+
+208
+00:15:05,000 --> 00:15:08,000
+Now, how do you even bother with auto scaling?
+
+209
+00:15:08,000 --> 00:15:13,000
+Well, if I put the fact that I'm upside down, just saying the word auto scaling makes my heart happy.
+
+210
+00:15:13,000 --> 00:15:15,000
+It has actual legit reasons.
+
+211
+00:15:15,000 --> 00:15:21,000
+So, first of all, it reduces queues in times of heavy load, and the queues go up,
+
+212
+00:15:21,000 --> 00:15:25,000
+then it will automatically scale and bring up more workers to bring the queues down quicker.
+
+213
+00:15:25,000 --> 00:15:30,000
+Additionally, it has increased multi-tenancy resource utilization,
+
+214
+00:15:30,000 --> 00:15:34,000
+so I can take two jobs and run them on the same underlying infrastructure,
+
+215
+00:15:34,000 --> 00:15:39,000
+and I can set one job to start working really hard at one point while the other one isn't,
+
+216
+00:15:39,000 --> 00:15:43,000
+and then vice versa, the other one will work really hard while the first one isn't,
+
+217
+00:15:43,000 --> 00:15:46,000
+but they could both run on the same underlying infrastructure without bothering each other.
+
+218
+00:15:46,000 --> 00:15:49,000
+Auto scaling lets you do that really efficiently.
+
+219
+00:15:49,000 --> 00:15:52,000
+And finally, there's no manual intervention necessary.
+
+220
+00:15:52,000 --> 00:15:57,000
+I mean, we've all been there, middle of the night, if you get paid, you wake up at 3am,
+
+221
+00:15:57,000 --> 00:16:02,000
+and you click the plus button, terrible, auto scaling solves it, and then everyone's happier.
+
+222
+00:16:02,000 --> 00:16:05,000
+Happy engineers can have your fun.
+
+223
+00:16:05,000 --> 00:16:12,000
+Okay, so auto scaling in celery is a little bit different than classical auto scaling.
+
+224
+00:16:12,000 --> 00:16:15,000
+First of all, we have to scale based on the queue length metric.
+
+225
+00:16:15,000 --> 00:16:21,000
+That's what determines the load of our system, not necessarily the CPU or memory of the underlying infrastructure.
+
+226
+00:16:23,000 --> 00:16:27,000
+Secondly, it's only cost effective for short tasks.
+
+227
+00:16:27,000 --> 00:16:31,000
+Now in our data pipeline, we have an axiom that we don't want to interrupt long-running tasks.
+
+228
+00:16:31,000 --> 00:16:37,000
+If a task takes one, two, or three hours to run, then you wouldn't want to kill it in order to scale down,
+
+229
+00:16:37,000 --> 00:16:41,000
+because then you lose those two or three hours of work, and now it's done.
+
+230
+00:16:41,000 --> 00:16:45,000
+So auto scaling only would work for short tasks.
+
+231
+00:16:45,000 --> 00:16:51,000
+But since we now split into light and heavy tasks, and 90% of our pipeline is light,
+
+232
+00:16:51,000 --> 00:16:56,000
+then hey, we can like auto scale 90% of our pipeline, which is pretty awesome.
+
+233
+00:16:56,000 --> 00:17:01,000
+Now let's take a quick look at the architecture needed to auto scale celery on Kubernetes.
+
+234
+00:17:01,000 --> 00:17:04,000
+Now the most important component is the horizontal pod auto scaler,
+
+235
+00:17:04,000 --> 00:17:08,000
+which is responsible for automatically adding and removing pods.
+
+236
+00:17:08,000 --> 00:17:14,000
+In our environment, one pod, or container, is one celery worker, which is consuming tasks from the queue.
+
+237
+00:17:14,000 --> 00:17:18,000
+And as I mentioned, we want to scale based on queue length.
+
+238
+00:17:18,000 --> 00:17:22,000
+The queue length of all of our metrics is stored in Datadog, a fast, monolayer solution.
+
+239
+00:17:22,000 --> 00:17:27,000
+They provide the Datadog transfer agent, which sections the queue length from Datadog
+
+240
+00:17:27,000 --> 00:17:32,000
+and exposes it to Kubernetes through the Datadog metric CRD, or custom resource definition.
+
+241
+00:17:33,000 --> 00:17:39,000
+CRDs are the Kubernetes way to expose external data through the Kubernetes API.
+
+242
+00:17:39,000 --> 00:17:45,000
+Now then all you have to do is attach the horizontal pod auto scaler to that CRD,
+
+243
+00:17:45,000 --> 00:17:49,000
+and it will begin auto scaling based on queue length metric.
+
+244
+00:17:49,000 --> 00:17:52,000
+The last piece of the puzzle is the cluster auto scaler.
+
+245
+00:17:52,000 --> 00:17:57,000
+If the horizontal pod auto scaler adds too many pods, and there is not enough underlying capacity to run them,
+
+246
+00:17:57,000 --> 00:18:02,000
+the cluster auto scaler catches this and scales up a new AWS instance to run on.
+
+247
+00:18:02,000 --> 00:18:04,000
+And just like that, everything works.
+
+248
+00:18:04,000 --> 00:18:07,000
+This is the actual metric used by auto scaler.
+
+249
+00:18:07,000 --> 00:18:11,000
+Those who are a sharper buy will notice that it's a moving roll up.
+
+250
+00:18:11,000 --> 00:18:15,000
+This is because queue lengths tend to be very spiky, and they go up and down a lot,
+
+251
+00:18:15,000 --> 00:18:19,000
+and that would make the auto scaler go up and down a lot and kind of work a bit unpredictably.
+
+252
+00:18:19,000 --> 00:18:26,000
+So moving things out with like a rolling average window makes everything work more predictably.
+
+253
+00:18:26,000 --> 00:18:28,000
+And at the bottom you see the number of running pods.
+
+254
+00:18:28,000 --> 00:18:30,000
+There's a very clear correlation here, right?
+
+255
+00:18:30,000 --> 00:18:36,000
+The number, the queue goes up, the number of running pods goes up, queue goes down, number of running pods goes down.
+
+256
+00:18:36,000 --> 00:18:44,000
+Another really interesting thing to note here is that the queue has to go up first before the number of running pods goes up.
+
+257
+00:18:44,000 --> 00:18:52,000
+This is, it means it's like it's inherently reactive, and it's kind of a constraint of that split end to scaling based on queue length,
+
+258
+00:18:52,000 --> 00:18:55,000
+but it does work, and it's pretty effective.
+
+259
+00:18:55,000 --> 00:19:01,000
+And last, but definitely not least for maybe some of the people in the crowd here, cost optimization.
+
+260
+00:19:01,000 --> 00:19:10,000
+So AWS actually has some useful spot instances which are essentially spare compute capacity that they offer at a fraction of the cost,
+
+261
+00:19:10,000 --> 00:19:15,000
+which is one added caveat that they can interrupt your instance within a three or four minute notice.
+
+262
+00:19:15,000 --> 00:19:22,000
+But now, since we split our tasks into light and heavy, and they are short jobs that are running on auto scaling servers
+
+263
+00:19:22,000 --> 00:19:27,000
+and they'll spell healing, then we don't care if the underlying instance dies because our infrastructure will just handle it.
+
+264
+00:19:27,000 --> 00:19:32,000
+So you can utilize spot instances and really cut down on applied costs.
+
+265
+00:19:32,000 --> 00:19:37,000
+So we've kind of been through a lot today, so let's take a look at the top and sum up this quickly.
+
+266
+00:19:37,000 --> 00:19:40,000
+We had queues and resource contention causing racism production.
+
+267
+00:19:40,000 --> 00:19:46,000
+We had heavy tasks that were holding up light tasks and causing data delays for our customers.
+
+268
+00:19:46,000 --> 00:19:52,000
+I used machine learning to predict the task performance and then send the task to dedicated workers based on
+
+269
+00:19:52,000 --> 00:19:56,000
+if it is expected to be a light task or a heavy task.
+
+270
+00:19:56,000 --> 00:20:01,000
+And finally, we were able to auto scale our light tasks with Kubernetes,
+
+271
+00:20:01,000 --> 00:20:08,000
+thus auto scaling about 90% of our pipeline and just making everything work more efficiently,
+
+272
+00:20:08,000 --> 00:20:12,000
+federal resource utilization, web waking up at night and all the wonderful things.
+
+273
+00:20:12,000 --> 00:20:14,000
+So what does the future hold?
+
+274
+00:20:14,000 --> 00:20:20,000
+Well, one thing that we could do is we could implement some kind of auto scaling predictor based on
+
+275
+00:20:20,000 --> 00:20:25,000
+few length patterns or a few time to follow patterns throughout the day, and so that holds true for many people.
+
+276
+00:20:25,000 --> 00:20:33,000
+And we could solve that problem of reactivity I mentioned earlier by knowing to predict when the spikes are
+
+277
+00:20:33,000 --> 00:20:35,000
+and then scaling in advance.
+
+278
+00:20:35,000 --> 00:20:38,000
+So implementing that could help with that. It was pretty cool.
+
+279
+00:20:38,000 --> 00:20:40,000
+So that's it. Thank you so much for listening.
+
+280
+00:20:40,000 --> 00:20:45,000
+Our mails are up there if you're too shy to ask any questions, but we're here and we're going to answer any questions you have.
+
+281
+00:20:45,000 --> 00:20:47,000
+So again, thank you so much.
+
+282
+00:20:47,000 --> 00:20:49,000
+Thank you.
+
+283
+00:20:49,000 --> 00:20:51,000
+Thank you.
+
+284
+00:20:51,000 --> 00:20:53,000
+Thank you.
+
+285
+00:20:53,000 --> 00:20:55,000
+Thank you.
+
+286
+00:20:55,000 --> 00:20:57,000
+Thank you.
+
+287
+00:20:57,000 --> 00:20:59,000
+Thank you.
+
+288
+00:20:59,000 --> 00:21:01,000
+Thank you.
+
+289
+00:21:01,000 --> 00:21:03,000
+Thank you.
+
+290
+00:21:03,000 --> 00:21:05,000
+Thank you.
+
+291
+00:21:05,000 --> 00:21:07,000
+Thank you.
+
+292
+00:21:07,000 --> 00:21:09,000
+Thank you.
+
+293
+00:21:09,000 --> 00:21:11,000
+Thank you.
+
+294
+00:21:11,000 --> 00:21:13,000
+Thank you.
+
+295
+00:21:13,000 --> 00:21:15,000
+Thank you.
+
+296
+00:21:15,000 --> 00:21:19,000
+This is a kind of clarifying question about your usage of spell instances.
+
+297
+00:21:19,000 --> 00:21:23,000
+You said you've got a few-to-four-minute notification that you're going to lose that instance.
+
+298
+00:21:23,000 --> 00:21:25,000
+Are your jobs usually shorter than that?
+
+299
+00:21:25,000 --> 00:21:27,000
+So you expect them to compute?
+
+300
+00:21:27,000 --> 00:21:31,000
+Or are they so short that it doesn't matter if they're killed and have to spend over?
+
+301
+00:21:31,000 --> 00:21:33,000
+Yeah, they're so short and then we just don't care.
+
+302
+00:21:33,000 --> 00:21:35,000
+It's really not the case.
+
+303
+00:21:35,000 --> 00:21:43,000
+We do also make sure, we do have alerts on if something goes wrong, then we'll see if our tasks are taking,
+
+304
+00:21:43,000 --> 00:21:50,000
+if our tasks are taking too long but are running on our spot instances, then we'll see and we'll notice and we'll fix things.
+
+305
+00:21:50,000 --> 00:21:52,000
+Right?
+
+306
+00:21:52,000 --> 00:21:54,000
+They're usually too short.
+
+307
+00:21:54,000 --> 00:22:02,000
+Are you using platform or other infrastructure as code to create these?
+
+308
+00:22:02,000 --> 00:22:11,000
+So we use CoP, which is a Kubernetes operator, like we place Kubernetes using configuration.
+
+309
+00:22:11,000 --> 00:22:15,000
+That's what we use to build this infrastructure mostly.
+
+310
+00:22:15,000 --> 00:22:19,000
+It allows you to just pass parameters saying, just see your spot instances, you see spot instances,
+
+311
+00:22:19,000 --> 00:22:23,000
+run them like this and all the other, you know, sort of things.
+
+312
+00:22:23,000 --> 00:22:27,000
+A question about the spot open, do we update the classification in mobile?
+
+313
+00:22:27,000 --> 00:22:29,000
+Do we update in our failure or like...
+
+314
+00:22:29,000 --> 00:22:31,000
+Yeah.
+
+315
+00:22:31,000 --> 00:22:36,000
+So the training we actually do like once a day, we run and we train the model on the failure task,
+
+316
+00:22:36,000 --> 00:22:42,000
+which has run now on the previous day and then like we run it in all the tasks that have run on the previous day.
+
+317
+00:22:42,000 --> 00:22:44,000
+And then the routing is done for each task.
+
+318
+00:22:44,000 --> 00:22:52,000
+So a task is created and then if anything, once it reaches the router, which we have implemented routers before,
+
+319
+00:22:52,000 --> 00:22:55,000
+we still have other, we still have other routers for routing it.
+
+320
+00:22:55,000 --> 00:23:03,000
+So then on that router, we will actually use the model for each single task and then dedicate it for the queue,
+
+321
+00:23:03,000 --> 00:23:05,000
+which is supposed to be a queue.
+
+322
+00:23:06,000 --> 00:23:07,000
+Hi.
+
+323
+00:23:07,000 --> 00:23:14,000
+As we were developing this, did you have issues with things like when you have the spot instances, if they go down,
+
+324
+00:23:14,000 --> 00:23:20,000
+how do you check to make sure you haven't run something through your queue twice or is it okay if something gets rerun
+
+325
+00:23:20,000 --> 00:23:24,000
+and how did you kind of deal with like any errors that happen in this pipeline along the way?
+
+326
+00:23:24,000 --> 00:23:25,000
+Yeah.
+
+327
+00:23:25,000 --> 00:23:32,000
+So the tasks which we have in this specific pipeline, it is okay that if they're running more than once,
+
+328
+00:23:32,000 --> 00:23:39,000
+we have a recovery system and dedications, which makes sure that it's okay and that's why we don't care if a task is killed.
+
+329
+00:23:39,000 --> 00:23:41,000
+It's okay if it's run again.
+
+330
+00:23:44,000 --> 00:23:51,000
+So you mentioned that you're monitoring in place to kind of like monitor some models or like drifting or something.
+
+331
+00:23:51,000 --> 00:23:57,000
+So, how often have you been notified about a wait and how often have you had to kind of like adjust something
+
+332
+00:23:57,000 --> 00:23:59,000
+since you've done like this?
+
+333
+00:23:59,000 --> 00:24:02,000
+Yeah, so usually, so the answer is almost not at all.
+
+334
+00:24:02,000 --> 00:24:04,000
+It all works pretty automatically.
+
+335
+00:24:04,000 --> 00:24:11,000
+And that's because since we reach frame, since we reach frame the model every day, then we expect it to,
+
+336
+00:24:11,000 --> 00:24:18,000
+if something really does start to skew, then the model will get that metadata, reach frame the existing model
+
+337
+00:24:18,000 --> 00:24:24,000
+with that new metadata and then it will already just start splitting it correctly.
+
+338
+00:24:24,000 --> 00:24:27,000
+So it doesn't really happen.
+
+339
+00:24:27,000 --> 00:24:34,000
+Yeah, and mostly when we do these tasks, if we run out on to our solo time, because we don't have all of our tasks using the model,
+
+340
+00:24:34,000 --> 00:24:38,000
+we like add each one at a time and we think that it needs the optimization.
+
+341
+00:24:38,000 --> 00:24:43,000
+So then at first, obviously, the error is silent and then we have like two things like, for example,
+
+342
+00:24:43,000 --> 00:24:45,000
+with the account or the next frame.
+
+343
+00:24:45,000 --> 00:24:47,000
+And once we sort that out, then it just ends.
+
+344
+00:24:47,000 --> 00:24:53,000
+Yeah, we have like a pre-train period where we just train the model and don't split.
+
+345
+00:24:53,000 --> 00:24:54,000
+Like we don't send it to split.
+
+346
+00:24:54,000 --> 00:24:57,000
+We have a new task and we want to just train and gather data.
+
+347
+00:24:57,000 --> 00:24:58,000
+So we just do that first.
+
+348
+00:24:58,000 --> 00:25:01,000
+We train the model without actually sending it to separate queues.
+
+349
+00:25:01,000 --> 00:25:08,000
+And then we can like enable it, like the feature files and okay, now it actually starts splitting the new task.
+
+350
+00:25:08,000 --> 00:25:10,000
+Good question.
+
+351
+00:25:10,000 --> 00:25:14,000
+Okay, so thank you again.
+
+352
+00:25:14,000 --> 00:25:15,000
+I want to send it.
+
+353
+00:25:15,000 --> 00:25:16,000
+Thank you.
+

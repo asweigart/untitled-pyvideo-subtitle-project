@@ -1,0 +1,1584 @@
+1
+00:00:00,000 --> 00:00:08,000
+Can you hear me? Hello? Great. Hello everyone. Welcome to the afternoon sessions for the talks.
+
+2
+00:00:08,000 --> 00:00:16,000
+So our next speaker is Dan Craig. He's worked in aerospace and web development.
+
+3
+00:00:16,000 --> 00:00:22,000
+And so his title of this next talk is called Testing Spacecraft at the PI-COP.
+
+4
+00:00:22,000 --> 00:00:25,000
+So if you can give him a round of applause and welcome him.
+
+5
+00:00:25,000 --> 00:00:32,000
+Thanks everyone. Good afternoon. It's a real pleasure to be here.
+
+6
+00:00:32,000 --> 00:00:36,000
+My name is Dan Craig. I'm a software engineer at Vardo Space Industries.
+
+7
+00:00:36,000 --> 00:00:40,000
+We are building the world's first on orbit industrial park.
+
+8
+00:00:40,000 --> 00:00:45,000
+Our goal is to be able to leverage microgravity for manufacturing materials for use here on Earth.
+
+9
+00:00:45,000 --> 00:00:50,000
+This is our first spacecraft, the Winnebago 1. It consists of two parts.
+
+10
+00:00:50,000 --> 00:00:55,000
+The first part is a reentry capsule on the top that contains the manufacturing apparatus.
+
+11
+00:00:55,000 --> 00:00:58,000
+Made into a Rocket Lab photon satellite bus on the bottom.
+
+12
+00:00:58,000 --> 00:01:01,000
+That's the gold part, which is the satellite or the solar panels there.
+
+13
+00:01:01,000 --> 00:01:06,000
+That provides the power, propulsion, communications and guidance.
+
+14
+00:01:06,000 --> 00:01:10,000
+Winnebago scheduled to launch this June on a Falcon 9 ride share.
+
+15
+00:01:10,000 --> 00:01:12,000
+It will stay on orbit for a month or more.
+
+16
+00:01:12,000 --> 00:01:15,000
+It will perform a pharmaceutical manufacturing operation.
+
+17
+00:01:15,000 --> 00:01:21,000
+The capsule will separate and parachute back to Earth, landing out in the desert here in Utah.
+
+18
+00:01:21,000 --> 00:01:25,000
+Now obviously we are doing our best to make sure that this mission is successful.
+
+19
+00:01:25,000 --> 00:01:27,000
+Naturally that involves a lot of testing.
+
+20
+00:01:27,000 --> 00:01:31,000
+For those of us on the software team, that involves a lot of software testing.
+
+21
+00:01:31,000 --> 00:01:36,000
+We're fortunate that we have tremendous access to tools available to us to make this possible.
+
+22
+00:01:36,000 --> 00:01:39,000
+Python and PyTest are two big ones that we take advantage of.
+
+23
+00:01:39,000 --> 00:01:42,000
+I'll talk about that later in the talk.
+
+24
+00:01:42,000 --> 00:01:46,000
+But it's important for us to keep in mind that a lot of the discourse around software testing
+
+25
+00:01:46,000 --> 00:01:49,000
+over the last 20 years has been dominated by web services.
+
+26
+00:01:49,000 --> 00:01:54,000
+And web services are great, but we need to be considerate of the differences and similarities
+
+27
+00:01:54,000 --> 00:01:57,000
+between testing a web service and testing a spacecraft.
+
+28
+00:01:57,000 --> 00:02:01,000
+Now you might not think there are any similarities between testing a web service
+
+29
+00:02:01,000 --> 00:02:03,000
+and testing a spacecraft, but you'd be surprised.
+
+30
+00:02:03,000 --> 00:02:06,000
+Both tend to be remote from the user.
+
+31
+00:02:06,000 --> 00:02:09,000
+Your web server is off in a data center or in a cloud.
+
+32
+00:02:09,000 --> 00:02:11,000
+Your spacecraft is off above the clouds.
+
+33
+00:02:11,000 --> 00:02:15,000
+Both tend to work on a request-response interface.
+
+34
+00:02:15,000 --> 00:02:18,000
+And spacecraft, of course, defend screens with telemetry,
+
+35
+00:02:18,000 --> 00:02:21,000
+not unlike a modern, well-instrumented web service.
+
+36
+00:02:21,000 --> 00:02:23,000
+There are big differences though.
+
+37
+00:02:23,000 --> 00:02:26,000
+Consistency of network connectivity is one of them.
+
+38
+00:02:26,000 --> 00:02:30,000
+A spacecraft really only has a consistent network connection when it's over a ground station.
+
+39
+00:02:30,000 --> 00:02:34,000
+And depending on your orbit, that might only be a few times a day.
+
+40
+00:02:34,000 --> 00:02:37,000
+You also generally have no physical access to your spacecraft,
+
+41
+00:02:37,000 --> 00:02:40,000
+assuming it's an unfroened spacecraft like a satellite.
+
+42
+00:02:40,000 --> 00:02:44,000
+So there's nobody who can go in and push the reset button if you're really in a pinch.
+
+43
+00:02:44,000 --> 00:02:50,000
+And lastly, the impact that a single occurrence or a single defect can have on your spacecraft
+
+44
+00:02:50,000 --> 00:02:53,000
+is very different from what it can have on a web service.
+
+45
+00:02:53,000 --> 00:02:57,000
+And I like to think about this as like putting it on an axis here about the volume and criticality.
+
+46
+00:02:57,000 --> 00:03:03,000
+Volume here being the number of requests or operations that your software is performing.
+
+47
+00:03:03,000 --> 00:03:09,000
+Compared to the criticality of any one of those requests or operations having or failing
+
+48
+00:03:09,000 --> 00:03:10,000
+because of a defect.
+
+49
+00:03:10,000 --> 00:03:13,000
+The most web services operate down here on the bottom.
+
+50
+00:03:13,000 --> 00:03:15,000
+They're high volume, low criticality.
+
+51
+00:03:15,000 --> 00:03:21,000
+So take for example a social media API or something where you might have thousands or millions of users
+
+52
+00:03:21,000 --> 00:03:24,000
+making millions of requests to your API.
+
+53
+00:03:24,000 --> 00:03:28,000
+And if you introduce a bug in the production that starts to cause some of those to fail,
+
+54
+00:03:28,000 --> 00:03:30,000
+like you know, it might be a bummer for some of those users.
+
+55
+00:03:30,000 --> 00:03:33,000
+Like maybe they don't get to make their posts or their feed doesn't refresh.
+
+56
+00:03:33,000 --> 00:03:36,000
+But that's not really the end of the world.
+
+57
+00:03:36,000 --> 00:03:42,000
+And because you're just such high volume, most of your users may not even know that the bug ever happened.
+
+58
+00:03:42,000 --> 00:03:45,000
+Because spacecraft are sort of on the opposite side of that.
+
+59
+00:03:45,000 --> 00:03:47,000
+There's low volume, high criticality.
+
+60
+00:03:47,000 --> 00:03:52,000
+You might only have one spacecraft that you're working with and you're performing one operation,
+
+61
+00:03:52,000 --> 00:03:55,000
+like a rocket launch or a reentry capsule during the reentry sequence.
+
+62
+00:03:55,000 --> 00:03:57,000
+You're only going to do that one time.
+
+63
+00:03:57,000 --> 00:04:01,000
+And it has to work that very one time that it counts.
+
+64
+00:04:01,000 --> 00:04:04,000
+Otherwise the results could be disastrous.
+
+65
+00:04:04,000 --> 00:04:10,000
+For example, June 1st, or 4th, 1996 was the maiden launch of the RAN-5 rocket.
+
+66
+00:04:10,000 --> 00:04:14,000
+37 seconds into flight, this happened.
+
+67
+00:04:27,000 --> 00:04:30,000
+So what happened here?
+
+68
+00:04:30,000 --> 00:04:36,000
+Well, the RAN-5 borrowed a lot from the RAN-4, its predecessor, including its initial measurement unit.
+
+69
+00:04:36,000 --> 00:04:44,000
+In the IMU software was an fast alignment routine that could be used to do a quick recycle of a launch countdown after an abort.
+
+70
+00:04:44,000 --> 00:04:50,000
+RAN-5 didn't need this capability, but the software was left in for commonality reasons,
+
+71
+00:04:50,000 --> 00:04:55,000
+and besides it was well tested and had flight heritage on RAN-4.
+
+72
+00:04:55,000 --> 00:05:02,000
+Initial alignment routine was a type conversion of a horizontal bias value from a float 64 to a science-based 16.
+
+73
+00:05:02,000 --> 00:05:05,000
+On the RAN-4, that bias value was small.
+
+74
+00:05:05,000 --> 00:05:11,000
+On the larger, faster RAN-5, it was bigger, resulting in an overflow exception.
+
+75
+00:05:11,000 --> 00:05:17,000
+And the software had been designed conservatively to detect that the IMU would shut down in the event of an unhandled exception,
+
+76
+00:05:17,000 --> 00:05:20,000
+which it did, leaving the rocket flying blind.
+
+77
+00:05:20,000 --> 00:05:27,000
+So, the RAN-5 was a very fast alignment routine, not knowing which way it was pointed, the engines dimpled hard over, and aerodynamic forces tore it apart.
+
+78
+00:05:27,000 --> 00:05:31,000
+Now you might wonder, like, wasn't there a backup? IMU on board? How come that didn't save it?
+
+79
+00:05:31,000 --> 00:05:39,000
+Well, there was a backup IMU on board, but it was running the same software, experiencing the same physics, and it shut down at exactly the same time.
+
+80
+00:05:39,000 --> 00:05:41,000
+So what can we learn from this?
+
+81
+00:05:41,000 --> 00:05:46,000
+Well, this has become a classic example of how software defects can be very different from hardware defects.
+
+82
+00:05:46,000 --> 00:05:51,000
+So, we know that there was a random failure of some parts that broke because it didn't meet specifications.
+
+83
+00:05:51,000 --> 00:05:54,000
+The software performed exactly as it was specified.
+
+84
+00:05:54,000 --> 00:05:57,000
+The problem was that the specifications were wrong.
+
+85
+00:05:57,000 --> 00:06:03,000
+Now, it would be a whole other topic, several PSV systems, about how you can prove that your specifications are correct,
+
+86
+00:06:03,000 --> 00:06:08,000
+and I'm not going to get into that here, but there's another lecture that we can take away for our purposes here,
+
+87
+00:06:08,000 --> 00:06:16,000
+and that's that the operating environment that your software is running in is just as important as the code itself for its successful execution.
+
+88
+00:06:16,000 --> 00:06:20,000
+So if your operating environment is different from what you tested and analyzed,
+
+89
+00:06:20,000 --> 00:06:28,000
+it might be irrelevant or misleading, and it will lead you into a false sense of confidence, as it did for the R1.5 developers.
+
+90
+00:06:28,000 --> 00:06:35,000
+You have to test your software in the environment that it will be used when it actually is running in production.
+
+91
+00:06:35,000 --> 00:06:37,000
+Example number two.
+
+92
+00:06:37,000 --> 00:06:41,000
+The Planetary Society's Lightsail 1 launched May 20, 2015.
+
+93
+00:06:41,000 --> 00:06:46,000
+This is a cube stat that was designed to demonstrate the deployment of a solar sail,
+
+94
+00:06:46,000 --> 00:06:51,000
+a thin, mylar sheet that can harness the momentum of the solar wind for its propulsion.
+
+95
+00:06:51,000 --> 00:06:54,000
+Six days into its flight, it went silent.
+
+96
+00:06:54,000 --> 00:06:56,000
+Well, what happened?
+
+97
+00:06:56,000 --> 00:07:01,000
+Well, Lightsail 1 was every 15 seconds would send a telemetry beacon message,
+
+98
+00:07:01,000 --> 00:07:04,000
+and it beautifully logged that message to a CSV file.
+
+99
+00:07:04,000 --> 00:07:12,000
+The problem was that nothing was rotating that file, so it grew unbounded until it filled up the 32 megabytes of disk on the flight computer.
+
+100
+00:07:12,000 --> 00:07:20,000
+Once that happened, the spacecraft became unresponsive, including unresponsive to the reboot commands being sent from the ground.
+
+101
+00:07:20,000 --> 00:07:28,000
+So the operators put their last hope in a radiation hit, triggering a reboot, which is not unusual in spaceflight.
+
+102
+00:07:28,000 --> 00:07:31,000
+And eight agonizing days later, it finally rebooted,
+
+103
+00:07:31,000 --> 00:07:37,000
+and they were able to reestablish contacts and schedule additional reboots before the disk showed backup,
+
+104
+00:07:37,000 --> 00:07:42,000
+and then they could deploy a fifth, and ultimately they went on to have a successful mission.
+
+105
+00:07:42,000 --> 00:07:44,000
+So what can we learn here?
+
+106
+00:07:44,000 --> 00:07:48,000
+Well, one is that software defects can be accumulated over time.
+
+107
+00:07:48,000 --> 00:07:54,000
+So if you have a really fast test suite, which I hope all of you do, and you can't have test cases run in seconds,
+
+108
+00:07:54,000 --> 00:07:58,000
+you might never notice that your disk is going to fill up over the course of six days.
+
+109
+00:07:59,000 --> 00:08:05,000
+The other lesson we can take here is a positive one, which is that having the ability to deploy a filth to your bug
+
+110
+00:08:05,000 --> 00:08:09,000
+can make the difference between success and failure.
+
+111
+00:08:09,000 --> 00:08:15,000
+Example number three, Boeing Starliner's global flight class, December 20, 2019.
+
+112
+00:08:15,000 --> 00:08:22,000
+Starliner was on its maiden voyage untrue, here a straight down flight, before sending crew to the International Space Station.
+
+113
+00:08:22,000 --> 00:08:28,000
+While it was on the CAD, it synchronized its mission-alapsed time clock with its Atlas V booster.
+
+114
+00:08:28,000 --> 00:08:33,000
+The problem was that it synchronized it too early, before the actual T-zero time had been set,
+
+115
+00:08:33,000 --> 00:08:38,000
+resulting in Starliner and Atlas thinking that they were 11 hours apart on the mission timeline.
+
+116
+00:08:38,000 --> 00:08:43,000
+At separation, the spacecraft thought it was in the wrong place seemingly at the wrong time,
+
+117
+00:08:43,000 --> 00:08:47,000
+and the navigation system tried its best to put it back into the right place,
+
+118
+00:08:47,000 --> 00:08:52,000
+by spending enough propellant to rule out a safe rendezvous to the International Space Station.
+
+119
+00:08:52,000 --> 00:08:54,000
+So how did this happen?
+
+120
+00:08:54,000 --> 00:09:00,000
+Well, it seems that there was never any integrated testing between Starliner and the Atlas V under a launch scenario.
+
+121
+00:09:00,000 --> 00:09:05,000
+So the lesson we can take away from this is that we can't just test to an interface.
+
+122
+00:09:05,000 --> 00:09:11,000
+We must test across interfaces, because different teams may have different understandings of that same interface.
+
+123
+00:09:11,000 --> 00:09:16,000
+And that there's just no substitute for integrated hardware and the loop testing.
+
+124
+00:09:16,000 --> 00:09:21,000
+And what matters to you is, for a successful mission, is the end-to-end performance of your system.
+
+125
+00:09:21,000 --> 00:09:25,000
+So you should be testing to the extent possible end-to-end.
+
+126
+00:09:25,000 --> 00:09:29,000
+And if you can't do that, then you need to have overlapping integrated tests.
+
+127
+00:09:29,000 --> 00:09:33,000
+And really, a good example here, like you're testing for systems A and B and B and C,
+
+128
+00:09:33,000 --> 00:09:39,000
+the tests have to overlap, otherwise you have a gap if you're not testing across every interface.
+
+129
+00:09:39,000 --> 00:09:45,000
+So now it's easy to pick on these projects, and there have been many other software failures in spaceflight before.
+
+130
+00:09:45,000 --> 00:09:48,000
+It's easy to pick on them in retrospect, because we know how they failed,
+
+131
+00:09:48,000 --> 00:09:54,000
+and we can go figure out from the data what the causal change of events was that it ultimately caused it.
+
+132
+00:09:54,000 --> 00:10:01,000
+And as Nancy Leveson pointed out, the cause of any accident is kind of by definition the thing you didn't test for.
+
+133
+00:10:01,000 --> 00:10:04,000
+So, yeah, it's easy to look at that in retrospect.
+
+134
+00:10:04,000 --> 00:10:09,000
+But in advance, which was marked here, there's a lot of different ways that your system might fail.
+
+135
+00:10:09,000 --> 00:10:14,000
+And so ultimately, you're asking the question of, will it succeed when it actually runs in production?
+
+136
+00:10:14,000 --> 00:10:18,000
+And this is a prediction, and your verification process is a prediction,
+
+137
+00:10:18,000 --> 00:10:21,000
+and specifically your prediction or answering the question here,
+
+138
+00:10:21,000 --> 00:10:26,000
+when running in a production environment under production load, will it perform as intended?
+
+139
+00:10:26,000 --> 00:10:29,000
+There's three acceptable answers to this.
+
+140
+00:10:29,000 --> 00:10:32,000
+No, maybe, and probably.
+
+141
+00:10:32,000 --> 00:10:39,000
+Yes is not an acceptable answer to this question, because our prediction is what the philosopher Karl Popper would call
+
+142
+00:10:39,000 --> 00:10:44,000
+a defiable hypothesis, that it can be disproven, but it can never really be proven.
+
+143
+00:10:44,000 --> 00:10:48,000
+Like we may collect corroborating evidence out of fruit passing test cases,
+
+144
+00:10:48,000 --> 00:10:53,000
+or we may know that the software doesn't even compile, so there's no way it would ever run in production.
+
+145
+00:10:53,000 --> 00:10:58,000
+But we can never be sure how it's going to perform in production until we put it into production.
+
+146
+00:10:58,000 --> 00:11:02,000
+So what we're left with is having confidence in our predictions.
+
+147
+00:11:02,000 --> 00:11:07,000
+And hopefully we are somewhere along this continuum here between, you know,
+
+148
+00:11:07,000 --> 00:11:12,000
+no, it's definitely not going to work, or probably almost certainly it's going to work there.
+
+149
+00:11:12,000 --> 00:11:18,000
+And we can move ourselves along that and gain confidence through the more corroborating evidence we have
+
+150
+00:11:18,000 --> 00:11:23,000
+and the more lack of refuting evidence that we have, despite rigorous attempts to gain it,
+
+151
+00:11:23,000 --> 00:11:28,000
+the more confidence that we have before we release this into production.
+
+152
+00:11:28,000 --> 00:11:31,000
+So now we have to ask, how much confidence do we really need?
+
+153
+00:11:31,000 --> 00:11:35,000
+And now you might think, well, why not go fulfill confidence?
+
+154
+00:11:35,000 --> 00:11:39,000
+The problem is that gaining confidence costs effort and time, and that costs money.
+
+155
+00:11:39,000 --> 00:11:44,000
+And if it doesn't really matter if you get it wrong, why would you waste all that time and effort
+
+156
+00:11:44,000 --> 00:11:49,000
+trying to make sure that you're 99% right that it's going to succeed?
+
+157
+00:11:49,000 --> 00:11:54,000
+So I'm going to offer the following questions, kind of as a rubric, to think about how much confidence do we need.
+
+158
+00:11:54,000 --> 00:11:57,000
+And I'm going to deliberately avoid being quantitative about it.
+
+159
+00:11:57,000 --> 00:12:01,000
+I think you can mislead yourself with false precision.
+
+160
+00:12:01,000 --> 00:12:04,000
+But for these questions, the kind of answer to dry this through.
+
+161
+00:12:04,000 --> 00:12:07,000
+Do you need more confidence or do you need not so much confidence here?
+
+162
+00:12:07,000 --> 00:12:09,000
+So we'll start with the basics.
+
+163
+00:12:09,000 --> 00:12:11,000
+Can your software kill or injure someone?
+
+164
+00:12:11,000 --> 00:12:13,000
+And can it cause property damage?
+
+165
+00:12:13,000 --> 00:12:17,000
+If it's so, you need more confidence before you release this into production.
+
+166
+00:12:17,000 --> 00:12:19,000
+Can it cause large financial loss?
+
+167
+00:12:19,000 --> 00:12:22,000
+And are the damages that it could cause, are they irreversible here?
+
+168
+00:12:22,000 --> 00:12:25,000
+If so, then you need more confidence.
+
+169
+00:12:25,000 --> 00:12:29,000
+How critical is it that it works the very first time in production?
+
+170
+00:12:29,000 --> 00:12:34,000
+This kind of goes back to the criticality volume part from earlier that for a rocket,
+
+171
+00:12:34,000 --> 00:12:40,000
+the first time it's in production under production load is when it's lifting off from the cloud, flying into space.
+
+172
+00:12:40,000 --> 00:12:43,000
+Everything else is just changing.
+
+173
+00:12:43,000 --> 00:12:47,000
+So you need it to work that one and only one time.
+
+174
+00:12:47,000 --> 00:12:51,000
+For a lot of web services, we can take a lot of steps to reduce the criticality
+
+175
+00:12:51,000 --> 00:12:53,000
+if it's running the first time into production.
+
+176
+00:12:53,000 --> 00:12:56,000
+And there's been a kind of good produce that have been developed over the years.
+
+177
+00:12:56,000 --> 00:13:02,000
+So we have rolling deployments, feature flags, deploying to production before you release.
+
+178
+00:13:02,000 --> 00:13:04,000
+All of those techniques are really good.
+
+179
+00:13:04,000 --> 00:13:10,000
+And what they accomplish is reducing the criticality of that very first time it operates in production.
+
+180
+00:13:10,000 --> 00:13:14,000
+How closely can you test environment match production?
+
+181
+00:13:14,000 --> 00:13:19,000
+In our space, we talk about this a lot, about tests as you fly and flies as you test.
+
+182
+00:13:19,000 --> 00:13:24,000
+But it can be really hard for satellites in particular because we are operating in vacuum
+
+183
+00:13:24,000 --> 00:13:29,000
+and microgravity in a high radiation environment and thermal extremes.
+
+184
+00:13:29,000 --> 00:13:33,000
+And you can simulate some of that on the ground, but it's really hard to get it right
+
+185
+00:13:33,000 --> 00:13:35,000
+and to get it to test the complete package.
+
+186
+00:13:35,000 --> 00:13:43,000
+And so we need a lot more confidence going into it because we don't know exactly how it will behave in that environment.
+
+187
+00:13:43,000 --> 00:13:46,000
+How frequently does the software run in production?
+
+188
+00:13:46,000 --> 00:13:49,000
+This is on the volume side of that.
+
+189
+00:13:49,000 --> 00:13:54,000
+So it's not like if the software runs the same operation over and over and over,
+
+190
+00:13:54,000 --> 00:13:58,000
+you can gain confidence through each one of those operations over time.
+
+191
+00:13:58,000 --> 00:14:02,000
+But if it only does one, it operates one time, on that one time the rocket is launching,
+
+192
+00:14:02,000 --> 00:14:07,000
+or during the reentry sequence of the reentry vehicle, it's got to get it right that one time.
+
+193
+00:14:07,000 --> 00:14:11,000
+And so you need more confidence going in before you limit.
+
+194
+00:14:11,000 --> 00:14:17,000
+But how easy is it to roll out a change that made the difference for the light cell phones?
+
+195
+00:14:17,000 --> 00:14:22,000
+And it's something that should be really easy in the web software world, but it's unfortunately not.
+
+196
+00:14:22,000 --> 00:14:28,000
+And a lot of people do get stuck in that business cycle of their deployments are slow and painful,
+
+197
+00:14:28,000 --> 00:14:30,000
+so you do them less often.
+
+198
+00:14:30,000 --> 00:14:35,000
+You need higher confidence before you can deploy, spreading out your time, and it's a cycle on and on and on.
+
+199
+00:14:35,000 --> 00:14:41,000
+And when you're developing spacecraft, it can be very easy to de-scope on-orbit software update
+
+200
+00:14:41,000 --> 00:14:44,000
+because it's not a trivial thing to implement.
+
+201
+00:14:44,000 --> 00:14:49,000
+But in my opinion, it's one of the most valuable features that you can have on your spacecraft software.
+
+202
+00:14:49,000 --> 00:14:52,000
+How embarrassing is it if you need to roll out a fix?
+
+203
+00:14:52,000 --> 00:14:56,000
+So even if you have the fastest, easiest deployment cycle at all,
+
+204
+00:14:56,000 --> 00:15:00,000
+if you're, say, a financial institution or a password manager or provider,
+
+205
+00:15:00,000 --> 00:15:05,000
+having a bug in production can be devastatingly embarrassing to you.
+
+206
+00:15:05,000 --> 00:15:09,000
+And lastly, who do you need to convince that your software will be successful?
+
+207
+00:15:09,000 --> 00:15:14,000
+For most of us, that's just our teammates or our managers or others in our company.
+
+208
+00:15:14,000 --> 00:15:19,000
+But when you're dealing with safety-critical software, there's often regulatory oversight involved.
+
+209
+00:15:19,000 --> 00:15:23,000
+And remember, the regulator's job is not to help you be successful.
+
+210
+00:15:23,000 --> 00:15:29,000
+The regulator's charge is to protect the general public from you and from your potential failure.
+
+211
+00:15:29,000 --> 00:15:33,000
+And they do this by asking that you follow good engineering practices,
+
+212
+00:15:33,000 --> 00:15:38,000
+that you follow through on testing your software and your system to show that it will be safe.
+
+213
+00:15:38,000 --> 00:15:42,000
+And so they need to be able to see that you did what you said you were going to do,
+
+214
+00:15:42,000 --> 00:15:49,000
+and that involves leaving an audit file, so leaving evidence behind of your testing, of your review, of your analysis.
+
+215
+00:15:49,000 --> 00:15:54,000
+All right. So how do we at VARTA take approach to gaining confidence here?
+
+216
+00:15:54,000 --> 00:15:58,000
+Well, we've defined the follow-on lightweight process for our team.
+
+217
+00:15:58,000 --> 00:16:02,000
+We have two sets of eyes on every change, three if it's a high-impact change.
+
+218
+00:16:02,000 --> 00:16:07,000
+We put our emphasis on hardware-on-the-loop testing for all of our ranks for record.
+
+219
+00:16:07,000 --> 00:16:11,000
+We do have unit tests, and those are useful for kind of supplemental confidence.
+
+220
+00:16:11,000 --> 00:16:16,000
+So HIDL is really where it's at for the actual value of providing full confidence.
+
+221
+00:16:16,000 --> 00:16:19,000
+We run our full suite of hardware-on-the-loop tests regularly,
+
+222
+00:16:19,000 --> 00:16:24,000
+and we try as much as possible to avoid spending an effort trying to justify not running a test
+
+223
+00:16:24,000 --> 00:16:26,000
+because it's time consuming, right?
+
+224
+00:16:26,000 --> 00:16:32,000
+Now, we do have regular soak tests that have a long duration that cover well beyond the time
+
+225
+00:16:32,000 --> 00:16:36,000
+from when we would power up the satellite to when we would be able to perform a software test.
+
+226
+00:16:36,000 --> 00:16:39,000
+We have the ability to perform a software update.
+
+227
+00:16:39,000 --> 00:16:43,000
+And we have the philosophy of never doing anything for the first time on the vehicle.
+
+228
+00:16:43,000 --> 00:16:46,000
+Always do it in one of our test environments first.
+
+229
+00:16:46,000 --> 00:16:51,000
+All right. So what would our – how do we get to a hardware-on-the-loop test environment for our vehicle?
+
+230
+00:16:51,000 --> 00:16:55,000
+So I mentioned before that our spacecraft assistants have two pieces.
+
+231
+00:16:55,000 --> 00:16:57,000
+There's the capsule and the bus.
+
+232
+00:16:57,000 --> 00:17:01,000
+And so if we were going to design a hardware-on-the-loop test rig for the capsule,
+
+233
+00:17:01,000 --> 00:17:04,000
+we would start here looking at the actual satellite.
+
+234
+00:17:04,000 --> 00:17:07,000
+And then we would start designing interfaces between the capsule and the bus.
+
+235
+00:17:07,000 --> 00:17:11,000
+There's the data for commanding its telemetry between the capsule and the bus.
+
+236
+00:17:11,000 --> 00:17:15,000
+And then the bus provides power to the capsule to charge up the batteries
+
+237
+00:17:15,000 --> 00:17:18,000
+and to run in its normal operation while made.
+
+238
+00:17:18,000 --> 00:17:21,000
+Now, inside our capsule is what we call the capsule controller,
+
+239
+00:17:21,000 --> 00:17:24,000
+and that's supposed to be our main electronics board.
+
+240
+00:17:24,000 --> 00:17:27,000
+And it has two different separate computers on it,
+
+241
+00:17:27,000 --> 00:17:32,000
+which we refer to as either nodes or strings coming in interchangeably, so node A and node B.
+
+242
+00:17:32,000 --> 00:17:37,000
+And both of those computers can be wired up to different peripheral devices like a GPS or an IMU.
+
+243
+00:17:37,000 --> 00:17:41,000
+They can both fire the pyros to deploy the parachute.
+
+244
+00:17:41,000 --> 00:17:48,000
+And they can both run on the batteries on the capsule once the capsule is separated from the bus during the re-entry sequence.
+
+245
+00:17:48,000 --> 00:17:51,000
+To turn this into a hardware-on-the-loop test bed,
+
+246
+00:17:51,000 --> 00:17:54,000
+we would take all the components of our capsule and lay them out on the table.
+
+247
+00:17:54,000 --> 00:17:59,000
+So we would have our controller and we would have our GPS and our IMU also wired up on the table.
+
+248
+00:17:59,000 --> 00:18:05,000
+We'll substitute the pyro's spin for the actual pyro so that we can just see electrically where they were fired.
+
+249
+00:18:05,000 --> 00:18:09,000
+And then we have a test draft that can provide the data and power interfaces
+
+250
+00:18:09,000 --> 00:18:11,000
+through just a test server with the serial of course,
+
+251
+00:18:11,000 --> 00:18:17,000
+and then some commandable power supplies and switches to act as the simulated bus and battery power.
+
+252
+00:18:17,000 --> 00:18:20,000
+And this is what the table looks like in practice.
+
+253
+00:18:20,000 --> 00:18:27,000
+You see the rack there on the right, the table here, the sticker boards on the front of the table are the pyro spins,
+
+254
+00:18:27,000 --> 00:18:32,000
+and the controller is behind the gray panel right on the center of the screen.
+
+255
+00:18:33,000 --> 00:18:36,000
+So we want to run these regularly, and that means automatically.
+
+256
+00:18:36,000 --> 00:18:42,000
+And so an auto-hiddle, the kind of sequence of events that we would want to achieve in an auto-hiddle, looks something like this.
+
+257
+00:18:42,000 --> 00:18:44,000
+We're going to power up the controller.
+
+258
+00:18:44,000 --> 00:18:47,000
+We're going to flash the new version of the software and the test on to it.
+
+259
+00:18:47,000 --> 00:18:51,000
+We're going to start out some of our helper software, like our ground software for commanding.
+
+260
+00:18:51,000 --> 00:18:56,000
+We're going to run a series of test cases where these have their own specific setup and tear down steps.
+
+261
+00:18:56,000 --> 00:19:00,000
+Then we'll stop the ground software, power off the controller, and generate a report.
+
+262
+00:19:01,000 --> 00:19:05,000
+Now if this kind of sounds like a good use case for your PyTest picture, you are exactly right.
+
+263
+00:19:05,000 --> 00:19:10,000
+We make extensive use of, we implement a different PyTest to make extensive use of PyTest pictures.
+
+264
+00:19:10,000 --> 00:19:17,000
+Now if you're not familiar with PyTest pictures, they're a way of defining setup and tear down steps for your test cases.
+
+265
+00:19:17,000 --> 00:19:22,000
+And you define a function, and you can run setup steps up to a point where it either returns or it yields.
+
+266
+00:19:22,000 --> 00:19:28,000
+You can return or yield an object that the consumer of the fixture can then operate on later.
+
+267
+00:19:28,000 --> 00:19:36,000
+And if you have a yield statement in, then your function executes up to the yield, then your test case runs,
+
+268
+00:19:36,000 --> 00:19:42,000
+and then after your test case is completed, it comes back and runs the steps after the yield to perform a tear down step.
+
+269
+00:19:42,000 --> 00:19:44,000
+And so this is an example of one of our fixtures.
+
+270
+00:19:44,000 --> 00:19:50,000
+This is the one that starts by telemetry a decoder, and it's just alternating with the decoder, starting and it's on thread,
+
+271
+00:19:50,000 --> 00:19:57,000
+and then yielding it so that other fixtures and tests can work on it, and then afterwards stopping the thread and waiting for it to complete.
+
+272
+00:19:57,000 --> 00:20:02,000
+And another great part of PyTest is the execution order of these fixtures.
+
+273
+00:20:02,000 --> 00:20:08,000
+You define fixtures can depend on other fixtures, and test cases can depend on test cases or on other fixtures.
+
+274
+00:20:08,000 --> 00:20:13,000
+And so the execution order of all of them is determined by the dependency graph of these fixtures and tests.
+
+275
+00:20:14,000 --> 00:20:20,000
+So another aspect of PyTest fixtures that we make cutting use of is the scoping of fixtures.
+
+276
+00:20:20,000 --> 00:20:25,000
+So you can scope things so that they run either like once per session per run of PyTest.
+
+277
+00:20:25,000 --> 00:20:27,000
+And so we do that for flashing the controller.
+
+278
+00:20:27,000 --> 00:20:30,000
+We don't want to do that for every single test function.
+
+279
+00:20:30,000 --> 00:20:34,000
+We can run things at the module level, like when we want to switch a configuration,
+
+280
+00:20:34,000 --> 00:20:38,000
+so we put the capsule on battery power and run a series of tests that are in that file.
+
+281
+00:20:38,000 --> 00:20:44,000
+We can run it at the cost level, if you want to do a one-time fixture set up and then run a group of parameterized tests,
+
+282
+00:20:44,000 --> 00:20:46,000
+we'll all use that same fixture.
+
+283
+00:20:46,000 --> 00:20:50,000
+And we'd probably make plenty of use of the function level fixtures as well.
+
+284
+00:20:50,000 --> 00:20:53,000
+Here's another example of one of our fixtures.
+
+285
+00:20:53,000 --> 00:20:57,000
+This is the flash board fixture, and it demonstrates a couple of new features of PyTest.
+
+286
+00:20:57,000 --> 00:21:03,000
+One is that we can put in a command line flag and put PyTest, a custom flag, and tell it to not flash the board,
+
+287
+00:21:03,000 --> 00:21:09,000
+which is really useful if we're trying to iterate on tests and we don't want to spend the time re-flashing the controller every time we run the test.
+
+288
+00:21:09,000 --> 00:21:14,000
+And then you'll notice that all the rest of these fixtures that are being tested are being called as functions.
+
+289
+00:21:14,000 --> 00:21:20,000
+And this is another PyTest feature called factory fixtures that we make a lot of use of.
+
+290
+00:21:20,000 --> 00:21:30,000
+Now factory fixture is when your fixture returns a function that then the caller or the dependent on that fixture can then call at their will.
+
+291
+00:21:30,000 --> 00:21:34,000
+And a really nice feature of this is that now your fixture can depend on other fixtures.
+
+292
+00:21:34,000 --> 00:21:40,000
+So this one on the top, this one is the powering on the screen and the fixture on our capsule.
+
+293
+00:21:40,000 --> 00:21:49,000
+So it needs the switch relay session object to be able to connect a certain relay to power it on.
+
+294
+00:21:49,000 --> 00:21:55,000
+But the consumer of that, this kind of bus powering that calls those two, the power on for the two different strings,
+
+295
+00:21:55,000 --> 00:22:00,000
+it doesn't need to know that. It doesn't need to know the power on the screen depends on the real assistant.
+
+296
+00:22:00,000 --> 00:22:03,000
+It doesn't take any arguments. It just does what it's told.
+
+297
+00:22:03,000 --> 00:22:10,000
+And there's a really nice side benefit of that, which is that you can override fixtures to accomplish things like running on different test beds.
+
+298
+00:22:10,000 --> 00:22:17,000
+So the usefulness here is that we want to run the same test case on different test beds with different configurations.
+
+299
+00:22:17,000 --> 00:22:24,000
+We already talked about the capsule huddle where we have real capsule hardware, where we have a simulated bus and simulated power.
+
+300
+00:22:24,000 --> 00:22:29,000
+And then we can turn on power to the capsule by commanding these switches and power supplies.
+
+301
+00:22:29,000 --> 00:22:35,000
+You have a different test bed that's an integrated capsule and bus hardware in the loop that has real bus hardware going together.
+
+302
+00:22:35,000 --> 00:22:39,000
+Now a bus does respond to commands, but it's very different. It's not commanding a switch on a relay.
+
+303
+00:22:39,000 --> 00:22:44,000
+It's a different way of implementing the same request to power on the screen.
+
+304
+00:22:44,000 --> 00:22:50,000
+Or we have our developer boards that we have at our desk, which is kind of like huddle and it involves a simulated bus.
+
+305
+00:22:50,000 --> 00:22:55,000
+But we don't have the fancy commandable power supplies and switches. We just have a little hand operated switch.
+
+306
+00:22:55,000 --> 00:23:01,000
+So we can implement this by defining three different folders under our test cases.
+
+307
+00:23:01,000 --> 00:23:09,000
+One's for huddle, one for flat size, what we call the integrated capsule and bus environment, and our desk folder here.
+
+308
+00:23:09,000 --> 00:23:15,000
+We can define our test case once in one of those folders and then just import it into the other folders.
+
+309
+00:23:15,000 --> 00:23:21,000
+And then this is where the magic happens, where we define that same fixture three different times.
+
+310
+00:23:21,000 --> 00:23:28,000
+So the one on the top is the fixture for how we're running in our capsule huddle environment, where we want to turn on the switch to close that relay.
+
+311
+00:23:28,000 --> 00:23:34,000
+In the middle is how we would do it in the integrated software environment, where we need to send the command to the bus.
+
+312
+00:23:34,000 --> 00:23:37,000
+And on the bottom we just prompt the user to flip the switch.
+
+313
+00:23:37,000 --> 00:23:43,000
+And so now it makes it very easy for us to test the runnings test on these different environments.
+
+314
+00:23:43,000 --> 00:23:49,000
+Another feature of PyTest that we make the most sense of is parameterizing the test.
+
+315
+00:23:49,000 --> 00:23:54,000
+And the use case here is that our pyro systems have a lot of layers of redundancy.
+
+316
+00:23:54,000 --> 00:23:58,000
+So we have two controller nodes, I've already mentioned, different computers that both can fire the pyros.
+
+317
+00:23:58,000 --> 00:24:02,000
+They can both do it at the same time or they can individually do it if the other one is done.
+
+318
+00:24:02,000 --> 00:24:07,000
+And each of those nodes is also looking at a majority vote of three different separation computers.
+
+319
+00:24:07,000 --> 00:24:13,000
+So there's a lot of combinations of ways that we could either correctly fire or not fire the pyros that we want to test.
+
+320
+00:24:13,000 --> 00:24:19,000
+The solution for this is to parameterize those tests across all of those different combinations of inputs.
+
+321
+00:24:19,000 --> 00:24:24,000
+And we can do this like these tests here, where we can have different tests for running the full pyros,
+
+322
+00:24:24,000 --> 00:24:27,000
+like just a single string one or two out of three separations.
+
+323
+00:24:27,000 --> 00:24:35,000
+And we can implement all of that multiplication of it by just having different groups of inputs here to these same tests.
+
+324
+00:24:35,000 --> 00:24:40,000
+So it can really do a good job of decreasing the verbosity and repetition of each test sheet.
+
+325
+00:24:40,000 --> 00:24:45,000
+But sometimes that's not enough. Sometimes we need to still be true verbose there.
+
+326
+00:24:45,000 --> 00:24:48,000
+And this is where parameterized chips here can come into play.
+
+327
+00:24:48,000 --> 00:24:52,000
+So here we have, I guess we have two different computers on the Casper controller.
+
+328
+00:24:52,000 --> 00:24:58,000
+And so we end up wanting to run a lot the same tests on both of those nodes together.
+
+329
+00:24:58,000 --> 00:25:04,000
+And so does that mean I have to parameterize my entire, you know, every single test in my test suite?
+
+330
+00:25:04,000 --> 00:25:09,000
+No, I can parameterize one fixture and have the rest of my tests depend on that.
+
+331
+00:25:09,000 --> 00:25:14,000
+So here's an example of this one where we have this test loop that's here that runs, you know, depends on the node.
+
+332
+00:25:14,000 --> 00:25:20,000
+And then we have a node one that is a parameterized fixture that does cap A and cap B, the two different nodes over four.
+
+333
+00:25:20,000 --> 00:25:27,000
+And the nice part about this is that my test course now doesn't really have to know or care that it's actually depending on a parameterized fixture.
+
+334
+00:25:27,000 --> 00:25:32,000
+It just does it depending on a node. And as long as you pass in that string, it's happy.
+
+335
+00:25:32,000 --> 00:25:41,000
+Right. Moving out of some process, so one common pattern that a lot of our test pictures or test results have is that they send a command
+
+336
+00:25:41,000 --> 00:25:46,000
+and take some action and then wait for that action to take its effect and be observable in Client Tree.
+
+337
+00:25:46,000 --> 00:25:51,000
+And unlike say an HTTP request, there's no like blocking the response that we get.
+
+338
+00:25:51,000 --> 00:25:56,000
+So we send the command and we just have to wait until the frame of Client Tree changes.
+
+339
+00:25:56,000 --> 00:25:59,000
+And we don't want to wait and kind of fix them at all time.
+
+340
+00:25:59,000 --> 00:26:03,000
+We kind of like to see the Client Tree coming. We like to await the change.
+
+341
+00:26:03,000 --> 00:26:08,000
+And so we implemented this in a context manager that we called Client Tree Becker.
+
+342
+00:26:08,000 --> 00:26:15,000
+But when it enters the context, it starts accumulating the Client Tree that's being collected by a Client Tree processor running in a separate thread.
+
+343
+00:26:15,000 --> 00:26:21,000
+And now we can provide a generator that can yield all this collected Client Tree points and any future points as they arrive.
+
+344
+00:26:21,000 --> 00:26:26,000
+And we can wrap that with some things to help filter down to just the points that we care about.
+
+345
+00:26:26,000 --> 00:26:32,000
+And we further wrap that with some test assertion helpers that can say assert when we receive an acknowledgement message
+
+346
+00:26:32,000 --> 00:26:36,000
+or assert that a particular channel eventually equals a certain value.
+
+347
+00:26:36,000 --> 00:26:41,000
+And the code for this is really small. This part here is just a setup of the context manager here.
+
+348
+00:26:41,000 --> 00:26:46,000
+We're sending a deck because that's a thread phase list that we can attend to.
+
+349
+00:26:46,000 --> 00:26:50,000
+And then this generator that iterates over the points, this is this.
+
+350
+00:26:50,000 --> 00:26:58,000
+We're iterating over the deck and then once we hit the end, we'll sweep for a little bit and check in again to see if any points have been attended
+
+351
+00:26:58,000 --> 00:27:01,000
+until we run to our timeout.
+
+352
+00:27:01,000 --> 00:27:06,000
+And now we can just start using some of the magic of Python. So like make another generator that filters that down
+
+353
+00:27:06,000 --> 00:27:11,000
+to just the points that we want. We can call next on that to get the first matching point there.
+
+354
+00:27:11,000 --> 00:27:16,000
+And now our assertion helpers can just call the first and say if you want to check once you get an awk,
+
+355
+00:27:16,000 --> 00:27:20,000
+look for the first matching point that matches the acknowledgement.
+
+356
+00:27:20,000 --> 00:27:24,000
+And this makes for a really clean and simple API for a test office.
+
+357
+00:27:24,000 --> 00:27:29,000
+So you can instantiate the telemetry buffer, the context manager, execute your commands,
+
+358
+00:27:29,000 --> 00:27:33,000
+and just assert all your telemetry values coming back.
+
+359
+00:27:33,000 --> 00:27:38,000
+We use some PyTest extensions here. We use PyTest HTML for generating reports.
+
+360
+00:27:38,000 --> 00:27:42,000
+We've customized it a little bit with some links. I'll create Grafana here.
+
+361
+00:27:42,000 --> 00:27:48,000
+We can use other cool things with Grafana passwords here by putting some annotations about our test values here
+
+362
+00:27:48,000 --> 00:27:52,000
+that can actually give you the test value message.
+
+363
+00:27:52,000 --> 00:27:55,000
+And we do this through the magic of PyTest Hooks.
+
+364
+00:27:55,000 --> 00:28:01,000
+And specifically here, there are expectant interactions, our interactive hook that can make that annotation
+
+365
+00:28:01,000 --> 00:28:04,000
+and send it out to the telegraph.
+
+366
+00:28:04,000 --> 00:28:08,000
+Okay. So this is kind of where our current test suite is at right now.
+
+367
+00:28:08,000 --> 00:28:12,000
+And we've been using this for about a year and we've been very happy with it.
+
+368
+00:28:12,000 --> 00:28:15,000
+We have plenty of future improvements that we could make.
+
+369
+00:28:15,000 --> 00:28:20,000
+One, I'd like to start adding some more leveraging these annotations more.
+
+370
+00:28:20,000 --> 00:28:24,000
+And so we could start with testing test assertions and annotations as well.
+
+371
+00:28:24,000 --> 00:28:26,000
+We actually experimented with that just a little bit.
+
+372
+00:28:26,000 --> 00:28:32,000
+And the problem was we had a really high rate of assertions sometimes that could overwhelm the telegraph
+
+373
+00:28:32,000 --> 00:28:36,000
+and just do it better. So we'll figure out how to solve that one day.
+
+374
+00:28:36,000 --> 00:28:40,000
+I'd like to add a log handler to create the Grafana annotations from log statements
+
+375
+00:28:40,000 --> 00:28:44,000
+so that people who are reviewing data can follow along the sequence of events
+
+376
+00:28:44,000 --> 00:28:46,000
+by looking at the timeline.
+
+377
+00:28:46,000 --> 00:28:50,000
+I see data review fixtures or decorators is something we're very interested in.
+
+378
+00:28:50,000 --> 00:28:54,000
+And this is for not just asserting on the specific condition that the test goes to use,
+
+379
+00:28:54,000 --> 00:29:02,000
+but for checking other health studies as well, like do we reboot accidentally or generally middle of a test
+
+380
+00:29:02,000 --> 00:29:07,000
+or did our CPU spike or something like that, just not specific to the particular test.
+
+381
+00:29:07,000 --> 00:29:11,000
+And we might end up implementing that as some form of a fixture or decorator.
+
+382
+00:29:11,000 --> 00:29:16,000
+By the way, I'd love to start collecting code coverage on our actual capsule software while it's running in Hittles.
+
+383
+00:29:16,000 --> 00:29:21,000
+We already collect code coverage on our ground software because that's all written in Python.
+
+384
+00:29:21,000 --> 00:29:23,000
+And coverage.py is awesome.
+
+385
+00:29:23,000 --> 00:29:26,000
+We'll probably do some custom HTML reports at some point.
+
+386
+00:29:26,000 --> 00:29:30,000
+I'd love to start embeddings linked to Grafana directly in the test output.
+
+387
+00:29:30,000 --> 00:29:33,000
+And then lastly, our test suite has been growing.
+
+388
+00:29:33,000 --> 00:29:35,000
+It takes a lot longer to run.
+
+389
+00:29:35,000 --> 00:29:40,000
+And so we want to know where is that time going, you know, the ways we could maybe shorten it or optimize some of our tests.
+
+390
+00:29:40,000 --> 00:29:47,000
+And recently started experimenting a week ago with PyTest Open telemetry that can produce a nice expand part here
+
+391
+00:29:47,000 --> 00:29:52,000
+of a bigger UI telling us where the time of our test cases are going.
+
+392
+00:29:52,000 --> 00:29:55,000
+So that is probably something that we'll be looking at much closer this summer.
+
+393
+00:29:55,000 --> 00:29:58,000
+And I think I am exactly on the time here.
+
+394
+00:29:58,000 --> 00:30:03,000
+So thank you for coming. I hope this was interesting.
+
+395
+00:30:03,000 --> 00:30:08,000
+So I'll be around in the hall if anybody wants to ask questions or talk more.
+
+396
+00:30:08,000 --> 00:30:11,000
+So happy to do so. Thanks.
+

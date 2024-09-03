@@ -1,0 +1,1004 @@
+1
+00:00:00,000 --> 00:00:05,000
+Alright, everyone, let's get started.
+
+2
+00:00:05,000 --> 00:00:10,000
+Hello, everybody. My name is Brandt Bunker.
+
+3
+00:00:10,000 --> 00:00:15,000
+Want to get my slides up?
+
+4
+00:00:15,000 --> 00:00:20,000
+Hello, everybody. My name is Brandt Bunker, and today I'm going to be sharing how I'm
+
+5
+00:00:20,000 --> 00:00:25,000
+responsible for making the CPython 3.11 especially fast. Specifically, I'm going to be talking about the
+
+6
+00:00:25,000 --> 00:00:30,000
+improvements in the new specializing adaptive interpreter. Before we get started, a little bit about me.
+
+7
+00:00:30,000 --> 00:00:35,000
+I started using Python about six years ago, and in the
+
+8
+00:00:35,000 --> 00:00:40,000
+years since I found and fixed my first bug, joined Python's triage team, became
+
+9
+00:00:40,000 --> 00:00:45,000
+a core developer, joined the FasterC Python team at Microsoft, where I work now, and
+
+10
+00:00:45,000 --> 00:00:50,000
+we've been making Python faster for the last year and a half or so. And I'm going to share
+
+11
+00:00:50,000 --> 00:00:55,000
+some of that today with you. One quick note before we get started.
+
+12
+00:00:55,000 --> 00:01:00,000
+Basically, this entire presentation is about bytecode. These are all implementation details of the CPython
+
+13
+00:01:00,000 --> 00:01:05,000
+interpreter. You don't need to know any of this for your code to get faster. Just upgrade to 3.11, and you'll probably see a
+
+14
+00:01:05,000 --> 00:01:10,000
+performance improvement. But I think that the way that the new interpreter works is really, really
+
+15
+00:01:10,000 --> 00:01:15,000
+interesting, and I want to share it with you today. Prior knowledge of bytecode is not
+
+16
+00:01:15,000 --> 00:01:20,000
+necessary for this talk. I'm going to go through a little bit of how it works. I'm going to just draw a little
+
+17
+00:01:20,000 --> 00:01:25,000
+page before we get into what we've actually changed in 3.11.
+
+18
+00:01:25,000 --> 00:01:30,000
+If you're not familiar with bytecode, it's basically assembly language for the Python
+
+19
+00:01:30,000 --> 00:01:35,000
+interpreter. And I think that it's best expressed with an example. So this is my
+
+20
+00:01:35,000 --> 00:01:40,000
+example point class. It has two instance attributes, x and y, which are floating
+
+21
+00:01:40,000 --> 00:01:45,000
+values, and it has one method, shifted, which basically returns a new instance of the same class,
+
+22
+00:01:45,000 --> 00:01:50,000
+shifted by the given x and y values. So throughout this talk, we're going to be looking at
+
+23
+00:01:50,000 --> 00:01:55,000
+two lines from my shifted method, adjusting the y value and then calling type on some.
+
+24
+00:01:55,000 --> 00:02:00,000
+So if you've never looked at bytecode before, it's very easy to do.
+
+25
+00:02:00,000 --> 00:02:05,000
+There's a standard library module, this assembler, called dis, the s, and you can call that on any
+
+26
+00:02:05,000 --> 00:02:10,000
+function, it will show you the bytecode for that function. So if you call dis on our shifted method,
+
+27
+00:02:10,000 --> 00:02:15,000
+you'll see something like this. And this is bytecode.
+
+28
+00:02:15,000 --> 00:02:20,000
+So I'm just going to walk verbally through how Python executes this bytecode,
+
+29
+00:02:20,000 --> 00:02:25,000
+just so we can kind of have a common understanding of what exactly is going on when
+
+30
+00:02:25,000 --> 00:02:30,000
+these two lines are being run by this Python. And as many of you may know, I don't see
+
+31
+00:02:30,000 --> 00:02:35,000
+Python's bytecode used as a stack-based virtual machine, so I'm just going to show the stack here on the right.
+
+32
+00:02:35,000 --> 00:02:40,000
+So this starts by executing two load fast
+
+33
+00:02:40,000 --> 00:02:45,000
+instructions. These load fast local variables dy and self, pushing them onto the stack.
+
+34
+00:02:45,000 --> 00:02:50,000
+Then the load adder instruction loads the y attribute of itself,
+
+35
+00:02:50,000 --> 00:02:55,000
+puts on stack, and the binary op instruction adds them together.
+
+36
+00:02:55,000 --> 00:03:00,000
+Finally, the store fast instruction pops the top of the stack off and stores it in the fast local variable y.
+
+37
+00:03:00,000 --> 00:03:05,000
+And we've just executed the first set.
+
+38
+00:03:05,000 --> 00:03:10,000
+For the second line, it starts by loading the global main type, loading the fast local variable
+
+39
+00:03:10,000 --> 00:03:15,000
+self again, and the pre-call and call instructions work together to call type on self,
+
+40
+00:03:15,000 --> 00:03:20,000
+and then finally we store the result in class.
+
+41
+00:03:20,000 --> 00:03:25,000
+So, what do we do differently in 3.11?
+
+42
+00:03:25,000 --> 00:03:30,000
+What makes it so much faster? The whole process starts with something called
+
+43
+00:03:30,000 --> 00:03:35,000
+quick name. So, essentially, actor code has been running for some time
+
+44
+00:03:35,000 --> 00:03:40,000
+and it's warmed up. And warm here means it's been run more than a handful of times.
+
+45
+00:03:40,000 --> 00:03:45,000
+We don't want to waste time optimizing code that's never run at all or is only run once or twice.
+
+46
+00:03:45,000 --> 00:03:50,000
+So, we wait until your code has actually gotten hot for some definition of hot.
+
+47
+00:03:50,000 --> 00:03:55,000
+So, if you want to view quickened bytecode, and I'll explain what quickening is in a second,
+
+48
+00:03:55,000 --> 00:04:00,000
+but if you want to view the quickened bytecode, you can pass adapted equals true
+
+49
+00:04:00,000 --> 00:04:05,000
+to any of the disabilities. And this will show you the new bytecode as it's changing,
+
+50
+00:04:05,000 --> 00:04:10,000
+and it does change, which is pretty cool.
+
+51
+00:04:10,000 --> 00:04:15,000
+So, there are a couple of steps involved in quickening.
+
+52
+00:04:15,000 --> 00:04:20,000
+Basically, after we decide that your code is hot and worthy of optimization,
+
+53
+00:04:20,000 --> 00:04:25,000
+we perform a couple of simple transformations on bytecode.
+
+54
+00:04:25,000 --> 00:04:30,000
+The first of these is inserting what are called super instructions. These are pretty straightforward.
+
+55
+00:04:30,000 --> 00:04:35,000
+It's basically taking two related instructions, for example, these two load fast instructions at the start of the stream,
+
+56
+00:04:35,000 --> 00:04:40,000
+into one instruction. So, rather than executing two instructions to load those fast local variables,
+
+57
+00:04:40,000 --> 00:04:45,000
+you can instead load them simultaneously. This is pretty powerful.
+
+58
+00:04:45,000 --> 00:04:50,000
+It results in a real speed up, but that's pretty much it. There's not much more interesting stuff
+
+59
+00:04:50,000 --> 00:04:55,000
+that happens with super instructions. What I'm going to spend the rest of today talking about are
+
+60
+00:04:55,000 --> 00:05:00,000
+adaptive instructions, because these are really, really cool.
+
+61
+00:05:00,000 --> 00:05:05,000
+I'm going to show you a couple of examples of adaptive instructions in this specific example.
+
+62
+00:05:05,000 --> 00:05:10,000
+These are five adaptive instructions that are inserted during quickening. So, you can see that we've replaced
+
+63
+00:05:10,000 --> 00:05:15,000
+load adder with load adder adaptive, binary output, binary output adaptive, and so on.
+
+64
+00:05:15,000 --> 00:05:20,000
+These adaptive instructions are basically just like their non-adaptive counterparts,
+
+65
+00:05:20,000 --> 00:05:25,000
+except that they can specialize themselves and turn themselves into
+
+66
+00:05:25,000 --> 00:05:30,000
+optimized versions, depending on what exactly they're doing. So, I know that's a lot,
+
+67
+00:05:30,000 --> 00:05:35,000
+but I think it's best to walk through the examples so we can actually see specialization in active.
+
+68
+00:05:35,000 --> 00:05:40,000
+So, what is a specialized instruction? Well, let's consider load adder adaptive.
+
+69
+00:05:40,000 --> 00:05:45,000
+Attribute loads in Python are actually surprisingly complex.
+
+70
+00:05:45,000 --> 00:05:50,000
+There are a ton of different places that an attribute could come from. You can be loading a name off of a module,
+
+71
+00:05:50,000 --> 00:05:55,000
+a class variable off of a class, a method off of a class. You could be going through all sorts of descriptors
+
+72
+00:05:55,000 --> 00:06:00,000
+and magic methods and all sorts of crazy stuff.
+
+73
+00:06:00,000 --> 00:06:05,000
+But the simplest example is just loading an instance attribute off of an instance.
+
+74
+00:06:05,000 --> 00:06:10,000
+And that's exactly what we're doing in this case. We're just loading the y attribute out of an instance dictionary.
+
+75
+00:06:10,000 --> 00:06:15,000
+So, load adder adaptive, while it's running, will realize that
+
+76
+00:06:15,000 --> 00:06:20,000
+this is the specific case that we're taking and that all of that other stuff, all the other places that an attribute
+
+77
+00:06:20,000 --> 00:06:25,000
+could possibly come from, don't actually matter here. So, it will turn itself into load adder instance value.
+
+78
+00:06:25,000 --> 00:06:30,000
+And this is a specialized instruction.
+
+79
+00:06:30,000 --> 00:06:35,000
+Essentially, it does the attribute load, but it only contains the fast path for this common case,
+
+80
+00:06:35,000 --> 00:06:40,000
+which is for an instance attribute coming out of an instance dictionary.
+
+81
+00:06:40,000 --> 00:06:45,000
+So, what does load adder instance value actually do?
+
+82
+00:06:45,000 --> 00:06:50,000
+It starts with a couple of checks. The first thing it does is it checks if the class is the same thing as last time.
+
+83
+00:06:50,000 --> 00:06:55,000
+If so, then it will also check if the object's instance dictionary keys are the same as last time.
+
+84
+00:06:55,000 --> 00:07:00,000
+So, think about what we're doing here. Every time you look up an instance attribute on a Python object,
+
+85
+00:07:00,000 --> 00:07:05,000
+we first need to check the class to see if there's a descriptor, and then we need to check the instance attribute.
+
+86
+00:07:05,000 --> 00:07:10,000
+That's two dictionary lookups. And dictionary lookups are fast, but they still cost something.
+
+87
+00:07:10,000 --> 00:07:15,000
+So, what we're doing here is these are very key checks to perform in Python.
+
+88
+00:07:15,000 --> 00:07:20,000
+And so, we are able to skip both the dictionary lookups and just assert that,
+
+89
+00:07:20,000 --> 00:07:25,000
+or not assert, but check that the class is the same as last time, check if the dict keys are the same as last time.
+
+90
+00:07:25,000 --> 00:07:30,000
+And if so, we don't actually need to perform any dictionary lookups.
+
+91
+00:07:30,000 --> 00:07:34,000
+We can reach directly into the dictionary values at the same offset as last time.
+
+92
+00:07:34,000 --> 00:07:38,000
+See if the hash table lookup entirely, collision resolution, all of that.
+
+93
+00:07:38,000 --> 00:07:43,000
+Now, one thing that's important to note here is if either of these checks fail, this optimization is no longer valid.
+
+94
+00:07:43,000 --> 00:07:49,000
+In that case, we don't want to crash or raise an exception or produce an incorrect result, right?
+
+95
+00:07:49,000 --> 00:07:54,000
+Like, we still need to actually do the right thing because Python is incredibly dynamic and we need to respect that.
+
+96
+00:07:55,000 --> 00:08:00,000
+So, if either of those checks fail, then we fall back on the regular load attribute slowback.
+
+97
+00:08:00,000 --> 00:08:05,000
+But in the event, the likely event, that they still hold true, we're able to take this very, very fast path instead.
+
+98
+00:08:09,000 --> 00:08:12,000
+A somewhat simpler example is binary op-adaptive.
+
+99
+00:08:12,000 --> 00:08:17,000
+When this runs, since it's running on floating point values in our example, it will specialize itself into binary op-ad float,
+
+100
+00:08:17,000 --> 00:08:22,000
+which does what it sounds like.
+
+101
+00:08:22,000 --> 00:08:27,000
+It contains two checks as well. First, it will check that the left-hand side is a floating point object.
+
+102
+00:08:27,000 --> 00:08:31,000
+Then it will check that the right-hand side is a floating point object.
+
+103
+00:08:31,000 --> 00:08:38,000
+If either of these checks fail, we go back to the regular add machinery, which is actually, again, surprisingly complex.
+
+104
+00:08:38,000 --> 00:08:46,000
+We have a very object-oriented double dispatching mechanism for operators if you're ever writing like an add or an R add implementation before.
+
+105
+00:08:46,000 --> 00:08:53,000
+However, if both of these are true, we can skip all of that and just add the raw floating point values together in C.
+
+106
+00:08:53,000 --> 00:08:58,000
+So this is about as fast as this could possibly be while still dealing with Python objects.
+
+107
+00:09:01,000 --> 00:09:03,000
+Another example is load global adaptive.
+
+108
+00:09:03,000 --> 00:09:09,000
+This is very similar to the load adder instance value optimization.
+
+109
+00:09:09,000 --> 00:09:18,000
+So again, for every load global, and this is again surprisingly expensive, every time we load, for example, the type built in or the land built in or the list built in,
+
+110
+00:09:18,000 --> 00:09:21,000
+there are two dictionary lookups that we can have in there.
+
+111
+00:09:21,000 --> 00:09:26,000
+First, we check the global namespace to see if type in this case has been shattered.
+
+112
+00:09:26,000 --> 00:09:34,000
+If not, which is the common case, we then look in the built-ins namespace, which is another dictionary, and perform that lookup, which will succeed.
+
+113
+00:09:34,000 --> 00:09:46,000
+So we can take a page out of load adder instance values, look here, and try to specialize load global built-in for the common case where the global dictionary keys are the same as last time,
+
+114
+00:09:46,000 --> 00:09:53,000
+meaning that type hasn't been shattered so we can skip that lookup, and that the built-in dictionary keys are the same as last time,
+
+115
+00:09:53,000 --> 00:09:57,000
+meaning that type is where we expect to be in the dictionary's internal layout.
+
+116
+00:09:58,000 --> 00:10:05,000
+If so, again, we can skip both of those dictionary lookups and reach directly into the built-in values of the same spaces last time.
+
+117
+00:10:05,000 --> 00:10:17,000
+Finally, and this is probably one of my favorite specializations, the pre-call and call adaptive instructions together combine into pre-call no-kw type one.
+
+118
+00:10:17,000 --> 00:10:20,000
+I promise I wasn't in charge of naming this one.
+
+119
+00:10:20,000 --> 00:10:27,000
+This one is really, really powerful. If you know anything about Python, you know that calls can be expensive, even if they're implemented in C or if they're implemented in Python.
+
+120
+00:10:27,000 --> 00:10:36,000
+So doing something like calling type is doing a lot more than actually just getting the type of the object. You're actually performing a call in Python.
+
+121
+00:10:36,000 --> 00:10:43,000
+However, type is called often enough that it's worth having its own specialization for.
+
+122
+00:10:43,000 --> 00:10:50,000
+And what this specialization does is really simple. It will check if the object that we're calling is still type.
+
+123
+00:10:50,000 --> 00:10:56,000
+If not, then okay, something crazy happens. It wants monkey patching type or something for a test maybe.
+
+124
+00:10:56,000 --> 00:11:00,000
+So we still need to fall back on the regular call path and do the right thing.
+
+125
+00:11:00,000 --> 00:11:09,000
+But if not, we can just get the argument's cost. If you've ever written a Python C extension, you know that this is an incredibly simple operation and it's much, much cheaper than that.
+
+126
+00:11:09,000 --> 00:11:19,000
+So after all these instructions are specialized, you can see that our Python looks very different and actually tells a very vivid story about the layout of the memory that we're working with,
+
+127
+00:11:19,000 --> 00:11:26,000
+the greater context that we're working within, and the data types that are flowing through our program.
+
+128
+00:11:26,000 --> 00:11:35,000
+And this doesn't stop here. As you're working on your Python, you're actually going to see a lot of the code that's being used in Python.
+
+129
+00:11:35,000 --> 00:11:41,000
+This doesn't stop here. As your program is running, it will continue to adapt.
+
+130
+00:11:41,000 --> 00:11:49,000
+So for example, let's say that in my point class, I start using integers instead of floats at some point in my program.
+
+131
+00:11:49,000 --> 00:11:57,000
+This binary add float instruction will repeatedly fail those initial checks that they're operating upon floating point values.
+
+132
+00:11:57,000 --> 00:12:02,000
+So we'll always be falling back to the slow path for this operation.
+
+133
+00:12:02,000 --> 00:12:12,000
+After that has happened enough times, the binary op add float instruction will go up its hands and just give up, and it will turn itself back into binary op adaptive.
+
+134
+00:12:12,000 --> 00:12:20,000
+At which point the process repeats itself and binary op adaptive will now replace itself with binary op add int,
+
+135
+00:12:20,000 --> 00:12:25,000
+which is exactly the same as binary op add float that specialize for integer values instead of floating point ones.
+
+136
+00:12:25,000 --> 00:12:31,000
+So this is what we mean by specializing adaptive interpreter, the specialization adapt to your code over time.
+
+137
+00:12:31,000 --> 00:12:39,000
+And if you look at this, what we've essentially done is we've taken a bunch of very expensive generic operations,
+
+138
+00:12:39,000 --> 00:12:46,000
+and we've inlined path paths for every single one of them specific to your code and changing over time as your code changes.
+
+139
+00:12:46,000 --> 00:12:53,000
+This is really, really powerful. It may seem like a bunch of small localized changes, which it is,
+
+140
+00:12:53,000 --> 00:13:03,000
+but combined they can be really, really meaningful. So in this specific example, the point shifting method in 311 versus 310 gets just under twice as fast.
+
+141
+00:13:03,000 --> 00:13:12,000
+So almost a 100% improvement speed. Now that's obviously on the upper end of what you can expect when upgrading just the 310 to 311.
+
+142
+00:13:12,000 --> 00:13:16,000
+I obviously chose the example because it specializes very, very well.
+
+143
+00:13:16,000 --> 00:13:23,000
+But I think it does kind of show just how powerful adding together all these little localized optimization can be.
+
+144
+00:13:23,000 --> 00:13:30,000
+So you may have noticed that I mentioned that we're caching and remembering a lot of information.
+
+145
+00:13:30,000 --> 00:13:37,000
+For example, what the last type scene was, what the last dictionary keys that we saw were, et cetera.
+
+146
+00:13:37,000 --> 00:13:43,000
+Where do we keep all this? The answer is we keep it in the bytecode itself.
+
+147
+00:13:43,000 --> 00:13:52,000
+So we use inline caches. These are hidden by default, but if you pass showCaches equals truth to any disutility,
+
+148
+00:13:52,000 --> 00:14:00,000
+you'll see that we actually have quite a few of these inline caches where we have things like the authorization counters, type and dictionary key versions,
+
+149
+00:14:00,000 --> 00:14:08,000
+and indexes, offsets into dictionaries. But honestly, you shouldn't really have to worry about caches.
+
+150
+00:14:08,000 --> 00:14:14,000
+So that's why we hide them by default. In fact, as Python programmers, people who are just using Python,
+
+151
+00:14:14,000 --> 00:14:18,000
+you shouldn't really have to worry about adaptive instructions at all.
+
+152
+00:14:18,000 --> 00:14:25,000
+The whole point of these instructions, as I reiterated, was essentially for them to be totally transparent.
+
+153
+00:14:25,000 --> 00:14:33,000
+We always need to do the right thing, even in the face of highly dynamic code. That's what makes Python Python, right?
+
+154
+00:14:33,000 --> 00:14:40,000
+And so the only way that you should actually be able to tell that this stuff is happening without actually looking at the disassembler itself
+
+155
+00:14:40,000 --> 00:14:48,000
+is just with the stopwatch. I'm saying, oh, wow, I saw a 25% improvement maybe when upgrading from 3.10 to 3.11.
+
+156
+00:14:50,000 --> 00:14:56,000
+So you shouldn't have to care about it. But what if you're like me and you are really, really curious?
+
+157
+00:14:56,000 --> 00:15:04,000
+You see that your point-shifted method got 100% faster. Where did it get faster? What is Python doing more efficiently?
+
+158
+00:15:04,000 --> 00:15:15,000
+How can I see what's actually gotten better? You may be tempted to, as I've mentioned, pull up this and look at the bytecode for your shifted method.
+
+159
+00:15:15,000 --> 00:15:21,000
+But even as someone who spends all day staring at bytecode disassemblies, this is super overwhelming.
+
+160
+00:15:21,000 --> 00:15:28,000
+And I can't tell at a glance what the interpreter is specializing well and what it's failing to specialize.
+
+161
+00:15:28,000 --> 00:15:33,000
+What would be really nice is if we had some way of mapping this bytecode back to source code.
+
+162
+00:15:33,000 --> 00:15:40,000
+And if we had some way of saying, okay, these are the places where things are specializing inappropriately, and here's where they're failing to specialize.
+
+163
+00:15:40,000 --> 00:15:45,000
+If you're like me and you want a tool like that, you're in luck, because I made that tool.
+
+164
+00:15:46,000 --> 00:15:53,000
+What you're looking at is a screenshot from a tool that I wrote called Specialist. And it's really easy to use.
+
+165
+00:15:53,000 --> 00:15:59,000
+Basically, instead of running your code with Python 3.11, you run it using Specialist on the same line.
+
+166
+00:15:59,000 --> 00:16:06,000
+It will run your code at full speed, and then after it's done, it will open up a web browser and display this colored HTML output.
+
+167
+00:16:06,000 --> 00:16:13,000
+And you can actually see just at a glance here that everything is specializing extremely well except the last line there, which is bright red.
+
+168
+00:16:13,000 --> 00:16:22,000
+So red is bad. And the reason that that line in particular is red, if you're curious, is because we actually don't specialize calls to Python classes.
+
+169
+00:16:22,000 --> 00:16:29,000
+It's a bit trickier to do than specializing other sorts of calls, but it is something that we're working on.
+
+170
+00:16:29,000 --> 00:16:35,000
+So Specialist is available on PIP. If you haven't downloaded Python 3.11 yet, I strongly recommend it.
+
+171
+00:16:35,000 --> 00:16:41,000
+Your first PIP install can be PIP install Specialist. It's also available on GitHub. You can check it out.
+
+172
+00:16:41,000 --> 00:16:45,000
+It's Bram Pucher. That's me. Slash Specialist.
+
+173
+00:16:45,000 --> 00:16:53,000
+So that's all of the Python 3.11 stuff. What are we doing to improve that in Python 3.12?
+
+174
+00:16:53,000 --> 00:17:00,000
+I'm going to show you a couple of little sneak peeks at what you might be able to find in 3.12 regarding these improvements.
+
+175
+00:17:00,000 --> 00:17:08,000
+So one thing that we've done is we are doing faster coding. So I'm going to illustrate this again with our same example.
+
+176
+00:17:09,000 --> 00:17:15,000
+I'm going to put the Python 3.11 code on the left and the Python 3.11 bytecode on the right.
+
+177
+00:17:15,000 --> 00:17:21,000
+Now, the quickening process has been improved to the point where we don't actually have a dedicated quickening step anymore.
+
+178
+00:17:21,000 --> 00:17:27,000
+And I'll kind of show you what I mean by this. So if you look at the bytecode comparison side by side,
+
+179
+00:17:27,000 --> 00:17:35,000
+probably the first thing you'll notice is that the super instructions are already inserted into the Python 3.12 code before it's even written.
+
+180
+00:17:35,000 --> 00:17:40,000
+So this is really cool. This means from the very first moment that your program starts executing,
+
+181
+00:17:40,000 --> 00:17:44,000
+it doesn't need to warm up to get the benefit of super instructions.
+
+182
+00:17:44,000 --> 00:17:48,000
+We're actually able to insert them statically, essentially at compile time,
+
+183
+00:17:48,000 --> 00:17:53,000
+because it doesn't actually matter what they're operating on in this case.
+
+184
+00:17:53,000 --> 00:17:59,000
+All that matters is you have two really fast instructions in a row. And that's something that we can do very easily.
+
+185
+00:17:59,000 --> 00:18:03,000
+Another thing that you'll probably notice by looking at this is that we've also simplified the call sequence a bit.
+
+186
+00:18:03,000 --> 00:18:07,000
+So instead of two instructions, it's now one.
+
+187
+00:18:07,000 --> 00:18:16,000
+So when you actually start running this code, after just two executions, the Python 3.12 code is fully specialized.
+
+188
+00:18:16,000 --> 00:18:21,000
+One thing you may notice is that we skipped the adaptive instructions entirely.
+
+189
+00:18:21,000 --> 00:18:27,000
+So there was not that step where we actually needed to walk over the bytecode and insert the adaptive instructions.
+
+190
+00:18:28,000 --> 00:18:34,000
+Instead, the basic instructions, the ones we saw at the beginning, are the adaptive instructions in 3.12.
+
+191
+00:18:34,000 --> 00:18:36,000
+So there's no need to insert them separately.
+
+192
+00:18:36,000 --> 00:18:43,000
+And one kind of cool thing that falls out of this is rather than an entire function warming up as a code object,
+
+193
+00:18:43,000 --> 00:18:50,000
+individual bytecode instructions now warm up, which means that if you have a hot loop or a hot path for your code,
+
+194
+00:18:50,000 --> 00:18:56,000
+those instructions will specialize more quickly than other ones, which is probably what you'd want.
+
+195
+00:18:56,000 --> 00:19:00,000
+You don't waste time turning a dead code into adaptive instructions.
+
+196
+00:19:01,000 --> 00:19:07,000
+Compare this to 3.11, where you need to call point.50 about eight times before you even get your super instruction.
+
+197
+00:19:07,000 --> 00:19:11,000
+And then we finally insert all the adaptive instructions.
+
+198
+00:19:11,000 --> 00:19:18,000
+And it's not until after the eighth call that you actually do get to see these fully specialized instructions,
+
+199
+00:19:18,000 --> 00:19:21,000
+at which point they're both basically the exact same.
+
+200
+00:19:22,000 --> 00:19:25,000
+So that's faster quickening, or rather no quickening at all.
+
+201
+00:19:25,000 --> 00:19:26,000
+What else have we done?
+
+202
+00:19:26,000 --> 00:19:29,000
+Well, we've been hard at work adding more specializations.
+
+203
+00:19:29,000 --> 00:19:34,000
+So these are all the specializations that are present in 3.11 and 3.12.
+
+204
+00:19:35,000 --> 00:19:36,000
+But we've added more.
+
+205
+00:19:37,000 --> 00:19:41,000
+So the ones we've added fall into a couple general categories.
+
+206
+00:19:41,000 --> 00:19:47,000
+One thing that we have gotten better at specializing is dynamic attribute accesses.
+
+207
+00:19:47,000 --> 00:19:53,000
+So things like underget attribute and properties are now specialized now, which is really, really cool.
+
+208
+00:19:53,000 --> 00:20:00,000
+We also specialize in iteration in for loops over the most common types of iterators,
+
+209
+00:20:00,000 --> 00:20:03,000
+which are lists, couples, ranges, and generators.
+
+210
+00:20:03,000 --> 00:20:06,000
+So you should see an improvement there as well.
+
+211
+00:20:06,000 --> 00:20:13,000
+Finally, we also included specialization for yield from generators and await list code routines.
+
+212
+00:20:14,000 --> 00:20:18,000
+I should also mention we have two open PRs for new specializations.
+
+213
+00:20:18,000 --> 00:20:21,000
+They might get in before the 3.12 beta freeze.
+
+214
+00:20:21,000 --> 00:20:29,000
+They would be for calling Python classes and for loading attributes and methods off of super objects.
+
+215
+00:20:29,000 --> 00:20:30,000
+The super one is kind of cool.
+
+216
+00:20:30,000 --> 00:20:36,000
+It basically makes it so that calling super has no overhead, which is really neat.
+
+217
+00:20:36,000 --> 00:20:38,000
+That one's thanks to Carl Meyer at Instagram.
+
+218
+00:20:40,000 --> 00:20:45,000
+So those are the additional specializations that you can expect in 3.12,
+
+219
+00:20:45,000 --> 00:20:48,000
+in addition to a couple others that we're hoping we'll be able to get in.
+
+220
+00:20:48,000 --> 00:20:52,000
+Finally, we've been hard at work shrinking the inline bytecode caches.
+
+221
+00:20:52,000 --> 00:20:57,000
+You saw how we had many of those cache entries that accompanied the instructions.
+
+222
+00:20:57,000 --> 00:21:01,000
+Those do serve to kind of increase the size of the bytecode a little bit,
+
+223
+00:21:01,000 --> 00:21:03,000
+which means longer jumps, a little bit higher memory usage.
+
+224
+00:21:03,000 --> 00:21:05,000
+So shrinking those is always a good thing.
+
+225
+00:21:07,000 --> 00:21:11,000
+Here I have three examples of common bytecode instructions that we specialize,
+
+226
+00:21:11,000 --> 00:21:14,000
+together with their accompanying inline caches.
+
+227
+00:21:14,000 --> 00:21:18,000
+So you can see that we have quite a few caches for these instructions.
+
+228
+00:21:18,000 --> 00:21:24,000
+And in 3.12, we've actually identified a couple of caches that either we don't need
+
+229
+00:21:24,000 --> 00:21:28,000
+or ways that we can reorganize the cache dates in order to pack them more efficiently.
+
+230
+00:21:28,000 --> 00:21:33,000
+And in 3.12, in some cases, like in the case of binary subscript,
+
+231
+00:21:33,000 --> 00:21:37,000
+the number of caches has decreased quite dramatically.
+
+232
+00:21:38,000 --> 00:21:40,000
+And that's pretty much it.
+
+233
+00:21:40,000 --> 00:21:43,000
+If you want to learn more about the specializing adaptive interpreter,
+
+234
+00:21:43,000 --> 00:21:49,000
+you can check out PEP 659, which is a PEP outlining sort of a high-level overview
+
+235
+00:21:49,000 --> 00:21:53,000
+and some more examples of how the specializing adaptive interpreter actually works.
+
+236
+00:21:54,000 --> 00:21:58,000
+If you want to learn about other performance improvements in 3.11 and beyond,
+
+237
+00:21:58,000 --> 00:22:00,000
+besides the specializing adaptive interpreter,
+
+238
+00:22:00,000 --> 00:22:06,000
+because there is a lot of other stuff that helps make Python 3.11 much faster than 3.10,
+
+239
+00:22:06,000 --> 00:22:09,000
+you can check out my colleague Mark Shannon's talk.
+
+240
+00:22:09,000 --> 00:22:12,000
+It's going to be right across the hallway tomorrow at 2.30, I think.
+
+241
+00:22:12,000 --> 00:22:16,000
+It's called, How We Are Making Cpipart Faster, Past, Present, and Future.
+
+242
+00:22:16,000 --> 00:22:18,000
+So if you're watching this live, you need to wait.
+
+243
+00:22:18,000 --> 00:22:22,000
+But if you're watching this YouTube video after the fact, you actually don't need to wait.
+
+244
+00:22:22,000 --> 00:22:26,000
+What I recommend is that you open up a new tab, pause this talk,
+
+245
+00:22:26,000 --> 00:22:29,000
+watch his talk from the beginning in its entirety.
+
+246
+00:22:30,000 --> 00:22:34,000
+You'll find that the two talks are not only complementary, but they're also mutually recursive.
+
+247
+00:22:34,000 --> 00:22:36,000
+And that's it. Thank you very much.
+
+248
+00:22:36,000 --> 00:22:40,000
+I'm at FranFuture on GitHub. You can also find me at Fran at Python.org.
+
+249
+00:22:40,000 --> 00:22:46,000
+And rather than do Q&A here, let's all go early.
+
+250
+00:22:46,000 --> 00:22:51,000
+And if you have any questions or want to chat, I'll just be on the hallway right up here.
+
+251
+00:22:51,000 --> 00:22:52,000
+Thank you.
+
