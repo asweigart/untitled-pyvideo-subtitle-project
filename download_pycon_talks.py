@@ -27,8 +27,8 @@ def download_files_for_event(pycon_event):
         ytdlp_options = {
             'quiet': True,
             'no_warnings': True,
-            'no_progress': True,
-            'format': 'm4a/bestaudio/best',
+            'no_progress': False,
+            #'format': 'm4a/bestaudio/best',
             'outtmpl': event_title + '.%(ext)s',
             #'postprocessors': [{  # Extract audio using ffmpeg
             #    'key': 'FFmpegExtractAudio',

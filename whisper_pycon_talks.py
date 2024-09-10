@@ -13,7 +13,8 @@ def run_whisper_for_event(pycon_event):
     os.chdir(Path(__file__).parent / f'events/{pycon_event}/originals')
 
     for filename in os.listdir():
-        if not filename.endswith('.m4a'): continue
+        # We only want to look at .m4a, .mkv, and .mp4 files:
+        if filename[-4:] not in ('.mp4', '.mkv', '.m4a'): continue
 
         if os.path.exists(filename[:-4] + '.srt'):
             print(f'Skipping {filename} because it has already been transcribed.')
