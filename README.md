@@ -63,3 +63,19 @@ Random Notes
 - Start reviewing the video by playing it at normal speed. If you are comfortable and there aren't that many corrections, you can then listen to the video at 1.5x or 2x speed. (I recommend 1.5x)
 - The pyvideo website should probably have both the original machine-produced srt, the human-reviewed (and publicly posted on the website) subtitles & text, and (not publicly posted) notes for other subtitlers (suggestions for things to add in later, like "There are two speakers here but I didn't label who is talking when" or "not thoroughly human reviewed but the machine transcription seems accurate").
 - Let's not let perfect be the enemy of good. Even some slightly incorrect subtitles are good if we carefully marked them as "human review not completed, unofficial subtitle status". We just want something approximate that search engines can crawl.
+
+Proposed new additions to the video JSON files:
+
+    "original_machine_srt_subtitles": "optional srt formatted subtitles",
+    "human_reviewed_srt_subtitles": "optional srt formatted subtitles",
+    "human_reviewer_notes_for_subtitles": "optional free form todo list here"
+
+The main question is if we should put them in the main part of the JSON data (because they apply to all videos on all sites) or per video (which would dramatically increase the size for videos with multipel URLs.)
+
+Random unrelated idea: We should have a project to have a fallback host for these talks, in case YouTube undergoes enshittification. Vimeo? Do we have backups for pycon videos somewhere? (Tougher question: Do we need them? How valuable is an archive of *all* PyCon talks? If push comes to shove, do we just want to backup the keynotes and popular talks by number of views?)
+
+Searching through the pyvideo data JSON files for all the videos, there are 1,293 videos (out of a total of 19,060 videos listed) that are listed in more than one place (one "type", and the full list of different types is ['archive', 'youtube', 'webm', 'mp4', 'peertube', 'vimeo', 'tweet', 'archive.org', 'conf', 'ogv', 'mkv'], with the file extension types being files available for direct download, often on archive.org. 1,564 videos have hosting on archive.org, while 18,003 videos (94%) have hosting on YouTube. 
+
+Haha, what are these videos not hosted on YouTube? Apparently these: {'fosdem-2017', 'pycon-za-2012', 'pygotham-2011', 'djangocon-eu-2016', 'kiwi-pycon-2009', 'pygotham-2012', 'pycon-fr-2015', 'djangocon-2009', 'pycon-de-2016', 'djangocon-2010', 'pycon-au-2010', 'bostonpy', 'pyohio-2011', 'djangocon-eu-2011', 'djangocong-toulouse-2012', 'pytexas-2011', 'pycon-fr-2023', 'djangocon-2011', 'pycon-us-2011', 'djangocon-eu-2015', 'pycon-us-2009', 'pycon-us-2014', 'vanpy', 'pycon-za-2013', 'pyohio-2010', 'djangocon-eu-2010', 'chipy', 'ndc-oslo-2016', 'fosdem-2018', 'pycon-za-2014', 'pycon-ca-2012', 'scipy-2012', 'pycon-us-2010', 'pyday-galicia-2017'} They mostly seem to be stored on archive.org.
+
+TODO: The pyvideo youtube channel should upload these and also make playlists for all events and popular tags.
