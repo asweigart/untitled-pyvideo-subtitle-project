@@ -1,0 +1,1888 @@
+1
+00:00:00,000 --> 00:00:12,360
+Welcome, everyone.
+
+2
+00:00:12,360 --> 00:00:20,360
+I have the pleasure of introducing Kevin Modzelewski from Anaconda, and he will be giving the talk
+
+3
+00:00:20,360 --> 00:00:26,040
+on writing performant code for modern Python interpreters.
+
+4
+00:00:26,040 --> 00:00:29,040
+And he'll take the questions at the end of the talk.
+
+5
+00:00:29,040 --> 00:00:30,040
+Thanks.
+
+6
+00:00:30,040 --> 00:00:31,040
+Hi, everyone.
+
+7
+00:00:31,040 --> 00:00:36,320
+I condensed the title of the talk a little bit.
+
+8
+00:00:36,320 --> 00:00:39,120
+So it's now how to write fast modern Python code.
+
+9
+00:00:39,120 --> 00:00:41,040
+And my name is Kevin Modzelewski.
+
+10
+00:00:41,040 --> 00:00:47,720
+I'm an employee at Anaconda where I work on the Pyston optimized Python interpreter.
+
+11
+00:00:47,720 --> 00:00:51,600
+And today I want to focus on the word modern.
+
+12
+00:00:51,600 --> 00:00:53,120
+There's a lot of Python tips out there.
+
+13
+00:00:54,120 --> 00:00:56,760
+There's another talk across the hall that's also about Python performance.
+
+14
+00:00:56,760 --> 00:01:02,060
+And this talk, I wanted to do this talk because there's a lot of work that's currently going
+
+15
+00:01:02,060 --> 00:01:07,880
+into optimizing Python that has downstream effects for what you as a Python programmer
+
+16
+00:01:07,880 --> 00:01:10,680
+can think about to make your code even faster.
+
+17
+00:01:10,680 --> 00:01:14,640
+So some of the tips that have been around for a while are not quite as useful anymore.
+
+18
+00:01:14,640 --> 00:01:17,960
+And there are some new ones that if you get onto these new systems, you might want to
+
+19
+00:01:17,960 --> 00:01:20,960
+start thinking about.
+
+20
+00:01:21,520 --> 00:01:24,800
+The structure of the talk is first I'm going to talk a little bit about what makes Python
+
+21
+00:01:24,800 --> 00:01:29,200
+slow, what we're doing to speed it up, and then spend the rest of the talk going into
+
+22
+00:01:29,200 --> 00:01:36,840
+specific examples of how those optimizations affect you as a programmer.
+
+23
+00:01:36,840 --> 00:01:39,960
+Why Python is slow is a bit of a divisive topic.
+
+24
+00:01:39,960 --> 00:01:41,360
+Everyone seems to give different reasons.
+
+25
+00:01:41,360 --> 00:01:43,960
+This is my personal take on it.
+
+26
+00:01:43,960 --> 00:01:48,320
+The most commonly given reason is that Python is interpreted, interpreted languages are
+
+27
+00:01:48,320 --> 00:01:51,080
+slow, so Python is slow.
+
+28
+00:01:51,080 --> 00:01:56,360
+But in my personal measurements on web servers, the interpretation overhead is about 10% of
+
+29
+00:01:56,360 --> 00:01:57,360
+the time.
+
+30
+00:01:57,360 --> 00:01:58,360
+So it's significant.
+
+31
+00:01:58,360 --> 00:01:59,440
+People don't want it.
+
+32
+00:01:59,440 --> 00:02:04,400
+But it doesn't explain why Python can be 10 to 100 times slower than C. For that, you
+
+33
+00:02:04,400 --> 00:02:09,440
+need to go to a different set of things, which I'm generically calling dynamic behavior.
+
+34
+00:02:09,440 --> 00:02:11,620
+Python is a very dynamic language, as we know.
+
+35
+00:02:11,620 --> 00:02:13,960
+And I'm not going to list all the ways it could be dynamic, but I'm just going to call
+
+36
+00:02:13,960 --> 00:02:15,880
+out a couple today.
+
+37
+00:02:15,880 --> 00:02:20,760
+So the first is maybe the most obvious way it's dynamic, which is you don't write types
+
+38
+00:02:20,760 --> 00:02:22,320
+before variables.
+
+39
+00:02:22,320 --> 00:02:26,660
+So the interpreter doesn't know what types any of the variables are.
+
+40
+00:02:26,660 --> 00:02:30,540
+And yes, there are static annotations, but do you really want the interpreter to crash
+
+41
+00:02:30,540 --> 00:02:33,160
+if your annotation is wrong?
+
+42
+00:02:33,160 --> 00:02:37,280
+Those aren't used to optimize performance yet.
+
+43
+00:02:37,280 --> 00:02:40,400
+So this is slow because it means that any time you want to do anything in Python, you
+
+44
+00:02:40,400 --> 00:02:45,440
+have to check what is the type of this object, how do I do the operation I want on this object.
+
+45
+00:02:46,440 --> 00:02:50,280
+The second thing that I call slow here is dynamic variable lookups.
+
+46
+00:02:50,280 --> 00:02:54,720
+And this is something that we might not even think about because it doesn't seem like it
+
+47
+00:02:54,720 --> 00:02:56,720
+should have to happen sometimes.
+
+48
+00:02:56,720 --> 00:03:00,860
+But say you have a print statement, print hello world or whatever.
+
+49
+00:03:00,860 --> 00:03:04,120
+Print isn't a special word in Python.
+
+50
+00:03:04,120 --> 00:03:05,480
+Print is just a function.
+
+51
+00:03:05,480 --> 00:03:10,920
+And when the interpreter sees print, it says, OK, let's look up what this function is.
+
+52
+00:03:10,920 --> 00:03:14,520
+And it does this whole lookup mechanism to see where that is.
+
+53
+00:03:14,520 --> 00:03:20,360
+In particular, it asks, did anyone in this module override what the print function is?
+
+54
+00:03:20,360 --> 00:03:23,400
+And it has to do that every single time you want to print something, every single time
+
+55
+00:03:23,400 --> 00:03:27,360
+you want to take the length of something, cast something to an integer.
+
+56
+00:03:27,360 --> 00:03:29,960
+All of these words require expensive lookups.
+
+57
+00:03:29,960 --> 00:03:36,040
+And then the third thing I'm pointing out here are dynamic attributes that even within
+
+58
+00:03:36,040 --> 00:03:43,200
+a single class, you in general don't know in advance what attributes exist on that class,
+
+59
+00:03:43,240 --> 00:03:47,900
+which means that you need a dynamic representation of the attributes, which are pretty fast for
+
+60
+00:03:47,900 --> 00:03:55,400
+what they are in Python, but they're still much slower than static languages.
+
+61
+00:03:55,400 --> 00:04:01,760
+So with that little primer on where we started, there's three projects that are sort of coming
+
+62
+00:04:01,760 --> 00:04:05,160
+out in various forms either last year or this year.
+
+63
+00:04:05,160 --> 00:04:07,080
+The project I work on is Pyston.
+
+64
+00:04:07,080 --> 00:04:10,600
+It's a fork of CPython being run out of Anaconda.
+
+65
+00:04:10,600 --> 00:04:16,040
+There's the Faster CPython project, which is working directly inside CPython.
+
+66
+00:04:16,040 --> 00:04:20,280
+And all that work is going to start showing up in 311 in October, and that's being run
+
+67
+00:04:20,280 --> 00:04:22,280
+out of Microsoft.
+
+68
+00:04:22,280 --> 00:04:28,200
+And there's Cinder, which is out of Instagram and is also a fork of CPython.
+
+69
+00:04:28,200 --> 00:04:33,700
+And these are all available right now in various forms.
+
+70
+00:04:33,700 --> 00:04:38,480
+So this is going to be the controversial slide of my talk, which is why it's not filled in,
+
+71
+00:04:38,480 --> 00:04:42,960
+because I'm going to go step by step with a lot of disclaimers.
+
+72
+00:04:42,960 --> 00:04:47,840
+This is going to be the set of projects in this space and the benchmark, my benchmark
+
+73
+00:04:47,840 --> 00:04:48,840
+numbers for them.
+
+74
+00:04:48,840 --> 00:04:52,640
+So I think I'm going to get a lot of flack for this slide, so that's why I'm disclaiming
+
+75
+00:04:52,640 --> 00:04:53,640
+it a lot.
+
+76
+00:04:53,640 --> 00:04:59,680
+The first controversial thing is even choosing a set of benchmarks for analyzing performance.
+
+77
+00:04:59,680 --> 00:05:04,600
+There's a very common semi-standard set of benchmarks called PyPerformance.
+
+78
+00:05:04,600 --> 00:05:05,600
+And it's nice in a lot of ways.
+
+79
+00:05:05,720 --> 00:05:07,120
+It's like well-established.
+
+80
+00:05:07,120 --> 00:05:09,480
+A lot of people present their numbers for it.
+
+81
+00:05:09,480 --> 00:05:14,840
+I personally think that it tends to overstate performance benefits, and so I tend to like
+
+82
+00:05:14,840 --> 00:05:18,040
+to look at more application code.
+
+83
+00:05:18,040 --> 00:05:20,920
+So I wrote a Flask benchmark as well.
+
+84
+00:05:20,920 --> 00:05:27,280
+Flask is a web server for Python and maybe web application library.
+
+85
+00:05:27,280 --> 00:05:31,040
+And it's one of the simpler ones, and I chose a simple one so that I could get more projects
+
+86
+00:05:31,040 --> 00:05:33,960
+working with it.
+
+87
+00:05:33,960 --> 00:05:38,240
+The next controversial thing is the selection of a baseline to measure everything against.
+
+88
+00:05:38,240 --> 00:05:41,880
+I picked Python 3.8 because that's what Pyston is based on.
+
+89
+00:05:41,880 --> 00:05:45,240
+And specifically I picked the Ubuntu build of Python 3.8.
+
+90
+00:05:45,240 --> 00:05:49,920
+I didn't know this coming into this, but actually different builds of Python can be pretty different
+
+91
+00:05:49,920 --> 00:05:51,000
+speeds.
+
+92
+00:05:51,000 --> 00:05:55,040
+So the same version of Python but built in different ways will be different speeds.
+
+93
+00:05:55,040 --> 00:05:57,680
+So the Ubuntu build is a pretty fast build.
+
+94
+00:05:57,680 --> 00:06:01,060
+I believe the Mac and Windows builds are slow builds.
+
+95
+00:06:01,060 --> 00:06:03,940
+So anyway, this is a Python 3.8 Ubuntu build.
+
+96
+00:06:03,940 --> 00:06:08,440
+And we're measuring relative numbers here, so it's the same speed as itself.
+
+97
+00:06:08,440 --> 00:06:11,740
+The next controversial thing is I get to list my project first.
+
+98
+00:06:11,740 --> 00:06:16,700
+So Pyston, we show improvements on both of these benchmarks.
+
+99
+00:06:16,700 --> 00:06:22,060
+And you can see the relative improvement is quite different between these two benchmarks.
+
+100
+00:06:22,060 --> 00:06:29,340
+So it is not getting into which is more accurate, but it is important to choose which benchmarks
+
+101
+00:06:29,340 --> 00:06:33,620
+you use that are actually representative of your programs because you'll get very different
+
+102
+00:06:33,620 --> 00:06:36,940
+numbers either way.
+
+103
+00:06:36,940 --> 00:06:43,740
+The next is Python 3.11 alpha 7, which includes most of the faster CPython work.
+
+104
+00:06:43,740 --> 00:06:46,620
+This came out I think earlier in April.
+
+105
+00:06:46,620 --> 00:06:49,540
+And they also show good improvements on both of these numbers.
+
+106
+00:06:49,540 --> 00:06:56,380
+This is controversial because they say a different number for their PyPerformance numbers.
+
+107
+00:06:56,380 --> 00:06:59,460
+I don't know exactly where the difference is, but they say 25%.
+
+108
+00:06:59,460 --> 00:07:03,620
+But when I measured it, I got 15%.
+
+109
+00:07:03,620 --> 00:07:04,800
+Then there's Cinder.
+
+110
+00:07:04,800 --> 00:07:09,620
+They don't have releases, so I just grabbed their GitHub and built it.
+
+111
+00:07:09,620 --> 00:07:14,860
+And very oddly, it was quite a bit slower than standard CPython.
+
+112
+00:07:14,860 --> 00:07:19,100
+So I put question marks here because I don't really believe these are real numbers.
+
+113
+00:07:19,100 --> 00:07:23,420
+They're using it internally, and I think they're smart enough to not use something that's slower.
+
+114
+00:07:23,420 --> 00:07:24,820
+So I don't know what's going on here.
+
+115
+00:07:24,860 --> 00:07:26,460
+I think they didn't open source all of it.
+
+116
+00:07:26,460 --> 00:07:27,460
+I'm not sure.
+
+117
+00:07:27,460 --> 00:07:30,460
+Now, this is going to be a little controversial.
+
+118
+00:07:30,460 --> 00:07:31,460
+I put PyPy on here.
+
+119
+00:07:31,460 --> 00:07:35,780
+This is a little bit more of an established player in the Python performance space.
+
+120
+00:07:35,780 --> 00:07:40,180
+But they make a very different set of tradeoffs, which I think show up in these numbers, which
+
+121
+00:07:40,180 --> 00:07:45,920
+first they can't run PyPerformance, so they don't support all of the dependencies of PyPerformance.
+
+122
+00:07:45,920 --> 00:07:49,500
+And then they're slower on this web serving benchmark.
+
+123
+00:07:49,500 --> 00:07:54,340
+And the controversial thing here is I did not put a question mark after their Flask number
+
+124
+00:07:54,420 --> 00:07:58,420
+because it is in line with other numbers I've seen of PyPy.
+
+125
+00:07:58,420 --> 00:08:01,260
+And then I also took the time to benchmark Pigeon.
+
+126
+00:08:01,260 --> 00:08:05,740
+I think it's a little bit less well-known, but I still wanted to know how it did.
+
+127
+00:08:05,740 --> 00:08:11,460
+And I don't know what happened here, but Pigeon was 1,000 times slower.
+
+128
+00:08:11,460 --> 00:08:15,340
+So that gets like a double question mark.
+
+129
+00:08:15,340 --> 00:08:20,500
+I assume that that's not the behavior that they get, but I didn't have time to sort all
+
+130
+00:08:20,500 --> 00:08:24,220
+these things out before this talk, unfortunately.
+
+131
+00:08:24,220 --> 00:08:31,020
+So this is sort of the state of Python optimizers that aim to support all of Python.
+
+132
+00:08:31,020 --> 00:08:37,780
+There's lots and lots of Python performance tools, but a lot of other ones fill more niche positions.
+
+133
+00:08:39,820 --> 00:08:43,580
+So in terms of going back to what makes Python slow, we can start talking about what these
+
+134
+00:08:43,580 --> 00:08:47,700
+projects do for those things I mentioned are slow.
+
+135
+00:08:47,700 --> 00:08:52,900
+The first is interpretation overhead, which is kind of just gone now, that a lot of these
+
+136
+00:08:52,900 --> 00:08:58,460
+projects such as Pyston and Cinder add JIT compilers, and JIT stands for Just in Time.
+
+137
+00:08:58,460 --> 00:09:03,100
+So it means that instead of compiling your code during your development process, we will
+
+138
+00:09:03,100 --> 00:09:08,420
+compile your code as it's running and convert your Python code into assembly instructions
+
+139
+00:09:08,420 --> 00:09:10,500
+that is your Python code.
+
+140
+00:09:10,500 --> 00:09:14,860
+And so this sort of definitionally gets rid of interpretation overhead.
+
+141
+00:09:14,860 --> 00:09:18,340
+I'm not going to really talk about this today, because while it's really cool at a technical
+
+142
+00:09:18,980 --> 00:09:23,820
+level and 10% is really nice to get, it's not something that really you as a programmer
+
+143
+00:09:23,820 --> 00:09:24,980
+can affect that much.
+
+144
+00:09:24,980 --> 00:09:26,140
+You just kind of get it.
+
+145
+00:09:26,140 --> 00:09:29,860
+You're not going to really improve or diminish it in any way.
+
+146
+00:09:29,860 --> 00:09:31,340
+So I'm not going to talk about it for this talk.
+
+147
+00:09:31,340 --> 00:09:36,620
+What I'm going to spend the rest of the talk talking about are the dynamic features.
+
+148
+00:09:36,620 --> 00:09:40,460
+I listed a bunch of projects, and all these projects do a bunch of things.
+
+149
+00:09:40,460 --> 00:09:46,020
+But if I was going to make a sweeping generalization, I would say the sort of bread and butter technique
+
+150
+00:09:46,180 --> 00:09:50,820
+that all these projects are doing in many different areas is to use the combination
+
+151
+00:09:50,820 --> 00:09:53,140
+of two theories.
+
+152
+00:09:53,140 --> 00:09:58,300
+The first is that most code does not use the full dynamic power that it could at any point
+
+153
+00:09:58,300 --> 00:09:59,300
+in time.
+
+154
+00:09:59,300 --> 00:10:05,020
+And the second idea is that we can quickly check if code is using the dynamic power that
+
+155
+00:10:05,020 --> 00:10:07,340
+it could.
+
+156
+00:10:07,340 --> 00:10:12,500
+And so this lets us say that we can very quickly check to see that nothing strange is happening
+
+157
+00:10:12,500 --> 00:10:15,700
+right here, and we can do something fast instead.
+
+158
+00:10:15,740 --> 00:10:19,620
+And this is pretty much the source of most of the speed ups I showed you earlier.
+
+159
+00:10:19,620 --> 00:10:21,860
+So this is quite effective.
+
+160
+00:10:21,860 --> 00:10:22,860
+And this sounds great.
+
+161
+00:10:22,860 --> 00:10:26,340
+You know, Python has dynamic features, but you're not paying for them if you're not using
+
+162
+00:10:26,340 --> 00:10:27,900
+them anymore.
+
+163
+00:10:27,900 --> 00:10:32,940
+But if we kind of reverse that statement, it kind of says that you are paying for dynamic
+
+164
+00:10:32,940 --> 00:10:35,020
+features that you do use now.
+
+165
+00:10:35,020 --> 00:10:38,460
+That before they were kind of free because you were paying for them whether or not you
+
+166
+00:10:38,460 --> 00:10:41,060
+use them, so it didn't matter if you used them.
+
+167
+00:10:41,060 --> 00:10:45,940
+But now, because you no longer pay for them when you're not using them, it is something
+
+168
+00:10:45,940 --> 00:10:51,020
+that you as a programmer could think about and speed up your program even more.
+
+169
+00:10:51,020 --> 00:10:52,460
+To be clear, you don't need to.
+
+170
+00:10:52,460 --> 00:10:54,420
+Your stuff will be faster no matter what.
+
+171
+00:10:54,420 --> 00:10:57,860
+But if you want to get the very best performance out of these new systems, thinking about these
+
+172
+00:10:57,860 --> 00:11:00,620
+things will make your code even faster.
+
+173
+00:11:00,620 --> 00:11:03,700
+All right.
+
+174
+00:11:03,700 --> 00:11:06,260
+So the rest of my talk is going into examples.
+
+175
+00:11:07,260 --> 00:11:12,500
+So the first one is that global variable and I suppose built-in variable case that I talked about.
+
+176
+00:11:12,500 --> 00:11:16,700
+So say you have a print statement or you're printing out a bunch of things or using when
+
+177
+00:11:16,700 --> 00:11:21,660
+to get the links of things and you're looking up that name a whole bunch of times.
+
+178
+00:11:21,660 --> 00:11:27,140
+In Python, there's a, in the implementation of Python, there's a very quick way to check
+
+179
+00:11:27,140 --> 00:11:32,260
+were any global variables assigned since the last time I did this lookup.
+
+180
+00:11:32,260 --> 00:11:37,240
+So you can very quickly check were any global variables assigned and if not, then we know
+
+181
+00:11:37,240 --> 00:11:42,420
+that the global lookup resolves to the same thing it did last time.
+
+182
+00:11:42,420 --> 00:11:46,020
+And I should be clear here about what it means to assign to a global variable.
+
+183
+00:11:46,020 --> 00:11:48,460
+I have two snippets of code here.
+
+184
+00:11:48,460 --> 00:11:51,080
+The one on the left assigns to the global variable.
+
+185
+00:11:51,080 --> 00:11:55,100
+It takes a new value and assigns it to the name of the global variable.
+
+186
+00:11:55,100 --> 00:11:59,080
+And the one on the right, I would call that mutating a global variable.
+
+187
+00:11:59,080 --> 00:12:01,980
+And the one on the right does not affect what I'm talking about.
+
+188
+00:12:01,980 --> 00:12:02,980
+That's fine.
+
+189
+00:12:02,980 --> 00:12:08,460
+But the one on the left, that assignment, L equals new list, will slow down the following
+
+190
+00:12:08,460 --> 00:12:10,420
+print statement.
+
+191
+00:12:10,420 --> 00:12:17,940
+I put together a benchmark and the numbers in this table are the time it takes to lookup
+
+192
+00:12:17,940 --> 00:12:19,660
+a global variable.
+
+193
+00:12:19,660 --> 00:12:24,820
+And the two columns are, I did a first benchmark where we're sometimes also assigning to global
+
+194
+00:12:24,820 --> 00:12:25,820
+variables.
+
+195
+00:12:25,820 --> 00:12:30,780
+And a second benchmark where we're never assigning to the global variables after initialization.
+
+196
+00:12:31,740 --> 00:12:36,100
+And you can see what I mean by you're not paying for dynamic features in Python 3.8
+
+197
+00:12:36,100 --> 00:12:37,660
+because these are the same speed.
+
+198
+00:12:37,660 --> 00:12:39,060
+It's doing the same amount of work.
+
+199
+00:12:39,060 --> 00:12:43,900
+It's doing the full dynamic work each time regardless of whether this optimization could
+
+200
+00:12:43,900 --> 00:12:46,220
+be applied.
+
+201
+00:12:46,220 --> 00:12:51,420
+The story is very different with these modern implementations that with Pyston especially,
+
+202
+00:12:51,420 --> 00:12:55,700
+it's six times faster in the not updated case.
+
+203
+00:12:55,700 --> 00:12:58,780
+I wouldn't take these numbers too literally.
+
+204
+00:12:58,780 --> 00:13:03,180
+This table I think is going to evolve very rapidly.
+
+205
+00:13:03,180 --> 00:13:05,540
+I think I was surprised a little bit by these numbers.
+
+206
+00:13:05,540 --> 00:13:09,540
+I think the faster C Python people might have some ideas from it.
+
+207
+00:13:09,540 --> 00:13:11,580
+So the exact numbers are going to change.
+
+208
+00:13:11,580 --> 00:13:15,740
+But I think the general conclusion that the no reassignments case is almost always going
+
+209
+00:13:15,740 --> 00:13:22,540
+to be faster than the reassignments case is we'll hold up over time.
+
+210
+00:13:22,540 --> 00:13:28,540
+This leads to a pretty simple tip that I'm giving out which is try not to reassign your
+
+211
+00:13:28,540 --> 00:13:31,700
+global variables.
+
+212
+00:13:31,700 --> 00:13:36,860
+Performance might not be your primary concern, but if you're considering performance, assigning
+
+213
+00:13:36,860 --> 00:13:39,460
+to global variables will slow things down.
+
+214
+00:13:39,460 --> 00:13:44,020
+And if you still want global mutable state, then store it within an object as an attribute
+
+215
+00:13:44,020 --> 00:13:50,220
+on an object or within a dictionary or something like that.
+
+216
+00:13:50,220 --> 00:13:54,180
+The next set of dynamic behavior are attributes that I talked about before.
+
+217
+00:13:54,220 --> 00:13:59,500
+As I said, you generally don't know what sets of attributes are going to be on an object.
+
+218
+00:13:59,500 --> 00:14:03,780
+And this means that we use dictionaries in general.
+
+219
+00:14:03,780 --> 00:14:05,780
+There's lots of special cases in Python.
+
+220
+00:14:05,780 --> 00:14:12,460
+But in general, Python objects are backed by dictionaries, otherwise known as hash tables.
+
+221
+00:14:12,460 --> 00:14:16,260
+And Python dictionaries are very fast as dictionaries come.
+
+222
+00:14:16,260 --> 00:14:20,380
+But they're still much slower than say in C where it's just a direct pointer look up
+
+223
+00:14:20,380 --> 00:14:22,420
+in a single memory load.
+
+224
+00:14:22,420 --> 00:14:28,780
+So even though each individual access is not that slow, because attribute access is such
+
+225
+00:14:28,780 --> 00:14:35,060
+a common operation, a large part of the runtime does end up doing this.
+
+226
+00:14:35,060 --> 00:14:38,540
+So we're going to apply the same optimization to this, which is we're going to assume that
+
+227
+00:14:38,540 --> 00:14:43,500
+you're not using the full dynamic power, that you're not having your objects of different
+
+228
+00:14:43,500 --> 00:14:46,500
+shapes and changing the shapes all the time.
+
+229
+00:14:46,500 --> 00:14:50,700
+And we're going to say, I'm saying this a little vaguely because the exact technical
+
+230
+00:14:50,740 --> 00:14:53,300
+restrictions are a little bit involved.
+
+231
+00:14:53,300 --> 00:15:00,500
+But at a high level, we say that if a repeated look up looks the same as it did the previous
+
+232
+00:15:00,500 --> 00:15:05,140
+time, then we can execute it the same as we did the last time.
+
+233
+00:15:05,140 --> 00:15:09,820
+And there's all these cases and all these special cases and different things that that can mean.
+
+234
+00:15:09,820 --> 00:15:11,500
+It's actually quite complicated.
+
+235
+00:15:11,500 --> 00:15:14,420
+But at a high level, that's what we do.
+
+236
+00:15:14,420 --> 00:15:18,700
+And as I said, there's a bunch of different things that lead to these technical restrictions.
+
+237
+00:15:18,740 --> 00:15:25,260
+But I'm going to call it two as things that you might run into that could affect this.
+
+238
+00:15:25,260 --> 00:15:27,180
+The first is what I'm calling different shapes.
+
+239
+00:15:27,180 --> 00:15:29,140
+It's the snippet on the left.
+
+240
+00:15:29,140 --> 00:15:33,740
+We have two objects of this class and they have different attributes on them.
+
+241
+00:15:33,740 --> 00:15:39,740
+This forces a less efficient representation of the class's objects because we can no longer
+
+242
+00:15:39,740 --> 00:15:43,420
+say all the objects of this class have a single shape.
+
+243
+00:15:43,420 --> 00:15:48,540
+So once you do this, this snippet on the left, accessing attributes on those objects will
+
+244
+00:15:48,540 --> 00:15:52,660
+be slow for the rest of your program.
+
+245
+00:15:52,660 --> 00:15:59,340
+The other case that hurts is what I'm calling type mutated, which is when you change attributes
+
+246
+00:15:59,340 --> 00:16:01,300
+on the class of an object.
+
+247
+00:16:01,300 --> 00:16:05,500
+So you can see here in the second case, we have an object, we set an attribute on it,
+
+248
+00:16:05,500 --> 00:16:07,860
+and then we change an attribute on the class.
+
+249
+00:16:07,860 --> 00:16:13,460
+And the reason this is really difficult for performance is the class has a lot of ways
+
+250
+00:16:13,460 --> 00:16:17,700
+that it can intercept attribute lookups on its objects.
+
+251
+00:16:17,700 --> 00:16:23,220
+And generally they're not used, so we have a very fast way of saying, did the class decide
+
+252
+00:16:23,220 --> 00:16:24,500
+– sorry.
+
+253
+00:16:24,500 --> 00:16:28,620
+We can say we know in the past the class did not intercept them and nothing changed on
+
+254
+00:16:28,620 --> 00:16:31,420
+the class, so now it's still not intercepting them.
+
+255
+00:16:31,420 --> 00:16:35,620
+But if you change something on the class, we no longer know if you might have changed
+
+256
+00:16:35,620 --> 00:16:39,020
+something that could now intercept attribute accesses.
+
+257
+00:16:39,020 --> 00:16:43,780
+So we have to do the expensive check.
+
+258
+00:16:43,860 --> 00:16:48,380
+I made a benchmark, and the third column is what I call the happy case, where all the
+
+259
+00:16:48,380 --> 00:16:52,180
+technical restrictions are met and the fast path can be taken.
+
+260
+00:16:52,180 --> 00:16:56,980
+And you can see from this example that, again, in Python 3.8, you're not really paying a
+
+261
+00:16:56,980 --> 00:17:00,580
+cost for your objects being different shapes.
+
+262
+00:17:00,580 --> 00:17:04,620
+You're doing a full hash table lookup no matter what, and it's the same cost.
+
+263
+00:17:04,620 --> 00:17:06,620
+You already were in Python 3.8.
+
+264
+00:17:06,620 --> 00:17:09,060
+I think it goes quite a bit back beyond that.
+
+265
+00:17:09,060 --> 00:17:12,980
+You were paying a cost for updating your classes because that doesn't validate a bunch of
+
+266
+00:17:12,980 --> 00:17:15,780
+caching.
+
+267
+00:17:15,780 --> 00:17:20,700
+And now in the optimized interpreters, the happy case gets way faster, but the other
+
+268
+00:17:20,700 --> 00:17:22,980
+cases not so much.
+
+269
+00:17:22,980 --> 00:17:28,660
+And again, the exact squares that are good are going to change over time, but the general
+
+270
+00:17:28,660 --> 00:17:33,980
+idea here is that having your objects of different shapes or changing the types will generally
+
+271
+00:17:33,980 --> 00:17:39,500
+tend to have the effect of slowing down your attribute lookups.
+
+272
+00:17:39,500 --> 00:17:43,300
+So the tip here is basically just don't do either of those things if you can avoid it,
+
+273
+00:17:43,300 --> 00:17:46,620
+especially the shape one.
+
+274
+00:17:46,620 --> 00:17:52,460
+In looking at some code, I've seen code that has objects of different shapes, and they
+
+275
+00:17:52,460 --> 00:17:57,620
+were doing that, I think, to save memory by not assigning variables they didn't need.
+
+276
+00:17:57,620 --> 00:18:02,740
+But that's also not a great tip anymore because by having different shapes, you're using this
+
+277
+00:18:02,740 --> 00:18:06,940
+less efficient representation and using more memory in general.
+
+278
+00:18:06,980 --> 00:18:13,940
+So in general, you want to set the same attributes in the same order.
+
+279
+00:18:13,940 --> 00:18:18,540
+I'm not going to get into it in this talk, but if you know what slots are, those are
+
+280
+00:18:18,540 --> 00:18:22,160
+now the fastest way to do attributes in Python.
+
+281
+00:18:22,160 --> 00:18:26,340
+They don't guarantee good performance, but they give you the best chance.
+
+282
+00:18:26,340 --> 00:18:35,300
+They resolve a bunch of the technical aspects that I didn't really go into in this example.
+
+283
+00:18:35,300 --> 00:18:39,500
+There's a special case of attribute lookups, which is where you look up in an attribute
+
+284
+00:18:39,500 --> 00:18:43,420
+and then you immediately call that attribute object.
+
+285
+00:18:43,420 --> 00:18:45,940
+I'm calling this method calls.
+
+286
+00:18:45,940 --> 00:18:47,460
+So that's sort of a two-step process.
+
+287
+00:18:47,460 --> 00:18:52,260
+You look up the attribute, you take that object, and then you call that object.
+
+288
+00:18:52,260 --> 00:18:56,980
+There's this common piece of advice that if you're doing that a lot in a loop, you should
+
+289
+00:18:56,980 --> 00:19:02,300
+try to do the attribute lookup only once outside the loop and then call the object inside the
+
+290
+00:19:02,300 --> 00:19:03,300
+loop.
+
+291
+00:19:03,300 --> 00:19:08,260
+That looks something like this, where you might say we want to append a bunch of things
+
+292
+00:19:08,260 --> 00:19:09,260
+to a list.
+
+293
+00:19:09,260 --> 00:19:14,100
+Let's forget about list comprehensions and whatever else, and just say we want to append
+
+294
+00:19:14,100 --> 00:19:15,100
+a bunch of things.
+
+295
+00:19:15,100 --> 00:19:25,180
+We're going to cache this list.append method and just call that attribute inside the for loop.
+
+296
+00:19:25,180 --> 00:19:30,120
+In doing a benchmark, in Python 3.8, this is decent advice.
+
+297
+00:19:30,120 --> 00:19:33,280
+If performance is what you're looking for, this does improve performance by about 10
+
+298
+00:19:33,280 --> 00:19:38,080
+percent, but 66 percent in this case.
+
+299
+00:19:38,080 --> 00:19:44,660
+The problem now in 2022 with these smart optimizers is the optimizers want to see more of your
+
+300
+00:19:44,660 --> 00:19:50,740
+code at once to optimize more of it, especially in this particular case.
+
+301
+00:19:50,740 --> 00:19:56,000
+This particular case is very special of fetching an attribute and calling it, and there are
+
+302
+00:19:56,000 --> 00:19:59,440
+a lot of special optimizations just for that case.
+
+303
+00:19:59,440 --> 00:20:06,740
+But by caching the method and separating them, those optimizations will no longer apply.
+
+304
+00:20:06,740 --> 00:20:11,300
+Now with these modern Python implementations, caching this method actually slows down your
+
+305
+00:20:11,300 --> 00:20:15,900
+code by a fair amount.
+
+306
+00:20:15,900 --> 00:20:18,540
+The situation is getting pretty complicated.
+
+307
+00:20:18,540 --> 00:20:24,860
+To be clear, this is just for functions on built-in types like list.
+
+308
+00:20:24,860 --> 00:20:27,700
+If we look at Python types, the numbers are a little bit different.
+
+309
+00:20:28,160 --> 00:20:32,480
+It was a little bit less of an improvement before versus the built-in type, but the improvement
+
+310
+00:20:32,480 --> 00:20:34,960
+is even smaller now.
+
+311
+00:20:34,960 --> 00:20:41,360
+Basically as attribute accesses get faster, the benefits of this approach get smaller.
+
+312
+00:20:41,360 --> 00:20:45,520
+I looked at another case which is not exactly the same but looks very similar, which is
+
+313
+00:20:45,520 --> 00:20:48,040
+where you're calling functions of modules.
+
+314
+00:20:48,040 --> 00:20:52,200
+I picked the function that I could find that does the least amount of work.
+
+315
+00:20:52,200 --> 00:20:54,920
+I think math.square root.
+
+316
+00:20:54,920 --> 00:20:57,560
+There's a square root instruction, so this is a single instruction.
+
+317
+00:20:57,560 --> 00:20:59,100
+Everything else is overhead.
+
+318
+00:20:59,100 --> 00:21:04,300
+This is the maximum amount of improvement that you'll ever see from this case.
+
+319
+00:21:04,300 --> 00:21:06,620
+In Python 3.8, it was pretty big.
+
+320
+00:21:06,620 --> 00:21:10,500
+In these new implementations, it is considerably smaller.
+
+321
+00:21:10,500 --> 00:21:15,740
+Maybe you consider 15% to be enough, but it is quite a bit smaller than before.
+
+322
+00:21:15,740 --> 00:21:20,500
+As I said, math.square root was picked because it is the fastest function I could find.
+
+323
+00:21:20,500 --> 00:21:26,940
+If we look at a more typical function, say os.path.join, the improvement was much smaller
+
+324
+00:21:26,940 --> 00:21:27,940
+than before.
+
+325
+00:21:27,940 --> 00:21:31,320
+Again, the improvement has decreased a lot.
+
+326
+00:21:31,320 --> 00:21:35,760
+Now you're talking about a 0.4 to 2% improvement by doing this.
+
+327
+00:21:35,760 --> 00:21:40,820
+I've shown you four different cases.
+
+328
+00:21:40,820 --> 00:21:41,960
+There's different numbers for them.
+
+329
+00:21:41,960 --> 00:21:43,240
+Sometimes it helps a decent amount.
+
+330
+00:21:43,240 --> 00:21:44,280
+Sometimes it helps a tiny amount.
+
+331
+00:21:44,280 --> 00:21:45,780
+Sometimes it hurts.
+
+332
+00:21:45,780 --> 00:21:46,780
+What is the takeaway?
+
+333
+00:21:46,780 --> 00:21:48,140
+What should you do?
+
+334
+00:21:48,140 --> 00:21:53,700
+My personal advice now is just don't cache methods anymore.
+
+335
+00:21:53,700 --> 00:21:55,380
+I think it's not worth the mental overhead.
+
+336
+00:21:55,820 --> 00:21:57,860
+I don't think it's worth the readability hit.
+
+337
+00:21:57,860 --> 00:22:03,060
+I think the improvement will get smaller and smaller as the implementations get smarter
+
+338
+00:22:03,060 --> 00:22:04,060
+and smarter.
+
+339
+00:22:04,060 --> 00:22:08,800
+You don't have to rewrite it if you already did it, but I think in general, this is something
+
+340
+00:22:08,800 --> 00:22:18,340
+that we can leave behind as the implementations get smarter.
+
+341
+00:22:18,340 --> 00:22:20,580
+In this slide, I'm calling out a couple of other dynamic features.
+
+342
+00:22:20,580 --> 00:22:25,060
+I'm not going to go into them a lot, but the point I want to make here is these, unlike
+
+343
+00:22:25,060 --> 00:22:28,460
+the ones I talked about before, these were already expensive before.
+
+344
+00:22:28,460 --> 00:22:34,940
+But now these particular features are getting even more expensive because they inhibit other
+
+345
+00:22:34,940 --> 00:22:35,940
+optimizations.
+
+346
+00:22:35,940 --> 00:22:39,660
+So not just are they expensive when you use them, but they might affect other parts of
+
+347
+00:22:39,660 --> 00:22:42,020
+your code that can no longer be optimized.
+
+348
+00:22:42,020 --> 00:22:49,340
+In particular, a problem that we need to solve as a community is attaching a profiler to
+
+349
+00:22:49,340 --> 00:22:51,180
+this optimized code.
+
+350
+00:22:51,180 --> 00:22:56,300
+At least in Pyston, I don't know about FastReceivePython and Cinder, will tend to just disable almost
+
+351
+00:22:56,300 --> 00:22:58,260
+all of the optimizations.
+
+352
+00:22:58,260 --> 00:23:02,020
+So the code that you end up profiling might look very different than the code that you
+
+353
+00:23:02,020 --> 00:23:04,820
+meant to profile with optimizations on.
+
+354
+00:23:04,820 --> 00:23:08,500
+This is in general a hard problem, and we might need a new profiling API.
+
+355
+00:23:08,500 --> 00:23:18,580
+I don't know exactly what it will take, but this is an unfortunate part of the situation.
+
+356
+00:23:18,740 --> 00:23:24,260
+The last thing I wanted to talk about is the situation of C extensions versus pure Python.
+
+357
+00:23:24,260 --> 00:23:29,900
+That generally C extensions are thought of either as bindings to another language or
+
+358
+00:23:29,900 --> 00:23:31,700
+as a way to speed up Python code.
+
+359
+00:23:31,700 --> 00:23:36,700
+A common piece of advice is use Cython, convert it to a C extension, stuff like that.
+
+360
+00:23:36,700 --> 00:23:41,780
+But this situation is getting pretty murky now because all of the optimizations that
+
+361
+00:23:41,780 --> 00:23:47,540
+I've talked about today, they currently only apply to Python code.
+
+362
+00:23:47,540 --> 00:23:52,340
+So this means that C extensions do a certain set of optimizations, the Python interpreter
+
+363
+00:23:52,340 --> 00:23:57,220
+does a different set of optimizations, and it's very dependent on your code which set
+
+364
+00:23:57,220 --> 00:24:01,020
+of optimizations helps your code more.
+
+365
+00:24:01,020 --> 00:24:05,220
+And unfortunately, it's very hard to give a good rubric for this case you definitely
+
+366
+00:24:05,220 --> 00:24:09,300
+should do it in C, this case you should definitely do it in Python.
+
+367
+00:24:09,300 --> 00:24:15,260
+But to illustrate this, I took the benchmark from before, the attribute lookup benchmark.
+
+368
+00:24:15,300 --> 00:24:20,340
+If you remember, this 18.4 nanoseconds was the amount of time it took before.
+
+369
+00:24:20,340 --> 00:24:25,340
+And I used Cython to convert this benchmark to a C extension.
+
+370
+00:24:25,340 --> 00:24:27,660
+And then I ran it in Python 3.8.
+
+371
+00:24:27,660 --> 00:24:30,300
+And indeed, it does make it a fair bit faster.
+
+372
+00:24:30,300 --> 00:24:35,900
+And so that advice was good before that converting it to a C extension is good.
+
+373
+00:24:35,900 --> 00:24:41,220
+But if you remember the slide of the other numbers, the other implementations sped up
+
+374
+00:24:41,220 --> 00:24:44,580
+this benchmark much more than Cython did.
+
+375
+00:24:44,580 --> 00:24:50,940
+And then also, the optimizations that these implementations do don't help Cython at all.
+
+376
+00:24:50,940 --> 00:24:54,220
+So Cython could adopt all of these same optimizations.
+
+377
+00:24:54,220 --> 00:24:58,100
+I don't think there's a technical reason that they couldn't.
+
+378
+00:24:58,100 --> 00:25:01,300
+I think it will probably happen over time, but they currently don't.
+
+379
+00:25:01,300 --> 00:25:05,580
+So this means that if you're particularly hitting the optimizations I've talked about
+
+380
+00:25:05,580 --> 00:25:09,900
+today, you might actually be better in Python.
+
+381
+00:25:09,940 --> 00:25:16,380
+As I said, there's not a really clear-cut rubric for when it's better one or the other.
+
+382
+00:25:16,380 --> 00:25:21,700
+If I had to say, I would say that object-oriented code is going to be helped a lot more by the
+
+383
+00:25:21,700 --> 00:25:23,260
+new interpreters.
+
+384
+00:25:23,260 --> 00:25:26,780
+And numeric code is going to still stay best in C code.
+
+385
+00:25:26,780 --> 00:25:29,740
+But this is something that you're going to have to verify for yourself, because as I
+
+386
+00:25:29,740 --> 00:25:35,020
+said, it's fairly complicated at this point in time.
+
+387
+00:25:35,020 --> 00:25:39,560
+Which brings me to my last point, which is that unfortunately, there's not a lot of help
+
+388
+00:25:39,600 --> 00:25:42,480
+that you're going to get with these kinds of issues.
+
+389
+00:25:42,480 --> 00:25:47,720
+I'm trying to give you the best tips I can now, but these things are changing rapidly.
+
+390
+00:25:47,720 --> 00:25:52,280
+There's all these corner cases, and there aren't tools that will say, hey, this was
+
+391
+00:25:52,280 --> 00:25:56,440
+slow because you did this over here, and so this optimization was turned off.
+
+392
+00:25:56,440 --> 00:25:58,240
+That stuff doesn't exist yet.
+
+393
+00:25:58,240 --> 00:26:03,520
+So your only method of telling how to optimize your code is you're going to have to benchmark
+
+394
+00:26:03,520 --> 00:26:06,560
+it and see what works and what doesn't.
+
+395
+00:26:10,000 --> 00:26:15,960
+So to wrap up my talk, as I said in the beginning, the general idea is that we're trying to make
+
+396
+00:26:15,960 --> 00:26:20,640
+Python programmers not pay for dynamic features they're not using.
+
+397
+00:26:20,640 --> 00:26:27,520
+And this is great, but it adds this new complexity that you get rewarded if you do think about
+
+398
+00:26:27,520 --> 00:26:31,760
+these dynamic features and trying to not use them.
+
+399
+00:26:31,760 --> 00:26:34,400
+I put the GitHub links up on there.
+
+400
+00:26:34,400 --> 00:26:35,760
+You can find all these projects.
+
+401
+00:26:35,760 --> 00:26:38,280
+They're already available in different forms.
+
+402
+00:26:38,320 --> 00:26:43,120
+I believe that these are also the best ways to get in touch with the relevant teams.
+
+403
+00:26:43,120 --> 00:26:44,320
+So I work on Pyston.
+
+404
+00:26:44,320 --> 00:26:50,080
+If you want to reach out to me online, you can go to the Pyston GitHub page, and then
+
+405
+00:26:50,080 --> 00:26:53,400
+I will also be hanging around here after this talk.
+
+406
+00:26:53,400 --> 00:26:54,400
+Thank you.
+
+407
+00:26:54,400 --> 00:27:03,400
+Thank you, Kevin.
+
+408
+00:27:03,440 --> 00:27:06,440
+I would now like to invite questions from the audience.
+
+409
+00:27:19,560 --> 00:27:25,360
+Do you think the Rust extensions will be any different than the C extensions, given cryptography
+
+410
+00:27:25,360 --> 00:27:28,360
+starting to use Rust libraries underneath?
+
+411
+00:27:28,360 --> 00:27:31,800
+I don't think so.
+
+412
+00:27:32,320 --> 00:27:37,440
+I think the only thing might be, I think these optimizations are probably too much work for
+
+413
+00:27:37,440 --> 00:27:41,080
+individual C extension writers or Rust extension writers to do.
+
+414
+00:27:41,080 --> 00:27:45,680
+If I were to guess at how they would start appearing in C extensions, it would be that
+
+415
+00:27:45,680 --> 00:27:50,400
+a intermediary tool like Cython would adopt them.
+
+416
+00:27:50,400 --> 00:27:53,680
+So in that sense, unless Cython can generate Rust extensions, it might be a little bit
+
+417
+00:27:53,680 --> 00:27:55,360
+slower getting to Rust.
+
+418
+00:27:55,360 --> 00:27:58,360
+But at a technical sense, there wouldn't be any difference.
+
+419
+00:28:02,040 --> 00:28:03,040
+Yeah?
+
+420
+00:28:07,640 --> 00:28:12,760
+Would it make sense to move your dynamic features in a different file or a different class and
+
+421
+00:28:12,760 --> 00:28:18,040
+the not so dynamic one somewhere else, and separate the concerns, so give the optimizers
+
+422
+00:28:18,040 --> 00:28:21,000
+more way to do it?
+
+423
+00:28:21,000 --> 00:28:25,080
+So just move everything that's dynamic to one place and not dynamic to the other place
+
+424
+00:28:25,080 --> 00:28:26,080
+instead of mixing them?
+
+425
+00:28:26,080 --> 00:28:27,080
+Would it help?
+
+426
+00:28:28,040 --> 00:28:32,240
+I'm not sure exactly what you're proposing, but I think the general idea is very much
+
+427
+00:28:32,240 --> 00:28:33,240
+happening.
+
+428
+00:28:33,240 --> 00:28:37,480
+We're not doing it in Pyston because we don't want people to change their code, but Cinder
+
+429
+00:28:37,480 --> 00:28:41,560
+has this thing called static Python that might be similar to what you're talking about, where
+
+430
+00:28:41,560 --> 00:28:47,000
+you sort of commit to not using certain dynamic features, and then the compiler is able to
+
+431
+00:28:47,000 --> 00:28:48,360
+speed it up even more.
+
+432
+00:28:48,360 --> 00:28:50,160
+Is that what you're talking about?
+
+433
+00:28:50,160 --> 00:28:56,400
+No, I mean, if you use one of the dynamic features, instead of one class, you have two
+
+434
+00:28:56,480 --> 00:29:00,800
+classes, one that uses dynamic features, the other one not, that you can speed up the one
+
+435
+00:29:00,800 --> 00:29:01,800
+that doesn't.
+
+436
+00:29:01,800 --> 00:29:02,800
+Would it help?
+
+437
+00:29:02,800 --> 00:29:06,320
+If you can do this easily, if it just fits your, if you have the design decision to make
+
+438
+00:29:06,320 --> 00:29:09,800
+and it wouldn't be any more work just to split into two classes, for instance.
+
+439
+00:29:09,800 --> 00:29:11,960
+Yeah, I guess that could work.
+
+440
+00:29:11,960 --> 00:29:16,040
+If you have some type that you need to update a lot, then I guess you could have a different
+
+441
+00:29:16,040 --> 00:29:18,880
+type with instances that you look up things a lot.
+
+442
+00:29:18,880 --> 00:29:23,080
+I think you probably have some trade-off with readability and maintainability, but for performance,
+
+443
+00:29:23,080 --> 00:29:24,080
+I think that could work for sure.
+
+444
+00:29:26,400 --> 00:29:39,160
+What is your thoughts on optimizations like using MyPyC and stuff like that?
+
+445
+00:29:39,160 --> 00:29:41,760
+Like passing your programs into MyPyC?
+
+446
+00:29:41,760 --> 00:29:46,480
+Yeah, I'm not super familiar with MyPyC in general, but as I kind of alluded to earlier
+
+447
+00:29:46,480 --> 00:29:53,120
+in the talk, there are a lot of tools that, there's sort of a spectrum of how much Python
+
+448
+00:29:53,120 --> 00:29:55,480
+versus how fast they are.
+
+449
+00:29:55,480 --> 00:30:00,400
+And so the more Python you support, the less fast you can go.
+
+450
+00:30:00,400 --> 00:30:03,360
+And if you support less Python, you can go way faster.
+
+451
+00:30:03,360 --> 00:30:07,800
+And so it's kind of nice that there are options all along that trade-off curve that you can
+
+452
+00:30:07,800 --> 00:30:08,800
+use.
+
+453
+00:30:08,800 --> 00:30:14,760
+I assume that MyPyC has some sort of issue with supporting everything, and that's why
+
+454
+00:30:14,760 --> 00:30:20,000
+we don't just run everything through MyPyC all the time, but that's a little bit of speculation
+
+455
+00:30:20,000 --> 00:30:23,960
+on my part.
+
+456
+00:30:23,960 --> 00:30:32,480
+So I was wondering, as far as typing is concerned and as things get more static, I know in some
+
+457
+00:30:32,480 --> 00:30:39,480
+languages, like in Scala, where types are sort of pseudo-dynamic, the type inference
+
+458
+00:30:39,480 --> 00:30:45,240
+engine can get pretty slow when things are sort of missing.
+
+459
+00:30:45,240 --> 00:30:49,640
+I was wondering if that's something, have you all seen any sort of performance issues
+
+460
+00:30:49,640 --> 00:30:56,280
+in terms of the performance or doing type inference on the fly?
+
+461
+00:30:56,280 --> 00:31:00,840
+I would say that we do very, in Pyston, talking just about Pyston now, we do very lightweight
+
+462
+00:31:00,840 --> 00:31:07,400
+profiling, which is basically for each bytecode, what did we see happen at that bytecode?
+
+463
+00:31:07,400 --> 00:31:10,080
+And it is quite cheap to do that.
+
+464
+00:31:10,080 --> 00:31:15,320
+There's no cross-function analyzing, whole program analysis, anything like that.
+
+465
+00:31:15,360 --> 00:31:20,600
+I don't know for the larger projects in terms of actually the type inferences or the static
+
+466
+00:31:20,600 --> 00:31:23,600
+Python project that I mentioned, but for us it's not really an issue.
+
+467
+00:31:29,960 --> 00:31:31,960
+Anyone else?
+
+468
+00:31:31,960 --> 00:31:38,400
+If you have any other questions, I would suggest talking to the speaker after, either outside
+
+469
+00:31:38,400 --> 00:31:39,400
+this space.
+
+470
+00:31:39,400 --> 00:31:40,400
+Great, thanks.
+
+471
+00:31:40,400 --> 00:31:41,400
+Thank you.
+
+472
+00:31:41,400 --> 00:31:42,480
+Thank you.
+
