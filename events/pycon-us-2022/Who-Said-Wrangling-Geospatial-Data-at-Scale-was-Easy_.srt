@@ -1,0 +1,912 @@
+1
+00:00:00,000 --> 00:00:15,240
+Hello, everyone. Let's welcome Brendan Collins to deliver a talk on who said ranking geospatial
+
+2
+00:00:15,240 --> 00:00:24,040
+data at scale was easy. Over to you, Brendan.
+
+3
+00:00:24,040 --> 00:00:30,440
+Huge thanks to the PyCon 2022 organizers for making this event happen. Super excited to
+
+4
+00:00:30,440 --> 00:00:36,280
+be here. This is my first PyCon. Also, you know, my first PyCon presentation, obviously.
+
+5
+00:00:36,280 --> 00:00:41,560
+Also huge thanks to Chris Schiner from the Nature Conservancy who loaned me his Python
+
+6
+00:00:41,560 --> 00:00:46,440
+for Dummies book in 2008 and was super patient with me as I struggled through writing some
+
+7
+00:00:46,440 --> 00:00:53,640
+of my first Python functions. I learned about geospatial data and the power of bringing
+
+8
+00:00:53,640 --> 00:00:59,560
+spatial thinking to organizations while working at a company called Blue Raster, which was using
+
+9
+00:00:59,560 --> 00:01:08,120
+geospatial data for helping conservation groups better achieve their goals. I've built a career
+
+10
+00:01:08,120 --> 00:01:14,280
+on geospatial data off of the work of a lot of other people. So huge thanks also to Peter Wang
+
+11
+00:01:14,280 --> 00:01:19,720
+and Travis Oliphant, Matt Rocklin who's here, and also Brian Vandevin, folks that have mentored me
+
+12
+00:01:19,720 --> 00:01:25,720
+and helped me and also shown me that there are business models that don't involve locking
+
+13
+00:01:25,720 --> 00:01:32,440
+important tools behind proprietary licenses and keys. So big, big thanks to those folks.
+
+14
+00:01:33,800 --> 00:01:42,120
+I wanted to start off by showing an example of a vertical scaling solution for geospatial data.
+
+15
+00:01:42,120 --> 00:01:47,880
+What we're looking at is Crater Lake National Park, and as I click around the map, I'm generating
+
+16
+00:01:47,880 --> 00:01:54,440
+a view shed or a line of sight analysis on this terrain while I'm rotating the position of the
+
+17
+00:01:54,440 --> 00:02:02,040
+sun to do ray tracing in a hill shade. This was made possible through using a CUDA enabled GPU
+
+18
+00:02:02,040 --> 00:02:06,440
+that was all written from a library called X-Ray Spatial, which we maintain at MakePath.
+
+19
+00:02:08,360 --> 00:02:14,600
+It's an example of taking a small amount of data and making what is a somewhat computationally
+
+20
+00:02:14,600 --> 00:02:21,800
+intensive task fast using a GPU. In this talk, I'm going to be presenting really a grab bag of
+
+21
+00:02:21,800 --> 00:02:28,280
+different tools that you should be aware of if you're approaching geospatial analytics in Python.
+
+22
+00:02:30,920 --> 00:02:36,360
+My name is Brendan Collins. I've been involved in open source geo for about 10 years.
+
+23
+00:02:36,360 --> 00:02:41,560
+I am the maintainer of X-Ray Spatial, which is a raster-based spatial analytics library.
+
+24
+00:02:42,200 --> 00:02:46,520
+I'm also a huge fan of DataShader, which is a general purpose rasterization pipeline.
+
+25
+00:02:46,520 --> 00:02:50,600
+We're going to be talking a little bit about DataShader. I'm also the author of the King
+
+26
+00:02:50,600 --> 00:02:55,240
+JSON Bible down there at the bottom left for anyone that's interested in doing NLP on the Bible.
+
+27
+00:02:57,080 --> 00:03:03,880
+Also, a new package from MakePath called MapShader, which is trying to make GIS web services easy from
+
+28
+00:03:03,880 --> 00:03:12,680
+Python. I'm the co-founder of MakePath, which is an Austin-based spatial analytics firm.
+
+29
+00:03:13,640 --> 00:03:18,920
+We are focused on bringing the broader tools from the data science ecosystem to geospatial
+
+30
+00:03:18,920 --> 00:03:25,080
+professionals and the clients that we work with. A lot of times, tools from general data science
+
+31
+00:03:25,080 --> 00:03:30,520
+are not named in ways that GIS analysts and geospatial data scientists recognize,
+
+32
+00:03:30,520 --> 00:03:34,120
+and we're trying to bridge that gap while also providing services to clients.
+
+33
+00:03:36,760 --> 00:03:40,920
+If you'd like to learn more about MakePath, please visit our blog, and you can see a blog
+
+34
+00:03:40,920 --> 00:03:46,680
+post on this GPU-enhanced geospatial analysis with the Greater Lake National Park that I just showed.
+
+35
+00:03:46,680 --> 00:03:49,080
+You can see a little bit more of what went into creating that.
+
+36
+00:03:53,320 --> 00:03:59,320
+Who said that processing geospatial data at scale was easy? Well, maybe it was Sophia Yang.
+
+37
+00:03:59,320 --> 00:04:05,240
+I don't know if you know her. She's a senior data scientist at Anaconda. She just started a
+
+38
+00:04:05,240 --> 00:04:10,920
+YouTube channel and has some really great content on there that she shows a lot of her secrets for
+
+39
+00:04:10,920 --> 00:04:18,760
+data science. So maybe it was Sophia Yang. Also, Natalie O'Dell here, who's a GIS analyst at
+
+40
+00:04:18,760 --> 00:04:25,320
+MakePath. Natalie, do you think that processing geospatial data at scale is easy? Sometimes.
+
+41
+00:04:25,320 --> 00:04:30,680
+Sometimes. Cool. So Natalie is the author of a really interesting library called
+
+42
+00:04:30,680 --> 00:04:36,920
+Census Parquet. And what Census Parquet is doing is it's taking the Census 2020
+
+43
+00:04:37,960 --> 00:04:44,760
+geographic files, shape files, and converting them into a format that's better for processing
+
+44
+00:04:44,760 --> 00:04:49,720
+at a large scale, which is parquet. So this is not exactly the parquet files themselves,
+
+45
+00:04:49,720 --> 00:04:55,080
+but the tools to create those parquet files. So you can go to Census Parquet and download this,
+
+46
+00:04:55,080 --> 00:05:01,080
+and you can modify these scripts for other uses. But we took this and we processed the Census 2020
+
+47
+00:05:01,080 --> 00:05:07,640
+data so that it would be easy to consume from big data systems like Dask and Spark and other solutions.
+
+48
+00:05:10,120 --> 00:05:16,280
+Now, one of the things that makes processing geospatial data difficult is that there's a
+
+49
+00:05:16,280 --> 00:05:22,840
+lot of different formats. So as we go over to OGC, the Open Geospatial Consortium, we can see a list
+
+50
+00:05:22,840 --> 00:05:30,600
+of the OGC standards which they currently support, and there's a bunch of them. They apply to many
+
+51
+00:05:30,600 --> 00:05:35,640
+different types of data. And it can be a little overwhelming if you're getting involved in this
+
+52
+00:05:35,640 --> 00:05:42,280
+to choose which data formats should I be targeting. So this talk, I hope that you leave this talk
+
+53
+00:05:42,280 --> 00:05:48,600
+with a good idea of the formats and tools that you should be using for different types of
+
+54
+00:05:48,600 --> 00:05:54,840
+geospatial data. These data formats are really divided up into two general categories.
+
+55
+00:05:54,840 --> 00:06:03,480
+One of those are for vector data and another is for raster data. In looking at datacarpentry.org,
+
+56
+00:06:03,480 --> 00:06:09,960
+which is a great site to learn more about data science, you can see a little bit of an introduction
+
+57
+00:06:09,960 --> 00:06:15,960
+to vector data. So vector is a very overloaded term in data science, but in GIS and geospatial,
+
+58
+00:06:15,960 --> 00:06:22,200
+it refers to points, lines, and polygons. So vector data represents discrete phenomena. So if we
+
+59
+00:06:22,200 --> 00:06:28,360
+think of a building, then that building could be represented as a point. It could be represented
+
+60
+00:06:28,360 --> 00:06:34,120
+as a line, as the outline of the building footprint, or it could be represented as a polygon.
+
+61
+00:06:34,120 --> 00:06:38,760
+Those are all vector formats. So vector are for discrete phenomena.
+
+62
+00:06:38,760 --> 00:06:46,040
+So some of the tools to handle vector data, points, lines, and polygons that we should think about
+
+63
+00:06:46,680 --> 00:06:51,960
+start with a library called pandas, which many of you are familiar with, that gives us the ability
+
+64
+00:06:51,960 --> 00:06:59,720
+to manipulate tabular data in Python and organize NumPy arrays with labels. Now, another library
+
+65
+00:06:59,720 --> 00:07:07,080
+came out called geopandas, and geopandas will add a geometry column to your pandas data frames so
+
+66
+00:07:07,080 --> 00:07:16,440
+that you can process vector data with a similar API to pandas. So geopandas is great, and just like
+
+67
+00:07:16,440 --> 00:07:23,560
+pandas, it's an in-memory data structure that you're working with. So another library on the
+
+68
+00:07:23,560 --> 00:07:29,800
+vector side that I just wanted to talk about was Dask geopandas. So the Dask data frame,
+
+69
+00:07:29,800 --> 00:07:35,560
+which is a really great abstraction for scaling pandas data frames to multiple threads or multiple
+
+70
+00:07:35,560 --> 00:07:41,000
+cores or multiple machines, also has this extension Dask geopandas to give you that
+
+71
+00:07:41,000 --> 00:07:47,800
+geometry column on your Dask data frame so that you can use the Dask abstractions with geopandas.
+
+72
+00:07:47,800 --> 00:07:54,760
+This is a fairly new library. It's, I would say, like has some rough edges, but they're getting
+
+73
+00:07:54,760 --> 00:08:01,320
+smoothed out, and it's a really great dependency if you're going to process vector data sets that
+
+74
+00:08:01,320 --> 00:08:07,880
+do not fit on a single machine. So as we processed census parquet, and Natalie was writing those
+
+75
+00:08:07,880 --> 00:08:17,400
+scripts, we used Dask geopandas to load up each one of the individual census files into a single
+
+76
+00:08:17,400 --> 00:08:26,120
+large data frame that we could then save out as a partitioned parquet file. So I'm going to mention
+
+77
+00:08:26,120 --> 00:08:31,640
+parquet a lot, and I think the first takeaway from this in processing geospatial data at scale
+
+78
+00:08:31,640 --> 00:08:39,080
+is that parquet is a really good friend. OGC is now putting out a geoparquet specification
+
+79
+00:08:39,080 --> 00:08:44,120
+for having that geometry in your parquet file, and there's a couple of reasons why you're going to
+
+80
+00:08:44,120 --> 00:08:50,840
+want to use parquet as a format. So the first reason that you're going to want to use parquet
+
+81
+00:08:50,840 --> 00:08:57,880
+as a format is because it's binary, right, instead of a text-based format. It supports a wide number
+
+82
+00:08:57,880 --> 00:09:04,920
+of compression formats, and it also stores data by column, and that's really nice, and it's
+
+83
+00:09:04,920 --> 00:09:11,160
+partitionable. So those four things together make parquet a really good option for storing your data,
+
+84
+00:09:11,720 --> 00:09:18,840
+and we know that performance breaks down into two different things. It breaks down into memory and
+
+85
+00:09:18,840 --> 00:09:25,480
+I.O., right, or compute and I.O., excuse me. So parquet is going to handle the I.O. component of
+
+86
+00:09:25,480 --> 00:09:31,720
+scaling, and as long as we have a geometry column in our parquet file, then we'll be able to scale
+
+87
+00:09:31,720 --> 00:09:39,960
+vector operations on top of the data. So the first lesson in scaling would be choose a data format
+
+88
+00:09:39,960 --> 00:09:44,840
+that lends itself to fast I.O. So it should be binary. It should support various types of
+
+89
+00:09:44,840 --> 00:09:49,400
+compression. It should be most likely column or store, so you don't have to load all of your data
+
+90
+00:09:49,400 --> 00:09:54,520
+into memory if you're only interested in one column, and it should also be partitionable so that you can
+
+91
+00:09:54,520 --> 00:10:00,840
+have individual processes or workers load in one partition as opposed to having to load the entire
+
+92
+00:10:00,840 --> 00:10:10,280
+data set. Now the other area of spatial data is raster data. Raster data is regular grids. We know
+
+93
+00:10:10,280 --> 00:10:17,720
+rasters from formats like JPEGs and PNGs. They're images. So raster formats in the geospatial world
+
+94
+00:10:17,720 --> 00:10:23,960
+are used to represent mostly continuous phenomena. So if you think of rainfall,
+
+95
+00:10:24,760 --> 00:10:34,680
+soil types is a common one. Elevation, those tend to be represented as rasters. And a fun little
+
+96
+00:10:34,680 --> 00:10:40,280
+cliche comment from the geospatial world, we say raster is faster and vector is correcter.
+
+97
+00:10:40,840 --> 00:10:47,320
+So a lot of times in performance, the performance gains can be found by making sure that you're
+
+98
+00:10:47,960 --> 00:10:54,120
+using the correct formats for your data. If you take a large elevation data set and you convert
+
+99
+00:10:54,120 --> 00:11:00,440
+it into a vector from a raster, you can do that, but you're going to end up with very complicated
+
+100
+00:11:00,520 --> 00:11:05,800
+vectors. So many vertices for each one of your areas. And as you process that, it's going to be
+
+101
+00:11:05,800 --> 00:11:13,080
+fairly slow. Now raster data has its own issues. And we're going to talk about a couple of libraries
+
+102
+00:11:13,080 --> 00:11:17,160
+that are going to help you. The foundational library, which we all know and love, is NumPy,
+
+103
+00:11:17,160 --> 00:11:24,360
+which gives us the ability to allocate a typed array that is much faster to work with than, say,
+
+104
+00:11:24,360 --> 00:11:29,880
+a heterogeneous Python list where we're doing all the type checking for every element. So
+
+105
+00:11:29,880 --> 00:11:36,520
+NumPy forms the foundation for the geospatial libraries for raster processing that come after.
+
+106
+00:11:36,520 --> 00:11:44,120
+But there are some things about NumPy that can be difficult. So one of them is not having labels.
+
+107
+00:11:44,760 --> 00:11:51,080
+So when you're using a NumPy array, you'll find that you do a lot of integer indexing with the
+
+108
+00:11:51,080 --> 00:11:57,240
+NumPy array slicing syntax. And it would be really nice if you could build, say, a cube,
+
+109
+00:11:57,240 --> 00:12:03,000
+let's think about a 3D array, where you have x and y as your geospatial coordinates and maybe z as
+
+110
+00:12:03,000 --> 00:12:08,920
+your different layers. Those could be maybe the bands of a Landsat image or they could be
+
+111
+00:12:10,520 --> 00:12:15,800
+different data sets from places that have been co-registered. X array will give you the ability
+
+112
+00:12:15,800 --> 00:12:22,360
+to label those dimensions and refer to those dimensions with strings instead of integers.
+
+113
+00:12:22,360 --> 00:12:28,200
+That makes your code a lot more readable. And in three months, when you come back to a function,
+
+114
+00:12:28,760 --> 00:12:36,280
+you'll be able to understand what it's doing. A lot of work has gone into x array. And we owe at
+
+115
+00:12:36,280 --> 00:12:42,520
+MakePath a huge credit to the Pangeo community for pushing forward the x array format and other
+
+116
+00:12:42,520 --> 00:12:50,760
+formats like XAR that we also rely on for raster data. MakePath decided that there could be more
+
+117
+00:12:51,320 --> 00:12:57,720
+universal functions on top of x array objects. So we created a library called x array spatial,
+
+118
+00:12:57,720 --> 00:13:04,040
+which includes spatial extensions for x array objects. This library does not introduce any
+
+119
+00:13:04,040 --> 00:13:09,880
+new data structures. All it does is a set of really the universal functions. So if we think of NumPy
+
+120
+00:13:09,880 --> 00:13:15,800
+really as two things, the nd array plus universal functions like sum and standard deviation that
+
+121
+00:13:15,800 --> 00:13:24,120
+operate on top of the NumPy array, x array spatial is basically like spatial u funcs, which take x
+
+122
+00:13:24,120 --> 00:13:29,800
+array data arrays as input and tend to return x array data arrays as output. There's a couple
+
+123
+00:13:29,800 --> 00:13:36,600
+of functions which return pandas data frames. And we can see a couple of those. But we have a nice
+
+124
+00:13:36,600 --> 00:13:42,120
+list of the features that are in x array spatial if you scroll down a little bit. And we can see
+
+125
+00:13:42,200 --> 00:13:48,760
+some of the categories of universal functions that we support. So classifying or binning
+
+126
+00:13:48,760 --> 00:13:56,120
+rasters where you want to bin using an equal interval method on top of a raster. Focal analytics
+
+127
+00:13:56,120 --> 00:14:02,360
+where we're looking at neighborhoods around pixels. Similar to convolution filters, but
+
+128
+00:14:02,920 --> 00:14:07,960
+we have a general apply so that you can create your own filters to pass over an image.
+
+129
+00:14:07,960 --> 00:14:14,920
+Hotspot analysis to identify statistically significant hotspots in an image. Statistics.
+
+130
+00:14:14,920 --> 00:14:21,000
+So multispectral functions. These are all about combinations of different bands and imagery. So
+
+131
+00:14:21,000 --> 00:14:28,200
+if you get a Landsat scene or a Sentinel scene, you'll have RGB bands, but then also near infrared
+
+132
+00:14:28,200 --> 00:14:33,720
+and a slew of other bands. You can combine those together to pull out interesting information.
+
+133
+00:14:33,720 --> 00:14:39,000
+The classic one in multispectral would be NDVI. I'm just going to try to make this so folks can
+
+134
+00:14:39,000 --> 00:14:44,600
+see. But there's a bunch of other ones. Now as I look through these features, you'll notice that
+
+135
+00:14:44,600 --> 00:14:50,760
+there's different columns here. So these different columns correspond to which array backends are
+
+136
+00:14:50,760 --> 00:14:58,600
+supported by the function. So the numpy x array data array. So x array is wrapping a numpy array
+
+137
+00:14:58,600 --> 00:15:04,360
+to provide labels, right? But it can wrap other types of arrays. So it can also wrap
+
+138
+00:15:04,360 --> 00:15:09,720
+Dask arrays. So if you're loading up a chunked array using Dask, you can still use those x array
+
+139
+00:15:09,720 --> 00:15:15,960
+labels, but the underlying data is a Dask array instead of just a numpy array. There are also
+
+140
+00:15:15,960 --> 00:15:24,520
+KooPy arrays. So KooPy provides a numpy-like API on top of CUDA GPUs. So that's really handy.
+
+141
+00:15:25,240 --> 00:15:30,600
+You can put a KooPy array inside of an x array data array and then run it through x array spatial
+
+142
+00:15:30,600 --> 00:15:36,680
+functions, and that's nice. And then there's also the Dask GPU column. So that would correspond to
+
+143
+00:15:36,680 --> 00:15:43,880
+a cluster of GPUs that you're running an analysis on. We have some simple pathfinding on top of
+
+144
+00:15:43,880 --> 00:15:51,800
+rasters. Also proximity analysis. So we're looking at the distance from target pixels in a couple of
+
+145
+00:15:51,800 --> 00:15:57,960
+different ways. There's allocation direction and just distance, which is the proximity function,
+
+146
+00:15:57,960 --> 00:16:02,200
+and those currently only work on numpy and Dask arrays. We're still implementing the KooPy
+
+147
+00:16:03,080 --> 00:16:09,320
+versions. Some raster to vector tools and classic surface tools like doing slope and curvature.
+
+148
+00:16:10,200 --> 00:16:17,320
+Viewshed is one of them here that I showed earlier. So we have vector and we have raster.
+
+149
+00:16:17,720 --> 00:16:24,120
+Datashader is a great tool which came out of Anaconda, really led by Jim Bednar and Jim
+
+150
+00:16:24,120 --> 00:16:30,760
+Christ. What this is is a general purpose rasterization pipeline. By that I mean moving
+
+151
+00:16:30,760 --> 00:16:37,160
+from vector data to raster data. So what if you're dealing with elevation data and you're also dealing
+
+152
+00:16:37,160 --> 00:16:44,600
+with parcel data? Parcels, say the boundaries of a given property in a community, are best represented
+
+153
+00:16:44,600 --> 00:16:51,080
+as vectors. While elevation is best represented as a raster, Datashader will allow you to convert
+
+154
+00:16:51,080 --> 00:16:56,840
+between the two in an intelligent way and it also allows you to specify aggregation functions for
+
+155
+00:16:56,840 --> 00:17:04,360
+dealing with things like overplotting. So Datashader is a really amazing tool. We use it all the time at
+
+156
+00:17:04,360 --> 00:17:11,400
+MakePath. We can see an example here of population in the United States of the lower 48. This is one
+
+157
+00:17:11,400 --> 00:17:16,920
+point per pixel in the country. So this is a vector data set of points and Datashader is taking
+
+158
+00:17:16,920 --> 00:17:24,600
+it and aggregating it to different pixels and then applying a function to reduce those values
+
+159
+00:17:24,600 --> 00:17:31,080
+into a color here. There's a log color ramp applied so we're able to resolve the Midwest cities and
+
+160
+00:17:31,080 --> 00:17:36,200
+not get drowned out by New York, Houston, and Chicago, and Los Angeles. But Datashader is one
+
+161
+00:17:36,200 --> 00:17:41,640
+of those tools you want in your toolbox so that you can convert from vector to raster easily
+
+162
+00:17:42,440 --> 00:17:49,240
+and co-register data sets. And by co-register I mean having their pixels aligned. So if I load up,
+
+163
+00:17:49,240 --> 00:17:55,880
+say, my elevation data and then I want to bring in parcel data and summarize the elevation by the
+
+164
+00:17:55,880 --> 00:18:01,080
+parcels, right, I'm going to have to convert those parcels into a raster but I'm going to need their
+
+165
+00:18:01,080 --> 00:18:07,640
+pixels to align. And that's where Datashader can help you by helping you resample the elevation data,
+
+166
+00:18:07,640 --> 00:18:12,280
+rasterize the vector data, bring them together, and allow you to do your analysis without worrying
+
+167
+00:18:12,280 --> 00:18:19,960
+about those creativity killing steps. Now in scaling there's some other dependencies that
+
+168
+00:18:19,960 --> 00:18:27,000
+need to be highlighted here. Numba is certainly one of them. In X-ray spatial we have heavy use
+
+169
+00:18:27,000 --> 00:18:33,400
+of Numba for vertical scaling. And by vertical scaling I mean making our algorithms faster.
+
+170
+00:18:33,400 --> 00:18:39,400
+I want to stay in Python. I don't want to drop down to a C extension when I need to loop through
+
+171
+00:18:39,400 --> 00:18:44,200
+a bunch of pixels. And so the Numba functions inside of X-ray spatial, I hope to get to showing
+
+172
+00:18:44,200 --> 00:18:51,000
+you one of them, make it possible to have performant code without adding a C extension.
+
+173
+00:18:51,000 --> 00:18:57,000
+And on the horizontal scaling, Dask is the solution for being able to scale out to multiple
+
+174
+00:18:57,000 --> 00:19:03,000
+threads and multiple CPUs. It understands Numba functions to send around to workers. And so these
+
+175
+00:19:03,000 --> 00:19:11,000
+tools integrate very nicely. I mentioned Kupai. Kupai is for interfacing with CUDA GPUs with a
+
+176
+00:19:11,000 --> 00:19:17,000
+Numpy like syntax. And here's a recent merge that we had on X-ray spatial where Tui, one of the
+
+177
+00:19:23,000 --> 00:19:29,000
+engineers says, current hot spots Kupai implementation runs on pure Kupai. Enabling Numba
+
+178
+00:19:29,000 --> 00:19:35,000
+helps greatly improve performance. In testing this array size we got a 6,000X performance increase.
+
+179
+00:19:35,000 --> 00:19:41,000
+So that was an example where there's probably a lot of low hanging fruit to do on the hot spots tool.
+
+180
+00:19:41,000 --> 00:19:49,000
+And using Numba and its JIT decorator for CUDA, we were able to target GPUs for hot spots and get a
+
+181
+00:19:49,000 --> 00:19:55,000
+really nice improvement. I also wanted to highlight the planetary computer from Microsoft. The
+
+182
+00:19:55,000 --> 00:20:01,000
+planetary computer combines curated data sets with scalable compute on Jupyter. And so that's
+
+183
+00:20:01,000 --> 00:20:07,000
+what we're doing here. We're looking at a quick example here. We can see pulling in elevation data
+
+184
+00:20:07,000 --> 00:20:13,000
+from the planetary computer and doing a nominal analysis on it. So what I'm doing is I'm
+
+185
+00:20:13,000 --> 00:20:19,000
+importing data shader. I'm importing a planetary computer library and X-ray. Choosing some areas
+
+186
+00:20:19,000 --> 00:20:25,000
+of interest. And so this is a very nice example of how we can use this to create a very
+
+187
+00:20:25,000 --> 00:20:31,000
+nice example. So what I'm doing here is I'm importing data from the planetary computer library and
+
+188
+00:20:31,000 --> 00:20:37,000
+X-ray. Choosing some areas of interest. And then using what is a stack catalog to access data.
+
+189
+00:20:37,000 --> 00:20:43,000
+Stack is a great open source specification. It's spatio temporal asset catalogs for being able to
+
+190
+00:20:43,000 --> 00:20:49,000
+have a JSON file which you can read which describes a multi-part raster data set.
+
+191
+00:20:49,000 --> 00:20:55,000
+So if you have a large, say you have Landsat and there's many scenes, you don't want to loop through every scene
+
+192
+00:20:55,000 --> 00:21:01,000
+and check its bounds to see whether it's in your study area or not. You want to consult an index.
+
+193
+00:21:01,000 --> 00:21:07,000
+And that's what stack is. It's an index that you can put in S3 along with some other formats and read
+
+194
+00:21:07,000 --> 00:21:13,000
+that stack catalog and find the data that you're interested in. So we've queried this stack catalog,
+
+195
+00:21:13,000 --> 00:21:19,000
+the NASA DEM for our area of interest. We're retrieving that elevation.
+
+196
+00:21:19,000 --> 00:21:23,000
+Then we're able to grab that data.
+
+197
+00:21:23,000 --> 00:21:31,000
+And use data shader to an X-ray spatial. So here we're computing a hill shade with X-ray spatial.
+
+198
+00:21:31,000 --> 00:21:39,000
+And then color mapping with a pseudo elevation color map. And so this was querying a very large data set.
+
+199
+00:21:39,000 --> 00:21:43,000
+But it used stack to figure out what area of the data to pull.
+
+200
+00:21:43,000 --> 00:21:47,000
+Then used X-ray to open that data set and resample it.
+
+201
+00:21:47,000 --> 00:21:54,000
+Used X-ray spatial to compute a hill shade to place a light source at a given location in an azimuth.
+
+202
+00:21:54,000 --> 00:21:59,000
+And then it used data shader at the end to actually add color mapping to the array.
+
+203
+00:21:59,000 --> 00:22:05,000
+So what this is, if you're interacting with this, this is an X-ray data array.
+
+204
+00:22:05,000 --> 00:22:11,000
+So stack, I mentioned a little bit about stack. So check stack out. There's a lot of great tools around stack.
+
+205
+00:22:11,000 --> 00:22:17,000
+Stack is not Python specific. It's simply a specification. But there's PyStack and other libraries that implement it.
+
+206
+00:22:17,000 --> 00:22:24,000
+And X-ray spatial has a whole user guide where you can look at the different tools in action.
+
+207
+00:22:24,000 --> 00:22:32,000
+So this is a proximity notebook where we're looking through calculating proximity on points.
+
+208
+00:22:32,000 --> 00:22:45,000
+So we have our starting points and we're able to run the X-ray spatial proximity tool to generate a grid where every pixel is the value in distance to the nearest point.
+
+209
+00:22:45,000 --> 00:22:56,000
+And you can choose different distance metrics. You can also do this where you are, say, doing the distance from a line feature.
+
+210
+00:22:56,000 --> 00:23:02,000
+And here's the result of a line feature. You can threshold that distance.
+
+211
+00:23:02,000 --> 00:23:10,000
+You can also do proximity allocation and direction where I want the value not to be the distance to the nearest item.
+
+212
+00:23:10,000 --> 00:23:16,000
+I want it to be the ID of the nearest item. And that's what allocation is. And so that is an allocation grid.
+
+213
+00:23:16,000 --> 00:23:22,000
+And then also direction where you want the say the cardinal direction to the nearest point.
+
+214
+00:23:22,000 --> 00:23:29,000
+So those are some tools available in X-ray spatial. We do have a continued CUDA working group where we're working on algorithms.
+
+215
+00:23:29,000 --> 00:23:39,000
+I mentioned the hotspots tool and I wanted to quickly show I just have a little time left what it's like inside the code of X-ray spatial looking at these number functions.
+
+216
+00:23:39,000 --> 00:23:49,000
+So here is the code for slope. But I'm just going to quickly change this to Hill shade because we saw more of the Hill shade demos here.
+
+217
+00:23:50,000 --> 00:23:59,000
+So we have first a NumPy implementation of Hill shade fairly just using NumPy you funcs. Great.
+
+218
+00:23:59,000 --> 00:24:08,000
+We can take that NumPy version of our Hill shade and we can scale it to using Dask. Look how easy Dask is.
+
+219
+00:24:08,000 --> 00:24:15,000
+So we're there is a edge case here where we have to handle overlapping partitions because our data is spread out.
+
+220
+00:24:15,000 --> 00:24:27,000
+We can use map overlaps so we can pull in the edge pixels from one partition and the edge from another so we can compute our Hill shade and not have edge effects for every partition of our of our raster.
+
+221
+00:24:27,000 --> 00:24:35,000
+We can then sprinkle on the CUDA JIT decorator and we've enabled this code for GPUs.
+
+222
+00:24:35,000 --> 00:24:44,000
+So in this file here it's about 200 lines with some documentation.
+
+223
+00:24:44,000 --> 00:24:54,000
+It's handling the NumPy case, the Dask case, the GPU case and the Dask GPU case all in 200 lines of code without any C extensions and it's very performant.
+
+224
+00:24:54,000 --> 00:25:01,000
+So check out X-ray spatial and the minimum steel functions from it and look at look at examples of implementing Numba and Dask together.
+
+225
+00:25:02,000 --> 00:25:11,000
+In general I'm just so grateful to be here. It's an amazing opportunity to interface with the Python community.
+
+226
+00:25:11,000 --> 00:25:16,000
+I urge folks to reach out to me and to other people at MakePath.
+
+227
+00:25:16,000 --> 00:25:22,000
+I always enjoy going and evangelizing these tools and helping organizations to use them.
+
+228
+00:25:22,000 --> 00:25:30,000
+Again, I think we're not doing any Q&A but thank you guys so much for the opportunity and hope to see you around the conference.
+
