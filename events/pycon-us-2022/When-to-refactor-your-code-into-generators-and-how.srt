@@ -1,0 +1,1308 @@
+1
+00:00:00,000 --> 00:00:10,120
+All right, let's start the third talk of the session.
+
+2
+00:00:10,120 --> 00:00:16,520
+We have Jan-Hein Buhrman here who is going to talk about when to refactor your code into
+
+3
+00:00:16,520 --> 00:00:18,120
+generators and how.
+
+4
+00:00:18,120 --> 00:00:19,560
+Take it away.
+
+5
+00:00:19,560 --> 00:00:20,560
+Thank you.
+
+6
+00:00:20,560 --> 00:00:22,560
+All right, let's start.
+
+7
+00:00:22,560 --> 00:00:25,440
+Well, first of all, it's great to be here.
+
+8
+00:00:25,440 --> 00:00:32,960
+I hope everybody is doing fine here at the venue, but also perhaps the viewers at home.
+
+9
+00:00:32,960 --> 00:00:37,400
+So let's start with my presentation, when to refactor your code into generators and
+
+10
+00:00:37,400 --> 00:00:38,400
+how.
+
+11
+00:00:38,400 --> 00:00:45,780
+All right, so the goals of this presentation are that I hope that after this presentation
+
+12
+00:00:45,780 --> 00:00:52,200
+you will be able to recognize certain loop constructs as candidates for refactoring and
+
+13
+00:00:52,360 --> 00:00:57,560
+how to convert these constructs into more maintainable and pythonic code by refactoring
+
+14
+00:00:57,560 --> 00:01:02,240
+them into elegant pipelines of generators.
+
+15
+00:01:02,240 --> 00:01:08,240
+And finally, you will be more acquainted with the standard library itertools module and the
+
+16
+00:01:08,240 --> 00:01:10,880
+more-itertools package.
+
+17
+00:01:10,880 --> 00:01:13,080
+But first, let's introduce myself.
+
+18
+00:01:13,080 --> 00:01:17,480
+My name is Jan-Hein Buhrman.
+
+19
+00:01:17,480 --> 00:01:21,200
+You see my email address and my Twitter handle over there.
+
+20
+00:01:21,200 --> 00:01:27,240
+As you can see in the email address, I'm working for Ordina already more than 10 years now.
+
+21
+00:01:27,240 --> 00:01:29,320
+Time flies when you're having fun.
+
+22
+00:01:29,320 --> 00:01:34,760
+I witnessed, and a long time ago, more than 30 years ago, I witnessed the first baby steps
+
+23
+00:01:34,760 --> 00:01:42,840
+of Python when I was working at the Dutch Institute for Mathematics and Computer Science.
+
+24
+00:01:42,840 --> 00:01:47,440
+And during my career, I was working as a C++ developer.
+
+25
+00:01:47,440 --> 00:01:50,040
+I had also management roles.
+
+26
+00:01:50,080 --> 00:01:57,080
+But I always kept an eye on Python and its developments and how it progressed.
+
+27
+00:01:57,080 --> 00:02:03,200
+And while being a Java unit manager at my current company, I sparked the idea for starting
+
+28
+00:02:03,200 --> 00:02:07,960
+up a dedicated Python practice, the Ordina Pythoneers.
+
+29
+00:02:07,960 --> 00:02:13,480
+And I think it's quite special for a broad spectrum IT service provider to have a Python
+
+30
+00:02:13,480 --> 00:02:22,480
+dedicated unit within and where we combine software ethics, software development ethics,
+
+31
+00:02:22,480 --> 00:02:29,000
+or software development craftsmanship together with Python.
+
+32
+00:02:29,000 --> 00:02:31,440
+We like that combination.
+
+33
+00:02:31,440 --> 00:02:36,800
+And finally, the Ordina Pythoneers are a participating sponsor of the PSF.
+
+34
+00:02:36,800 --> 00:02:41,840
+And the last four years, I'm working as a Python programmer, as a happy Python coder.
+
+35
+00:02:42,840 --> 00:02:43,440
+All right.
+
+36
+00:02:43,440 --> 00:02:50,120
+So the topic we will be addressing is, first of all, I'm going to show you some code with
+
+37
+00:02:50,120 --> 00:02:53,680
+certain kind of loops which have a certain pattern.
+
+38
+00:02:53,680 --> 00:02:59,360
+These loops have similar codes, but they vary in start, stop, and selection criteria.
+
+39
+00:02:59,360 --> 00:03:06,920
+And I'll give a short address to the topic of refactoring and how you can recognize certain
+
+40
+00:03:06,960 --> 00:03:12,160
+patterns of loop constructs for refactoring candidates.
+
+41
+00:03:12,160 --> 00:03:15,320
+Then I touch upon the topic of generators.
+
+42
+00:03:15,320 --> 00:03:22,080
+And I will introduce you to the earlier mentioned itertools module and the more-itertools package.
+
+43
+00:03:22,080 --> 00:03:24,320
+So let's start.
+
+44
+00:03:24,320 --> 00:03:28,480
+So this is, I'm going to tell you a story, but it is a fictional story.
+
+45
+00:03:28,480 --> 00:03:31,200
+It's not a true story.
+
+46
+00:03:31,200 --> 00:03:36,840
+It's a story about that we're working in a team and we have a product owner who is
+
+47
+00:03:37,760 --> 00:03:41,360
+representing the Fibonacci sequence fan club.
+
+48
+00:03:41,360 --> 00:03:46,560
+And he would like you to make a function returning a list of Fibonacci numbers which are less
+
+49
+00:03:46,560 --> 00:03:48,600
+than a certain value.
+
+50
+00:03:48,600 --> 00:03:52,080
+So first of all, who knows what a Fibonacci number is?
+
+51
+00:03:52,080 --> 00:03:58,360
+I see many ands, perhaps not 100%, but close to it.
+
+52
+00:03:58,360 --> 00:04:01,400
+So a short introduction to Fibonacci numbers.
+
+53
+00:04:01,400 --> 00:04:02,880
+I'll just read it out.
+
+54
+00:04:02,920 --> 00:04:07,800
+In mathematics, the Fibonacci numbers form a sequence, the Fibonacci sequence, in which
+
+55
+00:04:07,800 --> 00:04:11,300
+each number is the sum of the preceding two ones.
+
+56
+00:04:11,300 --> 00:04:13,620
+So that's the essence of the Fibonacci sequence.
+
+57
+00:04:13,620 --> 00:04:15,640
+You start with two numbers.
+
+58
+00:04:15,640 --> 00:04:17,760
+Usually it's zero and one.
+
+59
+00:04:17,760 --> 00:04:22,060
+The next value is simply the addition of the previous two.
+
+60
+00:04:22,060 --> 00:04:26,040
+So in this example, you see the first numbers are zero and one.
+
+61
+00:04:26,040 --> 00:04:30,240
+If you add them together, zero plus one makes one, right?
+
+62
+00:04:30,240 --> 00:04:33,760
+So that's the reason why you see another one in the sequence.
+
+63
+00:04:33,760 --> 00:04:39,880
+And then the next value is calculated by taking the two previous ones of the next value, which
+
+64
+00:04:39,880 --> 00:04:43,720
+are one plus one, and that makes two, et cetera, et cetera.
+
+65
+00:04:43,720 --> 00:04:45,580
+One plus two makes three.
+
+66
+00:04:45,580 --> 00:04:47,160
+Two plus three makes five.
+
+67
+00:04:47,160 --> 00:04:49,400
+And then you get this sequence.
+
+68
+00:04:49,400 --> 00:04:52,620
+So that's the essence of the Fibonacci sequence.
+
+69
+00:04:52,620 --> 00:04:55,960
+So let's start coding that in Python.
+
+70
+00:04:55,960 --> 00:05:04,480
+And if you Google around a little bit, perhaps you end up with the tutorial of Python itself,
+
+71
+00:05:04,480 --> 00:05:09,240
+where a variation of this function is actually written out.
+
+72
+00:05:09,240 --> 00:05:11,960
+It has another name.
+
+73
+00:05:11,960 --> 00:05:15,640
+It doesn't contain type annotations, but for the rest it's the same.
+
+74
+00:05:15,640 --> 00:05:18,640
+It doesn't contain a docstring either.
+
+75
+00:05:18,640 --> 00:05:20,920
+But it works as follows.
+
+76
+00:05:20,920 --> 00:05:23,400
+You initialize your function.
+
+77
+00:05:23,400 --> 00:05:27,360
+You initialize the result value as an empty list.
+
+78
+00:05:27,360 --> 00:05:33,920
+And you start initializing the two, what you could call the Fibonacci registers, A and
+
+79
+00:05:33,920 --> 00:05:39,800
+B. And you could view A as the current Fibonacci number and B as the next to come Fibonacci
+
+80
+00:05:39,800 --> 00:05:41,040
+number.
+
+81
+00:05:41,040 --> 00:05:45,880
+And as long as your current Fibonacci number is less than the threshold that you have given
+
+82
+00:05:45,880 --> 00:05:50,920
+as an argument, as a parameter to your function, then you enter the loop.
+
+83
+00:05:50,920 --> 00:05:56,120
+You append the current Fibonacci number to the list.
+
+84
+00:05:56,120 --> 00:06:00,960
+You calculate the two new registers.
+
+85
+00:06:00,960 --> 00:06:08,880
+And that is the new current Fibonacci number is the old value of the, is the old next Fibonacci
+
+86
+00:06:08,880 --> 00:06:09,880
+number.
+
+87
+00:06:09,880 --> 00:06:15,200
+So A becomes B. And at the same time, that's nice from Python, you can make this kind of
+
+88
+00:06:15,200 --> 00:06:18,400
+funny, how do you call it, tuple assignment.
+
+89
+00:06:18,400 --> 00:06:23,400
+You can calculate a new next to come Fibonacci number by adding the old values of A and B
+
+90
+00:06:23,400 --> 00:06:24,400
+together.
+
+91
+00:06:24,400 --> 00:06:26,800
+And that's what you store in the B variable.
+
+92
+00:06:26,800 --> 00:06:31,480
+And as long as the condition holds, you just simply repeat that.
+
+93
+00:06:31,480 --> 00:06:36,000
+And then finally at the end, you return the resulting list.
+
+94
+00:06:36,000 --> 00:06:38,040
+So looks great.
+
+95
+00:06:38,040 --> 00:06:40,040
+Seems to work.
+
+96
+00:06:40,040 --> 00:06:41,280
+Everything has been tested, by the way.
+
+97
+00:06:41,280 --> 00:06:45,120
+So this is what this will be working.
+
+98
+00:06:45,120 --> 00:06:49,280
+And the product owner is happy with the results and he wants more.
+
+99
+00:06:49,280 --> 00:06:54,320
+So he now asks us, can you also make a function that returns the end Fibonacci number counting
+
+100
+00:06:54,320 --> 00:06:55,320
+from zero?
+
+101
+00:06:55,320 --> 00:07:00,800
+So it means that if you ask for Fibonacci number zero, then you get the first one.
+
+102
+00:07:00,800 --> 00:07:06,960
+If you ask for Fibonacci number one, you get the second one, and so on, and so on.
+
+103
+00:07:06,960 --> 00:07:10,960
+We programmers like to index from zero onwards.
+
+104
+00:07:10,960 --> 00:07:12,800
+So let's go that one.
+
+105
+00:07:12,800 --> 00:07:16,400
+It looks a bit the same, but also a bit different.
+
+106
+00:07:16,400 --> 00:07:17,400
+It doesn't return a list.
+
+107
+00:07:17,400 --> 00:07:20,860
+It just returns one Fibonacci value.
+
+108
+00:07:20,860 --> 00:07:22,800
+But again, you have these A and B registers.
+
+109
+00:07:22,800 --> 00:07:24,480
+It works the same.
+
+110
+00:07:24,480 --> 00:07:27,880
+You make a counter, but you don't need to count a variable.
+
+111
+00:07:27,880 --> 00:07:32,920
+You only use it to iterate certain times through this loop.
+
+112
+00:07:32,920 --> 00:07:36,520
+And you calculate the current Fibonacci number.
+
+113
+00:07:36,520 --> 00:07:43,960
+So when you have calculated that many n times, then you can return the current Fibonacci
+
+114
+00:07:43,960 --> 00:07:44,960
+number.
+
+115
+00:07:44,960 --> 00:07:45,960
+All right.
+
+116
+00:07:45,960 --> 00:07:53,000
+So the product owner now really gets enthusiastic and he says, okay, well, can you now make
+
+117
+00:07:53,000 --> 00:07:58,240
+also another function which provides the first n Fibonacci numbers?
+
+118
+00:07:58,240 --> 00:08:03,680
+So not Fibonacci numbers up to n, but the first n, and perhaps also a function that
+
+119
+00:08:03,840 --> 00:08:09,120
+gives me the smallest Fibonacci number greater than or equal to a certain value.
+
+120
+00:08:09,120 --> 00:08:10,120
+All right.
+
+121
+00:08:10,120 --> 00:08:11,120
+We start coding again.
+
+122
+00:08:11,120 --> 00:08:14,280
+So here's the first implementation.
+
+123
+00:08:14,280 --> 00:08:17,280
+Here we are returning a list again.
+
+124
+00:08:17,280 --> 00:08:22,360
+You use this counter, what you have seen from the construct before, and you append the current
+
+125
+00:08:22,360 --> 00:08:27,640
+Fibonacci values to the list, et cetera, et cetera, and then you return the result.
+
+126
+00:08:27,800 --> 00:08:31,280
+And the last one, smallest Fib greater equal n.
+
+127
+00:08:31,280 --> 00:08:34,760
+It's a bit different.
+
+128
+00:08:34,760 --> 00:08:39,320
+There you go into the loop, and as long as the current Fibonacci number is less than
+
+129
+00:08:39,320 --> 00:08:48,000
+n, you simply continue until that condition does no longer hold, and then you return the
+
+130
+00:08:48,000 --> 00:08:53,600
+current value because that is then equal to n or greater than n.
+
+131
+00:08:53,600 --> 00:08:55,000
+So now we have four functions.
+
+132
+00:08:55,360 --> 00:08:58,720
+In my original presentation, there were even five, but it makes the story a bit boring
+
+133
+00:08:58,720 --> 00:09:04,920
+perhaps, and these line up nicely together in this matrix.
+
+134
+00:09:04,920 --> 00:09:11,960
+So here you have the condensed form of these four functions together, and I don't know
+
+135
+00:09:11,960 --> 00:09:14,880
+what you're thinking, but I am seeing a pattern.
+
+136
+00:09:14,880 --> 00:09:23,920
+Do other people also are seeing some sort of pattern or whatever?
+
+137
+00:09:23,920 --> 00:09:30,320
+You see the pattern explained over here because for all those functions, the function starts
+
+138
+00:09:30,320 --> 00:09:34,880
+with a name, it accepts some parameter, a threshold or whatever, or an index kind of
+
+139
+00:09:34,880 --> 00:09:43,200
+value, and sometimes you need to initialize a container, a list in our case.
+
+140
+00:09:43,200 --> 00:09:47,400
+Then you initialize these Fibonacci registers, the A and the B.
+
+141
+00:09:47,400 --> 00:09:53,280
+Then you go into some while loop or a for loop with certain ending conditions, and then
+
+142
+00:09:53,640 --> 00:10:01,400
+you are in the loop calculating the new values of the Fibonacci registers.
+
+143
+00:10:01,400 --> 00:10:07,880
+And then at the end, you return the current Fibonacci number or you're returning the container
+
+144
+00:10:07,880 --> 00:10:10,560
+where you've put in all the numbers.
+
+145
+00:10:10,560 --> 00:10:13,160
+So that's the pattern.
+
+146
+00:10:13,160 --> 00:10:19,080
+So there is a bit of duplication in this code, and you don't like duplicate code because
+
+147
+00:10:19,400 --> 00:10:24,480
+you might run the risk that for one of the four implementations, you just missed it,
+
+148
+00:10:24,480 --> 00:10:26,640
+did it wrong.
+
+149
+00:10:26,640 --> 00:10:34,540
+So you want to try to factor out the common code which is present in these functions.
+
+150
+00:10:34,540 --> 00:10:40,240
+So how to get rid of the redundancy of this code, and that's where this talk is about.
+
+151
+00:10:40,240 --> 00:10:44,640
+It seems to be quite difficult.
+
+152
+00:10:44,640 --> 00:10:52,440
+But in general, if you want to get rid of redundancy, you would refactor your code and
+
+153
+00:10:52,440 --> 00:10:54,040
+extract that part.
+
+154
+00:10:54,040 --> 00:10:59,360
+So first the question, who knows what refactoring is?
+
+155
+00:10:59,360 --> 00:11:02,320
+Yeah, many hands.
+
+156
+00:11:02,320 --> 00:11:06,200
+Great, great, great.
+
+157
+00:11:06,200 --> 00:11:13,560
+So refactoring is about that you restructure your code without changing the external behavior.
+
+158
+00:11:13,560 --> 00:11:18,640
+But you usually do this to improve the design, the structure, and the implementation of the
+
+159
+00:11:18,640 --> 00:11:19,640
+code.
+
+160
+00:11:19,640 --> 00:11:23,960
+But you make sure that the original functionality of the code remains the same.
+
+161
+00:11:23,960 --> 00:11:30,800
+And you do this for a reason because your code becomes more readable, less complex,
+
+162
+00:11:30,800 --> 00:11:33,800
+and better maintainable.
+
+163
+00:11:33,800 --> 00:11:36,900
+All right.
+
+164
+00:11:36,900 --> 00:11:38,760
+You try to extract these common parts.
+
+165
+00:11:38,760 --> 00:11:43,000
+You can, of course, extract that single line, the A and B initialization, put that in a
+
+166
+00:11:43,440 --> 00:11:44,440
+function or something like that.
+
+167
+00:11:44,440 --> 00:11:45,440
+It's quite useless, right?
+
+168
+00:11:45,440 --> 00:11:48,240
+You replace one line by another line.
+
+169
+00:11:48,240 --> 00:11:50,920
+So that doesn't seem to work.
+
+170
+00:11:50,920 --> 00:11:55,360
+You can replace that other line where you are calculating the new Fibonacci registers,
+
+171
+00:11:55,360 --> 00:11:56,640
+which is happening in the loop.
+
+172
+00:11:56,640 --> 00:12:00,000
+It doesn't look very sensible either.
+
+173
+00:12:00,000 --> 00:12:02,760
+So you're kind of stuck.
+
+174
+00:12:02,760 --> 00:12:05,320
+How can you refactor it?
+
+175
+00:12:05,320 --> 00:12:12,160
+Perhaps you should combine the functionality of all these functions into one super function,
+
+176
+00:12:12,160 --> 00:12:18,480
+which is able to do all these different kinds of calculations depending on the mode flag.
+
+177
+00:12:18,480 --> 00:12:26,920
+You could make an enum, for example, designating the mode where the function is running in.
+
+178
+00:12:26,920 --> 00:12:32,480
+We could try it first with just combining the first two functions of this story and
+
+179
+00:12:32,480 --> 00:12:37,500
+then not using an enum, but just a Boolean designating the mode of the function.
+
+180
+00:12:37,500 --> 00:12:40,600
+So I should have warned you.
+
+181
+00:12:40,600 --> 00:12:45,320
+Perhaps you had to put on your parasensitive sunglasses on because this code really is
+
+182
+00:12:45,320 --> 00:12:47,800
+hurting the eye.
+
+183
+00:12:47,800 --> 00:12:50,640
+I hope you agree.
+
+184
+00:12:50,640 --> 00:12:53,240
+It starts already with the ugly type annotations.
+
+185
+00:12:53,240 --> 00:12:54,240
+I don't know.
+
+186
+00:12:54,240 --> 00:12:58,480
+Everybody has seen the keynote of Bukhash Langa.
+
+187
+00:12:58,480 --> 00:13:03,160
+And ugly type annotations are also an indication of ugly codes.
+
+188
+00:13:03,160 --> 00:13:07,240
+In this case, also, it's a bit strange that this function is either returning an int or
+
+189
+00:13:07,240 --> 00:13:09,040
+a list of integers.
+
+190
+00:13:09,040 --> 00:13:13,080
+So it doesn't make sense to explain.
+
+191
+00:13:13,080 --> 00:13:16,480
+This code is working, by the way, but it doesn't make sense to explain this code.
+
+192
+00:13:16,480 --> 00:13:18,760
+So this is not the way to go.
+
+193
+00:13:18,760 --> 00:13:23,640
+It's also a bit of a contrived example, of course, but it's just to demonstrate that
+
+194
+00:13:23,640 --> 00:13:27,080
+the resulting code is not quite maintainable and this is not the way to go.
+
+195
+00:13:27,080 --> 00:13:31,640
+So again, how to refactor this?
+
+196
+00:13:31,640 --> 00:13:36,400
+Well, I think the key thing is here that you have to take a step back.
+
+197
+00:13:36,400 --> 00:13:41,520
+You have to more conceptualize the things that are happening in your codes.
+
+198
+00:13:41,520 --> 00:13:47,880
+Perhaps fly on a higher altitude, so to say.
+
+199
+00:13:47,880 --> 00:13:51,920
+And if you do that and you start thinking about what is this code actually doing, actually
+
+200
+00:13:51,920 --> 00:13:58,120
+it's doing two things or one thing which is common for all the codes and that is that
+
+201
+00:13:58,120 --> 00:14:01,840
+a part of it is producing these Fibonacci numbers.
+
+202
+00:14:01,840 --> 00:14:05,100
+And the other part of all these respective functions is doing something else.
+
+203
+00:14:05,100 --> 00:14:10,980
+Dealing with ending loop criteria or the way the values are collected in a container
+
+204
+00:14:10,980 --> 00:14:19,260
+or that you are working towards the final calculated Fibonacci number.
+
+205
+00:14:19,260 --> 00:14:25,860
+So that is the separation that you can mentally make in this code.
+
+206
+00:14:25,860 --> 00:14:32,900
+So when you see that you have some sort of, you have codes where you do things but you
+
+207
+00:14:32,900 --> 00:14:38,340
+also have a data producing part in that code, then you might be thinking of this refactoring
+
+208
+00:14:38,340 --> 00:14:44,260
+pattern because the data producing part is the part that you can actually quite easily
+
+209
+00:14:44,260 --> 00:14:47,260
+isolate.
+
+210
+00:14:47,260 --> 00:14:51,140
+But how will you do this isolation?
+
+211
+00:14:51,140 --> 00:14:58,580
+Well, for that I need to introduce another concept and that are the generator functions.
+
+212
+00:14:59,420 --> 00:15:01,740
+Yeah, a generator function.
+
+213
+00:15:01,740 --> 00:15:07,060
+When you call this function it creates an iterator, a generator iterator and if you
+
+214
+00:15:07,060 --> 00:15:13,300
+code a function it's quite, it's just like you're coding a function except in the simplest
+
+215
+00:15:13,300 --> 00:15:20,340
+form it doesn't contain any return statements, it contains yield expressions.
+
+216
+00:15:20,340 --> 00:15:27,260
+And if a function contains a yield expression then it automatically becomes a function,
+
+217
+00:15:27,300 --> 00:15:30,180
+a generator function.
+
+218
+00:15:30,180 --> 00:15:36,620
+And the yield expression is used to give back a value to the caller but not all values,
+
+219
+00:15:36,620 --> 00:15:39,380
+only one value at a time.
+
+220
+00:15:39,380 --> 00:15:47,940
+So you can use for example such a function in a for loop or some other thing that can
+
+221
+00:15:47,940 --> 00:15:51,460
+deal with iterators, right?
+
+222
+00:15:51,460 --> 00:16:00,180
+Well, each time that you, that the caller, the consuming party needs another value, the
+
+223
+00:16:00,180 --> 00:16:06,020
+generator, well it starts with the generator giving its first value back, right?
+
+224
+00:16:06,020 --> 00:16:11,060
+And then when it does so it saves its state and it passes control back to the calling
+
+225
+00:16:11,060 --> 00:16:13,780
+code, to the consuming code.
+
+226
+00:16:13,780 --> 00:16:21,420
+And once the consuming party needs another value then the generator is revived, it's
+
+227
+00:16:21,420 --> 00:16:27,140
+starts where it left off, it still has the value, all the local variables still have
+
+228
+00:16:27,140 --> 00:16:33,540
+their own value and it can produce the next value and so on and so on until some ending
+
+229
+00:16:33,540 --> 00:16:40,980
+criteria is met or something else or the consuming party doesn't need any more values so that's
+
+230
+00:16:40,980 --> 00:16:43,500
+how it sort of works.
+
+231
+00:16:43,500 --> 00:16:49,380
+So then the next question is how can you code a generator function?
+
+232
+00:16:49,460 --> 00:16:53,620
+How can you code a generator function producing these Fibonacci numbers?
+
+233
+00:16:53,620 --> 00:17:00,540
+Well, that's this lovely elegant piece of code I would say.
+
+234
+00:17:00,540 --> 00:17:06,060
+Let's call it fibgen, a Fibonacci generator and this function generates an endless sequence
+
+235
+00:17:06,060 --> 00:17:11,300
+of Fibonacci numbers until your memory in your computer cannot cope with the ultra large
+
+236
+00:17:11,300 --> 00:17:19,220
+numbers that you're producing and you recognize some familiar parts in this code I guess because
+
+237
+00:17:19,220 --> 00:17:25,660
+here you're again, before you enter the loop you're initialize your Fibonacci registers
+
+238
+00:17:25,660 --> 00:17:32,780
+A and B to the starting values 0 and 1 and then you enter an endless loop while true
+
+239
+00:17:32,780 --> 00:17:42,780
+and there you yield this first Fibonacci number and then the consuming party can do something
+
+240
+00:17:42,780 --> 00:17:50,940
+with that number and then after that when the consuming party wants another element
+
+241
+00:17:50,940 --> 00:17:56,460
+then your function, generator function continues so you start calculating the next values A
+
+242
+00:17:56,460 --> 00:18:03,700
+and B with a familiar formula, you loop again into the same loop and you yield the next
+
+243
+00:18:03,700 --> 00:18:10,420
+value and it stops again so that's how it works and in my view what you see here is
+
+244
+00:18:10,460 --> 00:18:15,460
+perhaps the most canonical code in representation of the Fibonacci sequence when you would code
+
+245
+00:18:15,460 --> 00:18:17,260
+it in an imperative style.
+
+246
+00:18:17,260 --> 00:18:22,380
+You could also express it in a more recursive style but if you express it in an imperative
+
+247
+00:18:22,380 --> 00:18:26,140
+style it would look like this I would say.
+
+248
+00:18:26,140 --> 00:18:30,100
+The next question is how can you use this generator?
+
+249
+00:18:30,100 --> 00:18:40,540
+Well on the Apple, on the read evil print loop it would look like this.
+
+250
+00:18:40,540 --> 00:18:47,940
+For example if you want to print the first 8 Fibonacci numbers then you can write this
+
+251
+00:18:47,940 --> 00:18:48,940
+loop.
+
+252
+00:18:48,940 --> 00:18:54,540
+What you do is you're using the zip function to zip together counter a range of 10 it will
+
+253
+00:18:54,540 --> 00:19:01,460
+give you the values 0 to 9 you don't need those values they are zipped and they end
+
+254
+00:19:01,460 --> 00:19:07,100
+up in the underscore variable and you call the Fibonacci generator and those values end
+
+255
+00:19:07,100 --> 00:19:14,220
+up in the fib variable in this loop and then you simply print this fib variable and this
+
+256
+00:19:14,220 --> 00:19:18,380
+is how you can use this generator.
+
+257
+00:19:18,380 --> 00:19:25,220
+So you could say we're set we're ready and you have a long break but perhaps there's
+
+258
+00:19:25,220 --> 00:19:35,380
+a little bit more to it because we can go one step further and that is by using some
+
+259
+00:19:35,380 --> 00:19:40,340
+beautiful building block that's provided by the Python standard library and the Isotuse
+
+260
+00:19:41,340 --> 00:19:47,620
+uses provides a lot of these nice building blocks.
+
+261
+00:19:47,620 --> 00:19:52,660
+Here it says the module standardized core set of fast memory efficient tools that are
+
+262
+00:19:52,660 --> 00:19:55,700
+useful by themselves or in combination.
+
+263
+00:19:55,700 --> 00:20:01,420
+Together they form an iterator algebra I would say a pipeline of iterators making it possible
+
+264
+00:20:01,420 --> 00:20:08,420
+to construct specialized tools succinctly and efficiently in pure Python.
+
+265
+00:20:08,500 --> 00:20:12,540
+There's another module which is called it's not a module it's a package you can fetch
+
+266
+00:20:12,540 --> 00:20:20,900
+it from pypy the more is tools package and the more is tools package implements many
+
+267
+00:20:20,900 --> 00:20:27,180
+of the documented recipes which you can read in the in the isotules module and a lot of
+
+268
+00:20:27,180 --> 00:20:32,160
+more a lot more convenient helper routines.
+
+269
+00:20:32,160 --> 00:20:39,520
+So those tools to the rescue in the sense that you can make things even more compact.
+
+270
+00:20:39,520 --> 00:20:46,920
+For example let's start with the explanation of the take while function that you see here.
+
+271
+00:20:46,920 --> 00:20:51,800
+The take while takes a predicate function it's just a function returning a falsy or
+
+272
+00:20:51,800 --> 00:20:57,440
+true fee value and the function will be called with the current value that is given back
+
+273
+00:20:57,520 --> 00:21:04,520
+by the by the iterable and in our case the iterable is fibgen and if you write a lambda
+
+274
+00:21:06,960 --> 00:21:13,960
+expression you see that as long as the current number that is given back by the Fibonacci
+
+275
+00:21:14,480 --> 00:21:21,480
+generator is less than the n parameter it returns a true fee value in this case actually
+
+276
+00:21:21,680 --> 00:21:28,680
+it's actually just true and then the value is passed on by take while and as soon as
+
+277
+00:21:30,040 --> 00:21:37,040
+the condition does not hold any longer then the generator is shut off so to say and you're
+
+278
+00:21:37,920 --> 00:21:44,280
+set and all these values that have been passed through also as an iterable from take while
+
+279
+00:21:44,280 --> 00:21:48,560
+are collected in a list by using the list constructor.
+
+280
+00:21:48,560 --> 00:21:53,960
+So this first function that we have written can also be expressed in this way using the
+
+281
+00:21:53,960 --> 00:22:00,960
+iter tools. Same for the second function here we're going to use the islice function from
+
+282
+00:22:02,680 --> 00:22:08,280
+the iter tools module and there is in two forms and the islice function is just like
+
+283
+00:22:08,280 --> 00:22:14,320
+you would like to use slicing with lists right you remember the syntax with the square brackets
+
+284
+00:22:14,320 --> 00:22:19,920
+and the colons where you can provide a start a stop and the step value well the islice
+
+285
+00:22:19,920 --> 00:22:25,760
+is the equivalent of that but then for iterators except that you cannot provide negative values
+
+286
+00:22:25,760 --> 00:22:31,720
+for either for one of these parameters so there are two there are two forms or you provide
+
+287
+00:22:31,720 --> 00:22:38,720
+only the stop value the stop index index between quotes or you provide the start index the
+
+288
+00:22:39,040 --> 00:22:46,040
+stop index and the step index but there must be no negative and we have another tool from
+
+289
+00:22:46,040 --> 00:22:53,040
+the more iter tools package which is called one and the one function accepts an iterable
+
+290
+00:22:54,840 --> 00:23:00,640
+and it makes sure that the iterable only contains exactly one value not zero not more exactly
+
+291
+00:23:00,640 --> 00:23:06,960
+one and if it contains this value then it extracts that from the sequence and returns
+
+292
+00:23:07,040 --> 00:23:13,000
+it as a value so with the combination of these functions you can implement the second function
+
+293
+00:23:13,000 --> 00:23:20,000
+that was requested by the product owner so well we can continue like that for example
+
+294
+00:23:21,320 --> 00:23:27,480
+here we have the islice this is the first function here we use the islice function in
+
+295
+00:23:27,480 --> 00:23:34,080
+the one index form only the stop value this is the one with the first and fibs and finally
+
+296
+00:23:34,120 --> 00:23:41,120
+the smallest fib you remember we had the previous function where we were using the take while
+
+297
+00:23:43,240 --> 00:23:49,520
+and this one is using the drop while so this one also takes a predicate function and it
+
+298
+00:23:49,520 --> 00:23:56,520
+will drop any value as long as the condition holds and once the condition does not hold
+
+299
+00:23:58,600 --> 00:24:03,720
+it will start passing through the values that it gets from the iterator and the first function
+
+300
+00:24:03,720 --> 00:24:10,320
+from the more iter tools package just selects the first value and returns that one so that's
+
+301
+00:24:10,320 --> 00:24:17,320
+how you can implement the last requested function so this now we're moving towards the end of
+
+302
+00:24:18,920 --> 00:24:25,920
+the presentation I would say I would encourage you to read through the documentation of the
+
+303
+00:24:26,520 --> 00:24:32,440
+iter tools package the iter tools module and the more iter tools package it's a very valuable
+
+304
+00:24:32,440 --> 00:24:39,440
+collection and you can use it perhaps more frequent than you were thinking and if you
+
+305
+00:24:40,080 --> 00:24:46,640
+have an idea what it all has to offer then it can make your code more expressive as well
+
+306
+00:24:46,640 --> 00:24:53,640
+so that's my plea and part of the goal of this presentation and just to tease you a
+
+307
+00:24:54,000 --> 00:25:00,560
+little bit for example suppose you have a massive amount of data bulk data that you
+
+308
+00:25:00,560 --> 00:25:06,640
+need to put into a database and you're using some sort of ORM like a sequel alchemy to
+
+309
+00:25:06,640 --> 00:25:13,640
+put it in then sometimes it could be useful to put it in large chunks yeah I'm still there
+
+310
+00:25:15,760 --> 00:25:21,760
+in large chunks instead of all the data in one go and then for example you can use the
+
+311
+00:25:21,760 --> 00:25:28,760
+more iter tools chunks or the i chunked function of this module so that's it and that's the
+
+312
+00:25:30,840 --> 00:25:37,120
+recap so the recap is we are now perhaps more able to recognize a certain pattern of certain
+
+313
+00:25:37,120 --> 00:25:44,120
+loops constructs as candidates for refactoring you know what generator functions are and
+
+314
+00:25:44,120 --> 00:25:51,120
+how you can use them to extract the data producing part out of your entangled code and you have
+
+315
+00:25:53,400 --> 00:26:00,400
+made acquaintance with the iter tools module and the more iter tools package here are some
+
+316
+00:26:01,000 --> 00:26:06,000
+resources and links I was inspired by Wikipedia for the definition of the Fibonacci number
+
+317
+00:26:06,000 --> 00:26:13,000
+code refactoring the Python glossary contains generator function definition the documentation
+
+318
+00:26:13,960 --> 00:26:19,280
+of iter tools and more iter tools and I would like to thank you you can check my you can
+
+319
+00:26:19,280 --> 00:26:25,320
+check out my repository don't look into its history but it's a final result please on
+
+320
+00:26:25,320 --> 00:26:32,320
+the main branch and actually perhaps as an additional note I have used PyTestBDD behavior
+
+321
+00:26:35,600 --> 00:26:40,520
+driven development gurgling language to test all the functions that are that you've seen
+
+322
+00:26:40,520 --> 00:26:44,240
+actually what you the functions that you've seen in this listing are actually from the
+
+323
+00:26:44,240 --> 00:26:51,240
+repo as a link linked in so to say and so the code that has been shown is working code
+
+324
+00:26:51,240 --> 00:26:58,240
+and I've used PyTestBDD to test both the pre-refactoring and the post-refactoring variance and even
+
+325
+00:27:01,840 --> 00:27:08,840
+that weird combination function for its correct working and I understand that questions it's
+
+326
+00:27:09,080 --> 00:27:16,080
+better to get them later on or perhaps in the NL or so I would like to thank you for
+
+327
+00:27:16,080 --> 00:27:18,880
+your attention and hope to speak to you later.
+
