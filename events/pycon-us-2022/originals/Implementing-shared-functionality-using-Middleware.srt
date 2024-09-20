@@ -1,0 +1,1432 @@
+1
+00:00:00,000 --> 00:00:09,380
+The usage of the term in the previous slide is quite different from what we are going
+
+2
+00:00:09,380 --> 00:00:10,660
+to discuss today.
+
+3
+00:00:10,660 --> 00:00:16,840
+Some of the key ideas that I found from back then that really resonated with me and that
+
+4
+00:00:16,840 --> 00:00:22,000
+expresses the essence of what middleware is are terms like glue.
+
+5
+00:00:22,000 --> 00:00:26,400
+It's an interface between hardware found above the transport layer but below the application
+
+6
+00:00:26,400 --> 00:00:28,280
+environment.
+
+7
+00:00:28,280 --> 00:00:34,560
+I can't really exactly express why but somewhere those terms gives me the essence of what we
+
+8
+00:00:34,560 --> 00:00:36,360
+truly use middleware for today.
+
+9
+00:00:36,360 --> 00:00:39,800
+Of course we are not talking about hardware but generally just as a glue between different
+
+10
+00:00:39,800 --> 00:00:44,080
+parts of our application.
+
+11
+00:00:44,080 --> 00:00:52,840
+Now for today consider a web application which consists of one or more API endpoints or views.
+
+12
+00:00:52,840 --> 00:00:57,960
+When middleware is code you write to implement functionality that is common across one or
+
+13
+00:00:57,960 --> 00:01:01,840
+more of your endpoints or views.
+
+14
+00:01:01,840 --> 00:01:08,200
+Examples count of page views centralized error handling caching and many others.
+
+15
+00:01:08,200 --> 00:01:17,600
+The WSGI specification PEP333 describes middleware as a way to provide extended APIs content
+
+16
+00:01:17,600 --> 00:01:22,760
+transformation navigation and other useful functions.
+
+17
+00:01:23,680 --> 00:01:31,360
+This leads us to our second topic of the talk middleware for WSGI applications.
+
+18
+00:01:31,360 --> 00:01:38,000
+I will start us off with discussing Flask applications.
+
+19
+00:01:38,000 --> 00:01:44,200
+Consider a very simple Flask application where we create a blueprint and define a single
+
+20
+00:01:44,200 --> 00:01:51,340
+route which handles all the requests and let's refer to that as the view function.
+
+21
+00:01:51,340 --> 00:01:54,700
+Now of course I have omitted a bunch of stuff from here because they are not relevant in
+
+22
+00:01:54,700 --> 00:01:58,940
+this context.
+
+23
+00:01:58,940 --> 00:02:03,900
+To define middleware in Flask we use decorators.
+
+24
+00:02:03,900 --> 00:02:08,160
+One example for decorator that we use is the before request decorator.
+
+25
+00:02:08,160 --> 00:02:14,340
+When you create a function or define a function and decorate it with the before request decorator
+
+26
+00:02:14,340 --> 00:02:22,300
+that function always gets called before your view function gets called when a request has
+
+27
+00:02:22,300 --> 00:02:26,140
+been made to the application.
+
+28
+00:02:26,140 --> 00:02:30,420
+Similarly if you want a function to be called after the request has been processed and the
+
+29
+00:02:30,420 --> 00:02:35,880
+response has been generated you decorate it with the function with the decorator after
+
+30
+00:02:35,880 --> 00:02:37,480
+request.
+
+31
+00:02:37,800 --> 00:02:44,680
+Of course here I have shown the example of blueprint but this equally applies to non-blueprint
+
+32
+00:02:44,680 --> 00:02:48,560
+applications as well just to be clear.
+
+33
+00:02:48,560 --> 00:02:54,360
+A typical example is shown here as a use case for where you might want to use this.
+
+34
+00:02:54,360 --> 00:03:01,400
+Let's say you want to print or not necessarily print perhaps record the latency of your page
+
+35
+00:03:01,400 --> 00:03:02,800
+rendering.
+
+36
+00:03:02,800 --> 00:03:11,120
+What you would do is you would use the Flask G global variable to start a timer in the
+
+37
+00:03:11,120 --> 00:03:16,840
+before request function or the function where you decorated with before request and then
+
+38
+00:03:16,840 --> 00:03:22,840
+in the function you decorated with after request you would find the difference between the
+
+39
+00:03:22,840 --> 00:03:27,720
+time now and the time that you recorded at the beginning of the request and that gives
+
+40
+00:03:27,720 --> 00:03:30,800
+you the latency of your page rendering.
+
+41
+00:03:33,720 --> 00:03:40,520
+So that's marked as an optional because I may not have time for it.
+
+42
+00:03:40,520 --> 00:03:45,400
+So if you do check out the slides I think that might give you more insights into how
+
+43
+00:03:45,400 --> 00:03:49,840
+this before request and after request are implemented within Flask itself.
+
+44
+00:03:49,840 --> 00:03:56,120
+Now it's very common to define not one but multiple such before request sorry not define
+
+45
+00:03:56,120 --> 00:03:59,240
+let's let's let's rehearse that.
+
+46
+00:03:59,240 --> 00:04:03,240
+It's very common to define multiple functions which you decorate with before request as
+
+47
+00:04:03,240 --> 00:04:05,040
+well as after request.
+
+48
+00:04:05,040 --> 00:04:12,160
+Now the ordering matters for the before request functions which I have specified here as before
+
+49
+00:04:12,160 --> 00:04:17,920
+request underscore F1 before request underscore F2 the order in which they are defined is
+
+50
+00:04:17,920 --> 00:04:21,280
+the order in which they are called.
+
+51
+00:04:21,280 --> 00:04:24,720
+For the after request functions they are called in the reverse order.
+
+52
+00:04:24,720 --> 00:04:29,400
+So when the response is generated from the view function the function you defined last
+
+53
+00:04:29,400 --> 00:04:36,000
+gets called first and then subsequently the other functions in a last in first order manner.
+
+54
+00:04:42,000 --> 00:04:44,680
+Let's consider a Django application now.
+
+55
+00:04:44,680 --> 00:04:51,240
+This is a simplified view function which I have called index.
+
+56
+00:04:51,240 --> 00:04:55,680
+It takes a single parameter request which represents the current request that is being
+
+57
+00:04:55,680 --> 00:04:57,680
+handled.
+
+58
+00:04:57,680 --> 00:05:05,360
+Please keep this in mind this is going to be our key for the next couple of slides.
+
+59
+00:05:05,360 --> 00:05:09,920
+So in Django you can define middleware using two approaches.
+
+60
+00:05:09,920 --> 00:05:13,280
+You can define a class or you can define a function.
+
+61
+00:05:13,280 --> 00:05:17,920
+Now the first example I have here is a class based approach.
+
+62
+00:05:17,920 --> 00:05:25,680
+You define a class you define a constructor which takes in a single parameter get response.
+
+63
+00:05:25,680 --> 00:05:32,200
+This parameter represents either the next view function or the next middleware to be
+
+64
+00:05:32,200 --> 00:05:35,320
+called.
+
+65
+00:05:35,320 --> 00:05:39,680
+The magic really happens here in the magic method call.
+
+66
+00:05:39,680 --> 00:05:47,080
+So what happens here is the first thing note here is the parameter that call takes.
+
+67
+00:05:47,240 --> 00:05:52,440
+It takes a parameter request which represents the current request that is being handled
+
+68
+00:05:52,440 --> 00:05:58,280
+and this is exactly what the view function also took in as a parameter.
+
+69
+00:05:58,280 --> 00:06:01,880
+Now in the call method is where we implement our middleware.
+
+70
+00:06:01,880 --> 00:06:07,200
+Now in this case the middleware we are implementing handles exceptions.
+
+71
+00:06:07,200 --> 00:06:12,440
+The desired behavior is if there is no exception we return the response as it is.
+
+72
+00:06:12,440 --> 00:06:16,200
+If however we got an exception we want to return a custom response.
+
+73
+00:06:16,320 --> 00:06:19,040
+I've omitted that from here for our brevity.
+
+74
+00:06:19,040 --> 00:06:24,320
+Code is really hard to put on slides in a way that actually it's legible.
+
+75
+00:06:24,320 --> 00:06:26,760
+So I've omitted that from here.
+
+76
+00:06:26,760 --> 00:06:34,760
+And that's your middleware which is using a class based approach in Django.
+
+77
+00:06:34,760 --> 00:06:38,000
+A function based middleware looks as shown.
+
+78
+00:06:38,000 --> 00:06:44,640
+We define a function called of course you can call it exactly what your middleware does.
+
+79
+00:06:44,920 --> 00:06:48,800
+In this case I'm calling it as latency underscore reporter.
+
+80
+00:06:48,800 --> 00:06:52,640
+And because I'm measuring latency of a request using this middleware.
+
+81
+00:06:52,640 --> 00:06:58,520
+Now the key here is the latency reporter function takes in a parameter get response
+
+82
+00:06:58,520 --> 00:07:04,360
+which points to the next middleware or the view function that we called for the request.
+
+83
+00:07:04,360 --> 00:07:12,040
+Now this function returns a closure that closure is again taking that parameter request
+
+84
+00:07:12,080 --> 00:07:16,600
+which represents the country was being handled and that is returned.
+
+85
+00:07:16,600 --> 00:07:23,240
+And the Django middleware machinery invokes this function whenever a request is being handled.
+
+86
+00:07:24,200 --> 00:07:30,800
+Now inside the closure what we do is we again start a timer with an assignment to a variable
+
+87
+00:07:30,800 --> 00:07:34,760
+request underscore begin and then we go through.
+
+88
+00:07:34,760 --> 00:07:40,440
+Sorry and then we call the view function or the next middleware which is get response.
+
+89
+00:07:40,440 --> 00:07:47,720
+And then after we have got the response from that function we can print the latency here
+
+90
+00:07:47,720 --> 00:07:51,560
+in a more practical use case you push the latency to your monitoring system
+
+91
+00:07:51,560 --> 00:07:55,240
+and then return the response from here.
+
+92
+00:07:55,240 --> 00:08:00,080
+Now once you define your middleware this is how you activate those middleware in Django.
+
+93
+00:08:00,080 --> 00:08:05,920
+You update your settings dot pi and you point and you update the middleware list
+
+94
+00:08:05,920 --> 00:08:11,720
+which is a module level variable to the middleware you want to activate.
+
+95
+00:08:11,720 --> 00:08:15,880
+The ordering here matters once again.
+
+96
+00:08:15,880 --> 00:08:21,760
+So consider that we have a middleware A B and then we have your application handler
+
+97
+00:08:21,760 --> 00:08:25,920
+or your view function whatever you want to call it as.
+
+98
+00:08:25,920 --> 00:08:30,240
+So when a request is being processed like basically when the request is coming into
+
+99
+00:08:30,240 --> 00:08:35,560
+your application first the middleware A is called then your middleware B is called
+
+100
+00:08:35,560 --> 00:08:38,320
+and then finally your view function is called.
+
+101
+00:08:38,320 --> 00:08:43,400
+Once the response has been generated the response first goes into middleware B
+
+102
+00:08:43,400 --> 00:08:48,200
+and then goes up to middleware A and then finally the client.
+
+103
+00:08:48,200 --> 00:08:54,360
+One key difference between Flask and Django middleware is that in Flask your middleware
+
+104
+00:08:54,360 --> 00:08:58,800
+may not be invoked for both parts of your request that is when for the request as well
+
+105
+00:08:58,800 --> 00:09:04,120
+as the response because you control that with the decorators before request and after request.
+
+106
+00:09:04,240 --> 00:09:06,680
+In Django it's different.
+
+107
+00:09:06,680 --> 00:09:11,160
+Every middleware that you define gets both the request as well as the response.
+
+108
+00:09:11,160 --> 00:09:14,800
+It depends on your middleware whether you want you can ignore the request or you can
+
+109
+00:09:14,800 --> 00:09:15,980
+ignore the response.
+
+110
+00:09:15,980 --> 00:09:25,560
+It really depends on what your middleware is trying to do.
+
+111
+00:09:25,560 --> 00:09:33,760
+To recap using middleware you define custom code to run before and after request processing
+
+112
+00:09:33,920 --> 00:09:37,920
+and how the middleware works is a framework specific detail which you usually can find
+
+113
+00:09:37,920 --> 00:09:40,120
+out by looking at the framework source code.
+
+114
+00:09:40,120 --> 00:09:44,760
+I did it myself but I have omitted it from today's talk because I will not be able to
+
+115
+00:09:44,760 --> 00:09:45,960
+cover it in the time.
+
+116
+00:09:45,960 --> 00:09:51,680
+I thought I had a 45 minute slot initially.
+
+117
+00:09:51,680 --> 00:09:56,180
+And WSGI frameworks define their own mechanism to define the middleware.
+
+118
+00:09:56,180 --> 00:09:58,520
+So let's pause a bit.
+
+119
+00:09:58,520 --> 00:10:03,600
+So as we have seen we write a middleware for Django application and we write a middleware
+
+120
+00:10:03,600 --> 00:10:08,000
+for Flask applications and the way we do it is quite different.
+
+121
+00:10:08,000 --> 00:10:13,120
+And the reason it's different is because each framework implements their own mechanism.
+
+122
+00:10:13,120 --> 00:10:18,880
+Now my question is could you write middleware in a framework independent way?
+
+123
+00:10:18,880 --> 00:10:20,800
+It turns out we can.
+
+124
+00:10:20,800 --> 00:10:25,840
+These are after all WSGI frameworks which means they define WSGI applications and there
+
+125
+00:10:25,840 --> 00:10:31,360
+lies the answer as we shall see next.
+
+126
+00:10:31,360 --> 00:10:39,240
+So I'll take a step back and define what is a function, a function which instantly
+
+127
+00:10:39,240 --> 00:10:40,640
+is a WSGI application.
+
+128
+00:10:40,640 --> 00:10:43,920
+I don't know how many of you actually know that this is a WSGI application.
+
+129
+00:10:43,920 --> 00:10:49,040
+I mean I knew something like this is how you define a WSGI application but before I did
+
+130
+00:10:49,040 --> 00:10:51,520
+this talk I had no idea.
+
+131
+00:10:51,520 --> 00:10:54,800
+But this is how a WSGI application looks like and that is it.
+
+132
+00:10:54,800 --> 00:10:57,100
+You don't have to do anything else.
+
+133
+00:10:57,100 --> 00:11:04,860
+So it takes two parameters of a dictionary called environ and a function startResponse.
+
+134
+00:11:04,860 --> 00:11:12,580
+The dictionary environ contains key value pairs describing the current request and startResponse
+
+135
+00:11:12,580 --> 00:11:19,900
+is a function which you use to send back the response to the client.
+
+136
+00:11:19,900 --> 00:11:26,420
+So the commented lines are where you do your processing in your handler and then when you're
+
+137
+00:11:26,460 --> 00:11:32,860
+ready to send the response you first call the startResponse with two arguments.
+
+138
+00:11:32,860 --> 00:11:39,060
+The first is a string containing the HTTP status and the second is a list of headers
+
+139
+00:11:39,060 --> 00:11:43,140
+that you want to add to the response and then you send back the response itself.
+
+140
+00:11:43,140 --> 00:11:46,000
+The response needs to be iterable.
+
+141
+00:11:46,000 --> 00:11:53,860
+So here it just contains a single byte hello world.
+
+142
+00:11:53,860 --> 00:11:58,020
+Let's look at how we can write a WSGI middleware.
+
+143
+00:11:58,020 --> 00:12:02,300
+So it looks very similar to the Django middleware with certain differences.
+
+144
+00:12:02,300 --> 00:12:04,780
+In fact, in fact, let me go back to this.
+
+145
+00:12:04,780 --> 00:12:09,580
+It looks, if you look at the call method, we'll ignore the init because it's not relevant
+
+146
+00:12:09,580 --> 00:12:10,580
+here.
+
+147
+00:12:10,580 --> 00:12:14,020
+I mean it's quite clear, I hope, what it's doing.
+
+148
+00:12:14,020 --> 00:12:20,500
+The call method signature and the WSGI application signature is exactly the same.
+
+149
+00:12:20,500 --> 00:12:25,900
+And what we do here is, once again, one of my favorite examples, it seems like, to handle
+
+150
+00:12:25,900 --> 00:12:27,020
+exceptions.
+
+151
+00:12:27,020 --> 00:12:34,180
+So what I do in the call method is I call the self.wisgiApp attribute which points to
+
+152
+00:12:34,180 --> 00:12:36,800
+the original WSGI application.
+
+153
+00:12:36,800 --> 00:12:41,100
+If there is no exception, the response is returned as returned by the WSGI application
+
+154
+00:12:41,100 --> 00:12:42,100
+itself.
+
+155
+00:12:42,100 --> 00:12:48,420
+If, however, there is an exception, I call the startResponse with a 500 status with some
+
+156
+00:12:48,700 --> 00:12:49,960
+headers.
+
+157
+00:12:49,960 --> 00:12:53,360
+And then I return a custom response which is an error occurred.
+
+158
+00:12:53,360 --> 00:12:57,100
+And that's really useful because you hide your internal exception details from your
+
+159
+00:12:57,100 --> 00:12:58,980
+client.
+
+160
+00:12:58,980 --> 00:13:04,340
+You should have a logit which I haven't shown here.
+
+161
+00:13:04,340 --> 00:13:07,780
+And how do you integrate the WSGI application with the middleware?
+
+162
+00:13:07,780 --> 00:13:09,000
+It looks like this.
+
+163
+00:13:09,000 --> 00:13:15,240
+You create an object of my exception processor type which is the middleware we defined.
+
+164
+00:13:15,240 --> 00:13:18,240
+And you pass in the WSGI application itself.
+
+165
+00:13:18,240 --> 00:13:19,960
+And that's your WSGI app.
+
+166
+00:13:19,960 --> 00:13:24,280
+And you can use a server like Junicon app to run it.
+
+167
+00:13:24,280 --> 00:13:25,280
+And there you go.
+
+168
+00:13:25,280 --> 00:13:28,660
+You have your WSGI application running with WSGI middleware.
+
+169
+00:13:28,660 --> 00:13:33,440
+I'm going to refer to this as the wrapping technique of defining middleware for WSGI
+
+170
+00:13:33,440 --> 00:13:38,160
+applications.
+
+171
+00:13:38,160 --> 00:13:40,100
+So let's pause again.
+
+172
+00:13:40,100 --> 00:13:45,700
+So frameworks implement their own mechanisms to define middleware as we have seen.
+
+173
+00:13:45,700 --> 00:13:49,720
+Now WSGI middleware is another WSGI application.
+
+174
+00:13:49,720 --> 00:13:55,520
+So that means if we implement a functionality using WSGI middleware, they are framework
+
+175
+00:13:55,520 --> 00:13:57,400
+independent.
+
+176
+00:13:57,400 --> 00:14:00,860
+Let's see how they work.
+
+177
+00:14:00,860 --> 00:14:03,700
+So this is the OpenTelemetry WSGI middleware.
+
+178
+00:14:03,700 --> 00:14:08,540
+It's an open source middleware that's available from the OpenTelemetry project.
+
+179
+00:14:08,540 --> 00:14:09,540
+It doesn't quite matter.
+
+180
+00:14:09,540 --> 00:14:12,780
+I shall not get into what OpenTelemetry itself is.
+
+181
+00:14:12,780 --> 00:14:17,080
+But this is an example I was familiar with of a WSGI middleware.
+
+182
+00:14:17,080 --> 00:14:18,960
+So this is the source code of the middleware.
+
+183
+00:14:18,960 --> 00:14:23,680
+And you can see the similarity with the middleware we defined here.
+
+184
+00:14:23,680 --> 00:14:27,520
+It's pretty much the same if you ignore the specific functionality.
+
+185
+00:14:27,520 --> 00:14:33,300
+So that's the OpenTelemetry WSGI middleware which is available as a third party package.
+
+186
+00:14:33,300 --> 00:14:36,200
+And how can you use that with Flask?
+
+187
+00:14:36,200 --> 00:14:43,280
+So when you define a Flask app, there is an attribute WSGI underscore app which points
+
+188
+00:14:43,280 --> 00:14:45,840
+to the WSGI application.
+
+189
+00:14:45,840 --> 00:14:53,840
+And what you can do here is we set the attribute to an object of the OpenTelemetry middleware
+
+190
+00:14:53,840 --> 00:15:01,440
+type which we create by passing the original WSGI app as an argument.
+
+191
+00:15:01,440 --> 00:15:10,200
+So this results in the OpenTelemetry middleware wrapping our original WSGI application.
+
+192
+00:15:10,200 --> 00:15:15,000
+And that basically gives you the functionality that the OpenTelemetry middleware provides
+
+193
+00:15:15,000 --> 00:15:18,280
+for your Flask application.
+
+194
+00:15:18,280 --> 00:15:26,960
+Now for Django, if you look at the file WSGI.py in your project, you will find this code where
+
+195
+00:15:27,560 --> 00:15:31,120
+top level variable called application.
+
+196
+00:15:31,120 --> 00:15:36,640
+And that gets set to the return value of the function getWSGI application.
+
+197
+00:15:36,640 --> 00:15:40,200
+And that points to your underlying WSGI application.
+
+198
+00:15:40,200 --> 00:15:44,560
+Remember when I said that this framework abstracts a lot of these things, but somewhere in there
+
+199
+00:15:44,560 --> 00:15:46,160
+there's a WSGI application.
+
+200
+00:15:46,160 --> 00:15:48,440
+So this is the WSGI application.
+
+201
+00:15:48,440 --> 00:15:54,000
+And the way we use the OpenTelemetry middleware, it looks similar to Flask.
+
+202
+00:15:54,000 --> 00:15:56,760
+We create an OpenTelemetry middleware object.
+
+203
+00:15:56,800 --> 00:15:59,920
+We pass the original WSGI application.
+
+204
+00:15:59,920 --> 00:16:05,000
+And then we update the value of the application, which is the model of a variable, to that
+
+205
+00:16:05,000 --> 00:16:06,440
+object.
+
+206
+00:16:06,440 --> 00:16:11,760
+And that's all you need to use WSGI middleware.
+
+207
+00:16:11,760 --> 00:16:14,000
+So this sounds like a win, right?
+
+208
+00:16:14,000 --> 00:16:18,400
+Like you can write a WSGI middleware and you can use it in a framework independent way.
+
+209
+00:16:18,400 --> 00:16:20,640
+Now I'm not sure if there are any pitfalls to doing that though.
+
+210
+00:16:20,640 --> 00:16:22,480
+I haven't explored it enough.
+
+211
+00:16:22,920 --> 00:16:26,760
+Maybe that's something for you to go and explore back home.
+
+212
+00:16:27,880 --> 00:16:28,880
+All right.
+
+213
+00:16:30,320 --> 00:16:34,760
+So let's see one last example of how we can use a middleware.
+
+214
+00:16:34,760 --> 00:16:39,880
+Consider that you have a Django application and you're moving some of your backends to
+
+215
+00:16:39,880 --> 00:16:40,880
+Flask.
+
+216
+00:16:40,880 --> 00:16:47,400
+What you can do is you can define a middleware which embeds the Flask application within
+
+217
+00:16:47,400 --> 00:16:49,840
+your Django application.
+
+218
+00:16:49,840 --> 00:16:55,320
+If it sounds like magic, that's how it seemed like to me when I actually implemented it.
+
+219
+00:16:55,320 --> 00:16:59,640
+So you define a class called, you know, you can call it anything really, but I have called
+
+220
+00:16:59,640 --> 00:17:01,160
+it FlaskAppWrapper.
+
+221
+00:17:01,160 --> 00:17:03,820
+The key again is the special call method.
+
+222
+00:17:03,820 --> 00:17:07,920
+So here I call the FlaskApps WSGI app method first.
+
+223
+00:17:07,920 --> 00:17:14,000
+You know, I pass the environment and start response exactly how I found it here.
+
+224
+00:17:14,000 --> 00:17:16,520
+And I pass it to the Flask app.
+
+225
+00:17:16,520 --> 00:17:21,480
+If I get a non-404 response, I return the data as it is.
+
+226
+00:17:21,480 --> 00:17:26,920
+And that indicates to me that that request was handled correctly.
+
+227
+00:17:26,920 --> 00:17:31,680
+If however I get a 404 response, I fall back to the Django application.
+
+228
+00:17:31,680 --> 00:17:38,200
+And that's one way you can use middleware to help you in migrations perhaps in your
+
+229
+00:17:38,200 --> 00:17:40,440
+project.
+
+230
+00:17:40,440 --> 00:17:41,520
+And this is how you use it.
+
+231
+00:17:41,520 --> 00:17:44,440
+It looks very similar to how you use the OpenTelemeter middleware.
+
+232
+00:17:46,840 --> 00:17:52,960
+So the result is when you make a request to the polls V2 path, the Flask application gets
+
+233
+00:17:52,960 --> 00:17:53,960
+called.
+
+234
+00:17:53,960 --> 00:17:59,680
+But when you make a request to the polls path, the Django application gets called.
+
+235
+00:17:59,680 --> 00:18:05,840
+So to recap, Flask and Django implement custom mechanisms to allow users to define middleware.
+
+236
+00:18:05,840 --> 00:18:11,040
+However, as you have seen, when we define a WSGI middleware, they become, they are framework
+
+237
+00:18:11,040 --> 00:18:14,000
+agnostic.
+
+238
+00:18:14,520 --> 00:18:17,920
+And we can use the wrapping technique to use this WSGI middleware.
+
+239
+00:18:20,560 --> 00:18:21,560
+Okay.
+
+240
+00:18:21,560 --> 00:18:23,560
+How much time do I have?
+
+241
+00:18:23,560 --> 00:18:25,560
+Seven or eight?
+
+242
+00:18:30,960 --> 00:18:32,960
+Eight.
+
+243
+00:18:32,960 --> 00:18:36,400
+So this is going to be like a turbo section I think.
+
+244
+00:18:36,400 --> 00:18:37,840
+But let's see.
+
+245
+00:18:37,840 --> 00:18:40,800
+So this is an ASGII HTTP application.
+
+246
+00:18:41,600 --> 00:18:44,720
+It's similar to what we saw for the WSGI application.
+
+247
+00:18:44,720 --> 00:18:46,640
+You define an async function.
+
+248
+00:18:46,640 --> 00:18:52,920
+It takes three parameters, a scope, a function receive, and a function send.
+
+249
+00:18:52,920 --> 00:18:56,080
+Scope essentially describes the current request.
+
+250
+00:18:56,080 --> 00:18:59,720
+Like you can think of it as the lifetime of the current request.
+
+251
+00:18:59,720 --> 00:19:03,120
+The receive function is used to get any request data.
+
+252
+00:19:03,120 --> 00:19:07,400
+And then you use the send function to send back any response.
+
+253
+00:19:07,400 --> 00:19:09,440
+So remember the signature.
+
+254
+00:19:09,440 --> 00:19:12,640
+That's all that's needed for this section.
+
+255
+00:19:12,640 --> 00:19:16,840
+And I'm going to skip over this because we'll cover it later.
+
+256
+00:19:16,840 --> 00:19:17,840
+Okay.
+
+257
+00:19:17,840 --> 00:19:20,000
+Now let's consider a fast API application.
+
+258
+00:19:20,000 --> 00:19:23,560
+This is how we define a very simple fast API application.
+
+259
+00:19:23,560 --> 00:19:27,520
+You create a top-level object of fast API type.
+
+260
+00:19:27,520 --> 00:19:34,680
+We define a route, expensive, and it's a super expensive route where we sleep for 10 seconds
+
+261
+00:19:34,680 --> 00:19:37,560
+and then return a response.
+
+262
+00:19:37,560 --> 00:19:41,000
+Now let's say I want to write a middleware as a caching.
+
+263
+00:19:41,000 --> 00:19:42,600
+I want to cache these expensive results.
+
+264
+00:19:42,600 --> 00:19:45,720
+I don't want to calculate a result every time.
+
+265
+00:19:45,720 --> 00:19:48,120
+So what I do, I define a middleware.
+
+266
+00:19:48,120 --> 00:19:50,080
+I define an init method.
+
+267
+00:19:50,080 --> 00:19:51,600
+It takes in two parameters.
+
+268
+00:19:51,600 --> 00:19:55,080
+The first parameter is the ASGII application itself.
+
+269
+00:19:55,080 --> 00:19:59,900
+And we have a second parameter, excluded parts.
+
+270
+00:19:59,900 --> 00:20:04,000
+Now this is any custom arguments that your middleware needs to take.
+
+271
+00:20:04,000 --> 00:20:05,880
+And we can specify as many as you want here.
+
+272
+00:20:05,880 --> 00:20:07,880
+I just have one.
+
+273
+00:20:07,880 --> 00:20:11,080
+The key here again is the special call method.
+
+274
+00:20:11,080 --> 00:20:12,960
+It should be an async function.
+
+275
+00:20:12,960 --> 00:20:21,120
+It takes in three parameters, scope, receive, send, exactly like our ASGII function here.
+
+276
+00:20:21,120 --> 00:20:25,660
+And in this function, we define the logic for the middleware.
+
+277
+00:20:25,660 --> 00:20:28,680
+If there's a cache hit, we return the cache response.
+
+278
+00:20:28,680 --> 00:20:34,560
+If however we did not get a cache hit, we call the original app using the original arguments,
+
+279
+00:20:34,560 --> 00:20:36,240
+scope, receive.
+
+280
+00:20:36,240 --> 00:20:41,320
+Cache and send is a wrapper that I created, which caches the response and then sends back
+
+281
+00:20:41,320 --> 00:20:42,920
+the response.
+
+282
+00:20:42,920 --> 00:20:49,000
+You can find these examples in the resources I have shared in my website.
+
+283
+00:20:49,000 --> 00:20:51,640
+And so, again, you have defined the middleware.
+
+284
+00:20:51,640 --> 00:20:52,640
+How do you add it?
+
+285
+00:20:52,640 --> 00:20:57,000
+In Fast API, it provides a helper method, addMiddleware.
+
+286
+00:20:57,000 --> 00:21:00,760
+And you first define the class of the middleware that you want to add.
+
+287
+00:21:00,760 --> 00:21:04,680
+And then you specify any additional parameters.
+
+288
+00:21:04,680 --> 00:21:09,240
+In this case, I have got a parameter called excluded parts, which is a list of parts I
+
+289
+00:21:09,240 --> 00:21:11,520
+don't want to cache.
+
+290
+00:21:11,520 --> 00:21:15,500
+So chat actually is a WebSocket backend, which I've implemented.
+
+291
+00:21:15,500 --> 00:21:17,600
+And that brings me nicely to my next slide.
+
+292
+00:21:17,600 --> 00:21:22,880
+So this middleware actually works very well, you know, as for HTTP applications as well
+
+293
+00:21:22,880 --> 00:21:24,940
+as WebSocket applications.
+
+294
+00:21:24,940 --> 00:21:30,560
+And the key to that is because the scope lasts as long as WebSocket connection remains open.
+
+295
+00:21:30,560 --> 00:21:36,800
+So when you call this awaitServe.app, that function doesn't return as long as WebSocket
+
+296
+00:21:36,800 --> 00:21:38,560
+connection remains open.
+
+297
+00:21:38,560 --> 00:21:44,760
+So I've got some logs down below where you can see that the request lasted for 30 seconds,
+
+298
+00:21:44,760 --> 00:21:49,800
+which is how long the WebSocket connection was open for.
+
+299
+00:21:49,800 --> 00:21:51,280
+I will skip over this.
+
+300
+00:21:51,280 --> 00:21:53,840
+You can look at the slides.
+
+301
+00:21:53,840 --> 00:21:54,840
+Okay.
+
+302
+00:21:55,000 --> 00:22:02,400
+Now if you notice, if you compare what the default behavior of the WSGI framework and
+
+303
+00:22:02,400 --> 00:22:07,760
+the ASGII framework is, I quite like the default behavior of fast API because it allows you
+
+304
+00:22:07,760 --> 00:22:10,520
+to define ASGII middleware directly.
+
+305
+00:22:10,520 --> 00:22:13,720
+In fact, that is the first thing they recommend in the documentation.
+
+306
+00:22:13,720 --> 00:22:17,800
+They talk about a more specific approach later on in the documentation, but I quite like
+
+307
+00:22:17,800 --> 00:22:22,600
+the fact that they ask you to just write a generic ASGII middleware, which means if there
+
+308
+00:22:22,800 --> 00:22:26,360
+are other ASGII frameworks, you could use the middleware with those as well.
+
+309
+00:22:26,360 --> 00:22:30,400
+I quite like that about fast API.
+
+310
+00:22:30,400 --> 00:22:38,400
+So okay, the last middleware example we're going to see is how can you embed a WSGI application
+
+311
+00:22:38,400 --> 00:22:40,200
+instead of an ASGII application?
+
+312
+00:22:40,200 --> 00:22:44,040
+This is as magical as it gets.
+
+313
+00:22:44,040 --> 00:22:50,600
+So what you can do is you define a fast API app, and then fast API provides a special
+
+314
+00:22:50,600 --> 00:22:52,880
+middleware called WSGI middleware.
+
+315
+00:22:52,880 --> 00:23:00,200
+You call the mount method, and any parts starting with V1 will be passed on to the WSGI middleware
+
+316
+00:23:00,200 --> 00:23:02,480
+and hence to a WSGI application.
+
+317
+00:23:02,480 --> 00:23:05,760
+And the result is, I've got a brief example.
+
+318
+00:23:05,760 --> 00:23:10,760
+So when you call anything with V1, you get hello world from Flask because that's been
+
+319
+00:23:10,760 --> 00:23:12,280
+processed by Flask.
+
+320
+00:23:12,280 --> 00:23:16,400
+On the other hand, when you call anything with V2, you get a response from the fast
+
+321
+00:23:16,400 --> 00:23:21,080
+API application.
+
+322
+00:23:21,080 --> 00:23:25,320
+The WSGI middleware implementation, if you look in the Starlit source code, looks like
+
+323
+00:23:25,320 --> 00:23:26,320
+this.
+
+324
+00:23:26,320 --> 00:23:30,600
+Very, I'm sure you're beginning to see the sort of pattern now.
+
+325
+00:23:30,600 --> 00:23:36,440
+So you look at the call method, takes in three parameters, and then there's the special WSGI
+
+326
+00:23:36,440 --> 00:23:42,640
+responder class, which if you go into, it defines a WSGI method which takes in two parameters,
+
+327
+00:23:42,640 --> 00:23:44,640
+which is an environment and start response.
+
+328
+00:23:44,640 --> 00:23:46,880
+So your WSGI application essentially.
+
+329
+00:23:46,880 --> 00:23:52,320
+I will skip that.
+
+330
+00:23:52,320 --> 00:23:55,520
+So key takeaways.
+
+331
+00:23:55,520 --> 00:24:03,160
+Middleware can be defined generally as an WSGI or ASGI application or be framework specific.
+
+332
+00:24:03,160 --> 00:24:08,240
+Middleware is code that's acting as both a client and a server.
+
+333
+00:24:08,240 --> 00:24:15,680
+A client for your other middleware or for your views and the server for other middleware
+
+334
+00:24:15,680 --> 00:24:17,960
+or for your original client.
+
+335
+00:24:17,960 --> 00:24:23,800
+And middleware enables decoupling and sharing of non-functional requirements.
+
+336
+00:24:23,800 --> 00:24:28,680
+And it also helps us in migration between application frameworks as well as WSGI and
+
+337
+00:24:28,680 --> 00:24:31,120
+ASGI.
+
+338
+00:24:31,120 --> 00:24:33,880
+So I have an exercise for you.
+
+339
+00:24:33,880 --> 00:24:37,440
+Go back, not today, maybe after you have recovered.
+
+340
+00:24:37,640 --> 00:24:42,720
+Look at the source code for the built-in middleware and the community-contributed middleware.
+
+341
+00:24:42,720 --> 00:24:49,000
+You will easily be able to see the pattern and hopefully the talk has given you enough
+
+342
+00:24:49,000 --> 00:24:53,800
+to really go dig deep into those and understand how they work.
+
+343
+00:24:53,800 --> 00:24:55,800
+So thank you.
+
+344
+00:24:55,800 --> 00:24:59,780
+Thanks for choosing my talk over some of the other excellent options.
+
+345
+00:24:59,780 --> 00:25:03,680
+And I hope you have gained insights into the internals of the middleware as they apply
+
+346
+00:25:03,680 --> 00:25:06,480
+to WSGI and ASGI applications.
+
+347
+00:25:06,480 --> 00:25:09,960
+And go away with a few new neural pathways formed in your brain.
+
+348
+00:25:09,960 --> 00:25:12,200
+I have written a few books.
+
+349
+00:25:12,200 --> 00:25:16,640
+Those two are my books I'm most proud of, I guess.
+
+350
+00:25:16,640 --> 00:25:20,880
+Go, yes, I know it's a Python conference, but I'm a Python as well as a Go guy.
+
+351
+00:25:20,880 --> 00:25:27,120
+So please check out that book if you're taking your first steps into Go and looking for something
+
+352
+00:25:27,120 --> 00:25:28,120
+practical.
+
+353
+00:25:28,120 --> 00:25:33,000
+And doing math with Python, I wrote that a few years ago, but I think it's still relevant.
+
+354
+00:25:33,000 --> 00:25:34,680
+So please check it out.
+
+355
+00:25:34,680 --> 00:25:38,280
+Feel free to contact me with anything related to this talk or anything else really.
+
+356
+00:25:38,280 --> 00:25:39,800
+Yeah, that's all I have.
+
+357
+00:25:39,800 --> 00:25:40,800
+Thank you.
+
+358
+00:25:40,800 --> 00:25:40,820
+Applause.
+

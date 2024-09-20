@@ -1,0 +1,752 @@
+1
+00:00:00,000 --> 00:00:12,860
+Hello, everyone. Welcome to our next talk, Bad Actors vs. Our Community, Detecting Software
+
+2
+00:00:12,860 --> 00:00:20,820
+Supply Chain Attacks on the Python Ecosystem. Please welcome Ajish Bijlani.
+
+3
+00:00:20,820 --> 00:00:32,180
+Thank you and welcome. Thank you for attending my talk. This is on supply chain attacks. So
+
+4
+00:00:32,180 --> 00:00:39,940
+let's get started. I'm Ajish. I hold a PhD from Georgia Tech in cybersecurity, and this is where
+
+5
+00:00:39,940 --> 00:00:44,740
+you can reach me. I work at Oscillate. I'm a research scientist, and we are developing tools
+
+6
+00:00:44,740 --> 00:00:52,180
+to detect software supply chain attacks. So open source software is a de facto standard way of
+
+7
+00:00:52,180 --> 00:00:59,740
+building digital apps and services today. Modern open source software is distributed as packages
+
+8
+00:00:59,740 --> 00:01:06,060
+on package managers. Examples of package managers include NPM and PyPy. For example, PyPy hosts
+
+9
+00:01:06,060 --> 00:01:17,620
+over 300,000 Python packages, and they receive millions of daily downloads. So anybody can publish
+
+10
+00:01:17,620 --> 00:01:22,820
+their package on these package managers. They make it super easy. They ship a command line tool that
+
+11
+00:01:22,820 --> 00:01:28,820
+you can use to publish your package, frictionless single command publishing. However, there's
+
+12
+00:01:28,820 --> 00:01:35,060
+limited security vetting. What does that mean? That means the software that we use on our server,
+
+13
+00:01:35,260 --> 00:01:42,340
+desktops, laptops, other devices, is written by unknown volunteers, which we blindly trust.
+
+14
+00:01:42,340 --> 00:01:53,060
+And bad actors exploit exactly this trust. And this is evident from several past incidents.
+
+15
+00:01:53,060 --> 00:02:00,580
+According to a recent study, the supply chain attacks have tripled in 2021 alone, and these
+
+16
+00:02:00,580 --> 00:02:08,540
+attacks have been carried out on all ecosystems. NPM, PyPy, no ecosystem has been spared. So what
+
+17
+00:02:08,540 --> 00:02:14,580
+are these supply chain attacks? So attackers target less secure packages or the weak links
+
+18
+00:02:14,580 --> 00:02:21,740
+in your supply chain, and they inject malware in the supply chain by publishing malicious packages.
+
+19
+00:02:21,740 --> 00:02:28,820
+Unlike vulnerabilities, malware is intentionally harmful. It's not an accidental programming bug
+
+20
+00:02:28,820 --> 00:02:36,100
+in a benign code. It is purposefully harmful. For example, a backdoor that is installed immediately
+
+21
+00:02:36,100 --> 00:02:42,420
+upon package installation, and that steals your SSH keys or Bitcoin wallet addresses.
+
+22
+00:02:42,420 --> 00:02:49,340
+Such attacks pose direct and dangerous threats because the same malware can be adopted by
+
+23
+00:02:49,340 --> 00:02:59,860
+millions of devices. And yeah, like I said, it has a wide blast radius. So what are these
+
+24
+00:02:59,860 --> 00:03:09,260
+techniques that attackers use to publish malware? So one such technique is typo-squatting. So under
+
+25
+00:03:09,260 --> 00:03:14,660
+typo-squatting, attackers publish packages with similar names to existing popular packages and
+
+26
+00:03:14,820 --> 00:03:21,940
+exploit inexperience or carelessness of developers to supply malware. For example, a named typo during
+
+27
+00:03:21,940 --> 00:03:27,940
+a package installation can end up in malware. In the slide here, we have shown a couple of examples.
+
+28
+00:03:27,940 --> 00:03:34,460
+For example, Colorama impersonates a popular package Colorama. And if you make a typo,
+
+29
+00:03:34,460 --> 00:03:42,500
+then you can end up installing malware on your machine. So let's take a case study and let's
+
+30
+00:03:42,980 --> 00:03:51,860
+dive deeper into what these malicious packages are. So let's take MITM proxy 2 as an example.
+
+31
+00:03:51,860 --> 00:03:59,260
+It impersonates a popular package called MITM proxy. As you can see, the project description
+
+32
+00:03:59,260 --> 00:04:06,580
+is exactly the same, and some of the stats are the same as the original package. So an inexperienced
+
+33
+00:04:06,580 --> 00:04:14,260
+developer may mistake this package as an upgraded version of MITM proxy and download it. But if you
+
+34
+00:04:14,260 --> 00:04:20,660
+look at the code, what this package does is it removes some of the safeguards. So anyone on the
+
+35
+00:04:20,660 --> 00:04:28,980
+same network can execute code on your machine with a single HTTP request. Social engineering
+
+36
+00:04:28,980 --> 00:04:35,620
+is another technique that attackers use to dupe maintainers and inject malware. NPM package event
+
+37
+00:04:35,620 --> 00:04:42,180
+stream is a good example. Here the attacker first gained trust by posing as a benign contributor
+
+38
+00:04:42,180 --> 00:04:49,220
+and contributing useful features. And later he asked to maintain the package event stream.
+
+39
+00:04:49,220 --> 00:04:54,860
+And after gaining the contributor privileges, the attacker published malicious code that searched
+
+40
+00:04:54,860 --> 00:05:02,860
+for Bitcoin addresses. The developer of the package in maintenance mode actually trusted
+
+41
+00:05:02,900 --> 00:05:12,540
+because the attacker was supposedly benign and he contributed popular or good features. So this
+
+42
+00:05:12,540 --> 00:05:19,780
+package is a good example because it receives millions of weekly downloads. Another technique
+
+43
+00:05:19,780 --> 00:05:26,620
+that attackers use is dependency confusion. So enterprises, they use internal mirrors of package
+
+44
+00:05:26,620 --> 00:05:31,020
+managers. For example, there will be an internal mirror of PyPy that is synced with the external
+
+45
+00:05:31,340 --> 00:05:37,260
+package managers as needed. And the technique exploits the default behavior of this artifactory
+
+46
+00:05:37,260 --> 00:05:43,140
+to always use the higher version of the package as available externally. So what can an attacker do?
+
+47
+00:05:43,140 --> 00:05:50,020
+An attacker can go through manifest file available publicly, find out what packages are being used,
+
+48
+00:05:50,020 --> 00:05:56,420
+for example, at Microsoft or other enterprise. And they can publish higher malicious versions
+
+49
+00:05:56,420 --> 00:06:02,140
+of the same package. And as a result, the artifactory will now install the external malicious
+
+50
+00:06:02,140 --> 00:06:11,140
+package and the malware will be in their apps and services. There have also been cases of account
+
+51
+00:06:11,140 --> 00:06:18,660
+hijacking to inject malware in open source packages. A popular example is UAParser.js. It's a
+
+52
+00:06:18,660 --> 00:06:25,780
+JavaScript package with 8 million weekly downloads. The package is actually used in apps and websites
+
+53
+00:06:25,780 --> 00:06:32,700
+to discover the type of device or browser the person is using from user agent data. The attacker
+
+54
+00:06:32,700 --> 00:06:40,980
+here hijacked the account and published malicious versions of this popular package. Let's look at
+
+55
+00:06:40,980 --> 00:06:48,820
+another case study. So this is a Python package that we found and we reported to PyPy admins in
+
+56
+00:06:48,820 --> 00:06:58,460
+January. We found that this package downloads a malicious payload from this URL and executes
+
+57
+00:06:58,460 --> 00:07:06,460
+the code by spawning subprocesses. And we saw that the email address on this package was invalid and
+
+58
+00:07:06,460 --> 00:07:12,220
+that's why we looked into this and also we analyzed the APIs. So I'll get to that briefly.
+
+59
+00:07:12,220 --> 00:07:20,500
+So how do we defend against such attacks? Well, security is a shared responsibility and as a
+
+60
+00:07:20,500 --> 00:07:25,140
+community we must all do our parts. For example, maintainers and package managers can adopt
+
+61
+00:07:25,140 --> 00:07:31,780
+two-factor authentication to protect against account hijacking. Package names coping can
+
+62
+00:07:31,780 --> 00:07:37,700
+also reduce the risks of typo-squatting attacks. However, these measures fall short because,
+
+63
+00:07:38,540 --> 00:07:44,460
+you know, as we have seen with the recent protest where a disgruntled developer can sabotage their
+
+64
+00:07:44,460 --> 00:07:52,300
+own package and inject malware. So developers must use a zero trust approach. They must thoroughly
+
+65
+00:07:52,300 --> 00:08:00,820
+vet code and behavior of every package, every dependency they use. Easier said than done. This
+
+66
+00:08:00,820 --> 00:08:08,780
+is because manual vetting is infeasible. As packages may have hundreds of dependencies,
+
+67
+00:08:08,780 --> 00:08:15,420
+include direct and transitive. This slide shows a dependency of PyTorch, the popular Python package.
+
+68
+00:08:15,420 --> 00:08:21,940
+By the way, this graph only shows transitive dependencies that are at a distance of two or
+
+69
+00:08:21,940 --> 00:08:29,020
+less from PyTorch. So as seen from this graph, PyTorch includes several dependencies and manually
+
+70
+00:08:29,020 --> 00:08:36,900
+analyzing each one would be tedious and error-prone. We can use tools. However, existing tools only
+
+71
+00:08:36,900 --> 00:08:45,580
+report known CVEs, publicly known CVEs in NVD or other public databases. For example, Sneak
+
+72
+00:08:45,580 --> 00:08:52,700
+Advisor reports no vulnerability with clearing malicious packages here. So this is an example
+
+73
+00:08:52,700 --> 00:08:57,740
+package maybe uploaded by a security researcher that says, you know, this is an example package
+
+74
+00:08:57,740 --> 00:09:05,420
+to demonstrate a malicious code insight and Sneak Advisor reports no security risks. If you delve
+
+75
+00:09:05,420 --> 00:09:12,420
+deeper, you'll see that this package generates and executes malicious code at runtime that reads
+
+76
+00:09:12,420 --> 00:09:26,020
+your SSH keys. How about stats? Can we rely on stats like GitHub downloads or stars or forks? Well,
+
+77
+00:09:26,380 --> 00:09:35,660
+stats are attacker controlled. Attacker bot can easily manipulate downloads or forks. More
+
+78
+00:09:35,660 --> 00:09:42,220
+important, there's no verification of package provenance, source provenance. So it may point
+
+79
+00:09:42,220 --> 00:09:49,420
+to a popular package on GitHub. For example, this slide shows starjacking where an attacker
+
+80
+00:09:49,620 --> 00:09:55,980
+can easily trick users by pointing to a popular source on GitHub. So this points to a sample
+
+81
+00:09:55,980 --> 00:10:04,260
+Python project and has over 4,000 stars and over 1,500 forks. No verification, like I said,
+
+82
+00:10:04,260 --> 00:10:09,780
+no verification is done for the source by package managers. Therefore, blindly trusting such vanity
+
+83
+00:10:09,780 --> 00:10:21,340
+stats would be naive. So package is our solution. We are developing an automated tool to vet packages
+
+84
+00:10:21,340 --> 00:10:29,220
+that you adopt. So we take a zero trust approach. We vet every API. We vet multiple attributes of
+
+85
+00:10:29,220 --> 00:10:36,460
+packages, multiple risky code as well as metadata attributes. And we provide actionable security
+
+86
+00:10:36,460 --> 00:10:44,180
+insights. For example, we test for weak links by checking is the package old or abandoned. Abandoned
+
+87
+00:10:44,180 --> 00:10:50,020
+packages or old packages may not receive security fixes. So they must be avoided. Does the package
+
+88
+00:10:50,020 --> 00:10:57,340
+read or send your data over the network? As we have seen from the example malware, malicious
+
+89
+00:10:57,340 --> 00:11:02,220
+packages usually they read files, they try to steal your sensitive data, which will be in file,
+
+90
+00:11:02,220 --> 00:11:08,860
+and they'll send this to a remote server. So a package that's reading and sending data or remote
+
+91
+00:11:08,860 --> 00:11:16,140
+server is fishy. It must be thoroughly checked. And finally, is the source repo publicly available?
+
+92
+00:11:16,140 --> 00:11:22,420
+Because if it is available, we can go and check the source code and be sure that the package indeed
+
+93
+00:11:22,420 --> 00:11:29,060
+contains the code that is displayed on public source repo. So package is a command line tool,
+
+94
+00:11:29,060 --> 00:11:38,780
+and you can customize it to a threat model. For example, if you think that two-factor authentication
+
+95
+00:11:38,780 --> 00:11:45,800
+may not be risky for you, if you perceive as lack of two-factor authentication is not risky,
+
+96
+00:11:45,800 --> 00:11:55,780
+you can turn off that alert and minimize noise. So how does it work? We use static analysis.
+
+97
+00:11:55,940 --> 00:12:02,180
+Specifically, we look at APIs that are being used by packages. These APIs are provided by the language
+
+98
+00:12:02,180 --> 00:12:09,820
+ecosystem or the operating system, and malware has to go through these APIs if they want to execute
+
+99
+00:12:09,820 --> 00:12:16,700
+any sensitive functionality or get access to any sensitive data. For example, if they want to read
+
+100
+00:12:16,700 --> 00:12:22,420
+files, they'll have to call open read write file system APIs. If they want to send data, they need
+
+101
+00:12:22,420 --> 00:12:27,980
+to call the socket APIs, network APIs. And if they want to generate code at runtime, downloading
+
+102
+00:12:27,980 --> 00:12:34,340
+malicious package or malicious payload at runtime and execute them, they have to use exec or eval or
+
+103
+00:12:34,340 --> 00:12:43,460
+for. So we track these APIs, and depending on your threat model, we provide alerts to you. We also
+
+104
+00:12:43,460 --> 00:12:49,880
+look at metadata analysis. For example, we look at maintainer email. Is it valid or not? Invalid
+
+105
+00:12:49,880 --> 00:12:56,640
+email suggests no-factor authentication. We check for abandoned packages because they don't receive
+
+106
+00:12:56,640 --> 00:13:06,720
+security fixes. We check for public source repo for code verification. And we do some type of
+
+107
+00:13:06,720 --> 00:13:14,920
+scoring detection based on name similarity. So time for some action. Let me...
+
+108
+00:13:14,920 --> 00:13:39,760
+All right. Let me demo the tool to you. Okay.
+
+109
+00:13:44,920 --> 00:13:58,160
+Cool. So this is the source code. It's hosted on GitHub. And we'll get to that. Let's try to
+
+110
+00:13:58,160 --> 00:14:08,040
+wait a package here. Does anybody have a popular package that they want to wait? What's that? Twisted.
+
+111
+00:14:08,040 --> 00:14:26,960
+Twisted. Is that correct? All right. Some errors. Work in progress. We are fixing it. But it did analyze
+
+112
+00:14:26,960 --> 00:14:36,760
+the version. It found version 2240. It checked the author. It checked the email. It checked the
+
+113
+00:14:37,160 --> 00:14:44,080
+sufficient readme. The version is only 19 days old. The repo is found. Looks good. Home page is
+
+114
+00:14:44,080 --> 00:14:50,080
+also found. Looks like it's reachable. No CVs were found, which is good. And it downloaded the
+
+115
+00:14:50,080 --> 00:14:55,320
+package and it carried out API analysis, but it failed. We can try with some other package,
+
+116
+00:14:55,320 --> 00:15:03,560
+and this will be fixed. But it did say that one risk found... So the home page is non-existent,
+
+117
+00:15:03,560 --> 00:15:18,720
+looks like. And we can check that later. Let me... What's that? Pip audit. All right. Single word?
+
+118
+00:15:18,720 --> 00:15:40,520
+Okay. Correct? All right. So the author is trail of bits. 32 days old, which is good. Readme,
+
+119
+00:15:40,520 --> 00:15:47,560
+sufficient readme. Repo is found. Home page also points to the same repo. No CVs were found. And
+
+120
+00:15:47,960 --> 00:15:54,560
+three risks. So it generates new code at runtime. Perhaps it's supposed to. But you can check that
+
+121
+00:15:54,560 --> 00:16:00,920
+by going to these... So no line number was provided for this. Yeah, this will be fixed in
+
+122
+00:16:00,920 --> 00:16:07,880
+new versions. But it also reads directories and files. And you can go to these files at these line
+
+123
+00:16:07,880 --> 00:16:15,840
+number and then test. And you can see a lot of this is in test suite, maybe. So that can be ignored.
+
+124
+00:16:15,840 --> 00:16:36,120
+But it's good to know what the package is doing. All right. So the source code of package is hosted
+
+125
+00:16:36,120 --> 00:16:43,840
+on GitHub under oscillate-inc. And as you can see, it's a standalone command line tool to write
+
+126
+00:16:43,840 --> 00:16:49,080
+open source software packages for risky attributes that make them vulnerable to supply chain attacks.
+
+127
+00:16:49,080 --> 00:16:55,960
+And like you saw, it just takes two arguments, the name of the registry package manager and the name
+
+128
+00:16:55,960 --> 00:17:01,760
+of the package. And we have already seen the output. But this only supports Python 2.7 and
+
+129
+00:17:01,760 --> 00:17:13,360
+only tested on Linux. So it will download package metadata from registry using these APIs and also
+
+130
+00:17:13,360 --> 00:17:19,120
+download the package itself, the tarball from registry using APIs. And it performs API analysis
+
+131
+00:17:19,120 --> 00:17:25,840
+using static code analysis. It checks for vulnerabilities using OSV database. And how
+
+132
+00:17:25,840 --> 00:17:36,360
+do you customize this? So suppose you... Okay. So we flag inactive or unmaintained packages that
+
+133
+00:17:36,360 --> 00:17:40,300
+no longer receive security fixes. But if that's not a problem for you, what you can do is you can
+
+134
+00:17:40,300 --> 00:17:55,700
+go to this file threats.csv here. And you can see that we categorize these attributes in four classes,
+
+135
+00:17:55,700 --> 00:18:01,420
+malicious, suspicious, which is potentially malicious, vulnerable to code exploit, includes
+
+136
+00:18:01,420 --> 00:18:09,480
+cvs and a lot of undesirable attributes. So if you don't want alert, some alert because of some
+
+137
+00:18:09,480 --> 00:18:18,320
+attribute, you can comment that out. For example, undesirable, the old package will be undesirable.
+
+138
+00:18:18,320 --> 00:18:23,160
+And if that's desirable to you, you can comment this out and then it will not provide alert.
+
+139
+00:18:23,160 --> 00:18:41,580
+All right. Let's continue. So with this tool, you can write individual packages by yourself. But
+
+140
+00:18:41,580 --> 00:18:49,140
+we actually are building a large scale waiting infrastructure for detecting supply chain attacks
+
+141
+00:18:49,300 --> 00:18:57,180
+on open source package managers. And the service that we have created is package.dev. It's a software
+
+142
+00:18:57,180 --> 00:19:02,060
+service and it offers better accuracy because we have large data set. The package command line
+
+143
+00:19:02,060 --> 00:19:08,900
+tool will operate only on one package. We can download millions of packages and then test them
+
+144
+00:19:08,900 --> 00:19:15,700
+for any supply chain attacks. So it provides more accuracy. So a lot of free reports are available
+
+145
+00:19:15,940 --> 00:19:23,580
+on pre-edited package on the website. There's also a command line. There's also a CI CD plugin
+
+146
+00:19:23,580 --> 00:19:28,580
+to audit pull requests. That's also free. You'll have to create an account for that. And you can
+
+147
+00:19:28,580 --> 00:19:37,940
+review security reports. You can endorse and share reports as well. Let me show that to you.
+
+148
+00:19:37,940 --> 00:19:48,020
+Quickly. Yeah. So this is where it's hosted. If you go to your own GitHub, it will point to
+
+149
+00:19:48,020 --> 00:19:57,420
+package. There's a CI CD plugin that you can use and audit pull requests. You can upload your
+
+150
+00:19:57,420 --> 00:20:08,180
+requirements.txt. You can search for packages. And there's a CI CD. All right. Let's see some of
+
+151
+00:20:08,180 --> 00:20:20,340
+the reports. So this is a popular Python package. 2.6 million download, weekly downloads. As you can
+
+152
+00:20:20,340 --> 00:20:25,820
+see, we provide some stats on this. So we provide code related stats. What's the size number of
+
+153
+00:20:25,820 --> 00:20:31,700
+files? Permissions. These are important. So the package would read files and spawn processes.
+
+154
+00:20:31,700 --> 00:20:38,540
+These are only two are shown here. But if you go to code behavior, you'll see a lot of details. So
+
+155
+00:20:38,540 --> 00:20:43,740
+it will read files. It will spawn processes. It will write the files. It generates code dynamically.
+
+156
+00:20:43,740 --> 00:20:50,100
+And as you can see, this is being done at installation time, which is risky. So you can go to
+
+157
+00:20:50,100 --> 00:20:55,940
+setup.py. And you can see that it's reading file. It's reading read me. So this is okay.
+
+158
+00:20:55,940 --> 00:21:07,820
+All right. What else is... So it has a package anatomy. It will mention the number of files
+
+159
+00:21:07,820 --> 00:21:15,820
+that this package has. And it provides some popularity graph. And you can see... Okay. This
+
+160
+00:21:15,820 --> 00:21:24,220
+feature is coming soon. But you can see this is used by 530 packages. Just good. And this
+
+161
+00:21:24,220 --> 00:21:37,740
+last release was more than 12 months. So you may want to check that. All right. Let's look at BS4.
+
+162
+00:21:37,740 --> 00:21:48,220
+This is a PyPo guard package. This is installed by the developer of Beautiful Soup so that you
+
+163
+00:21:48,220 --> 00:21:55,340
+don't accidentally install a malicious package. So if you go to PyPy, you can see that this is a
+
+164
+00:21:55,340 --> 00:22:06,540
+dummy package. And it's just a placeholder. And if you look at the code behavior, it uses
+
+165
+00:22:06,540 --> 00:22:11,540
+Beautiful Soup, which is the correct package as the dependency. So if you download BS4 by mistake
+
+166
+00:22:11,540 --> 00:22:17,780
+because of inexperience or you thought that was the correct name, you would get Beautiful
+
+167
+00:22:17,780 --> 00:22:25,020
+Soup for package as dependency. So you're good. But this is how an attacker can publish a name,
+
+168
+00:22:25,020 --> 00:22:29,140
+a package with a name similar to a popular package name, and you would end up downloading.
+
+169
+00:22:29,140 --> 00:22:34,580
+So if you look at the number of downloads, this has a huge number of downloads for a dummy package.
+
+170
+00:22:34,620 --> 00:22:40,740
+And how do we know that this is a dummy package? It's just 2kb. And there are only three files.
+
+171
+00:22:40,740 --> 00:22:50,540
+It's only one function, right? And one dependency. So these stats are useful. PyTorch is another
+
+172
+00:22:50,540 --> 00:23:01,420
+one. This is also a dummy or a placeholder package. You try to install PyTorch. All right. And you know
+
+173
+00:23:01,580 --> 00:23:08,100
+that this is a dummy package because it's just 840 bytes. Three files, seven functions. All right.
+
+174
+00:23:08,100 --> 00:23:22,340
+Looks like it provides some good stats. Let's continue. So we did find over 35 malicious
+
+175
+00:23:22,340 --> 00:23:30,700
+packages in January, and we reported that to PyPy. These are some of the examples that we found.
+
+176
+00:23:30,700 --> 00:23:47,020
+Let's look at them. So if you go to package to malware, you'll see these malicious packages,
+
+177
+00:23:47,020 --> 00:23:52,580
+example malicious packages that we reported. And I think some of them have been taken down now.
+
+178
+00:23:53,540 --> 00:24:04,140
+Let's inspect this particular package, ChrisKian. So this was uploaded in 2021, September. And our
+
+179
+00:24:04,140 --> 00:24:14,900
+static analysis module flagged this as suspicious because it's trying to spawn processes. It's
+
+180
+00:24:14,900 --> 00:24:21,140
+trying to download data from network and read file and all at installation time, which is pretty
+
+181
+00:24:21,140 --> 00:24:32,300
+risky. So we looked into this and we found that this package is indeed malicious. I think if you
+
+182
+00:24:32,300 --> 00:24:38,540
+scroll down, you'll see what this package does. This package will do different things for different
+
+183
+00:24:38,540 --> 00:24:47,020
+operating system. On Windows, I think it's trying to override explorer.exe. On Linux, it does the
+
+184
+00:24:47,020 --> 00:24:55,340
+same thing. It doesn't override explorer.exe, but it will download the payload from this URL,
+
+185
+00:24:55,340 --> 00:25:00,940
+and it will execute this payload using subprocess. So we detected this.
+
+186
+00:25:00,940 --> 00:25:11,460
+All right. So some of the findings. And this was it. Thank you so much for attending the talk. The
+
+187
+00:25:11,460 --> 00:25:15,860
+source code of the package is hosted on GitHub, and we have millions of pre-read packages,
+
+188
+00:25:15,860 --> 00:25:22,660
+reports available for free at package.tiff. And this is powered by Ocelet. Thank you.
+

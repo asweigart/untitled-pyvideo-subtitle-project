@@ -1,0 +1,1252 @@
+1
+00:00:00,000 --> 00:00:13,500
+Welcome to the last block of PyCon 2022. Our next talk, first talk of this block is fast
+
+2
+00:00:13,500 --> 00:00:18,540
+and reproducible tests, packaging and deploys with Pants builds hermetic environments by
+
+3
+00:00:18,540 --> 00:00:22,180
+Christopher Neugebauer. Go ahead and take it away.
+
+4
+00:00:22,180 --> 00:00:29,860
+Thank you very much, Mason. Hello. My name is Christopher Neugebauer. I work as an engineer
+
+5
+00:00:29,860 --> 00:00:35,380
+at Toolchain. I'm also a maintainer on the Pants build open source project. Feel free
+
+6
+00:00:35,380 --> 00:00:40,740
+to tweet me at the handle on the bottom of this slide. If you can't see it just yet,
+
+7
+00:00:40,740 --> 00:00:44,420
+it will be at the top in just a moment. If you want to loudly disagree with me during
+
+8
+00:00:44,420 --> 00:00:50,020
+the talk, I don't mind. If you have legitimate questions, you can send them to me by email.
+
+9
+00:00:50,020 --> 00:00:54,420
+Today's talk is about hermetic environments, which is an approach that Pants uses to make
+
+10
+00:00:54,420 --> 00:01:01,180
+sure that we can predictably model the tasks that run while writing and testing your code.
+
+11
+00:01:01,180 --> 00:01:06,140
+First up, I want to point out that this is not a security talk. A lot of the approaches
+
+12
+00:01:06,140 --> 00:01:10,060
+that we're going to be talking about today have tradeoffs between guaranteeing absolute
+
+13
+00:01:10,060 --> 00:01:16,540
+correctness on one hand and security on the other hand and delivering speedy performance.
+
+14
+00:01:16,540 --> 00:01:22,100
+If you have different goals, you would probably make different choices here. So the focus
+
+15
+00:01:22,100 --> 00:01:27,340
+of today's talk is on how reproducibility can make your build tools perform better and
+
+16
+00:01:27,340 --> 00:01:33,240
+what sandboxing techniques can deliver that reproducibility without sacrificing performance.
+
+17
+00:01:33,240 --> 00:01:38,100
+That theoretical material is going to be sandwiched in between an introduction to Pants and how
+
+18
+00:01:38,100 --> 00:01:44,940
+Pants actually implements these things so you can see how all this works in practice.
+
+19
+00:01:44,940 --> 00:01:48,900
+We're going to start the talk with a quick introduction to Pants and some of the problems
+
+20
+00:01:48,900 --> 00:01:54,780
+that motivate the techniques we're talking about in this talk. So Pants build is a build
+
+21
+00:01:54,780 --> 00:02:00,580
+system which is a bit of a holdover from compiled languages where you need to run a lot of different
+
+22
+00:02:00,580 --> 00:02:07,960
+programs in a very specific order in order to get your code to run at all. In our case,
+
+23
+00:02:07,960 --> 00:02:12,080
+we orchestrate all the tools that interact with your code. That's everything from linting
+
+24
+00:02:12,080 --> 00:02:17,620
+and testing all the way through to building a package for deployment or for distribution.
+
+25
+00:02:17,620 --> 00:02:22,360
+So even in Python where you don't have a compilation step necessarily, we can still help orchestrate
+
+26
+00:02:22,360 --> 00:02:29,860
+tools like my pi or my pi or linters like Flake 8 and black so you can run them more
+
+27
+00:02:29,860 --> 00:02:35,300
+efficiently and only have to interact with one tool to run all of them. There's a small
+
+28
+00:02:35,300 --> 00:02:39,060
+amount of jargon I'm going to have to get out of the way first which will hopefully
+
+29
+00:02:39,060 --> 00:02:43,500
+make the rest of this talk go just a bit more smoothly for you. In the build systems
+
+30
+00:02:43,500 --> 00:02:48,680
+community and Pants in particular, there are terms for the units of work that get run in
+
+31
+00:02:48,680 --> 00:02:54,880
+your development workflows. The ones that I'm going to refer to are goals, rules and
+
+32
+00:02:54,880 --> 00:03:01,620
+processes. Goals are things that an end user will ask Pants to do for them. That might
+
+33
+00:03:01,620 --> 00:03:06,500
+be something like run this test or type check the source files in this directory or package
+
+34
+00:03:06,500 --> 00:03:13,500
+this library. Most CI workflows, most pre-commit workflows are made up of multiple goals. Rules
+
+35
+00:03:14,280 --> 00:03:18,580
+are the individual steps that Pants needs to perform in order to accomplish a goal.
+
+36
+00:03:18,580 --> 00:03:22,900
+A rule might be something like figure out which files to give to my pi in order to run
+
+37
+00:03:22,900 --> 00:03:29,020
+a type checking run or figure out which source file is the entry point to a Python executable.
+
+38
+00:03:29,020 --> 00:03:36,020
+Goals are made out of rules and rules can themselves run more rules. And processes are
+
+39
+00:03:36,140 --> 00:03:40,500
+when we run the actual underlying tools that Pants is orchestrating. Processes might be
+
+40
+00:03:40,500 --> 00:03:46,260
+something like run pi test with these specific source files. Now, today we're talking about
+
+41
+00:03:46,260 --> 00:03:50,900
+Pants 2. You may have heard of Pants before. That was the old version. This is a new tool
+
+42
+00:03:50,900 --> 00:03:54,580
+that's inspired by the original version of Pants that was developed at Twitter 10 or
+
+43
+00:03:54,580 --> 00:03:59,820
+so years ago. It's a complete rebuild from the ground up by a community of open source
+
+44
+00:03:59,820 --> 00:04:04,000
+developers including a bunch of us who work at Toolchain. The first releases were made
+
+45
+00:04:04,000 --> 00:04:08,300
+very much with Python in mind. We're trying to be good members of the Python community
+
+46
+00:04:08,300 --> 00:04:14,480
+and we want Pants to be a great experience for Python-focused code bases of any size.
+
+47
+00:04:14,480 --> 00:04:18,680
+If you use Pants on a smallish Python-only code base, we sort of fit into the same category
+
+48
+00:04:18,680 --> 00:04:24,120
+of tools as Tox. But the goal of Pants is to be able to grow with your code base. This
+
+49
+00:04:24,120 --> 00:04:29,920
+means both supporting multiple languages and also being as efficient within a large base
+
+50
+00:04:30,040 --> 00:04:34,360
+as it is within a small code base. So the ideal world for us is for a developer to be
+
+51
+00:04:34,360 --> 00:04:39,760
+able to work on Scala or Go or Python code and interact with exactly the same tool commands
+
+52
+00:04:39,760 --> 00:04:43,640
+no matter what language they use. And we want it to be pleasant enough for you to want to
+
+53
+00:04:43,640 --> 00:04:49,640
+do that. And finally, we aim to make it easier to use a mono repo development workflow so
+
+54
+00:04:49,640 --> 00:04:54,040
+you get the configuration management and code reuse benefits that come with that but still
+
+55
+00:04:54,040 --> 00:04:59,860
+being as efficient and easy to reason about as a multi repo setup might be. The goal for
+
+56
+00:04:59,860 --> 00:05:05,220
+us is to complete your goals faster while making underlying tools. And Pants can do
+
+57
+00:05:05,220 --> 00:05:10,220
+things like identifying which rules can be run in parallel or it can eliminate duplicated
+
+58
+00:05:10,220 --> 00:05:15,380
+or unnecessary work. The idea is that as your code base scales, the work that Pants does
+
+59
+00:05:15,380 --> 00:05:19,420
+to configure and orchestrate your tools will be more efficient and effective than just
+
+60
+00:05:19,420 --> 00:05:25,940
+running those tools in their default configurations. As an example, let's say you have a test suite
+
+61
+00:05:25,940 --> 00:05:32,940
+with two test files in it. Pants will run your test suite. That is not surprising. If
+
+62
+00:05:33,620 --> 00:05:38,620
+you edit one of these two test files, Pants will only actually rerun the test file that
+
+63
+00:05:38,620 --> 00:05:44,940
+you edited. You can see that the reading is reused. That's what this memoized thing means.
+
+64
+00:05:44,940 --> 00:05:50,180
+It's still not all that surprising. Most tools can do something like this. What is surprising
+
+65
+00:05:50,180 --> 00:05:55,180
+though? Well, first we can revert the tests again and note that both tests are memoized
+
+66
+00:05:55,180 --> 00:06:00,260
+this time. Rather than just saving the most recent date of the tests, Pants has cached
+
+67
+00:06:00,260 --> 00:06:04,900
+both of our previous runs. Since we're running tests that we've run in the past in exactly
+
+68
+00:06:04,900 --> 00:06:11,180
+the same configuration, Pants will reuse those results. Now what happens if instead of changing
+
+69
+00:06:11,180 --> 00:06:18,180
+a test file, I change the implementation file that is under test? Again, rerun the tests
+
+70
+00:06:19,140 --> 00:06:25,500
+run against the implementations that changed. Everything else is cached. That is because
+
+71
+00:06:25,500 --> 00:06:30,340
+Pants automatically understands the dependencies in your code base through static analysis.
+
+72
+00:06:30,340 --> 00:06:34,540
+And it can use that information to figure out what tests need to be run again. When
+
+73
+00:06:34,540 --> 00:06:40,100
+you start dealing with code bases with hundreds or thousands of tests and implementation files,
+
+74
+00:06:40,100 --> 00:06:43,620
+automatic decisions like this mean you don't have to remember which tests are relevant
+
+75
+00:06:43,620 --> 00:06:47,820
+to the parts of the code base that you've changed. When you have a huge and slow test
+
+76
+00:06:47,820 --> 00:06:54,620
+suite, which most probably are, this can make it quite pleasant to regularly run your entire
+
+77
+00:06:54,620 --> 00:07:00,040
+test suite as you develop iteratively. And we can run tools more efficiently locally,
+
+78
+00:07:00,040 --> 00:07:05,220
+but to scale properly, we're working to properly support remote caching and remote execution.
+
+79
+00:07:05,220 --> 00:07:10,060
+Remote caching means that if one person on your team runs a given rule and another person
+
+80
+00:07:10,300 --> 00:07:14,540
+needs an identical rule completed, we can fetch that result from a cache instead of
+
+81
+00:07:14,540 --> 00:07:19,660
+running it again. It is surprising how often a team can run exactly the same rule over
+
+82
+00:07:19,660 --> 00:07:25,060
+and over and over again. It's a huge waste of time and money. So solving remote caching
+
+83
+00:07:25,060 --> 00:07:30,700
+means thinking about a lot of problems around how we run the underlying tools that Pants
+
+84
+00:07:30,700 --> 00:07:36,540
+orchestrates. Questions like what rules actually need to be run in order to finish a user's
+
+85
+00:07:36,620 --> 00:07:42,580
+goal. Do we split our goals into one process or several? And then once we've split up the
+
+86
+00:07:42,580 --> 00:07:48,940
+rules, can we test with accuracy to see if a given rule is already run? And if a rule
+
+87
+00:07:48,940 --> 00:07:54,940
+has already been run, can we actually reuse its output instead of running it again? All
+
+88
+00:07:54,940 --> 00:08:00,060
+these boil down to one question. How do we make sure that the end result of a rule is
+
+89
+00:08:00,060 --> 00:08:06,460
+reliably reproducible? Can we be confident that if we reuse a result from a previous run,
+
+90
+00:08:06,460 --> 00:08:12,940
+the combined end result is actually going to be valid? If we can run rules and be confident
+
+91
+00:08:12,940 --> 00:08:17,580
+that running the same rule again will yield exactly the same result, then we don't need to
+
+92
+00:08:17,580 --> 00:08:24,860
+run those rules again. Which leads us to our first concept. Reproducibility. Reproducibility
+
+93
+00:08:24,860 --> 00:08:31,020
+is the idea that if you run the same rule, you will end up with the same result. It seems like
+
+94
+00:08:31,020 --> 00:08:34,700
+a simple enough concept, but there's enough of a sticking point that I'm going to need to talk a
+
+95
+00:08:34,700 --> 00:08:40,620
+bit about what we mean by the same. The elephant in the room here is this thing called reproducible
+
+96
+00:08:40,620 --> 00:08:45,180
+builds, which you may have heard of if you work in open source. Reproducible builds are a process
+
+97
+00:08:45,180 --> 00:08:50,860
+in open source that provides you with an absolute guarantee that a binary package corresponds to a
+
+98
+00:08:50,860 --> 00:08:56,220
+given set of source files. The idea behind reproducible builds is that if you start with
+
+99
+00:08:56,220 --> 00:09:02,460
+a given snapshot of your code base and run it in a very well specified environment and guarantee
+
+100
+00:09:02,460 --> 00:09:07,980
+that the dependencies are the same, you will end up with exactly the same package as the published
+
+101
+00:09:07,980 --> 00:09:14,060
+binary. Pants can be used as part of a reproducible builds workflow, but most development teams,
+
+102
+00:09:14,060 --> 00:09:17,500
+especially ones internal to a company, don't actually need this level of guarantee.
+
+103
+00:09:18,300 --> 00:09:23,740
+The ops people in your company who are installing internal software should have high levels of trust
+
+104
+00:09:23,740 --> 00:09:28,780
+of the developers who work for the same company as them. So that's our use case. We don't go out of
+
+105
+00:09:28,780 --> 00:09:32,540
+our way to be cryptographically reproducible. That's not what we're going to talk about today.
+
+106
+00:09:33,820 --> 00:09:39,900
+Our primary goal here is ensuring a useful level of correctness. We really care about the completion
+
+107
+00:09:39,900 --> 00:09:44,700
+time of your goals so that you spend less time at your desk waiting for your test to pass and you
+
+108
+00:09:44,700 --> 00:09:50,620
+spend less time waiting for your CI to go green. For us, reproducibility means being able to be
+
+109
+00:09:50,620 --> 00:09:56,220
+certain that you'll get the same results running rules sequentially or in parallel. And reproducibility
+
+110
+00:09:56,220 --> 00:09:59,260
+means being confident that...
+
+111
+00:09:59,260 --> 00:10:13,820
+...
+
+112
+00:10:15,820 --> 00:10:22,540
+Okay. Mathematically, we model each rule as a pure function of inputs that produce given outputs.
+
+113
+00:10:23,260 --> 00:10:28,300
+A rule with the same inputs should yield the same outputs. For rules that are implemented
+
+114
+00:10:28,300 --> 00:10:33,420
+entirely within pants in Python code, Python gives us all the tools we need. We make heavy use
+
+115
+00:10:33,420 --> 00:10:39,900
+of frozen data classes and those are easy to cache and easy to check for quality. The problem for us
+
+116
+00:10:39,900 --> 00:10:44,780
+is that processes are rules as well. Indeed, they end up being the rules that underpin basically
+
+117
+00:10:44,780 --> 00:10:50,940
+every other rule that gets run. The rules that run entirely inside pants are usually just setting up
+
+118
+00:10:50,940 --> 00:10:56,860
+inputs and configuration for the rules that run processes. But processes are really, really
+
+119
+00:10:56,860 --> 00:11:01,660
+difficult to model. They're impacted by dependency versions, by operating system
+
+120
+00:11:01,660 --> 00:11:08,380
+characteristics and more. Being able to parallelize or cache any rule means being able to make sure
+
+121
+00:11:08,380 --> 00:11:13,820
+that we can make the results of processes as predictable as the pure function codes that we
+
+122
+00:11:13,820 --> 00:11:20,220
+write in Python ourselves. Being predictable means modeling processes so that they're as
+
+123
+00:11:20,220 --> 00:11:25,500
+cacheable as any other rule that we run. So if we want to be predictable, we can't rely on works on
+
+124
+00:11:25,500 --> 00:11:32,620
+my machine because that is in no way reproducible at all. And full cryptographic reproducibility is
+
+125
+00:11:32,620 --> 00:11:37,820
+more of a guarantee than most internal development teams actually need. What we actually care about
+
+126
+00:11:37,820 --> 00:11:43,420
+is making sure that we don't get the wrong results as long as we start with a similar environment.
+
+127
+00:11:43,420 --> 00:11:47,260
+And annoyingly, this brings about the question, what does it mean for an environment to be similar?
+
+128
+00:11:47,980 --> 00:11:51,420
+This discussion is going to center on Python tooling, so I'm going to focus on that.
+
+129
+00:11:51,420 --> 00:11:56,620
+The same general concepts actually apply to other language ecosystems such as the JVM or Go, which
+
+130
+00:11:56,620 --> 00:12:02,380
+we also support in Pants. So in Python, the environment that we care about consists of four
+
+131
+00:12:02,380 --> 00:12:07,260
+aspects. The first is your operating system, and if you use Mac OS, that also includes the
+
+132
+00:12:07,260 --> 00:12:11,660
+architecture of it. Then there is the actual Python version that you're running. Then there's
+
+133
+00:12:11,660 --> 00:12:16,380
+the version of your dependencies, which Pants captures using lock files, so we do that right
+
+134
+00:12:16,380 --> 00:12:21,340
+down to the specific artifact of PyPI. And then there is the configuration of the tools that you
+
+135
+00:12:21,340 --> 00:12:28,700
+run inside each rule. Now, even without Pants, most of these things you tend to fix in your
+
+136
+00:12:28,700 --> 00:12:34,860
+day-to-day life. Like, your operating system very rarely changes from underneath you. It's very easy
+
+137
+00:12:34,860 --> 00:12:39,500
+to stay on a specific Python version. It's very easy to forget to upgrade. And it's easy enough
+
+138
+00:12:39,500 --> 00:12:45,420
+to keep your tools configured in exactly the same way. By far the most complicated of these in Python
+
+139
+00:12:45,420 --> 00:12:50,140
+land is how to handle dependency versions, which is particularly if you're the sort of developer who
+
+140
+00:12:50,140 --> 00:12:56,700
+incrementally adds dependencies as you go. If you spend a lot of time working in a given virtual
+
+141
+00:12:56,700 --> 00:13:00,780
+M, for example, it can be really easy for your dependencies to drift away from what your code
+
+142
+00:13:00,780 --> 00:13:05,340
+base actually specifies, which is what your collaborators are going to be working with.
+
+143
+00:13:05,340 --> 00:13:09,260
+This is because standard Python tools sort of encourage you to build up your environment one
+
+144
+00:13:09,260 --> 00:13:13,100
+package at a time, and then freeze your requirements once you're ready to release.
+
+145
+00:13:14,540 --> 00:13:18,060
+And this really runs contrary to this idea of environments being predictable.
+
+146
+00:13:18,700 --> 00:13:23,660
+A much better approach is to make sure that every process gets run in a configuration
+
+147
+00:13:23,660 --> 00:13:27,420
+that fully corresponds to your requirements or your lock file if you have one.
+
+148
+00:13:30,140 --> 00:13:33,900
+The best way to provide a predictable environment is actually to create a completely new environment
+
+149
+00:13:33,900 --> 00:13:38,300
+for every process that needs to be run. One advantage of this is that you can manage the
+
+150
+00:13:38,300 --> 00:13:43,660
+versions and dependencies of your tools separately to your code base. So the version of Black that
+
+151
+00:13:43,660 --> 00:13:47,900
+you run doesn't need to be tied to the version of PyTest that you run just because they share a
+
+152
+00:13:47,900 --> 00:13:53,660
+common dependency. The other reason why we care about starting from clean environments for every
+
+153
+00:13:53,660 --> 00:13:59,980
+process is that often processes produce outputs that we don't care about, or they might modify
+
+154
+00:13:59,980 --> 00:14:04,620
+the environment in ways that might impact subsequent runs of the same tool, or the behavior
+
+155
+00:14:04,620 --> 00:14:10,220
+of other tools. So in terms of modeling, a reproducible process for us is one where we
+
+156
+00:14:10,220 --> 00:14:15,180
+specify the input files in the environment, and we only collect the output artifacts that we actually
+
+157
+00:14:15,180 --> 00:14:21,180
+care about. Let's make this a bit clearer. If we retain the side effects of any given process,
+
+158
+00:14:21,180 --> 00:14:25,260
+modeling the behavior of the process becomes dependent on the order in which they get run.
+
+159
+00:14:26,220 --> 00:14:30,540
+You need to run a given process in order to collect its side effects from that run,
+
+160
+00:14:30,540 --> 00:14:35,260
+and you need to make sure those side effects are tracked. So rather than having a predictable
+
+161
+00:14:35,260 --> 00:14:41,420
+model of the process executions, you actually have a model just of one step in a chain of processes,
+
+162
+00:14:41,420 --> 00:14:47,260
+which really isn't worth modeling at all. Because what happens if we change some of the inputs in
+
+163
+00:14:47,260 --> 00:14:52,860
+one step of the chain? Well, you break that chain, and you need to rerun every subsequent step.
+
+164
+00:14:54,140 --> 00:14:59,820
+What's worse is that if you keep the side effects around somewhere, if you want to achieve the same
+
+165
+00:14:59,820 --> 00:15:04,860
+goal and do it in a way that's correct, you have to run everything again from the start because
+
+166
+00:15:04,860 --> 00:15:10,940
+the environment has changed. Now, you might be thinking, I can run make as often as I like,
+
+167
+00:15:10,940 --> 00:15:16,220
+and it's instant every second time. That's because doing it correctly is tedious.
+
+168
+00:15:17,260 --> 00:15:21,340
+Those tools reuse the environment. They assume that the side effects don't actually matter,
+
+169
+00:15:22,220 --> 00:15:26,860
+but this actually leads to subtle contamination which can break things, and this is why most
+
+170
+00:15:26,860 --> 00:15:32,460
+tools that you use have a clean command. That's to deal with garbage that gets left behind
+
+171
+00:15:32,460 --> 00:15:38,620
+if your tool doesn't do the right thing in a reused environment. On the other hand,
+
+172
+00:15:38,620 --> 00:15:42,700
+if you don't reuse the environment, then you actually break this dependency on ordering.
+
+173
+00:15:43,580 --> 00:15:47,420
+This means that you can reorder processes so that they're more efficient. This could be as
+
+174
+00:15:47,420 --> 00:15:51,740
+simple as running formatters before you run linters, through to dividing up a test suite
+
+175
+00:15:51,740 --> 00:15:56,940
+to run on multiple cores in separate processes, through to skipping rules that have been run
+
+176
+00:15:56,940 --> 00:16:03,260
+earlier or even by someone else. It can do this without an explicit clean goal because by not
+
+177
+00:16:03,260 --> 00:16:09,660
+reusing the environment, Pants actually cleans as it goes. So that's what a hermetic environment is.
+
+178
+00:16:10,460 --> 00:16:14,860
+It took me half the talk to get here. It's an environment that isolates the side effects of a
+
+179
+00:16:14,860 --> 00:16:20,380
+process from other processes in the same workflow. It means that if one process does something
+
+180
+00:16:20,380 --> 00:16:25,980
+unfortunate that would invalidate the behavior of other processes, that effect doesn't get captured.
+
+181
+00:16:26,780 --> 00:16:31,580
+Indeed, it means only capturing the effects of a process that we actually intend to capture
+
+182
+00:16:31,580 --> 00:16:37,900
+and discarding everything else. The way that we achieve a hermetic build is by preparing a
+
+183
+00:16:37,900 --> 00:16:44,620
+knowable environment containing dependencies that we can model into which we place known input files.
+
+184
+00:16:45,420 --> 00:16:49,100
+The only things that we preserve from this environment are specific output files.
+
+185
+00:16:51,260 --> 00:16:55,580
+So I've said that that's a good thing. I've explained some theory about what constitutes
+
+186
+00:16:55,580 --> 00:16:59,900
+a hermetic environment. Now we need to look at how we actually go about preparing these environments.
+
+187
+00:16:59,900 --> 00:17:06,780
+So we're going to talk a bit about sandboxing techniques. The goal of a sandbox is to isolate
+
+188
+00:17:06,780 --> 00:17:12,540
+processes from one another so that their execution does not interfere with each other. Isolation can
+
+189
+00:17:12,540 --> 00:17:17,180
+come in many forms, but generally speaking the things that we tend to care about are making sure
+
+190
+00:17:17,180 --> 00:17:23,100
+that processes are isolated from each other. Most operating systems these days do that automatically,
+
+191
+00:17:23,740 --> 00:17:28,460
+but also making sure that processes don't write over files that are produced by other processes
+
+192
+00:17:29,100 --> 00:17:35,420
+or making sure that OS resources are allocated fairly. These days like 90% of the processes
+
+193
+00:17:35,420 --> 00:17:42,540
+that need isolation can be adequately handled by Docker. Everyone uses containers all the time these
+
+194
+00:17:42,540 --> 00:17:48,140
+days. And honestly you can do this hermetic environment thing with Docker as well. Another
+
+195
+00:17:48,140 --> 00:17:54,620
+mono repo build system called Bazel does in fact do this, but it is amongst several sandboxing
+
+196
+00:17:54,620 --> 00:17:59,260
+options that you can choose from inside Bazel. And that's because Docker, even though it's much
+
+197
+00:17:59,260 --> 00:18:05,020
+lighter than a virtual machine, still has significant performance overheads. If you want to
+
+198
+00:18:05,020 --> 00:18:09,580
+replicate a containerized environment multiple times, that means you need to materialize a
+
+199
+00:18:09,580 --> 00:18:14,780
+containerized OS multiple times. And there's a lot of underlying files that just don't change very
+
+200
+00:18:14,780 --> 00:18:19,980
+often. So that ends up being a lot of repeated and often unnecessary work just to run tests in
+
+201
+00:18:19,980 --> 00:18:26,460
+isolation. Building up truly isolated environments, be it through Docker or through other means,
+
+202
+00:18:26,460 --> 00:18:33,260
+is really, really slow. So all sandboxing approaches need to trade between the level
+
+203
+00:18:33,260 --> 00:18:38,700
+of isolation and the level of speed in which your sandboxes can be built. And so this raises the
+
+204
+00:18:38,700 --> 00:18:44,940
+following question. How much isolation do we actually need in order to build up a predictable
+
+205
+00:18:44,940 --> 00:18:50,700
+process execution model? And the answer is actually it's not a lot. Again, our needs are
+
+206
+00:18:50,700 --> 00:18:57,340
+not really built around ensuring security. This is because most tools that Pants orchestrates
+
+207
+00:18:57,340 --> 00:19:03,580
+are trustworthy. This is a bit of a hand wave, but generally you're already using these tools to build
+
+208
+00:19:03,580 --> 00:19:09,340
+your software. That means that you've already audited their functionality as much as your
+
+209
+00:19:09,340 --> 00:19:14,940
+organization needs. I presume you audit your tools. Yeah, okay, I see a lot of nodding here.
+
+210
+00:19:17,180 --> 00:19:22,220
+Pants doesn't make these tools do anything that they don't do on their own. Beyond that,
+
+211
+00:19:22,220 --> 00:19:26,220
+build tools tend to do a predictable amount of work. They tend to do a good job of only reading
+
+212
+00:19:26,220 --> 00:19:30,940
+the files that you tell them to and only outputting files in places that you tell them to.
+
+213
+00:19:32,300 --> 00:19:36,940
+So unlike in cases where processes might run away, like on a server facing the internet,
+
+214
+00:19:36,940 --> 00:19:42,940
+the processes that Pants runs doesn't really need enforcement of isolation. They just need to stay
+
+215
+00:19:42,940 --> 00:19:47,500
+in their lane. So enforcement approaches to isolation, these are things like running
+
+216
+00:19:47,500 --> 00:19:53,340
+processes on dedicated machines or containers or even just running in a file system, all these
+
+217
+00:19:53,340 --> 00:19:58,300
+require some amount of operating system primitives to be put in place before you can even run a
+
+218
+00:19:58,300 --> 00:20:04,940
+process. But they give you some level of actual resource isolation in return. Guidance tools are
+
+219
+00:20:04,940 --> 00:20:10,460
+a bit less frequent, but in the Python world, we tend to use them all the time in the form of
+
+220
+00:20:10,460 --> 00:20:16,780
+virtual M. All virtual M does is modifies your path environment variable so when you ask to run
+
+221
+00:20:16,780 --> 00:20:22,140
+Python, the first thing your shell finds is the version you specified with the dependencies you
+
+222
+00:20:22,140 --> 00:20:28,060
+installed there. The key observation is that VM doesn't actually stop you from being able to run
+
+223
+00:20:28,060 --> 00:20:33,660
+other versions of Python that are on your system. It just makes it easier to run one specific version
+
+224
+00:20:33,660 --> 00:20:40,220
+of Python and a lot harder to run the rest. So Pants does more or less exactly the same thing.
+
+225
+00:20:41,500 --> 00:20:46,780
+Rather than putting you in a predictable place inside a completely isolated environment, Pants
+
+226
+00:20:46,780 --> 00:20:51,980
+will run the processes inside the host operating system. But the working directory is a temporary
+
+227
+00:20:51,980 --> 00:20:57,500
+directory in a completely unpredictable part of your file system and we set environment variables
+
+228
+00:20:57,500 --> 00:21:03,420
+from scratch. The tools that Pants runs are usually fairly well behaved. They'll only access the
+
+229
+00:21:03,420 --> 00:21:08,780
+files that you tell them to. And if you configure a Python tool to load dependencies from a specific
+
+230
+00:21:08,780 --> 00:21:13,980
+place, it will do that rather than looking to where the OS stores them. That's how virtual
+
+231
+00:21:13,980 --> 00:21:20,140
+M works. We just do it a bit more aggressively. So because the tools that Pants runs tends to be
+
+232
+00:21:20,140 --> 00:21:24,860
+trustworthy and they're configurable in a way that makes them not interfere with files that they
+
+233
+00:21:24,860 --> 00:21:30,540
+aren't told to, we're able to run these tasks inside the host operating system. We can run them
+
+234
+00:21:30,540 --> 00:21:36,140
+in a temporary directory that is created especially for a given process and we never run another
+
+235
+00:21:36,140 --> 00:21:41,580
+process in the same directory. So to create environments, all we need to do is copy in the
+
+236
+00:21:41,580 --> 00:21:46,220
+input files and the dependencies that don't exist in the host environment and we copy the build
+
+237
+00:21:46,220 --> 00:21:52,940
+artifacts out when the process is done. So there's still one more thing that we need to discuss here,
+
+238
+00:21:52,940 --> 00:21:57,820
+which is how Pants actually does this stuff in practice. Caching the results of rules is
+
+239
+00:21:57,820 --> 00:22:03,180
+only really useful if it's faster to compute a cache key than it is to run the rule itself.
+
+240
+00:22:04,140 --> 00:22:08,700
+Copying files around can be really, really slow and wasteful. And if we're preparing environments
+
+241
+00:22:08,700 --> 00:22:14,300
+and it's substantially slower to do that when we need to run the processes, then users just aren't
+
+242
+00:22:14,300 --> 00:22:19,980
+going to tolerate that because people don't like slow build tools. So once you decide you might
+
+243
+00:22:19,980 --> 00:22:25,100
+want to cache the results of rules, the execution steps look something like this. We create some
+
+244
+00:22:25,580 --> 00:22:31,580
+process request and we send that request into the internals of Pants. Something happens. We wait
+
+245
+00:22:31,580 --> 00:22:37,100
+a while and eventually Pants will send back a process result object. To a Python developer,
+
+246
+00:22:37,100 --> 00:22:42,540
+this is an async IO call and as a Python developer, you don't really care what goes on underneath the
+
+247
+00:22:42,540 --> 00:22:48,780
+hood. Underneath the hood, though, Pants makes the decision to either run the process or fetch it out
+
+248
+00:22:48,780 --> 00:22:55,820
+of the cache. The point where we can end up saving some time comes from answering the question
+
+249
+00:22:55,820 --> 00:23:01,740
+of whether we've already run a given task. So with hermetic environments, we can answer one
+
+250
+00:23:01,740 --> 00:23:07,500
+question, which is if we have the same files and the same configuration, the same dependencies,
+
+251
+00:23:07,500 --> 00:23:14,300
+will we get the same result? What it doesn't answer the question of is whether a set of files is
+
+252
+00:23:14,300 --> 00:23:21,260
+the same. And that's a problem because with build processes, especially on big code bases,
+
+253
+00:23:21,260 --> 00:23:26,860
+you can end up having hundreds or thousands of files and files on file systems are annoyingly
+
+254
+00:23:26,860 --> 00:23:32,140
+mutable. And that makes reasoning about files on a file system themselves quite slow and unreliable.
+
+255
+00:23:33,020 --> 00:23:38,860
+So Pants solves this by using content addressable storage. In our case, we use LNDB under the hood.
+
+256
+00:23:39,500 --> 00:23:44,540
+Having our own system to reason about the files that we're modeling means that we get to decide
+
+257
+00:23:44,540 --> 00:23:49,260
+what operations are cheap and what operations aren't. And we get to do that without the
+
+258
+00:23:49,260 --> 00:23:54,620
+constraints that file systems normally put on us. It's also useful because as people writing
+
+259
+00:23:54,620 --> 00:24:00,620
+orchestration code, we very rarely care about addressing individual files, but we do care about
+
+260
+00:24:00,620 --> 00:24:06,780
+sets of files. We want to work with a set of source files or we want to work with the resolved
+
+261
+00:24:06,780 --> 00:24:11,180
+collection of dependencies that an application has or perhaps we want to deal with a combination
+
+262
+00:24:11,180 --> 00:24:17,820
+of both. If you're a rule author writing Pants rule code, your window into this content addressable
+
+263
+00:24:17,820 --> 00:24:24,300
+storage is a thing called a digest, which is a reference to a set of files. When we run a process,
+
+264
+00:24:24,300 --> 00:24:29,580
+what we end up with is a digest which represents the files that we asked to copy out of the process
+
+265
+00:24:29,580 --> 00:24:37,260
+execution environment and nothing else. Similarly, when we talk about copying input files into the
+
+266
+00:24:37,260 --> 00:24:42,860
+execution environment, what we're actually doing is materializing the content that is specified by
+
+267
+00:24:42,860 --> 00:24:49,420
+the digest into the execution environment. Now, digests are lightweight, which makes them cheap
+
+268
+00:24:49,420 --> 00:24:55,420
+to use in a cache key. And importantly for us, unlike files on a file system, items in the
+
+269
+00:24:55,420 --> 00:25:00,860
+content addressable storage for us are immutable. That means that we can deal with them in the same
+
+270
+00:25:00,860 --> 00:25:05,820
+way that we attempt to reason about everything else that we reason about in Pants. Digests are
+
+271
+00:25:05,820 --> 00:25:11,900
+immutable, they refer to immutable content and most importantly, the operations that we perform in our
+
+272
+00:25:11,900 --> 00:25:17,420
+rule code in Pants are very, very cheap compared with doing the same sorts of operations on a file
+
+273
+00:25:17,420 --> 00:25:23,820
+system. This includes things like renaming files so that they have a common prefix, moving a batch
+
+274
+00:25:23,820 --> 00:25:30,220
+of files into a different directory, merging multiple digests and also under the hood, we can
+
+275
+00:25:30,220 --> 00:25:35,500
+only store relative pars which is important. It means we can materialize files into a temporary
+
+276
+00:25:35,500 --> 00:25:41,980
+directory just the same as the rest of this execution model requires. And speaking of
+
+277
+00:25:41,980 --> 00:25:47,260
+materializing files, the key thing is that we don't actually materialize files into the host file system
+
+278
+00:25:47,820 --> 00:25:52,620
+until we actually have a process that needs our actual files. And this approach means that we don't
+
+279
+00:25:52,620 --> 00:25:57,820
+waste our time doing piles of I.O. in order to maintain these hermetic environments. We only do
+
+280
+00:25:57,820 --> 00:26:02,220
+the bare minimum amount of copying files around to ensure that we end up with the files that we
+
+281
+00:26:02,220 --> 00:26:08,540
+actually want. And so now that we have digests that can reliably represent an input or output
+
+282
+00:26:08,540 --> 00:26:15,420
+file set, we can model a process entirely in Python. In Pants, when we request to run a process,
+
+283
+00:26:15,420 --> 00:26:20,220
+we supply the command that we want to run, a series of environment variables and the files
+
+284
+00:26:20,220 --> 00:26:26,060
+in the environment are specified as a digest. Under the hood, it's a data class which is efficient
+
+285
+00:26:26,060 --> 00:26:30,940
+to cache in Python. So now that we have that, we have a lightweight reference to a lot of immutable
+
+286
+00:26:30,940 --> 00:26:36,860
+files which is a thing that's accurate enough for us to use in a cache key and the result of that is
+
+287
+00:26:36,860 --> 00:26:42,300
+itself cheap enough to store into a cache. So now the question of have we run this rule becomes
+
+288
+00:26:42,300 --> 00:26:47,020
+easy and lightweight to answer. If we've got a process with the same arguments, the same input
+
+289
+00:26:47,020 --> 00:26:52,220
+digest, the same environment, et cetera, et cetera, then we can be confident that we've already run it.
+
+290
+00:26:52,940 --> 00:26:58,460
+What's more, this question can be answered equally effectively by a local cache or by a remote cache.
+
+291
+00:27:00,540 --> 00:27:05,500
+And that's it. For Pants, a process execution consists of the host operating system,
+
+292
+00:27:05,500 --> 00:27:10,380
+an environment that we can predictably model and the contents of a digest that we can reliably
+
+293
+00:27:10,380 --> 00:27:16,140
+store inside a cache. So that's basically the end of this talk. We've done our high level look into
+
+294
+00:27:16,140 --> 00:27:21,180
+hermetic environments and how they unlock some of Pants' more interesting time saving features.
+
+295
+00:27:21,740 --> 00:27:27,740
+We saw that we're able to make existing Python tools run faster or not at all if we can make good
+
+296
+00:27:27,740 --> 00:27:33,900
+choices about how tools get run and when. We saw that we need to be able to predictably model
+
+297
+00:27:33,900 --> 00:27:38,860
+processes which is quite difficult to do unless you have a predictable environment.
+
+298
+00:27:39,740 --> 00:27:43,340
+Then we did some hand waving that build processes don't actually need a whole lot of
+
+299
+00:27:44,140 --> 00:27:49,340
+isolation or at least we don't need a whole lot to be able to predictably model their behaviour.
+
+300
+00:27:49,980 --> 00:27:55,020
+And we saw that using a content addressable database makes it cheaper to do orchestration tasks
+
+301
+00:27:55,020 --> 00:27:59,660
+like merging these set of dependencies and the set of source files and also makes it much,
+
+302
+00:27:59,660 --> 00:28:07,420
+much easier to reason about file sets in a cache. So if you're interested in all this stuff,
+
+303
+00:28:08,060 --> 00:28:12,620
+we are going to be around at the rest of the conference. Myself, John and Benji, we're going
+
+304
+00:28:12,620 --> 00:28:18,300
+to be sprinting tomorrow both on Pants Build and PECS which is a project that the Pants Build project
+
+305
+00:28:19,180 --> 00:28:24,380
+stewards. One thing that we will be doing in particular rather than working on features in
+
+306
+00:28:24,380 --> 00:28:30,940
+Pants will be helping you onboard Pants into your open source repo. So if all this seems interesting
+
+307
+00:28:30,940 --> 00:28:36,060
+to you, we'll help you take advantage of it. You can come find myself, Benji or John in the hallway
+
+308
+00:28:36,060 --> 00:28:39,980
+track after this talk. We're happy to answer any questions that you had about this talk.
+
+309
+00:28:40,620 --> 00:28:45,740
+There are docs and demonstrations available at pantsbuild.org and there's also a link to
+
+310
+00:28:45,740 --> 00:28:50,620
+our community Slack where you can ask us or other maintainers questions. There are notes on this
+
+311
+00:28:50,620 --> 00:28:55,260
+talk, they're a bit sparse at the moment, available on the Pants Build blog right now if I got the
+
+312
+00:28:55,260 --> 00:29:00,460
+scheduling functionality correct. That is the end of my talk. Thank you for paying attention.
+
+313
+00:29:00,460 --> 00:29:05,500
+I look forward to seeing you in the hallway track.
+

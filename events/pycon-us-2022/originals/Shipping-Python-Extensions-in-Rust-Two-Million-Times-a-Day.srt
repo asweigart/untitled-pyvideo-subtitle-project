@@ -1,0 +1,1244 @@
+1
+00:00:00,000 --> 00:00:11,200
+Good afternoon, everybody. Welcome to this next session. It should be an exciting one
+
+2
+00:00:11,200 --> 00:00:18,560
+here. We have Paul Carer and Alex Gaynor here, are going to tell us about shipping a Rust
+
+3
+00:00:18,560 --> 00:00:25,560
+Python extension many, many times a day. So take it away.
+
+4
+00:00:25,560 --> 00:00:35,880
+All right. Thank you very much, everybody. So welcome, everyone. It's nice and intimidating
+
+5
+00:00:35,880 --> 00:00:40,200
+to see you all in one room again. We're doing this talk as a cooperative presentation, so
+
+6
+00:00:40,200 --> 00:00:45,200
+I get the honor of introducing my co-presenter, Alex Gaynor. Alex enjoys describing himself
+
+7
+00:00:45,200 --> 00:00:48,920
+as a software resilience engineer, which is an accurate if understated way to describe
+
+8
+00:00:48,920 --> 00:00:53,880
+his passions. He currently works for the U.S. government at the FTC. However, he is here
+
+9
+00:00:53,920 --> 00:00:59,840
+in a personal capacity and is not representing his employer in any way. As for me, these
+
+10
+00:00:59,840 --> 00:01:05,240
+days I am a Zoom-based bobble head and I moonlight as a security architect for Oracle cloud infrastructure.
+
+11
+00:01:05,240 --> 00:01:09,320
+Again, I am here in a personal capacity, although if you're a cryptographic or security engineer,
+
+12
+00:01:09,320 --> 00:01:15,040
+I'd love to talk to you. Alex and I are the co-maintainers of the entire Python cryptographic
+
+13
+00:01:15,040 --> 00:01:21,080
+authority suite of libraries, but we spend most of our time and effort on PyCA cryptography.
+
+14
+00:01:21,080 --> 00:01:26,080
+The goal of this talk is to tell you about how we incorporated Rust into PyCA cryptography.
+
+15
+00:01:26,080 --> 00:01:32,080
+But first we need to explain why we did it. And to set the table, we think security is
+
+16
+00:01:32,080 --> 00:01:36,680
+important. As a cryptography package, we think our users expect that we go above and beyond
+
+17
+00:01:36,680 --> 00:01:41,640
+to keep them secure. After all, if you're encrypting something, you probably care that
+
+18
+00:01:41,640 --> 00:01:48,640
+you're encrypting it securely. PyCA cryptography depends on OpenSSL. We use OpenSSL for all
+
+19
+00:01:48,640 --> 00:01:53,280
+the cryptographic algorithms like AES and RSA. And before we did all of the work we're
+
+20
+00:01:53,280 --> 00:01:58,480
+going to describe here today, we used it for parsing structures like X509 certificates.
+
+21
+00:01:58,480 --> 00:02:03,400
+OpenSSL is written in C, and C is a pretty low-level language. This can be useful if
+
+22
+00:02:03,400 --> 00:02:08,000
+you're trying to make an AES function that runs as fast as is humanly possible. But C
+
+23
+00:02:08,000 --> 00:02:12,520
+is also memory unsafe. This means that it's very easy to introduce vulnerabilities like
+
+24
+00:02:12,520 --> 00:02:18,000
+buffer overflows and use after freeze. And indeed, OpenSSL suffers from these from time
+
+25
+00:02:18,000 --> 00:02:23,160
+to time, perhaps most famously heartbleed, which you may have heard of. A full analysis
+
+26
+00:02:23,160 --> 00:02:27,560
+of OpenSSL's security is beyond the scope of this talk. But in short, we think it's
+
+27
+00:02:27,560 --> 00:02:32,000
+both reasonable to rely on OpenSSL and we want to minimize our exposure to vulnerabilities
+
+28
+00:02:32,000 --> 00:02:37,600
+in OpenSSL. Paul and I have done a bunch of analysis. And in general, for large code bases
+
+29
+00:02:37,600 --> 00:02:42,120
+written in C or C++, about two-thirds of their vulnerabilities are going to be because of
+
+30
+00:02:42,120 --> 00:02:47,000
+memory and safety. Or put another way, two-thirds of these vulnerabilities are avoidable with
+
+31
+00:02:47,000 --> 00:02:53,400
+a different programming language. That's the case for why not C, but why Rust in particular.
+
+32
+00:02:53,400 --> 00:02:57,920
+Well, first and foremost, it's memory safe, meaning that as long as you don't use Rust's
+
+33
+00:02:57,920 --> 00:03:02,700
+unsafe keywords, these vulnerability classes like buffer overflows and use after freeze
+
+34
+00:03:02,700 --> 00:03:08,160
+are impossible. It's high performance in the same way C is. You can control the exact layouts
+
+35
+00:03:08,160 --> 00:03:12,800
+of objects and memory allocations. And it's got a very modern set of tooling, such as
+
+36
+00:03:12,800 --> 00:03:18,720
+a package manager, build system, code formatter, and even integration with Python bindings.
+
+37
+00:03:18,720 --> 00:03:22,600
+And it's widely used. At this point, many, many of the sponsors of this conference and
+
+38
+00:03:22,600 --> 00:03:28,360
+many other major tech companies are using Rust. Having identified that we thought Rust
+
+39
+00:03:28,360 --> 00:03:32,280
+was a good choice for PyC8 cryptography, that was really enough for us to commit to figure
+
+40
+00:03:32,280 --> 00:03:37,160
+out how we were going to use it. But we have another motivation as well. When Paul and
+
+41
+00:03:37,160 --> 00:03:41,900
+I look at the problem of memory safety, we see a problem that goes way beyond PyC8 cryptography
+
+42
+00:03:41,900 --> 00:03:47,460
+and OpenSSL. We see a problem that impacts operating systems and web browsers, chat applications
+
+43
+00:03:47,460 --> 00:03:53,100
+and video and image libraries. And we see memory unsafety vulnerabilities used against
+
+44
+00:03:53,100 --> 00:03:58,500
+women's rights activists, human rights activists, nutritionists working on a sugar tax in Mexico,
+
+45
+00:03:58,500 --> 00:04:02,940
+and ethnic minorities. And we believe something must and can be done to improve the state
+
+46
+00:04:02,940 --> 00:04:09,420
+of security that makes exploiting these vulnerabilities so practical. Part of improving the situation
+
+47
+00:04:09,540 --> 00:04:15,380
+is making it easier for more people to adopt memory safe languages. We have a pretty significant
+
+48
+00:04:15,380 --> 00:04:20,340
+place in the Python ecosystem. A lot of people rely on us. As you may have gotten from the
+
+49
+00:04:20,340 --> 00:04:25,780
+title of this talk, we have millions of downloads a day. We regularly are in the top 20 Python
+
+50
+00:04:25,780 --> 00:04:31,660
+packages on PyPI by downloads. We want to use that position to make it easier for the
+
+51
+00:04:31,660 --> 00:04:36,500
+next library that wants to adopt Rust to improve their security. As you're going to hear, we
+
+52
+00:04:36,500 --> 00:04:40,900
+have to do a bunch of work to make this practical and realistic. We want the next person to
+
+53
+00:04:40,900 --> 00:04:48,060
+choose Rust not to have to deal with the challenges we had to. So how did we actually go about
+
+54
+00:04:48,060 --> 00:04:51,300
+adopting Rust? Well, first we had to figure out which tools we were going to use beyond
+
+55
+00:04:51,300 --> 00:04:56,020
+the Rust programming language itself. And the first choice we made was which library
+
+56
+00:04:56,020 --> 00:05:01,780
+we were going to use for binding between Python and Rust code. We chose a library called PyO3
+
+57
+00:05:01,780 --> 00:05:06,980
+and it drops the CPythonC API. It's got a very ergonomic API. It's well maintained.
+
+58
+00:05:06,980 --> 00:05:12,180
+It has support for basically the entire Python API surface. And here's some example code,
+
+59
+00:05:12,180 --> 00:05:16,380
+creating a module with a single function in it called double that takes an integer and
+
+60
+00:05:16,380 --> 00:05:20,820
+multiplies it by two. We're not going to fully explain the Rust programming language, but
+
+61
+00:05:20,820 --> 00:05:26,500
+hopefully this is pretty reasonable, readable to you. And PyO3 handles a lot of the details
+
+62
+00:05:26,500 --> 00:05:30,880
+behind the scenes automatically for you, such as converting between Rust integers and Python
+
+63
+00:05:30,880 --> 00:05:35,920
+integers, noting when a Python integer is too large to fit into a Rust integer, all
+
+64
+00:05:35,920 --> 00:05:39,600
+the details like that. So we find this to be pretty ergonomic. And I just want to take
+
+65
+00:05:39,600 --> 00:05:44,000
+this opportunity to say that PyO3 maintainers have done an amazing job. The work we're going
+
+66
+00:05:44,000 --> 00:05:49,240
+to strive here is really a testament to the quality of the library they've built.
+
+67
+00:05:49,240 --> 00:05:52,280
+Now that we have some Rust code, we need to know how to build it. How do we make this
+
+68
+00:05:52,280 --> 00:05:56,920
+a part of the pip install process that everybody uses to actually get our library? We wanted
+
+69
+00:05:56,920 --> 00:05:59,900
+something that would be drop-in as possible, that would integrate with our existing setup
+
+70
+00:05:59,900 --> 00:06:04,580
+tools build process. Ideally, users would just have to have Rust installed and then
+
+71
+00:06:04,580 --> 00:06:08,740
+everything would work. For that we chose SetupTools Rust, which is also from the maintainers of
+
+72
+00:06:08,740 --> 00:06:14,780
+PyO3. It adds the Rust extensions option to the setup function, setup py, and it kind
+
+73
+00:06:14,780 --> 00:06:18,500
+of does what you'd expect. You point it to the directory with your Rust code and it will
+
+74
+00:06:18,500 --> 00:06:24,300
+compile it, put the .so in the right place, and you're off to the races.
+
+75
+00:06:24,300 --> 00:06:29,180
+So we picked our tools, and so we put together a small little PR, just a basic integration,
+
+76
+00:06:29,180 --> 00:06:35,180
+data module, one function, no problem. Everything breaks. So here's what we have to do in order
+
+77
+00:06:35,180 --> 00:06:40,460
+to get even the most basic pull request to green. Well, first things first, we need Rust
+
+78
+00:06:40,460 --> 00:06:45,820
+to be installed in our continuous integration environment, obviously. The base image for
+
+79
+00:06:45,820 --> 00:06:50,640
+GitHub Actions actually comes with Rust installed, so we're good there, but we also run some
+
+80
+00:06:50,640 --> 00:06:56,020
+tests in some Docker containers, so we need to install Rust into those environments. And
+
+81
+00:06:56,060 --> 00:07:00,620
+on top of that, we also used a service called OpenDev for continuous integration where we
+
+82
+00:07:00,620 --> 00:07:05,260
+also need to install Rust. Fortunately, installing Rust is pretty simple, just a matter of a
+
+83
+00:07:05,260 --> 00:07:10,580
+single line of shell script. Speaking of CI, we also used the Read the Docs service to
+
+84
+00:07:10,580 --> 00:07:14,780
+build our documentation, and it didn't have Rust installed in its environment. This was
+
+85
+00:07:14,780 --> 00:07:18,100
+also pretty straightforward, but we were able to contribute upstream here, sending a pull
+
+86
+00:07:18,100 --> 00:07:22,900
+request to the Read the Docs official Docker image to add Rust to that environment. Now
+
+87
+00:07:22,900 --> 00:07:27,860
+anybody using Read the Docs can easily build a Rust documentation for a project incorporating
+
+88
+00:07:27,860 --> 00:07:34,860
+Rust. Now we get to the more challenging pieces. For many years, CPython has supported something
+
+89
+00:07:34,940 --> 00:07:41,580
+called ABI 3 or the Limited API. The basic idea is in exchange for using only a subset
+
+90
+00:07:41,580 --> 00:07:46,780
+of the C API, you get wheel targets that are forwards compatible. This means you build
+
+91
+00:07:46,780 --> 00:07:52,660
+one wheel for all your Python 3 versions instead of needing to build one wheel for Python 3.5,
+
+92
+00:07:52,660 --> 00:07:59,660
+one wheel for Python 3.6, one wheel for Python 3.7, one wheel for Python 3.8, and so on.
+
+93
+00:07:59,740 --> 00:08:04,580
+We currently support five different versions of Python 3, so ABI 3 is more or less a hard
+
+94
+00:08:04,580 --> 00:08:08,500
+requirement for us to keep this maintainable. It's also a really important user experience
+
+95
+00:08:08,500 --> 00:08:13,060
+thing for when a new version of Python 3 is released. We don't have to scramble to get
+
+96
+00:08:13,060 --> 00:08:19,060
+a wheel out as soon as Python 3.11 ships. Unfortunately, PyO 3 didn't support ABI 3.
+
+97
+00:08:19,700 --> 00:08:24,860
+It always built libraries that targeted this full CPython C API. This was a pretty involved
+
+98
+00:08:24,860 --> 00:08:29,100
+fix. We had to send about seven pull requests, a few thousand lines of code, and refactoring
+
+99
+00:08:29,100 --> 00:08:34,380
+to the PyO 3 team. Again, they were fantastic contributing code reviews and even working
+
+100
+00:08:34,380 --> 00:08:39,540
+on this feature themselves once we sort of got the ball rolling. The good news is this
+
+101
+00:08:39,540 --> 00:08:44,500
+is all upstream now. Anyone using PyO 3, you can simply turn on the ABI 3 option and they'll
+
+102
+00:08:44,500 --> 00:08:50,260
+be able to build ABI 3 wheels with Rust. It's even nicely documented. We also ran into
+
+103
+00:08:50,260 --> 00:08:55,860
+some build challenges with SetupTools Rust and Alpine Linux and Windows 32-bit. On Alpine
+
+104
+00:08:55,860 --> 00:09:00,660
+Linux, the challenge is that Rust treats muscle libc, which is what Alpine uses, a little
+
+105
+00:09:00,660 --> 00:09:04,980
+specially, which the Rust maintainers agree is a bug, but fixing it's kind of hard due
+
+106
+00:09:04,980 --> 00:09:09,460
+to backwards compatibility. As a result, we had to send a pull request to SetupTools Rust
+
+107
+00:09:09,460 --> 00:09:14,220
+that has it detect when the system libc is muscle and pass the right flags to Rust to
+
+108
+00:09:14,220 --> 00:09:19,220
+not treat it specially. On 32-bit Windows, the challenge is that very often people use
+
+109
+00:09:19,220 --> 00:09:24,940
+a 32-bit Python on a 64-bit Windows operating system. SetupTools would get confused and
+
+110
+00:09:24,940 --> 00:09:30,500
+think it needs to build a 64-bit Rust library because it's a 64-bit operating system. Again,
+
+111
+00:09:30,500 --> 00:09:34,380
+fix was thankfully pretty straightforward. A small pull request to SetupTools Rust to
+
+112
+00:09:34,380 --> 00:09:38,780
+have it detect that actually it's a 32-bit Python on a 64-bit Windows and pass the right
+
+113
+00:09:38,780 --> 00:09:44,020
+flags. Going through all this was pretty involved. It took us a couple weeks, maybe a couple
+
+114
+00:09:44,020 --> 00:09:48,100
+months to get to the point where all of the different tools we rely on supported the
+
+115
+00:09:48,100 --> 00:09:54,120
+full range of functionality and targets that we and in turn our users need. The good news
+
+116
+00:09:54,120 --> 00:09:59,620
+is that this whole cost basically only needs to be paid once. Having done all this work
+
+117
+00:09:59,620 --> 00:10:04,220
+ourselves, it's A, been smooth sailing for us ever since, and all of this is available
+
+118
+00:10:04,220 --> 00:10:09,780
+to the next user who wants to pick up PyO3 or SetupTools Rust. We think we hit one of
+
+119
+00:10:09,860 --> 00:10:16,100
+that objective of making it easier for the next person.
+
+120
+00:10:16,100 --> 00:10:20,060
+As we did the engineering work, we concurrently developed a roadmap for how to actually ship
+
+121
+00:10:20,060 --> 00:10:25,200
+this. We are a foundational component of the Python ecosystem, and that has made us acutely
+
+122
+00:10:25,200 --> 00:10:30,180
+aware that difficulties installing our package have profound ripple effects. However, refusing
+
+123
+00:10:30,180 --> 00:10:35,220
+to drop support for anything or move to more modern solutions is also untenable for security
+
+124
+00:10:35,220 --> 00:10:39,460
+and maintainability reasons. We attempt to balance the two inherently conflicting requirements
+
+125
+00:10:39,460 --> 00:10:44,340
+as best we can. We're going to talk a little bit now about how we generally make choices,
+
+126
+00:10:44,340 --> 00:10:50,340
+why we think about these things, and how Rust altered our math.
+
+127
+00:10:50,340 --> 00:10:55,060
+Cryptography has, broadly speaking, four unofficial levels of support. First is what we test in
+
+128
+00:10:55,060 --> 00:11:00,860
+CI and ship via our binary wheels. These are, to use Rust's parlance, tier one targets,
+
+129
+00:11:00,860 --> 00:11:04,540
+which we have high confidence in and have thoroughly tested. Cryptography will never
+
+130
+00:11:05,180 --> 00:11:10,220
+ship a wheel for anything we do not test in RCI. Second, we provide best effort support
+
+131
+00:11:10,220 --> 00:11:14,780
+for environments we can't test but we are aware have significant use in the real world.
+
+132
+00:11:14,780 --> 00:11:18,460
+For these, we will accept patches and we will potentially even perform significant effort
+
+133
+00:11:18,460 --> 00:11:22,660
+ourselves to provide a reasonable experience. Examples of this right now include things
+
+134
+00:11:22,660 --> 00:11:29,660
+like ARMHF and MIPS platforms. Third, we have, yeah, sure, why not? Where we will accept
+
+135
+00:11:30,580 --> 00:11:34,220
+patches for less important architectures and OSs as long as they're reasonably written
+
+136
+00:11:34,460 --> 00:11:39,500
+and pass RCI gates. Finally, there's the set of things we consider entirely unsupported.
+
+137
+00:11:39,500 --> 00:11:43,500
+For example, versions of OpenSSL that are too old, Python versions we have chosen to
+
+138
+00:11:43,500 --> 00:11:47,700
+drop and arcane architectures where support would require significant modification of
+
+139
+00:11:47,700 --> 00:11:53,980
+the code base. A good example of this is something like S390, not S390X. If you want these things
+
+140
+00:11:53,980 --> 00:11:58,940
+to work, you're going to have to fork us. Sorry.
+
+141
+00:11:58,940 --> 00:12:03,980
+We have the data that we want to use but we get it from this big fire hose called the
+
+142
+00:12:03,980 --> 00:12:10,980
+PyPI statistics. How do we use that? First, usage of Python versions. We actually choose
+
+143
+00:12:11,740 --> 00:12:17,040
+to drop support. We would love to drop support when the upstream drops support. This is unfortunately
+
+144
+00:12:17,040 --> 00:12:22,380
+not practical. We drop support as usage drops under a threshold, like, for example, 5% or
+
+145
+00:12:22,380 --> 00:12:26,340
+less. Dropping a version for us is a concrete barrier because when we drop support for a
+
+146
+00:12:26,420 --> 00:12:30,180
+Python version, we tend to immediately start using features from our new minimum. This
+
+147
+00:12:30,180 --> 00:12:34,700
+means that there's typically no way to run our code on an older Python. When we began
+
+148
+00:12:34,700 --> 00:12:40,000
+this work, Kropotography still supported Python 2, but PyO3 did not. We had already chosen
+
+149
+00:12:40,000 --> 00:12:45,580
+to support Py2 well past when CPython did. In fact, we had made a decision early on that
+
+150
+00:12:45,580 --> 00:12:50,420
+we would support it at least one year past the final sunset date. And pip and drop support
+
+151
+00:12:50,420 --> 00:12:54,660
+as well. But this gave us an even stronger reason to finish our deprecation. Fortunately,
+
+152
+00:12:54,660 --> 00:12:58,940
+the statistics that we had showed usage dropping very rapidly, and this was not actually an
+
+153
+00:12:58,940 --> 00:13:03,540
+issue for us. Within the set of Python 3s that we were interested in supporting, which
+
+154
+00:13:03,540 --> 00:13:09,820
+was 3.6 and above, our Rust dependency that we were adding through PyO3 was not affected
+
+155
+00:13:09,820 --> 00:13:14,820
+after the work that Alex and the PyO3 maintainers had done in the previously mentioned contributions.
+
+156
+00:13:14,820 --> 00:13:20,820
+Next, of course, operating system. We support Linux, Mac OS, and Windows directly in our
+
+157
+00:13:21,020 --> 00:13:25,780
+CI, but we of course provide best effort support for other operating systems like FreeBSD,
+
+158
+00:13:25,780 --> 00:13:31,660
+OpenBSD, and even some more esoteric things. But of course, Linux is itself not a monolith,
+
+159
+00:13:31,660 --> 00:13:35,260
+and at the time we were looking to ship Rust, pip only supported many Linux wheels, which
+
+160
+00:13:35,260 --> 00:13:40,580
+excluded Alpine and other muscle-based distributions. This meant that adding Rust would, at minimum,
+
+161
+00:13:40,580 --> 00:13:43,900
+require Alpine users to install Rust C as part of their build process in addition to
+
+162
+00:13:43,900 --> 00:13:48,220
+the existing GCC and Clang requirement. GCC or Clang. I mean, you're welcome to install
+
+163
+00:13:48,220 --> 00:13:53,460
+them both. Obscure operating systems might also lack Rust targets, but ultimately we
+
+164
+00:13:53,460 --> 00:14:00,020
+decided that holding back the entire ecosystem for niche areas wasn't reasonable. Those unusual
+
+165
+00:14:00,020 --> 00:14:04,220
+edge cases can and should get LLVM and Rust bootstrapped in their world, much like they
+
+166
+00:14:04,220 --> 00:14:11,220
+did with their C compiler. So cryptography tests and ship wheels using x86, x8664, and
+
+167
+00:14:11,220 --> 00:14:18,220
+ARM64, both ARMv8 and Apple Silicon. We get occasional requests for various other architectures,
+
+168
+00:14:18,780 --> 00:14:23,460
+such as ARMHF or PowerPC64 Littlendian, but as previously mentioned, we only directly
+
+169
+00:14:23,460 --> 00:14:27,900
+support what we can test against. However, those best effort targets should still compile
+
+170
+00:14:27,900 --> 00:14:32,660
+and generally work, so we needed Rust to support at least the broadly popular CPUs in the desktop,
+
+171
+00:14:32,660 --> 00:14:37,140
+mobile server, and even some of the embedded world. Rust supports all these targets, along
+
+172
+00:14:37,140 --> 00:14:40,140
+with many more, but we realized that there may be some silent users lurking where this
+
+173
+00:14:40,140 --> 00:14:45,700
+could be challenging. So even though most of our users get a wheel, we do want to allow
+
+174
+00:14:45,700 --> 00:14:49,740
+users to compile their own versions. This means deciding on a range of open SSL versions
+
+175
+00:14:49,740 --> 00:14:55,660
+to support. We support various versions of LibreSSL and most recently BoringSSL, in addition
+
+176
+00:14:55,660 --> 00:15:00,820
+to all the versions of open SSL that we currently have supported. The PIP data that we get is
+
+177
+00:15:00,820 --> 00:15:04,620
+critical in making these decisions about when we can drop older versions, which frequently
+
+178
+00:15:04,620 --> 00:15:08,680
+carry significant support burden. But it didn't affect our Rust release, so I actually mention
+
+179
+00:15:08,720 --> 00:15:14,040
+it here only for the sake of completeness. And then, of course, as you might imagine,
+
+180
+00:15:14,040 --> 00:15:19,200
+we're interested in the version of the Rust compiler that users have available, so we've
+
+181
+00:15:19,200 --> 00:15:26,200
+recently convinced the PyPA folks to add that. So the data we had gave us reasonable confidence
+
+182
+00:15:26,760 --> 00:15:30,440
+that the vast majority of our users would either be entirely unaffected or would be
+
+183
+00:15:30,440 --> 00:15:34,260
+able to continue using the project with some changes to their build pipeline. But how do
+
+184
+00:15:34,260 --> 00:15:37,940
+we let people know this change is coming so they can make plans and invest in the areas
+
+185
+00:15:37,940 --> 00:15:44,860
+needed to ensure their chosen platforms still have access to this project?
+
+186
+00:15:44,860 --> 00:15:48,660
+We first announced that we were considering adding Rust code to PyCA cryptography on August
+
+187
+00:15:48,660 --> 00:15:53,340
+2020 on our cryptography-dev mailing list, along with a GitHub issue we invited people
+
+188
+00:15:53,340 --> 00:15:57,900
+to comment on. We followed that up with another email in December 2020 that also outlined
+
+189
+00:15:57,900 --> 00:16:03,720
+our general release plan, which we can summarize as the next release, which would be 3.4, would
+
+190
+00:16:03,740 --> 00:16:08,060
+include a Rust extension module which would be built by default but would not be required
+
+191
+00:16:08,060 --> 00:16:12,360
+for cryptography to work and could be disabled at build time with an environment variable.
+
+192
+00:16:12,360 --> 00:16:18,240
+The release after that, which we ultimately versioned to 35, not 3.4 for reasons we will
+
+193
+00:16:18,240 --> 00:16:24,360
+get into soon, would include a Rust extension module without which cryptography could not
+
+194
+00:16:24,360 --> 00:16:30,160
+work. In other words, we would depend upon Rust for actual core functionality.
+
+195
+00:16:30,160 --> 00:16:34,520
+This two-step plan was a result of community feedback, specifically Jeff T., so thank
+
+196
+00:16:34,520 --> 00:16:38,660
+you very much, Jeff, and designed out of a recognition that very few people follow mailing
+
+197
+00:16:38,660 --> 00:16:43,280
+lists or our issue tracker on a consistent basis. They wouldn't be aware of this change
+
+198
+00:16:43,280 --> 00:16:47,560
+without us putting it front and center, but breaking them with no escape valve was an
+
+199
+00:16:47,560 --> 00:16:52,380
+anti-goal. It was not our desire to break people.
+
+200
+00:16:52,380 --> 00:16:59,600
+So after all this, we released 3.4 on February 7, 2021. Hooray! This allowed us to both let
+
+201
+00:16:59,600 --> 00:17:02,720
+people know Rust was coming but also let people who weren't quite ready to add the
+
+202
+00:17:02,720 --> 00:17:06,640
+cryptography don't build Rust flag to their environment variables so they don't have to
+
+203
+00:17:06,640 --> 00:17:12,640
+immediately make changes to their build pipelines. Well, we expected feedback and, well, we got
+
+204
+00:17:12,640 --> 00:17:20,960
+it. So the vast majority of our users experienced no breakage in this transition. However, amongst
+
+205
+00:17:20,960 --> 00:17:25,280
+the minority who did, and to be very clear, we consider that minority significant and
+
+206
+00:17:25,280 --> 00:17:29,520
+important to us. There existed a subset who were willing to provide feedback. It took
+
+207
+00:17:29,520 --> 00:17:45,920
+various forms. It also started getting a bit heated. We also saw this release got some
+
+208
+00:17:45,920 --> 00:17:54,480
+attention in places you wouldn't expect, which ultimately spawned some other articles talking
+
+209
+00:17:54,480 --> 00:18:00,480
+about tradeoffs we had chosen to make. So throughout this process, we were taking
+
+210
+00:18:00,480 --> 00:18:04,920
+what we learned from our users and trying to provide improvements as quickly as we could.
+
+211
+00:18:04,920 --> 00:18:08,720
+First we got a bug in our new type hints, which there's a lesson there. Don't ship other
+
+212
+00:18:08,720 --> 00:18:13,880
+stuff with your big Rust change. We also realized we should provide more robust debug output
+
+213
+00:18:13,880 --> 00:18:18,280
+when compilation failed for people who aren't C and Rust experts. One of the unfortunate
+
+214
+00:18:18,280 --> 00:18:22,020
+things when we build these things is we become experts in the very things that are the most
+
+215
+00:18:22,020 --> 00:18:31,700
+opaque to the users who are having problems. So day two was spent improving our documentation,
+
+216
+00:18:31,700 --> 00:18:35,220
+making our errors even more debugable and generally learning from user confusion to
+
+217
+00:18:35,220 --> 00:18:43,740
+build more paved roads. And again, don't ship other invasive changes with a Rust transition.
+
+218
+00:18:43,740 --> 00:18:48,260
+After this, we added a test in RCI that tests for all possible import cycles because that
+
+219
+00:18:48,260 --> 00:18:54,260
+was really annoying. And finally, on the 13th, we released a version that dropped our MSRB,
+
+220
+00:18:54,260 --> 00:19:01,220
+our minimum supported Rust version, and also pre-announced a new versioning scheme. So
+
+221
+00:19:01,220 --> 00:19:06,300
+what lessons did we learn from all this? Well, one common point of feedback we got initially
+
+222
+00:19:06,300 --> 00:19:10,460
+was that while we documented the don't use Rust environment variables in the documentation,
+
+223
+00:19:10,460 --> 00:19:14,260
+it wasn't clearly linked to from either the error message or the change log. The flag
+
+224
+00:19:14,260 --> 00:19:20,820
+was simply not as discoverable as it needed to be. Errors out of PIP when compilation
+
+225
+00:19:20,820 --> 00:19:25,460
+fails can be extraordinarily verbose. So catching that and then emitting a more friendly message
+
+226
+00:19:25,460 --> 00:19:29,420
+with both a set of relevant environment information as well as links on how to surmount common
+
+227
+00:19:29,420 --> 00:19:33,300
+problems went a long way towards minimizing the time it took users to get their environments
+
+228
+00:19:33,300 --> 00:19:39,900
+working again. This is the difference between a pile of Rust C or GCC failed output and
+
+229
+00:19:40,100 --> 00:19:44,660
+one that has like a pretty output that says, hey, look, you should consider doing the following
+
+230
+00:19:44,660 --> 00:19:51,660
+things. And if those fail, please submit an issue. Additionally, for users who were willing
+
+231
+00:19:51,900 --> 00:19:55,260
+to immediately jump into our Rust requirement, we didn't provide enough information about
+
+232
+00:19:55,260 --> 00:19:59,580
+required Rust version or how to obtain it. Typically, users obtain their C compiler directly
+
+233
+00:19:59,580 --> 00:20:04,540
+from the operating system and the version barely matters. But in the Rust case, our
+
+234
+00:20:04,540 --> 00:20:09,060
+minimum supported Rust version was higher than some of the older Debian and Alpine installations,
+
+235
+00:20:09,060 --> 00:20:11,820
+requiring the user to learn how to install Rust up, which is an alternate mechanism of
+
+236
+00:20:11,820 --> 00:20:17,340
+installing these things. These items were potentially foreseeable errors on our part.
+
+237
+00:20:17,340 --> 00:20:20,480
+Our own familiarity with the code base and tooling required resulted in a failure to
+
+238
+00:20:20,480 --> 00:20:25,020
+systematically examine failure cases and think through user experience. We considered some
+
+239
+00:20:25,020 --> 00:20:31,100
+of these but failed to give users with problems good enough tools to fix their issues. We
+
+240
+00:20:31,100 --> 00:20:35,420
+also discovered just how many people pinned cryptography assuming semantic versioning.
+
+241
+00:20:35,420 --> 00:20:38,840
+When 3.4 made this change and their build pipelines blew up, this shocked them as they
+
+242
+00:20:38,840 --> 00:20:43,900
+believed we were breaking an unwritten contract. While Alex and I both have very strong feelings
+
+243
+00:20:43,900 --> 00:20:46,940
+about the value of semantic versioning in general, as well as specifically in the case
+
+244
+00:20:46,940 --> 00:20:52,600
+of security-critical libraries like cryptography, we also don't want to surprise users. So accordingly,
+
+245
+00:20:52,600 --> 00:20:56,500
+we re-versioned our library such that every feature release is now a new major version,
+
+246
+00:20:56,500 --> 00:21:01,780
+35.0, 36.0, et cetera, in the vein of Firefox's version numbers. A talk about versioning could
+
+247
+00:21:01,780 --> 00:21:04,740
+fill 30 minutes alone, so if you want our full hot takes, you'll have to find us in
+
+248
+00:21:04,740 --> 00:21:11,700
+the hallway track. Finally, when things aren't working and people are under pressure, tempers
+
+249
+00:21:11,700 --> 00:21:16,940
+run hot. We had passionate people both defending us and registering their objections to some
+
+250
+00:21:16,940 --> 00:21:21,420
+of our decisions. But an issue this emotionally charged results in that defense occasionally
+
+251
+00:21:21,420 --> 00:21:24,900
+looking more like an attack. And many users couldn't tell the difference between those
+
+252
+00:21:24,900 --> 00:21:29,220
+overly zealous defenders and the actual core maintainers. This led to a less civil discourse
+
+253
+00:21:29,220 --> 00:21:32,580
+than we would have preferred.
+
+254
+00:21:32,580 --> 00:21:37,080
+So having shipped a module that incorporates Rust into the build process but ultimately
+
+255
+00:21:37,080 --> 00:21:41,340
+does nothing of use, the next step was do something useful with Rust, you know, get
+
+256
+00:21:41,340 --> 00:21:45,660
+the value out of it that is the reason we're using it in the first place. Luckily for us,
+
+257
+00:21:45,660 --> 00:21:49,940
+we had a few concrete use cases in mind. First, we wanted to replace the small amount of C
+
+258
+00:21:49,940 --> 00:21:55,020
+code we'd written ourselves for handling things like cryptographic constant time operations.
+
+259
+00:21:55,020 --> 00:21:59,500
+And second, we wanted to replace OpenSSL's X509 layer and all of the parsing code for
+
+260
+00:21:59,580 --> 00:22:04,660
+ASN1 that it contains. There's actually not a ton to be said about the process of
+
+261
+00:22:04,660 --> 00:22:08,580
+replacing these things because mostly we just stuck to the best practices you'll hear about
+
+262
+00:22:08,580 --> 00:22:13,160
+any time you think about rewriting things. Make sure you have great test coverage, don't
+
+263
+00:22:13,160 --> 00:22:17,280
+rewrite everything at once, you know, break up your rewrite into small components, make
+
+264
+00:22:17,280 --> 00:22:21,100
+sure things are working all along the way, right, don't leave things in half broken
+
+265
+00:22:21,100 --> 00:22:27,620
+state. And so really the process of migrating to Rust is just a series of small pull requests
+
+266
+00:22:27,700 --> 00:22:31,460
+that keep tests running, add new test cases where we got concerned there wasn't enough
+
+267
+00:22:31,460 --> 00:22:37,140
+test coverage and attempting to measure how we were getting benefit from this. So for
+
+268
+00:22:37,140 --> 00:22:41,420
+example, even though our primary motivation in this effort was security, we also got some
+
+269
+00:22:41,420 --> 00:22:46,740
+really big performance wins. In the benchmarks we've got here, we migrated the parser for
+
+270
+00:22:46,740 --> 00:22:53,660
+the OCSP request class from an OpenSSL and CFFI implementation to the Rust implementation.
+
+271
+00:22:53,660 --> 00:22:58,940
+The result is it is now ten times faster than it used to be. This might come as a surprise.
+
+272
+00:22:58,940 --> 00:23:05,780
+OpenSSL is written in C, C is fast. C may be fast but it's not magic. OpenSSL's parsing
+
+273
+00:23:05,780 --> 00:23:11,360
+code performs a significant number of allocations and memory copies. Because of Rust safety
+
+274
+00:23:11,360 --> 00:23:16,520
+features, we were able to easily write parsing code without any allocations and without any
+
+275
+00:23:16,520 --> 00:23:20,900
+memory copies while still having confidence that we weren't introducing these memory safety
+
+276
+00:23:20,900 --> 00:23:26,140
+vulnerabilities we talked about at the top. We also got big benefits out of this in terms
+
+277
+00:23:26,140 --> 00:23:33,140
+of architectural improvements. Specifically, our X.509 API's implementation used to be
+
+278
+00:23:33,140 --> 00:23:39,660
+deeply intertwined with the OpenSSL implementation of other components of our library. This meant
+
+279
+00:23:39,660 --> 00:23:44,020
+we'd have APIs that said things like, takes a private key but in practice would be totally
+
+280
+00:23:44,020 --> 00:23:48,820
+broken if it wasn't an OpenSSL private key. Rewriting this code in Rust let us make the
+
+281
+00:23:48,820 --> 00:23:53,860
+API boundaries between these two components actually much clearer and now things like
+
+282
+00:23:53,860 --> 00:23:58,180
+sign a certificate with a private key in a cloud key management service actually just
+
+283
+00:23:58,180 --> 00:24:04,580
+works. And here's what our adoption curve looked like. The blue sectioner downloads
+
+284
+00:24:04,580 --> 00:24:09,260
+the versions with no Rust, the redder versions that contain the optional Rust and the yellower
+
+285
+00:24:09,260 --> 00:24:14,700
+versions that require Rust. There's really two things I noticed about this. First, adoption
+
+286
+00:24:14,780 --> 00:24:19,300
+of a new version happens in two phases. First it happens all at once and then it happens
+
+287
+00:24:19,300 --> 00:24:24,060
+slowly. Immediately after you release a new version, nearly half of our users will be
+
+288
+00:24:24,060 --> 00:24:29,780
+updated indicating they're almost certainly not using any sort of version or hash pinning.
+
+289
+00:24:29,780 --> 00:24:34,740
+After that, adoption increases very gradually. Right now we're at a point where approximately
+
+290
+00:24:34,740 --> 00:24:39,100
+80% of our downloads are processed in a facility that contains Rust and we'd like to get that
+
+291
+00:24:39,260 --> 00:24:45,300
+to 100% obviously. We know the blue section and no Rust is a mix of causes though. Some
+
+292
+00:24:45,300 --> 00:24:50,420
+of it is folks deliberately pinning to versions before we had Rust. Others are users pinning
+
+293
+00:24:50,420 --> 00:24:56,160
+to our 2.x series presumably because of expectations around semantic versioning that are not actually
+
+294
+00:24:56,160 --> 00:25:00,380
+accurate for us.
+
+295
+00:25:00,380 --> 00:25:04,560
+So we hope we've convinced you in this talk that Rust is now a viable choice no matter
+
+296
+00:25:04,560 --> 00:25:08,960
+how popular your project is. Much of this ecosystem work was done out of necessity
+
+297
+00:25:08,960 --> 00:25:13,160
+but the vast majority is now complete. We were also thrilled to see that other developers
+
+298
+00:25:13,160 --> 00:25:17,260
+took up the challenge to implement the muscle Linux standard across PyPA and PyPI which
+
+299
+00:25:17,260 --> 00:25:21,680
+gave Alpine Linux users access to wheels much like we already had for Debian Ubuntu, Redhat
+
+300
+00:25:21,680 --> 00:25:26,760
+and other G-lib C-based distributions. And of course we've hopefully weathered the storm
+
+301
+00:25:26,760 --> 00:25:32,460
+of legitimate concerns, well-meaning but confused people and angry trolls. If we can do it, so
+
+302
+00:25:32,500 --> 00:25:36,860
+can you. Next time you find yourself reaching for the Python C API to eke out some more
+
+303
+00:25:36,860 --> 00:25:42,380
+performance take a second and maybe reach for a nice cold glass of PyO3. There is however
+
+304
+00:25:42,380 --> 00:25:47,260
+room for future improvement here. For example alternate OS's such as FreeBSD and OpenBSD
+
+305
+00:25:47,260 --> 00:25:51,360
+are still required to build from source. It would be nice to be able to potentially define
+
+306
+00:25:51,360 --> 00:25:54,820
+standards where that is no longer required. Additionally to streamline the experience
+
+307
+00:25:54,820 --> 00:26:00,180
+even more we could investigate better binary build tooling, moving setup tools Rust into
+
+308
+00:26:00,180 --> 00:26:04,700
+setup tools or better integrations with CPython itself. The experience today is excellent
+
+309
+00:26:04,700 --> 00:26:09,620
+for most users but we can make it better. Oh and as announced via the Python announce
+
+310
+00:26:09,620 --> 00:26:16,620
+list and in this talk right now the next release of Bcrypt will be pure Rust. Thank you very
+
+311
+00:26:16,820 --> 00:26:17,220
+much.
+

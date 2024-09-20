@@ -1,0 +1,1508 @@
+1
+00:00:00,000 --> 00:00:09,080
+Hello everyone, welcome back.
+
+2
+00:00:09,080 --> 00:00:16,080
+We have our next talk, Harvest the Power of GPU for Awesome Special Effects by Paul Vincent
+
+3
+00:00:16,080 --> 00:00:17,080
+Craven.
+
+4
+00:00:17,080 --> 00:00:18,880
+Over to you, Paul.
+
+5
+00:00:18,880 --> 00:00:19,880
+Thank you.
+
+6
+00:00:19,880 --> 00:00:26,080
+Hi, I'm Paul Craven, and if you would like to copy paste any code samples, if you want
+
+7
+00:00:26,080 --> 00:00:31,480
+to refer to stuff later or find additional info, that tiny URL that's on the screen
+
+8
+00:00:31,480 --> 00:00:35,120
+will give you a page with all of that.
+
+9
+00:00:35,120 --> 00:00:39,440
+The goal of this talk is to show you how your programs don't have to be limited to just
+
+10
+00:00:39,440 --> 00:00:41,740
+using the CPU.
+
+11
+00:00:41,740 --> 00:00:47,640
+You can also use your graphics card, known as the GPU, to harness and do a lot of really
+
+12
+00:00:47,640 --> 00:00:49,520
+awesome special effects.
+
+13
+00:00:49,520 --> 00:00:55,640
+You can offload a lot of graphical work from your CPU to your GPU, because after all, you
+
+14
+00:00:55,760 --> 00:00:59,480
+have thousands of processors sitting there waiting for you to give them something to
+
+15
+00:00:59,480 --> 00:01:01,600
+do.
+
+16
+00:01:01,600 --> 00:01:05,560
+This animated cyber image is run completely on the GPU side.
+
+17
+00:01:05,560 --> 00:01:08,440
+The CPU is doing nothing while it's going on.
+
+18
+00:01:08,440 --> 00:01:15,440
+In fact, that glow effect is kind of difficult to do well on a CPU, but on the graphics card,
+
+19
+00:01:16,140 --> 00:01:21,440
+it's made for doing this, and it's really easy to add that glow effect.
+
+20
+00:01:21,480 --> 00:01:28,220
+In this talk here, I'll briefly show you some of what you can do with the GPU, and a little
+
+21
+00:01:28,220 --> 00:01:32,720
+bit of conceptual information on why we do things a little bit differently if we have
+
+22
+00:01:32,720 --> 00:01:35,280
+to end up using the GPU as opposed to the CPU.
+
+23
+00:01:35,280 --> 00:01:39,560
+I'll also show you how easy it is to get started doing this yourself.
+
+24
+00:01:39,560 --> 00:01:46,560
+With less than 50 lines of code, you can get started offloading stuff onto the GPU.
+
+25
+00:01:47,520 --> 00:01:53,280
+On this one, the GPU is doing all the star, flashy animation movement, and the CPU is
+
+26
+00:01:53,280 --> 00:01:56,560
+not doing a thing at all.
+
+27
+00:01:56,560 --> 00:02:01,840
+What more things can you do with the GPU, aside from cool background animations?
+
+28
+00:02:01,840 --> 00:02:06,440
+If you want to draw graphical images on your screen, the sprites, the squares, the fundamental
+
+29
+00:02:06,440 --> 00:02:13,440
+building blocks of a game, using the GPU is much faster than using the CPU.
+
+30
+00:02:13,840 --> 00:02:18,760
+PyGame, which has been around forever, is a classic CPU-based library, and it does really
+
+31
+00:02:18,760 --> 00:02:22,960
+well up to about 2,000 or so sprites on the screen.
+
+32
+00:02:22,960 --> 00:02:27,440
+Once you get beyond 2,000 sprites, depending upon your computer and what else is going
+
+33
+00:02:27,440 --> 00:02:31,560
+on, your frames per second really starts dropping off fast.
+
+34
+00:02:31,560 --> 00:02:38,560
+But if you use a GPU-based library that offloads all of that sprite onto the graphics card,
+
+35
+00:02:38,760 --> 00:02:43,680
+you can not only do more than 2,000, more than 14,000, but you can even have a million
+
+36
+00:02:43,680 --> 00:02:48,200
+sprites on your screen and have those things be rendered.
+
+37
+00:02:48,200 --> 00:02:52,220
+It's not just a little bit faster, it's a whole other ball game if you end up using
+
+38
+00:02:52,220 --> 00:02:54,960
+the graphics card.
+
+39
+00:02:54,960 --> 00:02:59,760
+You can also create games that aren't just with pixels, but you can add the glow effect,
+
+40
+00:02:59,760 --> 00:03:04,600
+the splash, all of those particles flying out, all of those are completely done on the
+
+41
+00:03:04,600 --> 00:03:11,600
+graphics card side, and that leaves the CPU just having to worry about the game logic.
+
+42
+00:03:15,080 --> 00:03:20,160
+How do you take calculations that you might have used to do with your CPU and offload
+
+43
+00:03:20,160 --> 00:03:23,080
+those to your graphics card, the GPU?
+
+44
+00:03:23,080 --> 00:03:28,440
+Well, unfortunately, one of the things we can't do is the old school way, the CPU way
+
+45
+00:03:28,440 --> 00:03:32,640
+of doing things, where it was straightforward, and if you wanted a rectangle, if you wanted
+
+46
+00:03:32,640 --> 00:03:37,280
+an image, you'd just say draw rectangle and you'd draw the rectangle.
+
+47
+00:03:37,280 --> 00:03:40,080
+But that doesn't really allow the graphics card to help much.
+
+48
+00:03:40,080 --> 00:03:43,280
+It's just getting one drawing command at a time.
+
+49
+00:03:43,280 --> 00:03:48,360
+It's got thousands of processors, and in fact, if you do it this way, not only is it not
+
+50
+00:03:48,360 --> 00:03:51,200
+faster, it's slower.
+
+51
+00:03:51,200 --> 00:03:58,200
+So if you're used to doing things a CPU-centric way and you transfer to a library that uses
+
+52
+00:03:58,680 --> 00:04:03,680
+the graphics card, you might actually find that things run slower until you kind of realize
+
+53
+00:04:03,680 --> 00:04:06,120
+how the graphics card works.
+
+54
+00:04:06,120 --> 00:04:10,720
+It's one of the reasons why I kind of like teaching students to program using more of
+
+55
+00:04:10,720 --> 00:04:14,800
+a graphics card-oriented library like Arcade, just because it gets them in the habit of
+
+56
+00:04:14,800 --> 00:04:18,000
+doing things that way from the beginning.
+
+57
+00:04:18,000 --> 00:04:21,040
+But regardless, it's not hard to make the switch.
+
+58
+00:04:21,040 --> 00:04:26,480
+Really the key thing here is before we start our scene, we need to send all of the data
+
+59
+00:04:26,560 --> 00:04:27,880
+to the graphics card.
+
+60
+00:04:27,880 --> 00:04:31,120
+And if you've worked with any modern games and it's got the little loading screen when
+
+61
+00:04:31,120 --> 00:04:36,000
+you're loading up a scene, it's got the progress box going across, a lot of what it's doing
+
+62
+00:04:36,000 --> 00:04:38,320
+is dumping data to the graphics card.
+
+63
+00:04:38,320 --> 00:04:41,400
+The images, the geometry, all of that.
+
+64
+00:04:41,400 --> 00:04:48,400
+So that when you're playing the game at 60 frames per second, instead of redrawing every
+
+65
+00:04:49,000 --> 00:04:53,560
+time, all your CPU has to do is just say, oh, that stuff I gave you before, just draw
+
+66
+00:04:53,560 --> 00:04:54,560
+it.
+
+67
+00:04:54,560 --> 00:05:00,080
+And then the graphics card that has all of that in it once can draw the stuff in parallel.
+
+68
+00:05:00,080 --> 00:05:04,600
+And that makes it run so much faster.
+
+69
+00:05:04,600 --> 00:05:07,720
+And it frees up the CPU to do the game logic.
+
+70
+00:05:07,720 --> 00:05:10,080
+But this still isn't perfect.
+
+71
+00:05:10,080 --> 00:05:12,520
+This only offloads the drawing.
+
+72
+00:05:12,520 --> 00:05:14,320
+After all, what happens if something moves?
+
+73
+00:05:14,320 --> 00:05:18,200
+Because it's not a very exciting game if nothing moves.
+
+74
+00:05:18,200 --> 00:05:20,920
+And the CPU still has to do the movement.
+
+75
+00:05:20,960 --> 00:05:25,960
+And any updated data that you've got needs to be sent to the graphics card.
+
+76
+00:05:25,960 --> 00:05:27,740
+This is still much faster.
+
+77
+00:05:27,740 --> 00:05:32,380
+Because instead of sending the image every time, the geometry of the object every time,
+
+78
+00:05:32,380 --> 00:05:34,880
+all you're doing is sending updated XY coordinates.
+
+79
+00:05:34,880 --> 00:05:40,560
+So this is still a definite improvement over doing things the old school way.
+
+80
+00:05:40,560 --> 00:05:47,560
+But what we really would like to do is minimize that amount of data that's being sent to the
+
+81
+00:05:48,160 --> 00:05:49,320
+graphics card.
+
+82
+00:05:49,320 --> 00:05:54,640
+We can do that by upfront not only sending data to the graphics card, but sending a script.
+
+83
+00:05:54,640 --> 00:05:58,400
+So we can automate any sort of calculation that we can.
+
+84
+00:05:58,400 --> 00:06:02,800
+And if we can do that script on the graphics card instead, then that's stuff that our CPU
+
+85
+00:06:02,800 --> 00:06:05,800
+doesn't have to do.
+
+86
+00:06:05,800 --> 00:06:09,000
+This next simulation is an end body simulation.
+
+87
+00:06:09,000 --> 00:06:15,560
+And it has basically 40,000 stars that are going to sort of do their gravitational attraction
+
+88
+00:06:15,560 --> 00:06:17,200
+to each other.
+
+89
+00:06:17,200 --> 00:06:24,120
+So 60 times per second for each frame, they are calculating the gravitational attraction
+
+90
+00:06:24,120 --> 00:06:31,120
+to the other 39,990 stars, resulting in approximately 1.6 billion gravity calculations each frame,
+
+91
+00:06:31,860 --> 00:06:35,240
+or about 100 billion calculations per second.
+
+92
+00:06:35,240 --> 00:06:39,280
+And this is totally doable on a modern graphics card.
+
+93
+00:06:39,280 --> 00:06:42,520
+It's like 30 frames per second for me, because mine's seven years old and they're hard to
+
+94
+00:06:42,520 --> 00:06:43,240
+get now.
+
+95
+00:06:43,880 --> 00:06:48,040
+You know, for a modern graphics card it looks really, really sharp.
+
+96
+00:06:48,040 --> 00:06:53,280
+And by offloading those calculations on the graphics card, I mean, there are so many processors
+
+97
+00:06:53,280 --> 00:06:58,640
+there, you can do things that you couldn't even remotely come close to on the CPU side.
+
+98
+00:06:58,640 --> 00:07:01,720
+So how do you get started with this?
+
+99
+00:07:01,720 --> 00:07:06,580
+Well, to get started, what we need to do is learn to write a shader.
+
+100
+00:07:06,580 --> 00:07:11,960
+And we're going to create a Python program that loads a shader to the graphics card.
+
+101
+00:07:11,960 --> 00:07:16,800
+The unfortunate side of things is that shaders aren't written in Python, which is sad.
+
+102
+00:07:16,800 --> 00:07:19,940
+But we can control shaders with our Python program.
+
+103
+00:07:19,940 --> 00:07:23,840
+We can send the position, the color of our items, and then this shader can take over
+
+104
+00:07:23,840 --> 00:07:30,840
+and do a little mini GLSL, Open GL Shading Language, GLSL for short, and it will run
+
+105
+00:07:31,840 --> 00:07:37,080
+that, in our case, for the example we'll do here, for every single pixel on the screen.
+
+106
+00:07:37,120 --> 00:07:43,600
+So if you have an 800 by 600 screen, it'll run it about a half million times, and for
+
+107
+00:07:43,600 --> 00:07:49,200
+each frame about 28, 29 million times per second, which seems like a lot, and it is,
+
+108
+00:07:49,200 --> 00:07:53,160
+but that's what the graphics card does really well.
+
+109
+00:07:53,160 --> 00:07:58,480
+The other thing is the Python Arcade Library makes it really easy to create and run shaders.
+
+110
+00:07:58,480 --> 00:08:03,600
+And it does so because it adopted the shader toy.com framework.
+
+111
+00:08:03,600 --> 00:08:06,360
+Shader toy.com is a cool website on the web.
+
+112
+00:08:06,360 --> 00:08:08,880
+Well most websites are on the web.
+
+113
+00:08:08,880 --> 00:08:15,880
+Anyway, shader toy.com is this website that allows you to actually code on your web browser
+
+114
+00:08:15,880 --> 00:08:18,960
+a shader and run it using WebGL.
+
+115
+00:08:18,960 --> 00:08:22,640
+And it has a nice framework that takes care of some of that grunt work for you, like the
+
+116
+00:08:22,640 --> 00:08:26,800
+resolution of the screen, where the mouse is, all of this stuff is already there and
+
+117
+00:08:26,800 --> 00:08:28,640
+available for you.
+
+118
+00:08:28,640 --> 00:08:31,320
+And this makes writing shaders very convenient.
+
+119
+00:08:31,360 --> 00:08:36,280
+And you can take those shaders and pretty much copy paste them over and run them in
+
+120
+00:08:36,280 --> 00:08:39,000
+your Python program.
+
+121
+00:08:39,000 --> 00:08:44,000
+So to start with and show you how easy this is, we're going to do a tutorial where you
+
+122
+00:08:44,000 --> 00:08:47,080
+can create a glowy ball that you just sort of move around with the mouse.
+
+123
+00:08:47,080 --> 00:08:52,680
+And the whole glow effect and the rendering of this will happen on the graphics card.
+
+124
+00:08:52,680 --> 00:08:56,600
+And you can change the color too.
+
+125
+00:08:56,600 --> 00:09:01,040
+So our first step in doing this is to open up a window.
+
+126
+00:09:01,080 --> 00:09:04,000
+This has nothing to do with shaders, but we at least need to get a window that we can
+
+127
+00:09:04,000 --> 00:09:05,880
+render something to.
+
+128
+00:09:05,880 --> 00:09:08,920
+And the code to do that is here.
+
+129
+00:09:08,920 --> 00:09:16,480
+Basically we're going to import the arcade library and the arcade library is going to
+
+130
+00:09:16,480 --> 00:09:20,760
+– you can just do a pip install arcade and it will take care of some of the graphic stuff
+
+131
+00:09:20,760 --> 00:09:22,160
+for us.
+
+132
+00:09:22,160 --> 00:09:27,400
+Then we'll do the magic if statement that only runs if we run this script as opposed
+
+133
+00:09:27,400 --> 00:09:29,480
+to import it.
+
+134
+00:09:29,480 --> 00:09:34,440
+The my game instance that we create here will be the window that pops up and I'll talk
+
+135
+00:09:34,440 --> 00:09:35,760
+about that here in a sec.
+
+136
+00:09:35,760 --> 00:09:39,720
+But this pops up a window and then once we get the window up we need to start our event
+
+137
+00:09:39,720 --> 00:09:40,720
+loop.
+
+138
+00:09:40,720 --> 00:09:45,120
+The event loop responds to keystrokes, mouse, that type of thing.
+
+139
+00:09:45,120 --> 00:09:47,920
+If we didn't have this here then the window would just close because we were done with
+
+140
+00:09:47,920 --> 00:09:49,760
+our program.
+
+141
+00:09:49,760 --> 00:09:54,160
+So that's what the arcade run does, starts up the event loop.
+
+142
+00:09:54,160 --> 00:09:58,920
+We can take our own custom class and derive from arcade window.
+
+143
+00:09:58,920 --> 00:10:03,320
+And when we derive from arcade window we get all of the grunt work that arcade does for
+
+144
+00:10:03,320 --> 00:10:07,760
+us and all we need to do is add the extra stuff that we need, which in this case isn't
+
+145
+00:10:07,760 --> 00:10:14,600
+really that much.
+
+146
+00:10:14,600 --> 00:10:20,320
+In our init then we are going to simply call the parents init and tell it how big of a
+
+147
+00:10:20,320 --> 00:10:21,320
+window we want.
+
+148
+00:10:21,320 --> 00:10:25,120
+So if you want different window dimensions in this case it's just defaulting to 1920
+
+149
+00:10:25,120 --> 00:10:28,240
+by 1080.
+
+150
+00:10:28,240 --> 00:10:31,480
+The next thing that we definitely need is to tell it what to draw.
+
+151
+00:10:31,480 --> 00:10:37,200
+So 60 times per second it's going to call an onDraw function and we need to define what
+
+152
+00:10:37,200 --> 00:10:41,600
+that is so that it knows what to draw.
+
+153
+00:10:41,600 --> 00:10:45,960
+And in this case we're just going to clear the screen just so the window pops up.
+
+154
+00:10:45,960 --> 00:10:52,420
+This will automatically default to black and we've got a window that pops up onto our screen.
+
+155
+00:10:52,420 --> 00:10:55,520
+Step two, how can we add in the shader?
+
+156
+00:10:56,200 --> 00:11:00,560
+We've got a window that pops up, adding in a shader is dead simple.
+
+157
+00:11:00,560 --> 00:11:03,800
+First off we just need to import a shader toy class.
+
+158
+00:11:03,800 --> 00:11:11,480
+This is basically what implements that framework that shadertoy.com has.
+
+159
+00:11:11,480 --> 00:11:17,200
+And that shader toy class just needs a couple bits of information to get started.
+
+160
+00:11:17,200 --> 00:11:22,280
+We're going to create a shader from the file and the file name where the shader exists,
+
+161
+00:11:22,280 --> 00:11:28,040
+I just have a circle one glsl but you're just going to define what the file name is.
+
+162
+00:11:28,040 --> 00:11:33,120
+And then you need to tell it how big the window is or the area that you are rendering.
+
+163
+00:11:33,120 --> 00:11:37,240
+In this case it's going to be the entire window so we just do self.git size which returns
+
+164
+00:11:37,240 --> 00:11:39,580
+the size of the window.
+
+165
+00:11:39,580 --> 00:11:44,120
+And given these two bits of information I can create my shader toy class.
+
+166
+00:11:44,120 --> 00:11:48,880
+This happens on startup and then 60 frames per second rather than clearing the screen
+
+167
+00:11:48,880 --> 00:11:51,340
+we're going to render the shader.
+
+168
+00:11:51,340 --> 00:11:53,980
+And there we are, so two basic things that we're adding.
+
+169
+00:11:53,980 --> 00:11:57,820
+We create the shader and we render it.
+
+170
+00:11:57,820 --> 00:12:01,620
+Next up we're going to write the shader in parts so you can kind of see the progression
+
+171
+00:12:01,620 --> 00:12:02,820
+of how this works.
+
+172
+00:12:02,820 --> 00:12:08,320
+I like writing everything where I start insanely simple and then work up from there.
+
+173
+00:12:08,320 --> 00:12:11,240
+This shader, again remember this is going to be a small program that runs for every
+
+174
+00:12:11,240 --> 00:12:12,240
+single pixel.
+
+175
+00:12:12,240 --> 00:12:18,060
+The pixel is going to figure out how far am I away from the origin coordinate, that zero
+
+176
+00:12:18,060 --> 00:12:19,860
+zero coordinate.
+
+177
+00:12:19,860 --> 00:12:24,320
+If I'm close to the origin, the zero zero, I'm going to make myself white.
+
+178
+00:12:24,320 --> 00:12:28,080
+If I'm not, I'm going to draw black.
+
+179
+00:12:28,080 --> 00:12:33,200
+And furthermore, basically this is what it's going to output.
+
+180
+00:12:33,200 --> 00:12:34,980
+The origin is in the lower left.
+
+181
+00:12:34,980 --> 00:12:38,580
+You might be familiar with some coordinate systems use the origin in the upper left.
+
+182
+00:12:38,580 --> 00:12:44,460
+In this case we use like standard mathematics where the y goes up and when it's positive.
+
+183
+00:12:44,460 --> 00:12:48,940
+The other thing that we're going to do, which most shaders will do, is we're going to normalize
+
+184
+00:12:48,980 --> 00:12:50,300
+the coordinates.
+
+185
+00:12:50,300 --> 00:12:54,980
+Which just is a really fancy word for saying I'm going to convert all my coordinates from
+
+186
+00:12:54,980 --> 00:13:00,820
+zero point zero, from whatever they are, from like zero to 800 or zero to 1920, I'm going
+
+187
+00:13:00,820 --> 00:13:06,220
+to switch them from that to zero to 1.0.
+
+188
+00:13:06,220 --> 00:13:07,220
+Floating point coordinates.
+
+189
+00:13:07,220 --> 00:13:11,940
+The reason we do this, I can then make the window a 4K window, I can make it a small
+
+190
+00:13:11,940 --> 00:13:16,220
+800 by 600 window, but after I normalize the coordinates, everything's going to come out
+
+191
+00:13:16,220 --> 00:13:17,220
+the same.
+
+192
+00:13:17,220 --> 00:13:24,140
+So, the shader's going to look like this and if you are at all familiar with any of those
+
+193
+00:13:24,140 --> 00:13:28,580
+evil curly brace semi-colon languages, it should look familiar.
+
+194
+00:13:28,580 --> 00:13:32,980
+But we won't have to make much of a shader to get our stuff up on the screen.
+
+195
+00:13:32,980 --> 00:13:38,040
+It's going to call this main image function for every pixel that I've got and it's going
+
+196
+00:13:38,040 --> 00:13:41,340
+to take in the coordinate that I'm rendering.
+
+197
+00:13:41,340 --> 00:13:47,020
+So if I'm currently trying to figure out what should appear at coordinate 800, 200, I'm going
+
+198
+00:13:47,020 --> 00:13:53,340
+to get a vector of two elements, vector just a really fancy name again for a list of stuff,
+
+199
+00:13:53,340 --> 00:13:57,060
+so a list of two items, an XY coordinate.
+
+200
+00:13:57,060 --> 00:14:03,660
+I know that this is coming in because it's got an N keyword on it.
+
+201
+00:14:03,660 --> 00:14:08,380
+I'm going to output what color I want that pixel to be.
+
+202
+00:14:08,380 --> 00:14:12,180
+And the output is going to be a vector of four numbers.
+
+203
+00:14:12,300 --> 00:14:16,820
+So, you probably, if you at all have worked with web or graphics with the red, green,
+
+204
+00:14:16,820 --> 00:14:19,340
+blue whole framework of how you specify colors.
+
+205
+00:14:19,340 --> 00:14:22,940
+So how much red, how much green, and how much blue should I have?
+
+206
+00:14:22,940 --> 00:14:24,740
+Those are three elements.
+
+207
+00:14:24,740 --> 00:14:30,020
+The fourth one is transparency so that you could layer additional renderings on top of
+
+208
+00:14:30,020 --> 00:14:31,780
+each other.
+
+209
+00:14:31,780 --> 00:14:36,380
+So this is the input and this is the output.
+
+210
+00:14:36,380 --> 00:14:40,140
+It's weird because you are used to perhaps using the return statement when you want to
+
+211
+00:14:40,180 --> 00:14:45,180
+return something out and instead we simply specify that the out is here by using the
+
+212
+00:14:45,180 --> 00:14:46,260
+out keyword.
+
+213
+00:14:46,260 --> 00:14:49,260
+So that is a bit different.
+
+214
+00:14:49,260 --> 00:14:55,180
+We can normalize the coordinate, convert it to that whole 1.0 thing going on by dividing
+
+215
+00:14:55,180 --> 00:14:57,220
+out by our screen resolution.
+
+216
+00:14:57,220 --> 00:15:02,720
+So we take the input fragment that we got from up here and we divide that by the resolution
+
+217
+00:15:02,720 --> 00:15:03,720
+of the screen.
+
+218
+00:15:03,720 --> 00:15:09,640
+We're given that automatically by the shader toy framework and we can divide both the X
+
+219
+00:15:09,640 --> 00:15:13,920
+and the Y at the same time which is pretty cool because we're working with vectors.
+
+220
+00:15:13,920 --> 00:15:20,640
+So now I've got a normalized coordinate and I'm storing it in the variable called UV.
+
+221
+00:15:20,640 --> 00:15:24,320
+And yep, there's my normalized coordinates.
+
+222
+00:15:24,320 --> 00:15:27,120
+Next up, I need to figure out how close I am to the origin, right, to know if I'm going
+
+223
+00:15:27,120 --> 00:15:29,760
+to be a black pixel or a white pixel.
+
+224
+00:15:29,760 --> 00:15:34,800
+And to do that I need to figure out the distance I am from the origin and I can do that with
+
+225
+00:15:34,800 --> 00:15:37,440
+a built-in function called length.
+
+226
+00:15:37,440 --> 00:15:42,720
+And that built-in function length I just pass it in the UV, bang, I've got how long that
+
+227
+00:15:42,720 --> 00:15:47,480
+vector is which is basically how far away I am from the origin.
+
+228
+00:15:47,480 --> 00:15:55,880
+If I'm greater than 0.2 far away, I'm going to make a white pixel, otherwise it's going
+
+229
+00:15:55,880 --> 00:15:56,880
+to be black.
+
+230
+00:15:56,880 --> 00:16:01,040
+So white, 0, 0, 0 and black, 1, 1, 1.
+
+231
+00:16:01,040 --> 00:16:02,640
+The last numbers are transparency.
+
+232
+00:16:02,640 --> 00:16:06,120
+We'll just always be opaque and set that to 1.
+
+233
+00:16:06,120 --> 00:16:10,400
+Don't forget, frag color comes from there so I didn't have to define it because I defined
+
+234
+00:16:10,400 --> 00:16:15,680
+it up there and as soon as I assign it then that's my output value.
+
+235
+00:16:15,680 --> 00:16:21,400
+Dead simple, not too many lines of code, just like 17 sitting here and I've got comments
+
+236
+00:16:21,400 --> 00:16:23,600
+and spaces.
+
+237
+00:16:23,600 --> 00:16:26,160
+So let's make this a little bit better.
+
+238
+00:16:26,160 --> 00:16:31,520
+Rather than a blob, let's do a circle and adjust for aspect ratio.
+
+239
+00:16:31,520 --> 00:16:33,060
+We want this.
+
+240
+00:16:33,060 --> 00:16:39,020
+We basically need to shift everything over 0.5, right, because we're at 0, 0 so 0.5 will
+
+241
+00:16:39,020 --> 00:16:41,740
+shift it over to the center of the screen.
+
+242
+00:16:41,740 --> 00:16:48,700
+And then I don't actually want to go from 0 to 1.0 for the height because my window
+
+243
+00:16:48,700 --> 00:16:53,620
+is not perfectly square so I need to adjust for aspect ratio.
+
+244
+00:16:53,620 --> 00:16:58,820
+And I can do that, I can do the shift by this line of code where I'm going to create a brand
+
+245
+00:16:58,820 --> 00:17:02,900
+new variable called RPOS, relative position.
+
+246
+00:17:02,900 --> 00:17:08,120
+And relative to the center of the screen, I am going to take a look at what my current
+
+247
+00:17:08,120 --> 00:17:11,320
+coordinate is and I just do that by subtracting 0.5.
+
+248
+00:17:11,320 --> 00:17:14,440
+That sort of shifted it all over.
+
+249
+00:17:14,440 --> 00:17:20,220
+And then I adjust for aspect ratio by taking that relative y coordinate and the aspect
+
+250
+00:17:20,220 --> 00:17:25,120
+ratio is simply how wide the screen is divided by how tall the screen is.
+
+251
+00:17:25,120 --> 00:17:30,960
+I just divide my y coordinate by that and my circle is now a circle rather than something
+
+252
+00:17:30,960 --> 00:17:33,220
+oblong.
+
+253
+00:17:33,220 --> 00:17:38,560
+And you should note that instead of figuring out the length to the origin, I am now using
+
+254
+00:17:38,560 --> 00:17:40,560
+this relative position.
+
+255
+00:17:40,560 --> 00:17:41,560
+And that's it.
+
+256
+00:17:41,560 --> 00:17:44,960
+Now I've got a circle that's in the middle of the screen.
+
+257
+00:17:44,960 --> 00:17:46,360
+So circles are boring.
+
+258
+00:17:46,360 --> 00:17:49,160
+That was like the most work you've probably ever gone through to draw a circle.
+
+259
+00:17:49,160 --> 00:17:51,980
+So how do I get it to actually look cool?
+
+260
+00:17:51,980 --> 00:17:58,940
+I want to add this cool fadey, glowy ball effect because I like fade and it's neat.
+
+261
+00:17:58,940 --> 00:18:00,940
+How do we do this?
+
+262
+00:18:00,940 --> 00:18:04,540
+Well this doesn't really complicate the code much at all.
+
+263
+00:18:04,540 --> 00:18:08,260
+All I need to do is I'm going to take a base color, which in this case I've got a vector
+
+264
+00:18:08,260 --> 00:18:09,600
+three of one, one, one.
+
+265
+00:18:09,600 --> 00:18:13,820
+That simply is for red, green, and blue of all red, green, and blue and it gives me a
+
+266
+00:18:13,820 --> 00:18:16,000
+white color.
+
+267
+00:18:16,000 --> 00:18:18,020
+And I'm going to multiply it times the strength value.
+
+268
+00:18:18,020 --> 00:18:21,260
+So if the strength value is one, I'm going to end up with white.
+
+269
+00:18:21,260 --> 00:18:23,820
+If the strength value is .5, I'll end up with gray.
+
+270
+00:18:23,820 --> 00:18:26,820
+Zero, I'll end up with black.
+
+271
+00:18:26,820 --> 00:18:30,580
+So how do I get what the strength should be?
+
+272
+00:18:30,580 --> 00:18:34,180
+All I need to do to get a good strength is basically one over the distance, the inverse
+
+273
+00:18:34,180 --> 00:18:37,700
+of the distance, gives me a nice looking fade effect.
+
+274
+00:18:37,700 --> 00:18:40,940
+If you're a physics major, you'll know it's like one over distance squared if you want
+
+275
+00:18:40,940 --> 00:18:45,820
+to be accurate, but I like glowy stuff so I'll leave that to you if you want it a little
+
+276
+00:18:45,820 --> 00:18:48,780
+bit more accurate.
+
+277
+00:18:48,780 --> 00:18:53,420
+But the unfortunate thing is one over distance will always give us numbers bigger than one,
+
+278
+00:18:53,420 --> 00:18:56,420
+or for the most part, it will give us numbers bigger than one.
+
+279
+00:18:56,420 --> 00:19:00,900
+And if I multiply numbers bigger than one times my white color, I'll end up with a white
+
+280
+00:19:00,900 --> 00:19:04,820
+color of one, one, one, or two, two, two, or three, three, three, which is still white
+
+281
+00:19:04,820 --> 00:19:06,860
+and I'll get a whole screen full of white.
+
+282
+00:19:06,860 --> 00:19:09,960
+I need to tone this down a lot.
+
+283
+00:19:09,960 --> 00:19:15,100
+And I do that by multiplying it times scale, which is just a number that I trial and error,
+
+284
+00:19:15,100 --> 00:19:18,540
+type in this number, type in this number until I get about where I want it to be.
+
+285
+00:19:18,540 --> 00:19:23,740
+I use .02 if you want a smaller glowy ball, you do .01, you just adjust it.
+
+286
+00:19:23,740 --> 00:19:25,420
+But that's really all there is to it.
+
+287
+00:19:25,420 --> 00:19:28,980
+And now I've got a glowy ball on the screen.
+
+288
+00:19:28,980 --> 00:19:34,980
+I do have steps six and seven, which are detailed online, but A, I don't have time, B, this
+
+289
+00:19:34,980 --> 00:19:37,740
+is a Python conference, not a GLSL conference.
+
+290
+00:19:37,740 --> 00:19:39,880
+So I want to get back to the Python stuff.
+
+291
+00:19:39,880 --> 00:19:47,900
+How do you send data from your Python to this shader that I've got?
+
+292
+00:19:47,900 --> 00:19:53,980
+And oh, anyway, after I get done, I added a few more steps and the glowy ball looks
+
+293
+00:19:53,980 --> 00:19:56,500
+like this instead, which I like a little bit better.
+
+294
+00:19:56,500 --> 00:19:58,980
+The code is still up on the screen for that.
+
+295
+00:19:58,980 --> 00:20:00,980
+I just won't go over the explanation.
+
+296
+00:20:00,980 --> 00:20:05,700
+Anyway, so I want to position the glow and I want to be able to also configure where
+
+297
+00:20:05,700 --> 00:20:07,580
+the color is, what the color is.
+
+298
+00:20:07,580 --> 00:20:12,900
+So I can do that first off by going back to my Python program and first off, need to figure
+
+299
+00:20:12,900 --> 00:20:14,820
+out where do I want the glowy ball.
+
+300
+00:20:14,820 --> 00:20:18,100
+So I'm going to grab the mouse coordinates and I grab the mouse coordinates this way.
+
+301
+00:20:18,100 --> 00:20:20,280
+This is how you do it in the arcade library.
+
+302
+00:20:20,280 --> 00:20:25,300
+So this gives me a tuple of two values for the XY where the mouse is.
+
+303
+00:20:25,300 --> 00:20:26,300
+I also want the color.
+
+304
+00:20:26,300 --> 00:20:29,980
+I'm just going to hard code this as a light blue, but you can have this change every single
+
+305
+00:20:29,980 --> 00:20:32,240
+frame.
+
+306
+00:20:32,240 --> 00:20:39,060
+And I convert it to the three floating point format that OpenGL uses.
+
+307
+00:20:39,900 --> 00:20:40,900
+And here's the key.
+
+308
+00:20:40,900 --> 00:20:49,900
+Shader toy has a built in dictionary that you can use to specify name value pairs to
+
+309
+00:20:49,900 --> 00:20:51,060
+send to your shader.
+
+310
+00:20:51,060 --> 00:20:56,140
+So in this case, I'm setting POS to the position that I just got.
+
+311
+00:20:56,140 --> 00:20:59,620
+And I'm setting color to the color that I just got.
+
+312
+00:20:59,620 --> 00:21:01,780
+And this will go to the shader.
+
+313
+00:21:01,780 --> 00:21:04,900
+And I pick it up in the shader this way.
+
+314
+00:21:04,900 --> 00:21:11,020
+Up there at the top is a vector 2 POS which matches the POS that I put here and a color
+
+315
+00:21:11,020 --> 00:21:13,900
+that matches the color that I put here.
+
+316
+00:21:13,900 --> 00:21:18,540
+It's expecting two elements, the X and Y, and then three elements for the color, red,
+
+317
+00:21:18,540 --> 00:21:19,540
+green, and blue.
+
+318
+00:21:19,540 --> 00:21:22,380
+I'll add the transparency later.
+
+319
+00:21:22,380 --> 00:21:25,940
+And it's got a weird keyword in front of it called uniform.
+
+320
+00:21:25,940 --> 00:21:29,500
+And I know programmers don't like to wear uniforms.
+
+321
+00:21:29,500 --> 00:21:32,020
+Well, I shouldn't anyway.
+
+322
+00:21:32,020 --> 00:21:33,620
+I don't.
+
+323
+00:21:33,700 --> 00:21:37,820
+But what this actually means is that this data is going to be the exact same for every
+
+324
+00:21:37,820 --> 00:21:38,820
+single pixel.
+
+325
+00:21:38,820 --> 00:21:41,860
+So every single pixel is going to know the same position of where the center of that
+
+326
+00:21:41,860 --> 00:21:46,420
+Glowy Ball is and the same color of what that Glowy Ball is supposed to be.
+
+327
+00:21:46,420 --> 00:21:49,540
+It's not going to change because remember, running is all in parallel.
+
+328
+00:21:49,540 --> 00:21:52,180
+It's just data that's going to stay the same for everybody.
+
+329
+00:21:52,180 --> 00:21:53,180
+OK.
+
+330
+00:21:53,180 --> 00:21:58,620
+So in order to make use of that, I'm going to normalize the position of where I want
+
+331
+00:21:58,620 --> 00:21:59,940
+this Glowy Ball to be.
+
+332
+00:21:59,940 --> 00:22:04,240
+So I'm going to take that POS that I had up there, shove it down here, and do the same
+
+333
+00:22:04,240 --> 00:22:07,900
+normalization that I did with the coordinates of where I'm at right now.
+
+334
+00:22:07,900 --> 00:22:13,700
+So I know where the center is, I know where I'm at now, and they're both normalized.
+
+335
+00:22:13,700 --> 00:22:18,020
+Then I'm going to take that color that came in and instead of multiplying times the white
+
+336
+00:22:18,020 --> 00:22:22,820
+color, I'm going to multiply instead times the color that comes in.
+
+337
+00:22:22,820 --> 00:22:24,700
+So I can use any color.
+
+338
+00:22:24,700 --> 00:22:36,340
+And then finally, I'm going to do a little bit of subtraction here.
+
+339
+00:22:36,340 --> 00:22:42,140
+So I'm going to see how far away my current normalized position is versus where the pixel
+
+340
+00:22:42,140 --> 00:22:45,020
+is and how far away I am from that.
+
+341
+00:22:45,020 --> 00:22:49,860
+And then you'll note that, whoops, I don't have an arrow for it, but the RPOS that I've
+
+342
+00:22:50,860 --> 00:22:56,540
+I end up using that to figure out the length and I know how much glow to have.
+
+343
+00:22:56,540 --> 00:22:58,220
+And that's basically it.
+
+344
+00:22:58,220 --> 00:23:05,360
+So really, in less than 50 lines of code, especially if you take out the blank lines
+
+345
+00:23:05,360 --> 00:23:13,300
+and stuff, of Python plus the GLSL code, both are about 25 lines, I've written a Python
+
+346
+00:23:13,300 --> 00:23:16,400
+program that interfaces with a shader.
+
+347
+00:23:16,400 --> 00:23:19,260
+And the shaders themselves are not hard to write.
+
+348
+00:23:19,260 --> 00:23:22,620
+They're great if you're the type of person that really likes to experiment.
+
+349
+00:23:22,620 --> 00:23:27,980
+Let's change this and see what happens and see some results visually as opposed to numerically.
+
+350
+00:23:27,980 --> 00:23:35,100
+There's a lot of visual feedback and it's one of my favorite ways of programming.
+
+351
+00:23:35,100 --> 00:23:37,740
+Additional types of things that you can do and learning.
+
+352
+00:23:37,740 --> 00:23:42,940
+If you ever wanted to figure out how to raycast shadows, so if you're moving around and amaze
+
+353
+00:23:43,420 --> 00:23:50,420
+you want to have shadows show where you can't see, then that is very easy to do with a shader.
+
+354
+00:23:50,460 --> 00:23:52,180
+And there's some tricks to it.
+
+355
+00:23:52,180 --> 00:23:57,140
+If you go to the web page, there's a whole tutorial that takes you through how to do
+
+356
+00:23:57,140 --> 00:23:58,140
+that.
+
+357
+00:23:58,140 --> 00:24:03,380
+If you want to know how to do that whole starfield simulation, the unbodied simulation with everything
+
+358
+00:24:03,380 --> 00:24:09,420
+flying around, then there's a tutorial also on how to do that.
+
+359
+00:24:09,420 --> 00:24:12,860
+And it's really not that bad to do.
+
+360
+00:24:12,860 --> 00:24:17,780
+If you ever wanted to filter things, like you can create a regular game and then throw
+
+361
+00:24:17,780 --> 00:24:23,660
+on top of it a filter that makes it look more like a 1980s style CRT monitor that's sort
+
+362
+00:24:23,660 --> 00:24:26,700
+of glowy and separates everything.
+
+363
+00:24:26,700 --> 00:24:29,160
+That's very doable.
+
+364
+00:24:29,160 --> 00:24:37,780
+We in fact just had somebody a couple days ago read in a video and then use a shader
+
+365
+00:24:37,780 --> 00:24:40,620
+to basically add a wave effect to the video.
+
+366
+00:24:40,620 --> 00:24:46,940
+So you're not just limited to 2D graphics like this, you could actually write video
+
+367
+00:24:46,940 --> 00:24:50,300
+filters yourself and do the modulators.
+
+368
+00:24:50,300 --> 00:24:54,820
+And they run so fast on even low end hardware.
+
+369
+00:24:54,820 --> 00:25:02,420
+There's also a whole set of OpenGL notes that are available if you want to read a little
+
+370
+00:25:02,420 --> 00:25:06,620
+bit more conceptually as far as what's going on.
+
+371
+00:25:06,780 --> 00:25:11,840
+If you want to experiment around with this or know more info, shoot me a message, Paul
+
+372
+00:25:11,840 --> 00:25:19,860
+Vincent Craven, and if there's one of those sprints as well coming up in working with
+
+373
+00:25:19,860 --> 00:25:25,540
+the arcade library, there's a ton of info available on the arcade library and using
+
+374
+00:25:25,540 --> 00:25:32,860
+shaders and it's pretty, I strongly encourage you to experiment around and work around with
+
+375
+00:25:32,860 --> 00:25:33,860
+it.
+
+376
+00:25:33,860 --> 00:25:34,860
+So that's what I've got.
+
+377
+00:25:34,860 --> 00:25:35,860
+Thank you very much.
+

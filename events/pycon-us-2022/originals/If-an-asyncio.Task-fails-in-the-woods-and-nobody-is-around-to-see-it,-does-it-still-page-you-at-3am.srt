@@ -1,0 +1,1276 @@
+1
+00:00:00,000 --> 00:00:07,000
+Hello, how's everyone doing today? Great, awesome. Okay, so we can start with our next
+
+2
+00:00:12,300 --> 00:00:18,640
+talk. It's by Jason and oh, I love this talk title. If an async IOTask fails in the woods
+
+3
+00:00:18,640 --> 00:00:24,760
+and nobody's around to see it, does it still page you at 3 a.m.? Right? Over to you, Jason.
+
+4
+00:00:24,760 --> 00:00:30,760
+All right, welcome to my talk. This was the longest title I could think up. But if it
+
+5
+00:00:30,760 --> 00:00:37,760
+helps you can refer to it by a handy acronym, IATFITWOHCDDISPY3, but that should be less
+
+6
+00:00:38,240 --> 00:00:42,480
+cumbersome when you want to talk about this talk in conversation later. I actually wanted
+
+7
+00:00:42,480 --> 00:00:48,960
+to see what that looked like on the... I guess we don't have time for that. I'm currently
+
+8
+00:00:48,960 --> 00:00:54,540
+a production engineer at Meta. I've contributed irregularly to CPython and various other open
+
+9
+00:00:54,540 --> 00:00:59,100
+source projects. And I've been writing software for a while. I spent seven years writing C
+
+10
+00:00:59,100 --> 00:01:03,740
+code and then ten years writing Perl and basically I started writing Python when I started at
+
+11
+00:01:03,740 --> 00:01:09,740
+Facebook in 2011. So I've been involved in Python development for ten years, a little
+
+12
+00:01:09,740 --> 00:01:16,420
+bit more. At Meta I drove the Python 2 to 3 conversion way back when just so I could
+
+13
+00:01:16,420 --> 00:01:20,620
+use async IO in production. Though back then it was still called Tulip and we were still
+
+14
+00:01:21,620 --> 00:01:28,620
+on before 3.5. And when you're a pioneer you have to forward a lot of rivers. And you have
+
+15
+00:01:28,620 --> 00:01:33,740
+to make do with whatever you can build yourself. So we had rivers that had to be crossed before
+
+16
+00:01:33,740 --> 00:01:38,900
+appropriate bridges had been built in the standard live or PyPI. So I had to build them
+
+17
+00:01:38,900 --> 00:01:44,420
+or to solve problems like async unit tests, async context managers, we needed an exit
+
+18
+00:01:44,420 --> 00:01:50,500
+stack. But fast forward to today we have hundreds of back end services written with async IO.
+
+19
+00:01:50,500 --> 00:01:55,260
+There are tens of thousands of people authoring Python commits every month at Meta. So I have
+
+20
+00:01:55,260 --> 00:01:59,420
+seen lots of code. I've seen the good, I've seen the bad, and I've seen the ugly. And
+
+21
+00:01:59,420 --> 00:02:04,860
+in this talk we're going to cover the ugly in very humorous detail. Things like nested
+
+22
+00:02:04,860 --> 00:02:11,860
+event loops, bad async IO bootstrapping, anonymous tasks, calling coroutines in the init method,
+
+23
+00:02:11,860 --> 00:02:17,500
+bad signal handling, ignoring cancellation, and not using timeouts. So on the subject
+
+24
+00:02:17,500 --> 00:02:23,580
+of event loops, now this is mostly for library writers. You have existing callers. You're
+
+25
+00:02:23,580 --> 00:02:29,940
+not an async dev, but you want to call a coroutine. This seems very simple. I'll just hit the
+
+26
+00:02:29,940 --> 00:02:35,220
+default event loop and I'll run it to complete. Well the problem comes is that you have some
+
+27
+00:02:35,220 --> 00:02:39,100
+caller way up in a call chain that you're not even aware of that's already running the
+
+28
+00:02:39,100 --> 00:02:43,280
+loop. And they get an exception about the loop already running. And because you would
+
+29
+00:02:43,320 --> 00:02:49,440
+have to change a whole bunch of unrelated functions outside of your own project to have
+
+30
+00:02:49,440 --> 00:02:55,040
+async dev variants, you figure it's just easier to hack it. So you decide to pause the existing
+
+31
+00:02:55,040 --> 00:03:01,600
+loop and use your own loop. So this pattern is called the nested event loop. Basically
+
+32
+00:03:01,600 --> 00:03:05,640
+trick async IO into thinking that there are no event loops running so that you can create
+
+33
+00:03:05,640 --> 00:03:11,200
+your own and start it while you block the current one. The example above is obviously
+
+34
+00:03:11,200 --> 00:03:18,200
+shorted and we have some many slides to go into detail, but it's really a dirty hack.
+
+35
+00:03:18,640 --> 00:03:24,280
+And it has some very bad unintended consequences. And we'll probably get you paged at 3 a.m.
+
+36
+00:03:24,280 --> 00:03:28,360
+because the service owner is seeing timeouts in their event loop once you stop blocking
+
+37
+00:03:28,360 --> 00:03:35,360
+it. Look, I've seen this kind of logic used at Meta and people still try to do crazy shit
+
+38
+00:03:35,640 --> 00:03:40,340
+like this because we all know writing quick and brittle unmaintainable code is better
+
+39
+00:03:40,340 --> 00:03:46,780
+than taking time to do it correctly because it just seems easier. Well, it's easier now,
+
+40
+00:03:46,780 --> 00:03:52,220
+but in the long run it's going to be very hard. The first thing is that this is completely
+
+41
+00:03:52,220 --> 00:03:57,380
+unsupported behavior. It requires you to reach into the guts of async IO to make it work.
+
+42
+00:03:57,380 --> 00:04:00,940
+And the next thing you will find is that the original loop has things scheduled on it that
+
+43
+00:04:00,940 --> 00:04:06,260
+you were not aware of. And those things have timeouts. And those timeouts will get expired
+
+44
+00:04:06,260 --> 00:04:10,140
+because you have blocked its event loop. The last one is you will end up having tasks
+
+45
+00:04:10,140 --> 00:04:15,420
+on the new event loop that you had created and they will throw some strange stack traces
+
+46
+00:04:15,420 --> 00:04:19,700
+when you'd have to close up your own event loop. And in the future you might have other
+
+47
+00:04:19,700 --> 00:04:24,860
+work that gets somehow added to this sub loop and you might have loops within loops nested
+
+48
+00:04:24,860 --> 00:04:29,620
+very far down and it'll be very hard to reason about what's going on. I've given up trying
+
+49
+00:04:29,620 --> 00:04:32,420
+to help people when I find them doing this and I tell them to just point them in the
+
+50
+00:04:32,420 --> 00:04:36,380
+right way. But the more magical your Python code gets, the harder it will be for you to
+
+51
+00:04:36,380 --> 00:04:43,700
+support it. Understanding what it's doing when something does go wrong is just a wasted effort.
+
+52
+00:04:43,700 --> 00:04:48,300
+So the solution is just to use async IO dot run. You may say, well doesn't async IO dot
+
+53
+00:04:48,300 --> 00:04:53,580
+run have the same issues as we had before? Well yes it does, but it lets the caller easily
+
+54
+00:04:53,580 --> 00:04:57,660
+put it into a different thread using an executor. Because it creates a new event loop instead
+
+55
+00:04:57,660 --> 00:05:02,380
+of assuming that there's a default one, which is not true on threads other than main, and
+
+56
+00:05:02,380 --> 00:05:06,820
+that exception thrown is a good thing. It lets the caller know that they need to put
+
+57
+00:05:06,820 --> 00:05:10,780
+the function in a thread pool executor. Or you could do it for them if you happen to
+
+58
+00:05:10,780 --> 00:05:14,980
+live in a giant mono repo shared code base like meta because you need to land your own
+
+59
+00:05:14,980 --> 00:05:18,900
+changes and you don't want to break their tests. Now the best solution, but it's not
+
+60
+00:05:18,900 --> 00:05:23,740
+always practical or possible, is to provide an entire async def call chain from their
+
+61
+00:05:23,740 --> 00:05:30,220
+code to your code and maintain a separate blocking call chain that used to exist. It
+
+62
+00:05:30,220 --> 00:05:35,860
+sounds daunting, but that's probably the best solution. So some tips is you only own
+
+63
+00:05:35,860 --> 00:05:40,180
+the event loops you create. Respecting ownership means that if you do not own it, you don't
+
+64
+00:05:40,180 --> 00:05:43,860
+mess with it. Like you don't come to my ranch and mess with my goats and I'll ford you
+
+65
+00:05:43,860 --> 00:05:48,700
+the same courtesy. A core tenet of Python is that we are all consenting adults. We don't
+
+66
+00:05:48,700 --> 00:05:53,220
+need the language to make us behave or respect each other's privacy. And in the case of event
+
+67
+00:05:53,220 --> 00:05:58,560
+loops, don't stop it. Don't start it, don't block it, just leave it alone. You can do
+
+68
+00:05:58,600 --> 00:06:05,600
+normal stuff, but you definitely don't set up a magic sub nested event. This violates
+
+69
+00:06:06,120 --> 00:06:10,800
+the number one rule of async IO that you're just now going to hear about because I made
+
+70
+00:06:10,800 --> 00:06:15,960
+it up this week. You are not allowed to block the event loop on purpose. Sure people block
+
+71
+00:06:15,960 --> 00:06:21,040
+it all the time out of ignorance, but when you do it on purpose that's malicious intent.
+
+72
+00:06:21,040 --> 00:06:28,040
+Right there that makes you a bad person, but you should feel bad. So you should be using
+
+73
+00:06:28,240 --> 00:06:35,240
+async IO. And ideally only ever have one event loop. If that's not possible, have one event
+
+74
+00:06:35,360 --> 00:06:40,160
+loop per thread. But you should never have more than one loop on the same thread. It's
+
+75
+00:06:40,160 --> 00:06:45,240
+just madness. Also let your callers decide what to do. They have more context than you
+
+76
+00:06:45,240 --> 00:06:49,440
+about the event loop and maybe what might be scheduled there. And they have the ability
+
+77
+00:06:49,440 --> 00:06:56,040
+to put in an executor. You don't have that from a blocking call. Now let's look at the
+
+78
+00:06:56,160 --> 00:07:00,280
+bootstrapping async IO and why it's important you have clean async bootstrapping. Bootstrapping
+
+79
+00:07:00,280 --> 00:07:05,080
+is the process of starting up the event loop, scheduling the initial work, and also concerned
+
+80
+00:07:05,080 --> 00:07:09,400
+with handling the results and handling cleanup and taking care of signal handling so that
+
+81
+00:07:09,400 --> 00:07:16,200
+your application can terminate sanely. You've probably seen code like this in the past.
+
+82
+00:07:16,200 --> 00:07:21,000
+I've seen it all over the place. It's a holdover from a pattern before we had coroutines, before
+
+83
+00:07:21,000 --> 00:07:25,760
+we had async IO run and it was encouraged that people use callback style async IO. So
+
+84
+00:07:25,760 --> 00:07:31,120
+this is super old. It's terrible. You're in and out of the loop. We start the loop.
+
+85
+00:07:31,120 --> 00:07:35,800
+We run it. We get some value. We go back into the loop. We create a task. Then we run forever.
+
+86
+00:07:35,800 --> 00:07:41,200
+Well we don't ever actually stop the loop unless somebody stops the loop. If that task
+
+87
+00:07:41,200 --> 00:07:47,280
+died, we're still running the loop. And if we do somehow do stop the loop, we have to
+
+88
+00:07:48,280 --> 00:07:51,720
+So we have to cancel the task and then we have to run the loop again and then we're
+
+89
+00:07:51,720 --> 00:07:58,720
+finally finally close it. So that task, while it has a name, it might as well be anonymous.
+
+90
+00:07:59,960 --> 00:08:04,200
+We don't ensure that it stays running. This might get you woken up in the middle of the
+
+91
+00:08:04,200 --> 00:08:09,520
+night to find that your running service is actually doing nothing. This is kind of a
+
+92
+00:08:09,520 --> 00:08:15,720
+maintenance nightmare. So even if you do get your task canceled, you have no knowledge
+
+93
+00:08:15,720 --> 00:08:19,240
+or basic you can't ensure that the callbacks, if there are any callbacks on it, actually
+
+94
+00:08:19,240 --> 00:08:24,920
+get run before you complete and run on to complete. The solutions pattern is easy and
+
+95
+00:08:24,920 --> 00:08:30,920
+much cleaner. Like the last issue, the solution is async IO.run. It handles all the crazy
+
+96
+00:08:30,920 --> 00:08:35,280
+bootstrapping cleanup like cancellation of task and some basic signal handling. And it's
+
+97
+00:08:35,280 --> 00:08:40,440
+just less code and easier to read. Now we have, we're doing pretty much the same work,
+
+98
+00:08:40,440 --> 00:08:43,680
+but we pass, we basically take a coroutine and we do all initialization and pass it to
+
+99
+00:08:43,680 --> 00:08:50,640
+async IO.run. If that very important task, some server that we had before, if it fails,
+
+100
+00:08:50,640 --> 00:08:57,080
+the code just exits like it logically should. And since we're talking about tasks, let's
+
+101
+00:08:57,080 --> 00:09:04,080
+look at the problem of anonymous tasks or what I call set it and forget it pattern.
+
+102
+00:09:04,160 --> 00:09:09,200
+It also applies to daemon threads. Unlike an infomercial kitchen or tessery, tasks should
+
+103
+00:09:09,200 --> 00:09:13,160
+never be created and forgotten about. This is exactly the kind of thing that gets you
+
+104
+00:09:13,160 --> 00:09:17,920
+paged at four in the morning. Turns out that something important happens in the do something
+
+105
+00:09:17,920 --> 00:09:22,880
+coroutine, and it has been printing exceptions all night. But because we didn't do anything
+
+106
+00:09:22,880 --> 00:09:28,440
+with the tasks, nobody noticed. They just get printed to the standard error. And nobody
+
+107
+00:09:28,440 --> 00:09:31,800
+noticed until four in the morning until it started breaking other things. You should
+
+108
+00:09:31,800 --> 00:09:37,260
+have some mechanism to ensure that your tasks are inspected when they have exceptions. Your
+
+109
+00:09:37,260 --> 00:09:41,600
+unit test should look for these unhandled tasks. The solution to this is simple, use
+
+110
+00:09:41,680 --> 00:09:47,120
+async IO.run. Okay, that's a joke. Not everything is solved by async IO.run. It can't solve
+
+111
+00:09:47,120 --> 00:09:52,440
+all your problems. One possible solution is the nursery from Trio. I don't know the origins
+
+112
+00:09:52,440 --> 00:09:56,400
+of the name, but we can generally reason about how it should work. We don't let small children
+
+113
+00:09:56,400 --> 00:09:59,920
+just wander around unattended, and we put them in a nursery so that we can watch over
+
+114
+00:09:59,920 --> 00:10:03,880
+them and take care of them in case something bad happens. Now, don't get the idea of killing
+
+115
+00:10:03,880 --> 00:10:08,440
+all the other kids when one kid has an issue. That kind of gets dark and mirrors the disturbing
+
+116
+00:10:08,520 --> 00:10:12,480
+terminology we use when we talk about the POSIX process model about killing children
+
+117
+00:10:12,480 --> 00:10:17,640
+when their parents die and sometimes there's zombies involved. To get back on track, the
+
+118
+00:10:17,640 --> 00:10:22,520
+gist of this idea is you have this failure domain of tasks. If a task in the nursery
+
+119
+00:10:22,520 --> 00:10:27,800
+dies for whatever reason, the other tasks are canceled. An application-wide feature
+
+120
+00:10:27,800 --> 00:10:32,600
+domain is useful for important tasks for your service that if they failed for whatever reason,
+
+121
+00:10:32,600 --> 00:10:38,360
+would be really bad. You can get this functionality in async IO using the AO nursery or the later
+
+122
+00:10:38,360 --> 00:10:43,800
+package from PyPI, though later calls them watchers. They basically have the same goal.
+
+123
+00:10:43,800 --> 00:10:49,200
+So you might ask, well, I don't care if the task fails. It's best effort. I'm logging
+
+124
+00:10:49,200 --> 00:10:54,120
+or doing something like that. So sure, if it fails every once in a while, maybe that's
+
+125
+00:10:54,120 --> 00:10:59,720
+fine, but what if it started failing every time you called it? Is that still best effort?
+
+126
+00:10:59,720 --> 00:11:04,480
+You should have some mechanism to ensure that not all of these best effort activities fail.
+
+127
+00:11:04,480 --> 00:11:08,960
+Maybe set some kind of SLA. Like if you start failing a certain percentage per hour, maybe
+
+128
+00:11:08,960 --> 00:11:12,640
+you should do something about it or go ahead and set your alarm for 3 a.m. so I can call
+
+129
+00:11:12,640 --> 00:11:19,640
+you. You might say that you're just using tasks for this abomination. So this is a something,
+
+130
+00:11:20,280 --> 00:11:24,960
+example I've seen in talks, I've seen this online, is we have this bound queue and we're
+
+131
+00:11:24,960 --> 00:11:27,720
+putting an item on it and they're like, oh, I don't want to get blocked, so I'm going
+
+132
+00:11:27,720 --> 00:11:33,600
+to put that in a task. So this pattern, I've seen this pattern talked about, like what
+
+133
+00:11:33,640 --> 00:11:38,680
+the hell are you actually doing? Because this is so much more performant, just having an
+
+134
+00:11:38,680 --> 00:11:43,600
+unbound queue and using put no wait. Like think, would you rather unbound memory growth
+
+135
+00:11:43,600 --> 00:11:50,600
+potential or unbound memory growth potential and slow ass event loop cycling through an
+
+136
+00:11:51,160 --> 00:11:57,120
+unbound list of tasks, which has in effect become a second queue, which if you know anything
+
+137
+00:11:57,120 --> 00:12:01,960
+about queueing theory, you don't do secondary queues. But one thing that is, but this one
+
+138
+00:12:02,000 --> 00:12:06,800
+secondary queue is way more expensive than the original queue because the bigger it gets,
+
+139
+00:12:06,800 --> 00:12:11,440
+the slower your event loop gets because your event loop has to cycle through all the tasks
+
+140
+00:12:11,440 --> 00:12:15,440
+to check them if they're ready. So if you're going to do something like this, then just
+
+141
+00:12:15,440 --> 00:12:20,760
+use an unbounded queue or use the put no wait, but if you're going to use a bounded queue,
+
+142
+00:12:20,760 --> 00:12:24,400
+use it for what it's supposed to be for. It's supposed to be for flow control so you can
+
+143
+00:12:24,400 --> 00:12:28,160
+get back pressure. You can know that the queue that we're working on is filling up. Maybe
+
+144
+00:12:28,160 --> 00:12:34,880
+I should report to the user that we're overloaded. Let's move on. So calling coroutines from
+
+145
+00:12:34,880 --> 00:12:38,240
+a knit. People always seem to want to get in the situation, like I got to call this
+
+146
+00:12:38,240 --> 00:12:42,920
+coroutine from my knit method. I see code like this and I personally think, do you hate
+
+147
+00:12:42,920 --> 00:12:49,120
+me? Like are you doing this on purpose? So by doing this in a knit, you have barred me
+
+148
+00:12:49,120 --> 00:12:52,800
+from using async IORun, which according to this talk you'll know is my favorite thing
+
+149
+00:12:52,800 --> 00:12:57,200
+in the world, which you should be using by the way, since it creates its own event loop
+
+150
+00:12:57,200 --> 00:13:04,320
+that anything you produce or start here is in a different event loop. Some people use
+
+151
+00:13:04,320 --> 00:13:08,000
+that nasty magic nested event loop that we had talked about before and it has all the
+
+152
+00:13:08,000 --> 00:13:13,400
+same problems and it's weird. Or they create anonymous tasks, which we just got to finish
+
+153
+00:13:13,400 --> 00:13:19,080
+talking about. The problem with these patterns is you're doing some kind of async activity
+
+154
+00:13:19,080 --> 00:13:24,280
+in a place that was not designed and is ill suited for that task. Like what are we really
+
+155
+00:13:24,360 --> 00:13:29,560
+trying to do here? Like any IO inside of a knit method is bad design. Good in it method
+
+156
+00:13:29,560 --> 00:13:34,880
+should not block or affect any state outside themselves. So don't do this. You don't need
+
+157
+00:13:34,880 --> 00:13:41,380
+it. There are better alternatives. The solution is the async context manager. To initialize
+
+158
+00:13:41,380 --> 00:13:45,840
+any async state of an object. By using an async context manager, you have a method that
+
+159
+00:13:45,840 --> 00:13:50,600
+is well suited for initializing async stuff. And as an added bonus, you have a well suited
+
+160
+00:13:50,600 --> 00:13:56,240
+method for cleaning and canceling your async stuff. Because they're code routines. That's
+
+161
+00:13:56,240 --> 00:14:00,920
+what they're made for. And on the subject of using context managers, I have seen code
+
+162
+00:14:00,920 --> 00:14:04,740
+like this to like you get a random package, somebody's downloading PyPI and they want
+
+163
+00:14:04,740 --> 00:14:07,920
+you to help them get it running. And you have to go read through their docs and you have
+
+164
+00:14:07,920 --> 00:14:12,400
+to find what they decided to name this method that you have to run for it to work. Well,
+
+165
+00:14:12,400 --> 00:14:16,000
+there's no conventions. This method can be named anything. Here it's like, oh, let me
+
+166
+00:14:16,000 --> 00:14:20,480
+go read your docs again so I can see what this is going to be called. But then you sometimes
+
+167
+00:14:20,480 --> 00:14:23,560
+have to worry about clean up and you have to go find out what that's called. Though
+
+168
+00:14:23,560 --> 00:14:29,960
+with an async context manager, there's a better pattern. It's the same amount of work except
+
+169
+00:14:29,960 --> 00:14:35,040
+that the maintainer of the better async web server can do it for you. This pattern is
+
+170
+00:14:35,040 --> 00:14:39,760
+less error prone. It uses less of your own head space to keep track of. The API is defined
+
+171
+00:14:39,760 --> 00:14:43,760
+by a PEP which means it's well defined in part of the language. You learn it once and
+
+172
+00:14:43,760 --> 00:14:48,800
+it never changes. Well, hopefully. The async context manager and well context managers
+
+173
+00:14:48,840 --> 00:14:54,960
+in general are pretty awesome. They're like the perfect system for writing like a plug-in
+
+174
+00:14:54,960 --> 00:15:01,560
+or extensions. No matter what my object does, everyone already knows how to enter its context.
+
+175
+00:15:01,560 --> 00:15:05,080
+They know how to clean it up. It's built into Python using the with statement or in this
+
+176
+00:15:05,080 --> 00:15:10,280
+case the async with statement. So let's move to signal handling. Every application needs
+
+177
+00:15:10,280 --> 00:15:16,000
+signal handling, especially async code. Async I O run, which I love to talk about, gives
+
+178
+00:15:16,000 --> 00:15:22,160
+us some helpful defaults for control C and which is a case again. But you probably will
+
+179
+00:15:22,160 --> 00:15:27,160
+need more. This is essentially the signal handling example in the async I O docs. I've
+
+180
+00:15:27,160 --> 00:15:30,800
+shortened it and I've cleaned it up because I didn't like what they were calling functions.
+
+181
+00:15:30,800 --> 00:15:34,440
+But basically we have our main method. We get the loop, the running loop, the correct
+
+182
+00:15:34,440 --> 00:15:39,000
+way, and we set the signal and we set the sig term, the first one being control C, and
+
+183
+00:15:39,000 --> 00:15:42,400
+we add the signal handlers and we do some partial magic so we can pass it the loop and
+
+184
+00:15:43,400 --> 00:15:47,800
+And then in our handler we print that we got the signal that we're exiting and then we
+
+185
+00:15:47,800 --> 00:15:52,080
+do a loop.stop. This is straight from the docs, like what to do when you want to handle
+
+186
+00:15:52,080 --> 00:15:58,080
+this. This is terrible. This practice of handling shutdown of an application, it's like the
+
+187
+00:15:58,080 --> 00:16:02,280
+adding signal handlers, that's a good part. That's actually useful. But what we do with
+
+188
+00:16:02,280 --> 00:16:07,440
+the signals is the problem. We just called stop. And if you do call loop stop, your application
+
+189
+00:16:07,440 --> 00:16:13,440
+will raise a runtime error to be raised wherever you happen to run the loop. Because we all
+
+190
+00:16:13,440 --> 00:16:17,360
+know that your application should explode with unhandled exceptions when you handle
+
+191
+00:16:17,360 --> 00:16:23,240
+a signal and everything goes as expected. The exception lets you know it's working. Okay,
+
+192
+00:16:23,240 --> 00:16:27,000
+nobody thinks like that. If you tell me that you're just going to catch that exception,
+
+193
+00:16:27,000 --> 00:16:33,440
+I'll be paging you tomorrow at 325 a.m. If you're not using async I O run, then you need
+
+194
+00:16:33,440 --> 00:16:37,000
+to start the loop again to handle cleanup by yourself. We saw that in the bootstrapping
+
+195
+00:16:37,000 --> 00:16:42,120
+example. And if you are using async I run, you better be okay with all the tasks being
+
+196
+00:16:42,120 --> 00:16:47,840
+canceled at pretty much the same time. And there's a good chance that you will care. Like what if
+
+197
+00:16:47,840 --> 00:16:52,560
+you have an async web server, we'll say that runs a status page of your application, and when it's
+
+198
+00:16:52,560 --> 00:16:56,960
+shutting down, you would like to update the status page so you can know that the process is still
+
+199
+00:16:56,960 --> 00:17:01,840
+going and shutting down and know what it's doing. Well, because some of your tasks might take a
+
+200
+00:17:01,840 --> 00:17:06,800
+little while to shut down, and maybe they can update on this page. Well, if you use loop.stop,
+
+201
+00:17:06,800 --> 00:17:11,520
+your web server will probably be the first thing to get canceled. And you're still going to have to
+
+202
+00:17:11,520 --> 00:17:19,200
+wait for your other tasks to finish. One solution is that you could instead cancel a task. This task
+
+203
+00:17:19,200 --> 00:17:23,760
+might be what you're primarily concerned with. This, your shutdown logic could be just handled
+
+204
+00:17:23,760 --> 00:17:29,360
+in cancellation flow. You could combine this with maybe a later watcher or a task nursery. Later
+
+205
+00:17:29,360 --> 00:17:33,160
+watcher has a method you can call on the watcher to cancel all the tasks and fall through the
+
+206
+00:17:33,160 --> 00:17:39,040
+context. That's what I use in my method for terminating my applications from signal handlers.
+
+207
+00:17:39,040 --> 00:17:44,280
+If you, and I do that from the non-signal things, if you combine this with an async context manager
+
+208
+00:17:44,280 --> 00:17:49,360
+and exit stack, you have this like, subscribable system that you can handle well-ordered startup
+
+209
+00:17:49,360 --> 00:17:54,600
+and well-ordered shutdown. It all happens in the order you specify. So if you want your web server
+
+210
+00:17:54,600 --> 00:17:58,480
+to be the last thing that gets canceled, you enter its context first. So all the other things
+
+211
+00:17:58,480 --> 00:18:02,960
+have to be canceled and exit and then your web server shutdown. Shutdown logic and signal
+
+212
+00:18:02,960 --> 00:18:06,720
+handling logic should be the same because most of the time, how else do you shut down your
+
+213
+00:18:06,720 --> 00:18:12,800
+application but sitting at a control C or a SIG term? And even if you have some other non-signal way
+
+214
+00:18:12,800 --> 00:18:16,880
+to shut down your application, you probably want to do the same thing anyway. So just make them the
+
+215
+00:18:16,880 --> 00:18:22,000
+same. Or you could use an event. That might be a solution. Your task could wait on it. They can
+
+216
+00:18:22,000 --> 00:18:27,500
+use it as a looping flag. Multiple places in your code could monitor the same event. It's not as
+
+217
+00:18:27,500 --> 00:18:32,620
+robust as task cancellation in the watcher solution with the async exit stack, but it's better than
+
+218
+00:18:32,620 --> 00:18:37,340
+the blast creator that's created with loop stop because that provides zero customization about how
+
+219
+00:18:37,340 --> 00:18:43,380
+things get turned off. So we talked about cancellation a few times, so we should probably go over it. So
+
+220
+00:18:43,380 --> 00:18:51,820
+let's spend the next 40 slides to quickly introduce cancellation. Okay, I'm kidding. We're not going
+
+221
+00:18:51,820 --> 00:18:56,980
+to do that. But I am going to go over some of it. Cancellation is tricky and it's hard, but it's not
+
+222
+00:18:57,100 --> 00:19:02,140
+that hard. Many people screwed up just by ignoring cancellation, either on purpose or out of ignorance.
+
+223
+00:19:02,140 --> 00:19:09,140
+Like this code above or maybe this code where we still do the same thing but we're catching
+
+224
+00:19:09,140 --> 00:19:16,820
+basic exception. Or maybe this code where we're still catching cancellation error but we're just
+
+225
+00:19:16,820 --> 00:19:22,140
+very terrible about it because we're using naked accepts. So if we go back to the original code
+
+226
+00:19:22,140 --> 00:19:29,220
+here. So what are we doing here? Like what were you trying to accomplish? Like I see patterns like
+
+227
+00:19:29,220 --> 00:19:33,780
+this and the only time you should ever do something like this is if you have just canceled a task
+
+228
+00:19:33,780 --> 00:19:40,020
+yourself and you are waiting for it to ensure that it cancels. And even then it's not so simple as
+
+229
+00:19:40,020 --> 00:19:46,380
+we'll see later. So people generally expect to be able to cancel a task, but task writers never
+
+230
+00:19:46,380 --> 00:19:51,540
+expect their task to be canceled. Cancellation is a contract. It's not a clear one, but you agree to
+
+231
+00:19:51,540 --> 00:19:55,340
+it the moment you start writing async IO code. I cobbled together what the contract looks like
+
+232
+00:19:55,340 --> 00:19:59,780
+by just reading through the documentation. It's in a couple different places. Number one, in a
+
+233
+00:19:59,780 --> 00:20:05,620
+wait statement, any wait statement can raise a cancel error. It could be somebody canceling you,
+
+234
+00:20:05,620 --> 00:20:09,900
+it could be somebody canceling a task you're waiting on, it could be both. You can have be
+
+235
+00:20:09,900 --> 00:20:14,140
+canceled more than once. That's a little weird. You can catch the exception, but you should never
+
+236
+00:20:14,140 --> 00:20:20,740
+ignore it and always re-raise the exception. When you get canceled, you don't have to exit right now,
+
+237
+00:20:20,740 --> 00:20:26,620
+but you should move towards shutdown. Like async IO run expects that all tasks will eventually
+
+238
+00:20:26,620 --> 00:20:34,540
+cancel because it attempts to do just that before it returns. And as per the documentation, the
+
+239
+00:20:34,540 --> 00:20:40,700
+canceled error exception can be caught to perform custom operations when async tasks are canceled.
+
+240
+00:20:40,700 --> 00:20:48,220
+In almost all situations, that exception must be re-raised. Well, but what about the other ones
+
+241
+00:20:48,300 --> 00:20:52,980
+where you don't have to re-raise it? Well, I guess nobody knows. We'll figure that out later. So,
+
+242
+00:20:52,980 --> 00:20:58,700
+it's not hard to comply with the contract. When you get the exception, start your cleanup and stop
+
+243
+00:20:58,700 --> 00:21:04,180
+accepting new work, move towards exiting, and then raise when you're done. This also means you have
+
+244
+00:21:04,180 --> 00:21:08,980
+to stop catching base exception or using empty accept clauses with your async IO code unless
+
+245
+00:21:08,980 --> 00:21:14,100
+you're being very careful to check that what you did catch was not a cancel error. Because it is a
+
+246
+00:21:14,180 --> 00:21:19,660
+cancel error, you have to re-raise it in most cases. And the other side of cancellation is easy,
+
+247
+00:21:19,660 --> 00:21:25,020
+right? You want to cancel a task, you just call cancel. Wrong. That task isn't actually canceled
+
+248
+00:21:25,020 --> 00:21:30,340
+yet. It's scheduled to be canceled for the next time you await something. Yet, I see people
+
+249
+00:21:30,340 --> 00:21:35,660
+canceling things and expecting that this is what this happens. For this reason, I have long held
+
+250
+00:21:35,660 --> 00:21:41,060
+the opinion that cancel should return an awaitable. So, canceling things correctly is not too hard.
+
+251
+00:21:41,540 --> 00:21:47,140
+You can cancel on a task, but it doesn't actually cancel until the next event loop cycle. If the
+
+252
+00:21:47,140 --> 00:21:51,540
+task has never been run, then it's canceled without ever the coroutine ever being started.
+
+253
+00:21:51,540 --> 00:21:55,980
+But if the task is already running, the next cycle of the loop will cause a cancel error to be raised
+
+254
+00:21:55,980 --> 00:22:00,140
+from whatever await statement it's currently paused at. And this affects all the things that
+
+255
+00:22:01,020 --> 00:22:05,180
+it's awaiting on as well. So, it goes all the way down the chain unless it's shielded and throws in
+
+256
+00:22:05,180 --> 00:22:13,300
+a canceled error. Even then, a task is not considered canceled until it re-raises the canceled error.
+
+257
+00:22:13,300 --> 00:22:20,420
+The docs seem to say it should be the same canceled error. So, we do this in the coroutine above,
+
+258
+00:22:20,420 --> 00:22:25,500
+we cancel the task, and then we await on it and catch the cancel exception. Because we know it's
+
+259
+00:22:25,500 --> 00:22:30,300
+going to happen, we don't want to raise it because we're purposely canceling something. But what if
+
+260
+00:22:30,300 --> 00:22:35,420
+the task takes a long time to cancel and someone has come from above you and attempted to cancel
+
+261
+00:22:35,420 --> 00:22:40,780
+you while you're waiting on the task to finish? But you're supposed to re-raise the cancel you've
+
+262
+00:22:40,780 --> 00:22:46,140
+got, but we're suppressing it. So, maybe it's not as easy as I've let on. So, I've come up with this
+
+263
+00:22:46,140 --> 00:22:52,220
+monstrosity. So, you can see that what we're doing is we're trying to prevent ourselves from being
+
+264
+00:22:52,220 --> 00:22:57,260
+canceled until the task we are trying to cancel has finished canceling. That's a mouthful. So,
+
+265
+00:22:57,340 --> 00:23:03,180
+we check that the task was canceled every time we catch the canceled error. And if we catch one and
+
+266
+00:23:03,180 --> 00:23:08,060
+the task is not done, we save that exception to raise later to complete our part of the cancellation
+
+267
+00:23:08,060 --> 00:23:13,900
+contract. We also cycle the event loop after the task cancel so we give a chance for the callbacks
+
+268
+00:23:13,900 --> 00:23:20,380
+to get a chance to run. You may notice we also use shield. So, this is when we are canceled,
+
+269
+00:23:20,380 --> 00:23:25,020
+we can prevent that the task that we have already sent a cancel message to from getting a secondary
+
+270
+00:23:25,020 --> 00:23:30,620
+cancel while we are awaiting it. Yeah, you could do all this every time you want to cancel something
+
+271
+00:23:30,620 --> 00:23:35,500
+or you could use something like later.cancel from the later package in PyPI. And I will be pushing
+
+272
+00:23:35,500 --> 00:23:41,500
+out a new release sometime tonight to update with this new extended behavior. But let's move on.
+
+273
+00:23:42,940 --> 00:23:47,660
+So, you need timeouts. You should use timeouts in your application because in the real world,
+
+274
+00:23:47,660 --> 00:23:51,420
+things get stuck. Now, you may tell me that you have never used timeouts
+
+275
+00:23:51,420 --> 00:23:59,420
+before. And you don't have any issues. I call you a liar. But no, so what are the chances that an
+
+276
+00:23:59,420 --> 00:24:04,300
+async call won't complete in the expected time? Well, in your dev environment, that's zero. Look,
+
+277
+00:24:04,300 --> 00:24:08,860
+we've all heard the lament, hey, it worked in my dev server. Everything works on your dev server
+
+278
+00:24:08,860 --> 00:24:13,820
+because that's where you stuff. But in production, it's a little different. Everybody has experiences.
+
+279
+00:24:13,820 --> 00:24:20,380
+Things don't always behave expected the first time you run it in production. But what you may not know
+
+280
+00:24:20,380 --> 00:24:24,860
+is that running something in production makes your service actively hate you. Not people in general,
+
+281
+00:24:24,860 --> 00:24:30,540
+just you. So, during standard business hours, it seems to change based on whether or not you're at
+
+282
+00:24:30,540 --> 00:24:36,060
+your desk. It fails more the moment you step away from your desk. And because even more unstable the
+
+283
+00:24:36,060 --> 00:24:40,700
+moment you're out eating lunch with your friends. And I'm not sure exactly how this one happens,
+
+284
+00:24:40,700 --> 00:24:48,460
+but it does. And things also fail more often during weekends than they do on weekdays. Things
+
+285
+00:24:48,460 --> 00:24:53,500
+never seem to fail when you're actually working. There are some obvious modifiers that have been
+
+286
+00:24:53,500 --> 00:24:57,340
+observed on holidays. When you're sleeping, when you don't have access to your laptop,
+
+287
+00:24:57,340 --> 00:25:02,460
+things fail more often. And then later, the later the night gets, the more things fail.
+
+288
+00:25:03,500 --> 00:25:08,940
+So, if you're sleeping at 5 a.m. while having forgotten stuff at work, on a holiday, that's
+
+289
+00:25:08,940 --> 00:25:13,180
+170%. Wait, you say that's over 100%, Jason. You're not doing probability correctly. Well,
+
+290
+00:25:13,180 --> 00:25:16,780
+at that point, your service has broken all the rules of probability and is going after all the
+
+291
+00:25:16,780 --> 00:25:21,820
+other services in your infrastructure for sport. If you sleep until 10, that's a site-wide incident.
+
+292
+00:25:21,820 --> 00:25:26,380
+And then you are somehow taking down random pieces of the internet and your CEO is calling
+
+293
+00:25:26,380 --> 00:25:31,660
+you because they have to release a press release. Okay, I've made all that up, but the idea is that
+
+294
+00:25:31,660 --> 00:25:37,100
+your service is going to fail at certain times. You may think it's directly related to you because
+
+295
+00:25:37,100 --> 00:25:42,220
+it'll just fall on its face at random times. Timeouts are kind of a way to keep things in
+
+296
+00:25:42,220 --> 00:25:46,380
+check when you're not there to manually intervene or to interrupt it when it gets stuck.
+
+297
+00:25:47,740 --> 00:25:53,580
+So, look, things fail. Prepare for it. Sometimes things don't raise exceptions when they will
+
+298
+00:25:53,580 --> 00:25:59,740
+never complete. They might raise an exception eventually, but that could be on geologic
+
+299
+00:25:59,740 --> 00:26:07,980
+time scales, not human ones. This is why we have timeouts in software. You have a few choices.
+
+300
+00:26:07,980 --> 00:26:12,540
+There's wait and wait for, but neither are as elegant as the async timeout package from
+
+301
+00:26:12,540 --> 00:26:17,980
+PyPI. Things inside the timeout context get cancelled if they run too long. And outside
+
+302
+00:26:17,980 --> 00:26:23,820
+the context gets raised a timeout error. When you are waiting for something that could be delayed,
+
+303
+00:26:23,820 --> 00:26:29,340
+consider adding timeouts around the code. When you don't want to have to be woken up in the
+
+304
+00:26:29,340 --> 00:26:33,260
+night, figure out why your service is doing nothing at all. In our example above, we are
+
+305
+00:26:33,260 --> 00:26:38,060
+using nested timeouts because the request timeout we want should, we should plan to
+
+306
+00:26:38,060 --> 00:26:41,980
+retry them when they timeout. And how long we should attempt to retry them, that's a case of
+
+307
+00:26:41,980 --> 00:26:46,780
+a budget we've set like 100 milliseconds. So that we, that they should only ever take 100
+
+308
+00:26:46,780 --> 00:26:53,660
+milliseconds total if they have to keep retrying. So, look, shit happens. Try to make the best of
+
+309
+00:26:53,660 --> 00:26:58,540
+it. Async.io can be a powerful tool, but used poorly will cause you lots of pain. So let's wrap
+
+310
+00:26:58,540 --> 00:27:03,820
+up this talk. So, inclusion. Never assume intent or violate ownership expectations.
+
+311
+00:27:03,820 --> 00:27:08,460
+Nested event loops is a bad idea. If you want logical startup and shutdown, use async.io context
+
+312
+00:27:08,460 --> 00:27:13,180
+managers and async exit stacks. Tasks fail or sometimes never complete. Use timeouts and handle
+
+313
+00:27:13,180 --> 00:27:17,420
+your exceptions. I've had people tell me that cancellation is too hard. Look, it's not that
+
+314
+00:27:17,420 --> 00:27:20,940
+hard and it's not that painful set up. It's definitely better than being paged in the middle
+
+315
+00:27:20,940 --> 00:27:25,980
+of a cold night while you're sleeping. I suggest async.io run because it's the best bootstrap we
+
+316
+00:27:25,980 --> 00:27:29,580
+have. Even though it raises exceptions, it's awesome because I'd rather know that you're
+
+317
+00:27:29,580 --> 00:27:33,260
+attempting to run an event loop that I can easily put in execute without having to worry about
+
+318
+00:27:33,260 --> 00:27:39,260
+threads getting default event loops. That's it. Thank you for coming to my Ted talk. Any questions?
+
+319
+00:27:40,780 --> 00:27:44,380
+Questions will be out in the hallway.
+

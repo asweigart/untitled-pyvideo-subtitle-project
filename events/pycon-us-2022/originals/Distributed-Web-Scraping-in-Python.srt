@@ -1,0 +1,1340 @@
+1
+00:00:00,000 --> 00:00:11,080
+So, yeah, I'm here today to talk about distributed web scraping.
+
+2
+00:00:11,080 --> 00:00:14,520
+It's my first PyCon since 2015 in Montreal.
+
+3
+00:00:14,520 --> 00:00:19,040
+First time I've been selected to actually speak at PyCon, so I'm pretty excited about
+
+4
+00:00:19,040 --> 00:00:20,040
+that.
+
+5
+00:00:20,040 --> 00:00:24,960
+Today I'm going to be talking about distributed web scraping with Python and some lessons
+
+6
+00:00:24,960 --> 00:00:26,960
+I've learned along the way.
+
+7
+00:00:26,960 --> 00:00:31,560
+So, like I said, the goal of this presentation is to motivate you on when and why and how
+
+8
+00:00:31,560 --> 00:00:40,720
+you should use distributed web scrapers and how you can build one if you need to.
+
+9
+00:00:40,720 --> 00:00:44,680
+So I'll give you an introduction to distributed web scraping.
+
+10
+00:00:44,680 --> 00:00:46,800
+I'll set the stage of when you'd actually want to use one.
+
+11
+00:00:46,800 --> 00:00:51,280
+I'll kind of walk through my journey of how I came to actually needing to build one, what
+
+12
+00:00:51,280 --> 00:00:55,320
+it finally looks like, and then a bunch of tips and tricks and management and Python
+
+13
+00:00:55,360 --> 00:00:59,720
+packages and some cool stuff I found that will help you if you want to build distributed
+
+14
+00:00:59,720 --> 00:01:04,160
+web scraping.
+
+15
+00:01:04,160 --> 00:01:09,040
+So quick introduction myself so you know that I have some validity of what I'm talking about.
+
+16
+00:01:09,040 --> 00:01:10,040
+My name is Josh.
+
+17
+00:01:10,040 --> 00:01:11,040
+I'm a Canadian.
+
+18
+00:01:11,040 --> 00:01:12,040
+I live in Colorado right now.
+
+19
+00:01:12,040 --> 00:01:13,640
+I'm actually moving back to Canada this summer.
+
+20
+00:01:13,640 --> 00:01:21,360
+I've been using Python for about 14 years now, back in 2.5 when I was in university.
+
+21
+00:01:21,400 --> 00:01:25,480
+I did my undergrad West Coast Canada and then I did my masters in the East Coast in Ottawa
+
+22
+00:01:25,480 --> 00:01:33,200
+where I did machine learning, natural language processing, and artificial intelligence.
+
+23
+00:01:33,200 --> 00:01:35,360
+I use Python all through that.
+
+24
+00:01:35,360 --> 00:01:38,920
+Right now I'm employed with the Department of Defense here at the U.S. where I use data
+
+25
+00:01:38,920 --> 00:01:43,800
+science and data engineering, primarily in the aerospace domain.
+
+26
+00:01:43,800 --> 00:01:50,080
+I've consulted multiple times for professional sports teams and leagues in a data science,
+
+27
+00:01:50,080 --> 00:01:55,240
+physical analytics type role, building pipelines, doing data science, doing analysis, providing
+
+28
+00:01:55,240 --> 00:02:00,960
+analysis to decision makers.
+
+29
+00:02:00,960 --> 00:02:03,800
+And of course I want to give a shout out to Statistics of the Borders, someone I've been
+
+30
+00:02:03,800 --> 00:02:08,800
+volunteering with for the last, actually this year is my first time, my first job.
+
+31
+00:02:08,800 --> 00:02:12,800
+They're a great organization if you want to get back to community and do some data type work.
+
+32
+00:02:13,520 --> 00:02:20,800
+So if you've ever done data science you've probably seen these five stages of the project
+
+33
+00:02:20,800 --> 00:02:21,800
+or program.
+
+34
+00:02:21,800 --> 00:02:24,200
+You need to collect your data, you need to store your data, you need to clean your data,
+
+35
+00:02:24,200 --> 00:02:25,200
+prepare your data.
+
+36
+00:02:25,200 --> 00:02:29,440
+And after 80% of that work is done you can finally actually build your models and do
+
+37
+00:02:29,440 --> 00:02:32,560
+the work you need to do and analyze it.
+
+38
+00:02:32,560 --> 00:02:36,800
+This is where this talk is focused on, it's the first few steps here in this process.
+
+39
+00:02:36,800 --> 00:02:41,160
+80% of my work is just in that first stage of collecting data.
+
+40
+00:02:41,520 --> 00:02:47,160
+Most of my responsibilities come from collecting a large amount of data on pipelines that run overnight.
+
+41
+00:02:47,160 --> 00:02:51,760
+I need to ensure that the data is collected and it's up to date so I can provide it to
+
+42
+00:02:51,760 --> 00:02:55,640
+the rest of my team and they can do the actual analysis on it.
+
+43
+00:02:55,640 --> 00:03:01,160
+So that's really where this talk is focused on and where I'm motivated to come from.
+
+44
+00:03:05,440 --> 00:03:06,760
+So what is web scraping?
+
+45
+00:03:06,760 --> 00:03:08,040
+What is distributed web scraping?
+
+46
+00:03:08,040 --> 00:03:11,120
+We need to talk about that and make sure we're on the same page.
+
+47
+00:03:11,280 --> 00:03:17,600
+Web scraping is the act of extracting data usually from a website.
+
+48
+00:03:17,600 --> 00:03:21,720
+You're taking some information from it, processing it, and storing it.
+
+49
+00:03:21,720 --> 00:03:24,920
+When you move to distributed we're applying where we're spreading this work over a large
+
+50
+00:03:24,920 --> 00:03:27,000
+number of computers.
+
+51
+00:03:27,000 --> 00:03:31,440
+This typically means we're looking at large amounts of data.
+
+52
+00:03:31,440 --> 00:03:35,240
+Typically we're requesting around 25,000 pages at one time.
+
+53
+00:03:35,240 --> 00:03:38,840
+That's usually the volume that I work at.
+
+54
+00:03:38,840 --> 00:03:42,200
+So giving you a quick brief before I jump into the journey of how I got there, this
+
+55
+00:03:42,200 --> 00:03:46,240
+is generally what I would present to you as a mental model of what a distributed web scraper
+
+56
+00:03:46,240 --> 00:03:47,240
+looks like.
+
+57
+00:03:47,240 --> 00:03:52,680
+You have your main controller, consumer, which generates the jobs, sends it to a bunch of
+
+58
+00:03:52,680 --> 00:03:54,020
+different nodes.
+
+59
+00:03:54,020 --> 00:03:57,800
+They do their work and they send it back to the consumer which then stores and does the
+
+60
+00:03:57,800 --> 00:04:00,680
+final processing of the data.
+
+61
+00:04:00,680 --> 00:04:10,840
+To show you how I got there I'm going to walk through my journey of web scraping throughout
+
+62
+00:04:10,840 --> 00:04:11,840
+the last decade.
+
+63
+00:04:11,840 --> 00:04:18,320
+To set the stage, like I said, we're looking at 25,000 pages.
+
+64
+00:04:18,320 --> 00:04:26,960
+The intent is you're in a situation where you want to collect a lot of data source where
+
+65
+00:04:26,960 --> 00:04:29,520
+the layout is going to be the same, it's going to be the same website, you want to do it
+
+66
+00:04:29,520 --> 00:04:35,320
+as quickly and efficiently as possible and ensure you have the fidelity of the data.
+
+67
+00:04:35,320 --> 00:04:40,080
+So for example, say you want to make a Goodreads competitor and you need book data.
+
+68
+00:04:40,080 --> 00:04:44,120
+Your intent would be to scrape book data off of Amazon.
+
+69
+00:04:44,120 --> 00:04:47,400
+You're going to be requesting a whole bunch of book information from their individual
+
+70
+00:04:47,400 --> 00:04:48,400
+pages.
+
+71
+00:04:48,400 --> 00:04:52,680
+You're going to be working with the same templates and you're going to be extracting the same
+
+72
+00:04:52,680 --> 00:04:57,680
+information, page numbers, prices, titles, authors, etc.
+
+73
+00:04:57,680 --> 00:05:03,040
+This is the place where distributed web scrapers would typically jump, where you would want
+
+74
+00:05:03,040 --> 00:05:08,720
+to use one.
+
+75
+00:05:08,720 --> 00:05:11,680
+So when I first started, the very first place is what you've probably done if you've ever
+
+76
+00:05:11,680 --> 00:05:14,640
+worked with a tutorial in web scraping in Python.
+
+77
+00:05:14,640 --> 00:05:21,640
+You create a simple script, it requests the resource and then it stores the results.
+
+78
+00:05:21,640 --> 00:05:26,400
+Python makes that really easy.
+
+79
+00:05:27,400 --> 00:05:34,280
+With the request library or urllib or urllib2, you can easily request websites.
+
+80
+00:05:34,280 --> 00:05:36,400
+You can then pass them to something like Beautiful Soup.
+
+81
+00:05:36,400 --> 00:05:39,240
+There's other alternatives like LXML.
+
+82
+00:05:39,240 --> 00:05:42,480
+They make it easy to process that page and store it.
+
+83
+00:05:42,480 --> 00:05:45,200
+You then have to decide how you want to store it.
+
+84
+00:05:45,200 --> 00:05:48,760
+Whether you want to store it to a CSV file, you have a database, a text file, or just
+
+85
+00:05:48,760 --> 00:05:51,880
+output it to the screen.
+
+86
+00:05:51,880 --> 00:05:52,880
+So doing this once, super easy.
+
+87
+00:05:52,880 --> 00:05:55,520
+You can make a script, run it, get your data.
+
+88
+00:05:55,520 --> 00:05:57,600
+That's good.
+
+89
+00:05:57,600 --> 00:06:01,520
+So from here, when I was working with that base case of collecting a whole bunch of books
+
+90
+00:06:01,520 --> 00:06:08,320
+from Amazon, I didn't want to collect one book, I wanted to collect 25,000 books.
+
+91
+00:06:08,320 --> 00:06:13,800
+So I moved it to an iterative approach.
+
+92
+00:06:13,800 --> 00:06:16,640
+I now have two phases in my scraping job.
+
+93
+00:06:16,640 --> 00:06:22,120
+The first phase would be to collect all the pages I would need to scrape from.
+
+94
+00:06:22,120 --> 00:06:27,320
+That could be going through a search or an index, and then I would need to scrape each
+
+95
+00:06:27,320 --> 00:06:31,400
+of those individual pages.
+
+96
+00:06:31,400 --> 00:06:34,440
+This is done the exact same way as a single request, but just looped over and over and
+
+97
+00:06:34,440 --> 00:06:39,240
+over and over, repeating until you're completed.
+
+98
+00:06:39,240 --> 00:06:44,960
+However, like I said, once I started working the volume of 25,000 pages, a number of issues
+
+99
+00:06:44,960 --> 00:06:45,960
+quickly arose.
+
+100
+00:06:45,960 --> 00:06:49,600
+First, this was very slow.
+
+101
+00:06:49,600 --> 00:06:52,560
+For every request, you had to make a network request.
+
+102
+00:06:52,560 --> 00:06:59,400
+There was a lot of idling while you're waiting for your networks to just return to the websites.
+
+103
+00:06:59,400 --> 00:07:05,400
+Say even if it's one second a page times up by 25,000, that's a lot of time.
+
+104
+00:07:05,400 --> 00:07:08,400
+The second issue I was running into was bot detection.
+
+105
+00:07:08,400 --> 00:07:11,040
+Websites would quickly detect me as being a bot.
+
+106
+00:07:11,040 --> 00:07:16,920
+If they see the same script requesting resources over and over and over and over and over really
+
+107
+00:07:16,960 --> 00:07:22,520
+fast, it picks it up as being suspicious.
+
+108
+00:07:22,520 --> 00:07:28,120
+At this stage, I didn't have any tracking tools, so I didn't know if I was requesting
+
+109
+00:07:28,120 --> 00:07:29,600
+websites twice.
+
+110
+00:07:29,600 --> 00:07:36,000
+Same thing when things failed, which happens a lot when you're working with networks.
+
+111
+00:07:36,000 --> 00:07:43,040
+I would have to start the script from scratch, and you're basically starting at zero.
+
+112
+00:07:43,040 --> 00:07:46,640
+Of course, as I've been working with this over the last decade, the Internet's changed,
+
+113
+00:07:46,640 --> 00:07:47,640
+too.
+
+114
+00:07:47,640 --> 00:07:51,640
+Around 2010, 2012, 2014, you had a lot of pages that were static HTML.
+
+115
+00:07:51,640 --> 00:07:57,160
+Nowadays, you're using a lot more dynamic websites built off JavaScript, so if you're
+
+116
+00:07:57,160 --> 00:08:04,560
+using something like requests, you're not going to get that dynamically generated HTML.
+
+117
+00:08:04,560 --> 00:08:11,560
+Then I had to address these issues with my next approach.
+
+118
+00:08:14,560 --> 00:08:19,120
+In this, I introduced a number of different advanced improvements or intermediate improvements
+
+119
+00:08:19,120 --> 00:08:21,360
+to help myself.
+
+120
+00:08:21,360 --> 00:08:28,360
+I'd introduce a middle proxy layer in order to help replicate my actions as if a human
+
+121
+00:08:28,360 --> 00:08:30,880
+were making all these requests.
+
+122
+00:08:31,680 --> 00:08:36,880
+It would randomly pick a proxy at random, feed it through that proxy, so every time
+
+123
+00:08:36,880 --> 00:08:41,800
+the website would see the request coming from a different IP.
+
+124
+00:08:41,800 --> 00:08:45,280
+I started adding headers to my requests.
+
+125
+00:08:45,280 --> 00:08:52,960
+The base requests package in Python doesn't add any headers to it, so if a website sees
+
+126
+00:08:52,960 --> 00:08:57,040
+a request come in with no headers of what browser type it's looking at, it often detects
+
+127
+00:08:57,040 --> 00:08:59,280
+it as being a bot.
+
+128
+00:08:59,280 --> 00:09:02,760
+I'm not just adding a header, but adding random headers, so every time it looked like
+
+129
+00:09:02,760 --> 00:09:07,760
+a different browser was going to the website.
+
+130
+00:09:07,760 --> 00:09:12,560
+For example, all of us here at the conference going to the PyCon website were all probably
+
+131
+00:09:12,560 --> 00:09:15,600
+going to be on the same IP, but it's going to look as if a whole bunch of different browsers
+
+132
+00:09:15,600 --> 00:09:18,040
+are viewing it because it is a whole bunch of different browsers for everyone's different
+
+133
+00:09:18,040 --> 00:09:19,040
+devices.
+
+134
+00:09:22,040 --> 00:09:24,560
+One thing I found helpful was adding delays between my requests.
+
+135
+00:09:24,840 --> 00:09:29,520
+One, you don't want to hammer a website into DDoS, but you also want to add random delays
+
+136
+00:09:29,520 --> 00:09:35,680
+so it's not a consistent amount of time between every request.
+
+137
+00:09:35,680 --> 00:09:42,600
+Dealing with the JavaScript issue, I started moving off of beautiful super requests and
+
+138
+00:09:42,600 --> 00:09:43,600
+go to Selenium.
+
+139
+00:09:43,600 --> 00:09:47,920
+Selenium is typically used for testing, but it's great for dynamically generating web
+
+140
+00:09:47,920 --> 00:09:50,960
+content and then extracting that HTML.
+
+141
+00:09:51,360 --> 00:09:57,080
+I also added try until succeed methods.
+
+142
+00:09:57,080 --> 00:10:00,880
+Like I said, networks are tricky.
+
+143
+00:10:00,880 --> 00:10:03,760
+They can often fail, and I'm sure you've gone to a website before and it didn't load, but
+
+144
+00:10:03,760 --> 00:10:05,800
+then you refresh it and load it again.
+
+145
+00:10:05,800 --> 00:10:11,200
+Before, in the previous iteration, these would cause the scripts to fail.
+
+146
+00:10:11,200 --> 00:10:16,040
+I started adding wrappers to my functions that would simply just keep retrying the request
+
+147
+00:10:16,040 --> 00:10:17,740
+until it succeeded.
+
+148
+00:10:17,740 --> 00:10:22,540
+You only try two or three times because you don't want to loop forever.
+
+149
+00:10:22,540 --> 00:10:27,300
+And I started adding some basic tracking to my scripts themselves just so we know what
+
+150
+00:10:27,300 --> 00:10:37,100
+URLs we need to collect from and what we've already succeeded in collecting.
+
+151
+00:10:37,100 --> 00:10:40,000
+Of course, this introduced more issues.
+
+152
+00:10:40,000 --> 00:10:41,860
+This was even slower.
+
+153
+00:10:41,860 --> 00:10:45,580
+Once you're slowing down your requests, you're going to add time.
+
+154
+00:10:45,580 --> 00:10:49,420
+Once you're dealing with dynamically generated JavaScript that has to load, you're going
+
+155
+00:10:49,420 --> 00:10:52,300
+to be even slower.
+
+156
+00:10:52,300 --> 00:10:54,220
+You have wasted resources.
+
+157
+00:10:54,220 --> 00:10:57,460
+When you have all those proxies sitting there doing nothing, so for example, if you have
+
+158
+00:10:57,460 --> 00:11:02,020
+five proxies and you're rotating randomly every time, 80% of them are doing nothing.
+
+159
+00:11:02,020 --> 00:11:07,580
+And if you're spinning these up on, say, AWS or Digital Ocean, they're sitting there and
+
+160
+00:11:07,580 --> 00:11:11,140
+you're paying for resources to do nothing.
+
+161
+00:11:11,140 --> 00:11:16,860
+But at this point, my progress tracking and restarting was really weak.
+
+162
+00:11:16,860 --> 00:11:21,660
+There were still issues that popped up again which really inspired the distributed scraper.
+
+163
+00:11:21,660 --> 00:11:26,780
+This is around the time when I started thinking about distributed scraping.
+
+164
+00:11:26,780 --> 00:11:31,340
+So the intent was to address all these previous issues that we've just discussed.
+
+165
+00:11:31,340 --> 00:11:35,540
+I want to have multilogs working on scraping jobs at the same time.
+
+166
+00:11:35,580 --> 00:11:41,180
+I still wanted to retain that two-phase approach in generating URLs and processing them.
+
+167
+00:11:41,180 --> 00:11:45,700
+And this is what came up to my mental model.
+
+168
+00:11:45,700 --> 00:11:50,660
+We'll break it down a bit more, but as I first introduced it, you have a controller which
+
+169
+00:11:50,660 --> 00:11:52,860
+generates your list of work.
+
+170
+00:11:52,860 --> 00:11:55,460
+It's going to feed those into a work queue.
+
+171
+00:11:55,460 --> 00:11:59,140
+Each of your scraping nodes can then start working off that queue.
+
+172
+00:11:59,140 --> 00:12:01,500
+They can individually scrape.
+
+173
+00:12:01,500 --> 00:12:06,020
+And then they'll return results back to the results queue which can then be consumed and
+
+174
+00:12:06,020 --> 00:12:10,580
+saved and stored for how you need it in the future.
+
+175
+00:12:10,580 --> 00:12:15,900
+I should add that there's five in this picture, but you can have as many nodes as you want.
+
+176
+00:12:15,900 --> 00:12:20,380
+So breaking that down a bit more detailed, you have the first phase which is your controller.
+
+177
+00:12:20,380 --> 00:12:24,900
+The controller does the same work that I first mentioned in generating your list of URLs.
+
+178
+00:12:24,900 --> 00:12:29,620
+Goes through your search index or an index page and generates your list of URLs and stores
+
+179
+00:12:29,660 --> 00:12:32,460
+them into a work queue.
+
+180
+00:12:32,460 --> 00:12:37,340
+These work queues offer some cool tools such as ensuring their duplicates.
+
+181
+00:12:37,340 --> 00:12:40,380
+I'll talk about them a little bit more.
+
+182
+00:12:40,380 --> 00:12:43,380
+Once it's done collecting all the results, it actually publishes them to the work queue
+
+183
+00:12:43,380 --> 00:12:48,620
+so that way the nodes can start working.
+
+184
+00:12:48,620 --> 00:12:52,740
+The scraping node is basically a smaller version of the previous iteration of the scraper that
+
+185
+00:12:52,740 --> 00:12:54,780
+we talked about before.
+
+186
+00:12:54,780 --> 00:12:58,660
+It pulls a URL from that work queue and starts scraping with the same techniques we introduced
+
+187
+00:12:58,660 --> 00:12:59,660
+before.
+
+188
+00:12:59,660 --> 00:13:02,660
+It requests a page, parses the page, and returns the results.
+
+189
+00:13:02,660 --> 00:13:08,620
+We're turning it back to the result queue for the final stage.
+
+190
+00:13:08,620 --> 00:13:14,620
+One cool side effect of introducing all these nodes with these queues is that you can add
+
+191
+00:13:14,620 --> 00:13:17,620
+and destroy queues mid-job.
+
+192
+00:13:17,620 --> 00:13:20,900
+If you need to add more queues because you want to speed it up, you can spin up more
+
+193
+00:13:20,900 --> 00:13:21,900
+nodes.
+
+194
+00:13:21,900 --> 00:13:25,460
+They can start pulling from the queue without any disruptions and start adding to the result
+
+195
+00:13:25,460 --> 00:13:27,540
+queue without disruption.
+
+196
+00:13:27,540 --> 00:13:33,100
+Same thing because of the cool things that queues can give you.
+
+197
+00:13:33,100 --> 00:13:38,540
+If you destroy a node, even if it's mid-job, you won't lose that progress and you'll be
+
+198
+00:13:38,540 --> 00:13:46,020
+able to re-request that resource.
+
+199
+00:13:46,020 --> 00:13:49,100
+Once the scraper is actually done, you send it back to the controller, which doesn't have
+
+200
+00:13:49,100 --> 00:13:55,720
+to be in the same place as the first phase, and it stores into result queue.
+
+201
+00:13:55,720 --> 00:14:01,800
+This queue keeps track of where you've progressed and allows you to keep track of your total
+
+202
+00:14:01,800 --> 00:14:02,800
+progress.
+
+203
+00:14:02,800 --> 00:14:10,280
+Right away, this speeds up your scraping much faster.
+
+204
+00:14:10,280 --> 00:14:15,840
+When I first actually started doing this, I was working at the volume of about 15,000
+
+205
+00:14:15,840 --> 00:14:16,840
+pages.
+
+206
+00:14:16,840 --> 00:14:20,680
+I always said 25 earlier, but five years ago, about 15,000 pages.
+
+207
+00:14:20,680 --> 00:14:25,040
+That would take me about 26 hours with the second iteration before the distribute scraper.
+
+208
+00:14:25,040 --> 00:14:30,160
+When I went up to a distribute scraper using about eight or ten nodes, that would reduce
+
+209
+00:14:30,160 --> 00:14:32,040
+it down to four or five hours.
+
+210
+00:14:32,040 --> 00:14:35,040
+That's still a lot of time because you're still looking at a lot of resources, but something
+
+211
+00:14:35,040 --> 00:14:39,160
+you can run overnight without any issues.
+
+212
+00:14:39,160 --> 00:14:42,720
+You're now no longer wasting resources, so instead of having proxies sitting there doing
+
+213
+00:14:42,720 --> 00:14:46,520
+nothing, you can actually employ all the proxies to do something to help you with the overall
+
+214
+00:14:46,520 --> 00:14:50,440
+job.
+
+215
+00:14:50,440 --> 00:14:54,720
+With the introduction of queues, we're improving our fidelity of the process.
+
+216
+00:14:54,720 --> 00:14:58,560
+We're ensuring that all the work is being done, and we're getting the results from all
+
+217
+00:14:58,560 --> 00:15:00,560
+the resources.
+
+218
+00:15:00,560 --> 00:15:05,440
+Of course, then you can automate the whole process.
+
+219
+00:15:05,440 --> 00:15:13,720
+If you employ a distribute scraper on a platform such as AWS, Azure, Lino, Digital Ocean, they
+
+220
+00:15:13,720 --> 00:15:19,640
+all have their own APIs, so you can automate almost this entire process.
+
+221
+00:15:19,640 --> 00:15:24,600
+Of course, the disadvantages with distribute scrapers is now there's much higher cost.
+
+222
+00:15:24,600 --> 00:15:27,880
+Again, these platforms are fairly cheap, so you're not talking large dollars, but there
+
+223
+00:15:27,880 --> 00:15:32,920
+is still a cost to actually employ each of these nodes.
+
+224
+00:15:32,920 --> 00:15:36,240
+Redeployability of code has been a bit tricky, but I have a few ideas on that, and I'll talk
+
+225
+00:15:36,240 --> 00:15:38,240
+about that in a minute.
+
+226
+00:15:38,240 --> 00:15:40,200
+The other one is assumption of trust.
+
+227
+00:15:40,200 --> 00:15:43,620
+You're assuming that this entire system is a closed system.
+
+228
+00:15:43,620 --> 00:15:48,520
+You assume that all your nodes are only talking with your queues, and you're assuming that
+
+229
+00:15:48,680 --> 00:15:53,400
+no data is being introduced from another source that could either be malicious or just be
+
+230
+00:15:53,400 --> 00:15:57,840
+not useful.
+
+231
+00:15:57,840 --> 00:16:01,380
+That is generally a distributed scraper in general, but I want to talk about a few other
+
+232
+00:16:01,380 --> 00:16:06,980
+more specific technical things on these different phases.
+
+233
+00:16:06,980 --> 00:16:11,640
+The first is that the introduction of queues made that distributed scraping job really
+
+234
+00:16:11,640 --> 00:16:14,160
+easy to manage.
+
+235
+00:16:14,160 --> 00:16:20,800
+Queues themselves offer a number of useful dispatch methods, so you can ensure that the
+
+236
+00:16:20,800 --> 00:16:24,600
+resources are being spread out across the different nodes, whether you want fair or
+
+237
+00:16:24,600 --> 00:16:26,280
+round robin.
+
+238
+00:16:26,280 --> 00:16:34,120
+You get ACK methods, so you can guarantee that your resource has been sent to a scraping
+
+239
+00:16:34,120 --> 00:16:38,400
+node, and then you acknowledge and confirm that results have been sent back before deleting
+
+240
+00:16:38,400 --> 00:16:39,400
+anything.
+
+241
+00:16:39,480 --> 00:16:52,480
+You can also send messages across them, so typically you're sending them as text, so
+
+242
+00:16:52,480 --> 00:16:59,960
+you can wrap them in JSON and make it easy to send across and use it with any type of
+
+243
+00:16:59,960 --> 00:17:05,720
+platform or language or tool.
+
+244
+00:17:05,720 --> 00:17:11,480
+These message brokers, again, are really agnostic, so you're not stuck to any specific one.
+
+245
+00:17:11,480 --> 00:17:18,360
+I typically use RabbitMQ or Redis in my own work.
+
+246
+00:17:18,360 --> 00:17:22,040
+My day job is using Kafka a lot, but again, you're not just stuck on these, so you can
+
+247
+00:17:22,040 --> 00:17:26,840
+use what you're used to, whether it's AWS data streams, Azure event hubs, or SQL or
+
+248
+00:17:26,840 --> 00:17:32,320
+no SQL databases.
+
+249
+00:17:32,320 --> 00:17:36,920
+Python offers a lot of really useful and easy packages for you to actually start working
+
+250
+00:17:36,920 --> 00:17:37,920
+with these queues.
+
+251
+00:17:37,920 --> 00:17:40,720
+Pica and Puca are the ones I've used most.
+
+252
+00:17:40,720 --> 00:17:46,560
+I haven't used Celery in this context, but I've used it for offloading jobs off websites.
+
+253
+00:17:46,560 --> 00:17:54,360
+Super easy to manage your queues.
+
+254
+00:17:54,360 --> 00:17:58,440
+The one thing I've really found tricky over the last few years was code management.
+
+255
+00:17:59,360 --> 00:18:02,920
+As you employ your scraping code to each of the nodes, eventually something's going to
+
+256
+00:18:02,920 --> 00:18:04,400
+happen that's going to break it.
+
+257
+00:18:04,400 --> 00:18:07,360
+Either there'll be an exception that you didn't think of.
+
+258
+00:18:07,360 --> 00:18:13,480
+Say, for example, you pulled a birthday off of a website, and they said that person was
+
+259
+00:18:13,480 --> 00:18:19,320
+born on the 13th month, the 45th day in the year 1045.
+
+260
+00:18:19,320 --> 00:18:25,960
+That can easily break your Python code if you don't have any exceptions to it.
+
+261
+00:18:25,960 --> 00:18:34,440
+For example, if the resource doesn't exist, or it throws weird errors, or even commonly
+
+262
+00:18:34,440 --> 00:18:38,000
+if the website just changes, the layout changes, and your code no longer works, you need to
+
+263
+00:18:38,000 --> 00:18:41,400
+manage that code onto the scraping node itself.
+
+264
+00:18:41,400 --> 00:18:48,680
+A couple options I've looked at over the years was containers, which work.
+
+265
+00:18:48,680 --> 00:18:53,400
+I am not a fan of them personally in this context, partly because I'm not super comfortable
+
+266
+00:18:53,400 --> 00:19:00,080
+with them, but also I find on the nodes themselves, for myself they're often a bunch of servers,
+
+267
+00:19:00,080 --> 00:19:05,040
+so I have a lot of bash scripts that I have outside of the container context that I also
+
+268
+00:19:05,040 --> 00:19:07,480
+need to manage.
+
+269
+00:19:07,480 --> 00:19:10,760
+One thing I like is a VCS hook.
+
+270
+00:19:10,760 --> 00:19:16,120
+Every time you start up your scraping node, it just pulls the latest version of the code
+
+271
+00:19:16,120 --> 00:19:18,640
+off a repo.
+
+272
+00:19:18,640 --> 00:19:21,760
+I've looked into serverless computing, such as AWS Lambda.
+
+273
+00:19:22,320 --> 00:19:27,680
+But again, a lot of the time in scraping is sitting there waiting for resources, so when
+
+274
+00:19:27,680 --> 00:19:32,320
+you're using that, you end up paying for Lambda when you're not actually using it.
+
+275
+00:19:32,320 --> 00:19:37,440
+The ugliest method, which we end up using way too often, is manual deployment of images.
+
+276
+00:19:37,440 --> 00:19:44,480
+I'll create a node, FTP into it, update the code, shut down it, create a new image of
+
+277
+00:19:44,480 --> 00:19:48,160
+it, and deploy all the nodes off that new image.
+
+278
+00:19:48,240 --> 00:19:54,360
+It's not ideal, but I end up being lazy and end up going that approach.
+
+279
+00:19:54,360 --> 00:19:58,600
+So I do want to highlight a couple of useful Python packages that are useful in scraping,
+
+280
+00:19:58,600 --> 00:20:02,120
+both in the distributed scraper and in non-distributed scraping.
+
+281
+00:20:02,120 --> 00:20:03,120
+Request Beautiful Sleuths Lenium.
+
+282
+00:20:03,120 --> 00:20:04,120
+They're your go-tos.
+
+283
+00:20:04,120 --> 00:20:11,320
+If you've ever done a tutorial, you've seen them, so don't go too much into them.
+
+284
+00:20:11,320 --> 00:20:12,320
+Click is really awesome.
+
+285
+00:20:12,320 --> 00:20:16,200
+It comes in a lot of other packages, so you might already have it installed.
+
+286
+00:20:16,200 --> 00:20:22,160
+It makes it really easy for you to create command line arguments for your scripts.
+
+287
+00:20:22,160 --> 00:20:23,160
+Retry Backoff.
+
+288
+00:20:23,160 --> 00:20:29,440
+Retry and Backoff Retry are two different packages that make it easy, that are essentially
+
+289
+00:20:29,440 --> 00:20:35,280
+function wrappers that handle the retrying of failed functions.
+
+290
+00:20:35,280 --> 00:20:40,240
+So for example, if you request a website and it gives you a 404 error because it doesn't
+
+291
+00:20:40,240 --> 00:20:43,560
+exist, it would retry it, and you can give it a number of parameters, such as the number
+
+292
+00:20:44,320 --> 00:20:46,320
+of retimes you want to try before you give up.
+
+293
+00:20:46,320 --> 00:20:50,000
+You could add backoff, so you exponentially slow down your request between every time.
+
+294
+00:20:50,000 --> 00:20:54,520
+So that's a really useful package.
+
+295
+00:20:54,520 --> 00:20:58,640
+Request Cache is a really great one for development.
+
+296
+00:20:58,640 --> 00:21:04,360
+Request is the package to request a resource from a website, but Request Cache actually
+
+297
+00:21:04,360 --> 00:21:05,560
+caches that result.
+
+298
+00:21:05,560 --> 00:21:07,920
+So every time when you're developing and you're testing and you're building a script for the
+
+299
+00:21:07,920 --> 00:21:13,080
+first time, you don't have to re-grab it new every single request.
+
+300
+00:21:13,080 --> 00:21:18,920
+You can just grab it out of your cache and it'll help speed up your development time.
+
+301
+00:21:18,920 --> 00:21:21,920
+And Fake User Agent was a really good one that I found recently.
+
+302
+00:21:21,920 --> 00:21:24,680
+I learned about it from one of the Python podcasts.
+
+303
+00:21:24,680 --> 00:21:26,720
+I just can't remember which one.
+
+304
+00:21:26,720 --> 00:21:32,080
+So what I mentioned earlier before, introducing random headers for your requests.
+
+305
+00:21:32,080 --> 00:21:40,000
+It uses a real world database and it gives you a random header that's based on distribution
+
+306
+00:21:40,000 --> 00:21:42,120
+of what they actually see in real life.
+
+307
+00:21:42,120 --> 00:21:46,320
+So instead of just adding a random header, you're adding something that you're likely
+
+308
+00:21:46,320 --> 00:21:53,160
+to see or the server's likely to see in real time.
+
+309
+00:21:53,160 --> 00:21:57,560
+So just some other considerations, probably for myself, as far as I think about, you definitely
+
+310
+00:21:57,560 --> 00:21:58,560
+want to add.
+
+311
+00:21:58,560 --> 00:21:59,560
+Full automation.
+
+312
+00:21:59,560 --> 00:22:03,320
+I haven't fully gotten there yet to fully creating this, partly because I'm lazy and
+
+313
+00:22:03,320 --> 00:22:09,400
+busy just managing these servers, processes, and getting my team working.
+
+314
+00:22:09,400 --> 00:22:15,360
+You can fully automate them, something I want to investigate more into.
+
+315
+00:22:15,360 --> 00:22:18,520
+Alerts are something you definitely need on all of your distributed web scraping scripts,
+
+316
+00:22:18,520 --> 00:22:22,880
+whether it's an SMS or an email.
+
+317
+00:22:22,880 --> 00:22:25,480
+It makes your life so much easier if you can be aware as soon as it happens that there's
+
+318
+00:22:25,480 --> 00:22:26,720
+a failure.
+
+319
+00:22:26,720 --> 00:22:30,120
+So for example, there's a network issue or you got a 503 error because you got banned
+
+320
+00:22:30,120 --> 00:22:35,800
+or because the website no longer exists or the page doesn't exist or the layout changed.
+
+321
+00:22:35,800 --> 00:22:37,640
+And also for completions and success.
+
+322
+00:22:37,680 --> 00:22:42,200
+You also want to know when it succeeded so you can actually go back and continue the
+
+323
+00:22:42,200 --> 00:22:44,800
+next phase of whatever you're working on.
+
+324
+00:22:44,800 --> 00:22:49,480
+And of course, all the previous things I've talked about still need to be addressed.
+
+325
+00:22:49,480 --> 00:22:51,440
+So I kind of went through it a little bit quicker than I hope, but yeah.
+
+326
+00:22:51,440 --> 00:22:56,120
+So in conclusion, Python itself makes scraping really easy.
+
+327
+00:22:56,120 --> 00:22:59,680
+Large jobs require a lot of work to ensure the fidelity and ensure that you can actually
+
+328
+00:22:59,680 --> 00:23:04,960
+scrape all the resources, especially in a reasonable amount of time.
+
+329
+00:23:05,000 --> 00:23:09,000
+Distributed web scraping is an approach you can use to improve your fidelity and speed
+
+330
+00:23:09,000 --> 00:23:13,840
+up the time to actually request all these resources, however, it does come at the cost
+
+331
+00:23:13,840 --> 00:23:17,200
+of a higher actual resource cost.
+
+332
+00:23:17,200 --> 00:23:18,200
+So thank you for that.
+
+333
+00:23:18,200 --> 00:23:20,640
+I don't believe we're doing Q&A, but I'm here all weekend.
+
+334
+00:23:20,640 --> 00:23:22,760
+So if you ever see me this weekend, just come up and chat.
+
+335
+00:23:22,760 --> 00:23:23,760
+So thank you.
+

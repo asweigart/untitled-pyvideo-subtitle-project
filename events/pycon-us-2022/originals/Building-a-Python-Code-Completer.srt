@@ -1,0 +1,1096 @@
+1
+00:00:00,000 --> 00:00:12,500
+Hello and welcome back. This will be, I guess, one of the final sessions here before the
+
+2
+00:00:12,500 --> 00:00:17,920
+plenary session. So thank you for sticking around and I think you'll find it worth it
+
+3
+00:00:17,920 --> 00:00:27,840
+here. So Meredydd Lough is here and going to be speaking about building a Python code
+
+4
+00:00:27,840 --> 00:00:32,840
+completer. Let's give him a big hand, please.
+
+5
+00:00:32,840 --> 00:00:40,720
+All right. Thank you very much. My name is Meredydd and I am here to talk today about
+
+6
+00:00:40,720 --> 00:00:46,880
+code completion. So code completion is that little pop-up box you get in your editor offering
+
+7
+00:00:46,880 --> 00:00:52,160
+to autocomplete your variable names, your identifiers, anything else in your code. And
+
+8
+00:00:53,160 --> 00:00:59,600
+interested in code completion when I had to build a completer myself. And it turns out
+
+9
+00:00:59,600 --> 00:01:04,440
+that code completion is really awesome. It's one of these amazing things in computing that
+
+10
+00:01:04,440 --> 00:01:10,080
+feels like absolute magic when you are using it and is actually incredibly simple at its
+
+11
+00:01:10,080 --> 00:01:16,920
+core. So today we're going to be talking about why code completion is important to us as
+
+12
+00:01:16,920 --> 00:01:21,320
+developers. We're going to talk about how it works and how it might be simpler than
+
+13
+00:01:21,320 --> 00:01:26,520
+you might think. And to show how simple it is, I am going to build a code completer live
+
+14
+00:01:26,520 --> 00:01:32,760
+on this stage in a little over five minutes, after which we can talk about the hard parts,
+
+15
+00:01:32,760 --> 00:01:37,260
+the things I'll need to do to take something I can build in five minutes and turn it into
+
+16
+00:01:37,260 --> 00:01:43,480
+something we can ship to a working developer. But first, let's talk about why code completion
+
+17
+00:01:43,480 --> 00:01:50,480
+is really important. So it gives us a bunch of stuff. For starters, it gives us discoverability.
+
+18
+00:01:51,560 --> 00:01:58,560
+So we use a huge number of libraries and modules in our code, and code completion lets us discover
+
+19
+00:01:58,560 --> 00:02:04,320
+what APIs are available in our code editor without having to page over to the documentation.
+
+20
+00:02:04,320 --> 00:02:09,240
+It gives us speed because we can type a few characters and hit the tab key rather than
+
+21
+00:02:09,240 --> 00:02:14,480
+taking the time to spell initialization correctly for the fifth time this function. It gives
+
+22
+00:02:14,480 --> 00:02:19,160
+us confidence that what we're doing is right because there are whole classes of bugs we
+
+23
+00:02:19,160 --> 00:02:24,520
+can spot and fix or avoid entirely because the code completer warned us. And for all
+
+24
+00:02:24,520 --> 00:02:29,840
+these reasons, it feels good to use. It lets us stay in that flow state that as programmers
+
+25
+00:02:29,840 --> 00:02:35,400
+is where we want to be. So code completion is a pretty essential part of any modern developer
+
+26
+00:02:35,400 --> 00:02:41,800
+workflow. But why did I end up building one of these beasts myself? Well, this is because
+
+27
+00:02:41,800 --> 00:02:45,640
+I am one of the original creators of Anvil, which is a framework for building full stack
+
+28
+00:02:45,800 --> 00:02:50,360
+applications entirely in Python. So that's Python running in the web browser, Python
+
+29
+00:02:50,360 --> 00:02:55,560
+running on the server, even a Python user interface toolkit. And more to the point,
+
+30
+00:02:55,560 --> 00:02:59,280
+we have an online editor for apps built with this framework with a drag and drop designer
+
+31
+00:02:59,280 --> 00:03:04,600
+for building your user interface, but also an online code editor for writing the Python
+
+32
+00:03:04,600 --> 00:03:09,120
+code that will run in the web browser to drive that user interface, as well as the code that
+
+33
+00:03:09,120 --> 00:03:13,960
+will run on the server, setting up a built-in database, and of course a built-in hosting
+
+34
+00:03:13,960 --> 00:03:19,920
+platform so you don't need to know about DevOps or JavaScript or HTML. You can build
+
+35
+00:03:19,920 --> 00:03:25,360
+and deploy a web application even if all you know is a bit of Python. Now, obviously, to
+
+36
+00:03:25,360 --> 00:03:32,360
+pull this off, we need good code completion. And there are some off-the-shelf code completion
+
+37
+00:03:32,560 --> 00:03:38,640
+systems, but we had a couple of specific requirements. One is that this is a full stack framework,
+
+38
+00:03:38,640 --> 00:03:42,840
+so our completer needs to know about some stuff outside your code. It needs to know
+
+39
+00:03:43,000 --> 00:03:47,920
+about what components, what UI components are on your web page. It needs to know about
+
+40
+00:03:47,920 --> 00:03:51,960
+the schema of your built-in database. And okay, we could have hacked that in, but the
+
+41
+00:03:51,960 --> 00:03:57,840
+real kicker is that this is an online editor in the browser. And when a programmer is typing,
+
+42
+00:03:57,840 --> 00:04:02,720
+there is just not a lot of time between keystrokes. You do not have 300 milliseconds to send your
+
+43
+00:04:02,720 --> 00:04:08,000
+code to the server, run it through a completion engine, and send the results back. So we ended
+
+44
+00:04:08,000 --> 00:04:13,640
+up building our own, and that is how I ended up on the journey that I'm sharing with you
+
+45
+00:04:13,640 --> 00:04:20,640
+today. So if we are building a code completer, what is our goal? Well, we are here to answer
+
+46
+00:04:21,840 --> 00:04:27,960
+one question, and that is, what is the programmer going to type next? And to do that, we need
+
+47
+00:04:27,960 --> 00:04:34,560
+to understand the program that they are writing. And to understand how we do that, I'm going
+
+48
+00:04:34,560 --> 00:04:40,840
+to have to take a brief tour into how Python compiles our code. So when you run a Python
+
+49
+00:04:40,840 --> 00:04:46,800
+program, the Python interpreter reads your .py file and follows the instructions contained
+
+50
+00:04:46,800 --> 00:04:53,440
+within. Now, it doesn't actually seek through your file byte by byte reading each statement
+
+51
+00:04:53,440 --> 00:04:57,920
+as it executes it. That would be a very inefficient way to run your code. So instead, it does
+
+52
+00:04:57,920 --> 00:05:04,120
+something called parsing, where it reads all of your source up front and then turns it
+
+53
+00:05:04,120 --> 00:05:11,120
+into a more tractable representation. So it feeds this text to a bit of code called
+
+54
+00:05:11,200 --> 00:05:17,720
+a parser, which will then generate something called an abstract syntax tree. Here's one.
+
+55
+00:05:17,720 --> 00:05:24,720
+So this is another representation of the same code. It's a set of objects, and it's much
+
+56
+00:05:25,120 --> 00:05:29,400
+easier to work with. You can see we've got a function definition, it's got a name, it's
+
+57
+00:05:29,400 --> 00:05:33,620
+got some arguments, it's got a body that's a list of statements. The first statement
+
+58
+00:05:33,620 --> 00:05:39,420
+is an assignment. It's assigning to a variable named message. It's assigning a string value,
+
+59
+00:05:39,420 --> 00:05:44,220
+hello world. And then we've got a function call that's calling a function named alert
+
+60
+00:05:44,220 --> 00:05:49,540
+with one argument, and that is the variable named message. And this is much, much easier
+
+61
+00:05:49,540 --> 00:05:53,140
+to work with from code. It's just a bunch of objects. You can walk over it, you can
+
+62
+00:05:53,140 --> 00:05:57,220
+walk over it, execute it directly. You can generate byte code. You can do all sorts of
+
+63
+00:05:57,220 --> 00:06:03,860
+stuff. Now, as an aside, parsing is actually really, really cool. That parser wasn't even
+
+64
+00:06:03,860 --> 00:06:09,580
+written by a human being. Instead, if you go to the Python documentation, you will find
+
+65
+00:06:09,580 --> 00:06:15,140
+something called a grammar file, and that is a textual description of the syntax of
+
+66
+00:06:15,140 --> 00:06:21,620
+the Python language. So here's how it describes an if statement. So it defines an if statement
+
+67
+00:06:21,620 --> 00:06:28,780
+as the word if followed by an expression, followed by a colon, and then a block of code,
+
+68
+00:06:28,780 --> 00:06:33,860
+and then either an elif statement or an else block or nothing at all. Those square brackets
+
+69
+00:06:33,860 --> 00:06:38,900
+mean the else block is optional. And likewise, an elif statement is the word elif, then an
+
+70
+00:06:38,900 --> 00:06:43,660
+expression, then a colon, then a block, then another elif statement or maybe an else block
+
+71
+00:06:43,660 --> 00:06:48,260
+or nothing at all. And if you look through the grammar file, there are pages and pages
+
+72
+00:06:48,260 --> 00:06:54,980
+of this stuff defining every piece of syntax that could go into a valid Python program.
+
+73
+00:06:54,980 --> 00:06:59,320
+And what you can do is you can feed this textual description into something called a parser
+
+74
+00:06:59,320 --> 00:07:06,060
+generator, and it will output code for a parser. And remember, the parser is the program that
+
+75
+00:07:06,060 --> 00:07:12,580
+takes our source code and produces an abstract syntax tree. So we're reading in a text file
+
+76
+00:07:12,580 --> 00:07:17,980
+and spitting out code for a program that will read in a text file and spit out an abstract
+
+77
+00:07:18,020 --> 00:07:23,580
+syntax tree. It's all very meta, and it's enough to give you a little bit of a headache.
+
+78
+00:07:23,580 --> 00:07:27,900
+But fortunately, as Python programmers, we don't have to engage with all this complexity
+
+79
+00:07:27,900 --> 00:07:33,720
+because the parser functionality is exposed to us out of the box as part of Python's standard
+
+80
+00:07:33,720 --> 00:07:40,860
+library using the AST module. So this is a module you can import, and then you can call
+
+81
+00:07:40,860 --> 00:07:47,140
+AST.parse. You can feed it a string of Python code, and it will give you an abstract syntax
+
+82
+00:07:47,140 --> 00:07:54,140
+tree. You can print it out. It looks a bit like this. You can see we've got a very small
+
+83
+00:07:54,660 --> 00:08:00,300
+Python module here with a body with one statement. That statement is an assignment. Its target
+
+84
+00:08:00,300 --> 00:08:06,340
+is the variable named x, and the value we're assigning is the constant value 42. And this
+
+85
+00:08:06,340 --> 00:08:10,620
+is, yeah, this is a set of objects. It's much easier to work with. It's all extremely cool.
+
+86
+00:08:10,620 --> 00:08:16,900
+But I'm pretty sure I was supposed to be talking about code completion somewhere in here. Fortunately,
+
+87
+00:08:16,900 --> 00:08:23,900
+everything is our magic bullet for code completion because if you are building a code completer,
+
+88
+00:08:24,260 --> 00:08:31,260
+you are facing a half-written program with a cursor somewhere in the middle of it. And
+
+89
+00:08:31,260 --> 00:08:36,940
+it's your job to answer the question, you know, what the program is going to type next.
+
+90
+00:08:36,940 --> 00:08:41,740
+And to do this, you need to understand what's going on in the program around where the cursor
+
+91
+00:08:41,740 --> 00:08:48,460
+is to work out what the valid next moves might be. And this is a pretty daunting task.
+
+92
+00:08:48,460 --> 00:08:54,800
+If you're looking at this as a set of text, you might want to examine byte by byte. But
+
+93
+00:08:54,800 --> 00:08:58,780
+if we have a parser and we can convert it into a more tractable format, well, now we're
+
+94
+00:08:58,780 --> 00:09:04,220
+cooking on gas. So what we can do is we can replace this cursor with a special symbol
+
+95
+00:09:04,220 --> 00:09:10,140
+and feed this to a parser. And now we have an AST representing that code, and somewhere
+
+96
+00:09:10,220 --> 00:09:17,220
+in that AST is our cursor symbol. And now we can walk through these objects. We have
+
+97
+00:09:18,140 --> 00:09:22,500
+a predigested idea of what the code is doing. We can build up a representation of what's
+
+98
+00:09:22,500 --> 00:09:28,020
+going on so that by the time we encounter the cursor, we know what's going on and we
+
+99
+00:09:28,020 --> 00:09:33,580
+can offer the programmer contextually appropriate completions. So we could say, well, here,
+
+100
+00:09:33,580 --> 00:09:38,380
+we've got a function definition. Okay, so we've got some arguments. So we have the local
+
+101
+00:09:38,420 --> 00:09:42,620
+variables, self and event tags. We know they exist. We've seen an assignment to the variable
+
+102
+00:09:42,620 --> 00:09:47,340
+message so we know the variable message exists. We've got a function called arguments. Oh,
+
+103
+00:09:47,340 --> 00:09:53,020
+there's our cursor. Well, I guess we might want to offer those local variables as code
+
+104
+00:09:53,020 --> 00:10:00,020
+completion options. So that's how it works in theory. Let's build one. So here I have
+
+105
+00:10:01,580 --> 00:10:08,300
+open in the Anvil editor. I have a running web application right over here. So this is
+
+106
+00:10:08,300 --> 00:10:14,380
+using the code mirror, code editor. And every time I trigger the code completion in this
+
+107
+00:10:14,380 --> 00:10:20,340
+editor, it's going to call this complete function. And whenever it returns, it's going to offer
+
+108
+00:10:20,340 --> 00:10:25,460
+me its code completion options. So if I trigger it here, I am going to get some text because
+
+109
+00:10:25,460 --> 00:10:32,260
+that's what was hard coded. And if we look at our print output, we can see we've got
+
+110
+00:10:32,420 --> 00:10:39,420
+the source code here with the cursor symbol where that cursor was. So we know what we
+
+111
+00:10:39,940 --> 00:10:45,460
+want to do next. We want to parse this. Let's get an abstract syntax tree by calling ast.parse
+
+112
+00:10:45,460 --> 00:10:52,460
+on that text. Let's dump that out onto standard output. Now let's restart this and run it
+
+113
+00:10:55,060 --> 00:11:01,220
+again. Okay, let's trigger our code completion. And in the app console, we can see, oh, a
+
+114
+00:11:01,220 --> 00:11:08,220
+rather poorly formatted ast. Let's use a new option from Python 3.9. And now we can
+
+115
+00:11:10,780 --> 00:11:17,020
+get a nicely indented ast. And see, we can see we've got a module with a body with an
+
+116
+00:11:17,020 --> 00:11:22,180
+assignment to the variable x and then assignment to the variable y and then assignment to the
+
+117
+00:11:22,180 --> 00:11:29,180
+variable z and its value is our cursor symbol. So we could just walk through the statements
+
+118
+00:11:29,180 --> 00:11:34,100
+in this module and build up a representation of what variables are hanging around. We
+
+119
+00:11:34,100 --> 00:11:38,740
+want to keep a set of what variables are in scope to build that up. So we're going to
+
+120
+00:11:38,740 --> 00:11:42,180
+start that. It's going to be a set of strings with the variable names. And then we go just
+
+121
+00:11:42,180 --> 00:11:49,180
+for each statement in the body of that module object. Now we only really care about these
+
+122
+00:11:50,780 --> 00:11:57,780
+assign statements. So we'll go if the type of that statement is ast.assign, we'll go
+
+123
+00:11:59,700 --> 00:12:04,580
+then. Now we have a couple of things to do. The first thing is that we now know that this
+
+124
+00:12:04,580 --> 00:12:11,580
+variable exists because it's been assigned to. So let's get the name of that variable.
+
+125
+00:12:12,820 --> 00:12:16,500
+First target. We're not dealing with multiple targets. No tuple destructuring in this demo.
+
+126
+00:12:16,500 --> 00:12:21,260
+Grab its ID. Okay. And now we can just take the scope and we can add that variable name
+
+127
+00:12:21,260 --> 00:12:26,740
+to the set of variables we know exists. Okay. Now the second thing we want to do is check
+
+128
+00:12:26,740 --> 00:12:33,360
+if we hit the cursor. So let's check the value. If the type of the value of this assignment
+
+129
+00:12:33,360 --> 00:12:40,360
+is a name object and the ID is this cursor symbol, then we've just hit the cursor. We
+
+130
+00:12:45,260 --> 00:12:51,180
+want to offer code completion. Now we already have a set of all the variables that are in
+
+131
+00:12:51,180 --> 00:12:56,140
+scope right now. So that makes a perfectly valid list of completions. Let's just make
+
+132
+00:12:56,140 --> 00:13:01,940
+a sorted list of everything that is currently in scope at the moment we hit the cursor.
+
+133
+00:13:01,940 --> 00:13:08,540
+And then instead of our hard coded list, we can return that. And of course if we don't
+
+134
+00:13:08,540 --> 00:13:13,740
+hit the cursor, this will raise an exception. So let's have a fail safe, set that to an
+
+135
+00:13:13,740 --> 00:13:20,740
+empty list. Okay. If we go here and we trigger the completer here, we will be offered those
+
+136
+00:13:21,020 --> 00:13:26,100
+variables. So we have just built a code completer that passes our code, walks through it, builds
+
+137
+00:13:26,100 --> 00:13:30,580
+up a representation of what's going on, and then offers us contextually appropriate completions.
+
+138
+00:13:30,580 --> 00:13:35,820
+And that was barely ten lines of code. Let's get a little bit more fancy. Let's talk about
+
+139
+00:13:35,820 --> 00:13:42,100
+functions. So I've got a function here that's got two arguments, foo and bar. And if I do
+
+140
+00:13:42,100 --> 00:13:48,620
+an auto completion inside this function, well, now I'm inside the scope of this function.
+
+141
+00:13:48,620 --> 00:13:53,980
+I have access to those global variables, but I also have a couple of new variables, foo
+
+142
+00:13:53,980 --> 00:13:59,220
+and bar, because those were arguments to my function. Of course if I trigger the completion
+
+143
+00:13:59,220 --> 00:14:03,380
+now, I will see absolutely nothing at all because our completer doesn't know about
+
+144
+00:14:03,380 --> 00:14:08,020
+function definitions. So let's go look through the AST and work out what's going on. So this
+
+145
+00:14:08,020 --> 00:14:14,180
+module body has an assignment to x, has an assignment to y, and it's got a function definition.
+
+146
+00:14:14,180 --> 00:14:18,420
+Okay. Pay dirt. We've got some arguments. We've got a name. And we've got a body. There
+
+147
+00:14:18,420 --> 00:14:23,020
+we go. And here of course we have an assignment to z and we've got our cursor. So we just
+
+148
+00:14:23,020 --> 00:14:27,700
+want to walk that body like we've walked the function body. Now of course that means this
+
+149
+00:14:27,700 --> 00:14:33,140
+is going to have to be recursive, so let's factor this out into a recursive function.
+
+150
+00:14:33,140 --> 00:14:49,020
+So some tree, some scope, and then if elif type of statement is a function def, then
+
+151
+00:14:49,180 --> 00:14:55,700
+Well, we want to recursively walk that statement's body. Let's start with the scope we've already
+
+152
+00:14:55,700 --> 00:14:59,300
+got. Okay. Now we're doing this recursively. We can't just return the completions. We're
+
+153
+00:14:59,300 --> 00:15:03,140
+going to have to make that a global variable because we don't know where we're going to
+
+154
+00:15:03,140 --> 00:15:10,580
+find them. So let's initialize them at global scope. And then when we complete, we just
+
+155
+00:15:10,580 --> 00:15:16,540
+walk the body of the tree, our initial syntax tree, using that initial scope and return
+
+156
+00:15:16,540 --> 00:15:23,260
+whatever completions we happen to hit along the way. Let's run our code. So now if we
+
+157
+00:15:23,260 --> 00:15:28,100
+complete inside this function, we are being offered those variables. Okay, so our completer
+
+158
+00:15:28,100 --> 00:15:33,660
+now knows how to walk inside function definitions. We're getting somewhere, but it still doesn't
+
+159
+00:15:33,660 --> 00:15:37,740
+know that we're in a new scope now. We've got some different variables if our cursor
+
+160
+00:15:37,740 --> 00:15:42,700
+is here than if our cursor was outside. So let's go model that. So when we hit a function
+
+161
+00:15:42,700 --> 00:15:47,820
+definition, we create a new scope to represent what's going on inside the function. Of course,
+
+162
+00:15:47,820 --> 00:15:51,780
+it's going to start out with all the variables that already existed in the parent scope.
+
+163
+00:15:51,780 --> 00:15:56,740
+And then we want to add all that function's arguments to it. So again, let's look at the
+
+164
+00:15:56,740 --> 00:16:08,180
+AST. We've got these args, this arg object. So for arg in statement.args.args, we add
+
+165
+00:16:08,260 --> 00:16:12,740
+the argument name to the scope because that's now a variable that's in scope. And then when
+
+166
+00:16:12,740 --> 00:16:20,220
+we walk the body, we walk it in this new scope. So now if we run this, if we trigger our completion
+
+167
+00:16:20,220 --> 00:16:29,180
+here, we will explode. Line 26, oh yes, new scope dot add. Coding live on stage. It's
+
+168
+00:16:29,180 --> 00:16:40,220
+full of pitfalls. All right. We have a code completer that parses our code, walks through
+
+169
+00:16:40,220 --> 00:16:45,940
+it, builds up a representation of what's going on. It understands that inside a function
+
+170
+00:16:45,940 --> 00:16:50,900
+you're in a different scope to outside a function, and it's offering us those foo and bar as
+
+171
+00:16:50,900 --> 00:16:56,780
+completions. But if we complete outside, you see it's only offering us our global variables
+
+172
+00:16:56,780 --> 00:17:00,940
+because it knows we're not in a scope where those are valid options. So we have built
+
+173
+00:17:00,940 --> 00:17:05,500
+a completer. It parses our code. It walks through our AST. It builds up a representation
+
+174
+00:17:05,500 --> 00:17:09,660
+of what's going on. It offers suggestions that are contextually appropriate to where
+
+175
+00:17:09,660 --> 00:17:19,980
+the cursor is. Pretty cool, right? That was pretty simple. What's next? Well, there are
+
+176
+00:17:19,980 --> 00:17:24,700
+some pretty straightforward extensions we might make. For one thing, we might want to
+
+177
+00:17:24,900 --> 00:17:30,660
+teach it about some more syntax. Right now, our completer only understands assigned statements
+
+178
+00:17:30,660 --> 00:17:35,100
+and function definitions. We'd probably want to teach it about if statements and while
+
+179
+00:17:35,100 --> 00:17:42,900
+loops and arithmetic operators and the rest of Python syntax. We could make it track types.
+
+180
+00:17:42,900 --> 00:17:47,140
+So it's actually quite handy to know not just the variable that exists, but what type it
+
+181
+00:17:47,140 --> 00:17:51,940
+is so we could have our completer notice that, hey, there is a person class here and Alice
+
+182
+00:17:51,940 --> 00:17:56,860
+is an instance of person. So if I type Alice dot, it could say, did you mean Alice dot
+
+183
+00:17:56,860 --> 00:18:04,340
+name? We could give help with function arguments. We could notice that the cursor is inside
+
+184
+00:18:04,340 --> 00:18:08,220
+the arguments to a function call and we could pop up some helpful information about what
+
+185
+00:18:08,220 --> 00:18:13,020
+arguments that function takes. And so on and so forth. I mean, I'm not actually going to
+
+186
+00:18:13,020 --> 00:18:17,940
+implement any of these. We'd be here all day. But we wouldn't be here much longer than that
+
+187
+00:18:18,220 --> 00:18:24,540
+because these are all pretty straightforward extensions to what we've already set up. Unfortunately,
+
+188
+00:18:24,540 --> 00:18:29,820
+it's a bit more complicated than that. And the main and biggest source of complication
+
+189
+00:18:29,820 --> 00:18:35,660
+in code completing a Python program is that it is mathematically impossible to know in
+
+190
+00:18:35,660 --> 00:18:42,180
+advance what a program is going to do before you execute it. And in a language as dynamic
+
+191
+00:18:42,180 --> 00:18:47,420
+as Python, that means we don't know for sure what functions are going to be defined. We
+
+192
+00:18:47,660 --> 00:18:52,340
+don't know what variables will be valid. We don't know what attributes some module we import
+
+193
+00:18:52,340 --> 00:18:59,100
+is going to have. So we have to approximate. We have to guess. We have to cheat. And that's
+
+194
+00:18:59,100 --> 00:19:02,980
+okay because building a code completer is a little bit like building the graphics to
+
+195
+00:19:02,980 --> 00:19:09,220
+a computer game. You don't need perfect physical accuracy. You need to keep the human in front
+
+196
+00:19:09,220 --> 00:19:14,100
+of the computer happy. Here's an example of where we might want to cheat. So backward
+
+197
+00:19:14,100 --> 00:19:20,300
+references. This is a perfectly reasonable Python program. It has a function, doubles
+
+198
+00:19:20,300 --> 00:19:25,300
+everything in a list of numbers with this twice function. And if I'm editing this code,
+
+199
+00:19:25,300 --> 00:19:30,620
+I might reasonably expect code completion. Unfortunately, the cursor's up here. And if
+
+200
+00:19:30,620 --> 00:19:35,580
+we are scanning this AST from top to bottom, then at the point where we hit the cursor,
+
+201
+00:19:35,580 --> 00:19:41,220
+we haven't even seen the twice function. We have no idea it exists. So what can we do?
+
+202
+00:19:41,580 --> 00:19:46,880
+We can cheat. We can remember that the cursor was inside the double all function and then
+
+203
+00:19:46,880 --> 00:19:50,980
+carry on scanning the rest of our module and then go back afterwards and rescan that function
+
+204
+00:19:50,980 --> 00:19:56,020
+now that we know what's going on in our program. Is it a cheap dirty trick? Yes. Does it produce
+
+205
+00:19:56,020 --> 00:20:03,020
+surprisingly good order completion? Also yes. Cheating works. What about invalid code? Here
+
+206
+00:20:03,020 --> 00:20:10,020
+is a bigger challenge. So very often, if you are in the middle of editing a program,
+
+207
+00:20:13,620 --> 00:20:17,900
+your program's not going to be syntactically valid. So this is a very common situation.
+
+208
+00:20:17,900 --> 00:20:23,780
+You're editing on line three, but line two has a syntax error. And unfortunately, if
+
+209
+00:20:23,780 --> 00:20:30,060
+you feed an invalid program to AST.parse, you're going to get a syntax error exception
+
+210
+00:20:30,060 --> 00:20:36,620
+raised and that means you're not going to get an AST. Now this is enough information
+
+211
+00:20:36,620 --> 00:20:41,020
+to display a nifty red line and say, hey, syntax error on line two, you might want to
+
+212
+00:20:41,020 --> 00:20:45,820
+go sort that out. But we'd still actually like to provide a little bit more help with
+
+213
+00:20:45,820 --> 00:20:50,020
+the editing that's going on on line three. So there are a couple of approaches you can
+
+214
+00:20:50,020 --> 00:20:56,660
+take here. You could use some filthy, filthy hacks. You could notice the syntax error and
+
+215
+00:20:56,660 --> 00:21:01,780
+then try and massage that program text into something that will parse. Or you can use
+
+216
+00:21:01,780 --> 00:21:07,900
+a parser with error recovery. Now the idea behind error recovery is that you can feed
+
+217
+00:21:07,900 --> 00:21:14,900
+the parser a program that has a syntax error in it and it will still produce a partial
+
+218
+00:21:16,740 --> 00:21:22,180
+AST. Now of course, this is a syntactically invalid program. Somewhere in here, it's
+
+219
+00:21:22,180 --> 00:21:26,900
+going to throw its hands up and go, syntax error, I don't know what's going on. But
+
+220
+00:21:26,900 --> 00:21:32,380
+with luck, this approximation, because it is an approximation, will be good enough that
+
+221
+00:21:32,380 --> 00:21:36,140
+you can still walk over it and learn some things about the program. And hopefully what
+
+222
+00:21:36,140 --> 00:21:42,860
+you learn is enough to provide good auto-completion. Now as I've said before, Python's AST module
+
+223
+00:21:42,860 --> 00:21:48,940
+does not do error recovery. But that's all right. There are some alternative parsers
+
+224
+00:21:49,020 --> 00:21:55,660
+you can use. So Jedi is actually a full-fledged code completion system for Python. Or there
+
+225
+00:21:55,660 --> 00:22:01,220
+are alternative standalone parsers like TreeSitter and Laser and so on. Actually, the Anvil editor
+
+226
+00:22:01,220 --> 00:22:05,460
+I've been showing you doesn't use any of these because when you write programs in Anvil,
+
+227
+00:22:05,460 --> 00:22:09,500
+you write Python code that runs in the web browser. We already make really heavy use
+
+228
+00:22:09,500 --> 00:22:16,500
+of the Sculpt Python to JavaScript compiler. And so we use Sculpt's parser to do our code
+
+229
+00:22:17,220 --> 00:22:23,540
+completion. Unfortunate consequence, Sculpt's parser is not good at error recovery. So we
+
+230
+00:22:23,540 --> 00:22:27,660
+lean quite heavily on those filthy hacks I was talking about earlier. But I am one of
+
+231
+00:22:27,660 --> 00:22:32,340
+the Sculpt maintainers. We are rebuilding the Sculpt parser. It will be good at error
+
+232
+00:22:32,340 --> 00:22:38,180
+recovery, I promise. Watch this space. Okay. Let's finish up with something a little bit
+
+233
+00:22:38,180 --> 00:22:43,860
+more philosophical. Let's talk about types. So we already know that keeping track of the
+
+234
+00:22:44,020 --> 00:22:48,380
+variables is useful in a codecomputer. So we can say, hey, Alice, it's an instance of
+
+235
+00:22:48,380 --> 00:22:55,380
+person. And that means that it has a name attribute. But what exactly is a type? Well,
+
+236
+00:22:56,420 --> 00:23:02,420
+as working Python programmers, you might say to me, the type of an object is its class,
+
+237
+00:23:02,420 --> 00:23:07,900
+dummy. It's what I get if I call the type function on it. Or you might say it's what
+
+238
+00:23:07,900 --> 00:23:14,060
+the type annotations say. Yes, okay, whatever. As code completion authors, it's actually
+
+239
+00:23:14,060 --> 00:23:18,900
+much more useful to think of the academic definition of a type, which is to say anything
+
+240
+00:23:18,900 --> 00:23:25,900
+we know in advance about a value. So here, sure, we know that we got the value of the
+
+241
+00:23:26,380 --> 00:23:32,140
+variable Alice by calling the person constructor. And we know that the person constructor, when
+
+242
+00:23:32,140 --> 00:23:36,260
+it's called, returns something that has a name attribute. So yeah, fair game. Use it
+
+243
+00:23:36,420 --> 00:23:43,420
+in your codecompletion. But what about these values? They both have identical types as
+
+244
+00:23:43,420 --> 00:23:48,940
+far as the interpreter is concerned. They are both instances of the dict class. But
+
+245
+00:23:48,940 --> 00:23:52,420
+they have some crucial differences that might be useful to the programmer. If you're using
+
+246
+00:23:52,420 --> 00:23:58,900
+one of these things, we might want to offer completions for what items to look up. So
+
+247
+00:23:58,900 --> 00:24:03,900
+it's perfectly valid for our codecomputer to treat these two values as having different
+
+248
+00:24:03,900 --> 00:24:08,780
+types. Perfectly fine. Now, why am I banging on about this? Because I'm a web guy, and
+
+249
+00:24:08,780 --> 00:24:15,220
+the web sucks at this. All the time, we write code that hits some remote API, gets back
+
+250
+00:24:15,220 --> 00:24:22,220
+a blob of JSON, and then tries to look something up in the middle. And, of course, our codecomputer
+
+251
+00:24:22,740 --> 00:24:29,740
+doesn't stand a chance. It has no idea what's on the other end of that HTTP request or what
+
+252
+00:24:29,740 --> 00:24:34,680
+type of data it's going to return. Now, in AMBL, we deal with this by using function
+
+253
+00:24:34,680 --> 00:24:38,500
+calls to go from the client to the server. And because it's a full-stack framework, the
+
+254
+00:24:38,500 --> 00:24:43,540
+codecomputer knows about that server function. It knows what type getUser returns, so we
+
+255
+00:24:43,540 --> 00:24:48,620
+can provide useful codecompletion in client code. But for traditional web development,
+
+256
+00:24:48,620 --> 00:24:53,500
+we're writing two completely different programs that know almost nothing about each other.
+
+257
+00:24:53,500 --> 00:25:00,500
+And we get no codecompletion on our application's main data model. It's bonkers. Now, good news
+
+258
+00:25:00,980 --> 00:25:07,420
+is that things are getting better with projects like OpenAPI that allow a server to specify
+
+259
+00:25:07,420 --> 00:25:12,980
+what type of data will be received and transmitted for a particular URL. Unfortunately, this
+
+260
+00:25:12,980 --> 00:25:17,820
+being the web platform, we have chosen something with maximum complexity. You can write out
+
+261
+00:25:17,820 --> 00:25:23,900
+an extremely long YAML file describing the types of your HTTP endpoint, or you can use
+
+262
+00:25:23,900 --> 00:25:28,540
+a whole bunch of automation, which means more build chain for you. I know you love it. You
+
+263
+00:25:28,540 --> 00:25:32,780
+can write your code in fast API, then automate the extraction of an OpenAPI specification
+
+264
+00:25:32,780 --> 00:25:35,780
+from that, and then automate the ingestion of that into Swagger so that you generate
+
+265
+00:25:35,780 --> 00:25:38,420
+an up-to-date client library, then automate the ingestion of that, make sure it lands
+
+266
+00:25:38,420 --> 00:25:45,420
+in your webpack build config correctly. But at least things are getting better. Slowly.
+
+267
+00:25:46,100 --> 00:25:50,320
+But now I'm really on my hobby horse, so it's probably time for me to wrap this up. Today
+
+268
+00:25:50,320 --> 00:25:55,900
+we have learned that codecompletion isn't magic. It's so simple. You have seen me build
+
+269
+00:25:55,900 --> 00:26:02,900
+a codecompletor live on this stage. We have learned that codecompletors cheat. And that's
+
+270
+00:26:03,340 --> 00:26:10,340
+okay because our only job is to keep the programmer happy. We've learned that parsing is awesome,
+
+271
+00:26:10,400 --> 00:26:14,860
+and so is working in a programming language where that functionality is available at our
+
+272
+00:26:14,860 --> 00:26:19,820
+fingertips as part of the standard library. And I hope we've learned that the web needs
+
+273
+00:26:19,820 --> 00:26:25,620
+better codecompletion. Come on, folks. It's 2022. Sort yourselves out. I have been Reddith
+
+274
+00:26:25,620 --> 00:26:28,820
+Luff. This has been Building a Python Codecompletor. Thank you very much.
+

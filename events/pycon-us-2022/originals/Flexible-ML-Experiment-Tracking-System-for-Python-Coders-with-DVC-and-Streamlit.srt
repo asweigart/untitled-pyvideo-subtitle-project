@@ -1,0 +1,1436 @@
+1
+00:00:00,000 --> 00:00:11,000
+Hello and welcome.
+
+2
+00:00:11,000 --> 00:00:18,280
+So our next presentation and the last one before lunch is we have Antoine Toubon who
+
+3
+00:00:18,280 --> 00:00:23,680
+is going to be talking about flexible machine learning experiment tracking system for Python
+
+4
+00:00:23,680 --> 00:00:27,880
+coders with the VCM Streamlit.
+
+5
+00:00:27,880 --> 00:00:30,880
+Let's welcome Antoine with a round of applause.
+
+6
+00:00:30,880 --> 00:00:37,040
+Hi everybody.
+
+7
+00:00:37,040 --> 00:00:38,040
+Thank you for being here.
+
+8
+00:00:38,040 --> 00:00:43,640
+Today I'm going to talk about ML experiment tracking system.
+
+9
+00:00:43,640 --> 00:00:46,920
+A few words about me.
+
+10
+00:00:46,920 --> 00:00:47,920
+My name is Antoine Toubon.
+
+11
+00:00:47,920 --> 00:00:48,920
+I'm French.
+
+12
+00:00:48,920 --> 00:00:53,360
+I live and work in Paris.
+
+13
+00:00:54,360 --> 00:01:00,160
+I work in a consulting firm called Cicara and what we do is that we build a solution
+
+14
+00:01:00,160 --> 00:01:04,920
+for our clients, AI solutions mostly.
+
+15
+00:01:04,920 --> 00:01:11,960
+I am a data scientist for four years, five years now and I mostly work on computer vision
+
+16
+00:01:11,960 --> 00:01:12,960
+problems.
+
+17
+00:01:12,960 --> 00:01:20,200
+So today I'm going to talk about machine learning engineering.
+
+18
+00:01:20,200 --> 00:01:26,640
+At Cicara the official job title is data scientist but actually what we do is more machine learning
+
+19
+00:01:26,640 --> 00:01:34,840
+engineer because we do data science, we read research paper, we implement models, we run
+
+20
+00:01:34,840 --> 00:01:38,280
+experiments, but we also build what is around.
+
+21
+00:01:38,280 --> 00:01:45,160
+We build APIs, we integrate models in mobile app or stuff like that.
+
+22
+00:01:45,160 --> 00:01:52,160
+So it's in between data science and software engineering and in software engineering we
+
+23
+00:01:52,160 --> 00:01:55,640
+have a lot of tools.
+
+24
+00:01:55,640 --> 00:02:01,720
+I mean the software engineering is very mature and you can leverage on existing best tools
+
+25
+00:02:01,720 --> 00:02:04,200
+and best practices.
+
+26
+00:02:04,200 --> 00:02:11,600
+So on the other hand machine learning engineering is more than just software engineering.
+
+27
+00:02:11,600 --> 00:02:13,900
+There is a lot of things that you need to do.
+
+28
+00:02:13,900 --> 00:02:18,700
+You need to track the data alongside the code.
+
+29
+00:02:18,700 --> 00:02:22,000
+It's more an exploratory work.
+
+30
+00:02:22,000 --> 00:02:31,420
+You have to try and test things and as you train models you need tools to investigate
+
+31
+00:02:31,420 --> 00:02:36,020
+them, to touch them, to see how it works.
+
+32
+00:02:36,020 --> 00:02:41,180
+So today I'm going to talk about ML experiment tracking system.
+
+33
+00:02:41,180 --> 00:02:49,820
+In most machine learning projects you have this loop when somehow you have some data
+
+34
+00:02:49,820 --> 00:02:57,580
+and you want to try some models so you train your model, then you evaluate it and it provides
+
+35
+00:02:57,580 --> 00:02:59,380
+you with feedbacks.
+
+36
+00:02:59,380 --> 00:03:05,580
+So either you modify the data or the model, you change the hyperparameters or things like
+
+37
+00:03:05,580 --> 00:03:09,500
+that and you do it again.
+
+38
+00:03:09,500 --> 00:03:18,260
+For these reasons you need an experiment tracking system that allows you to track your experiments.
+
+39
+00:03:18,260 --> 00:03:24,620
+So you want to have a record of which data did you use, which code, which parameters.
+
+40
+00:03:24,620 --> 00:03:30,340
+You want to be able to compare experiments and as the project is going on you are going
+
+41
+00:03:31,340 --> 00:03:38,540
+more and more experiments so you need to organize them so that it's easy to search.
+
+42
+00:03:38,540 --> 00:03:44,960
+Reproducibility is very important because when you have a model that proves to be good
+
+43
+00:03:44,960 --> 00:03:52,340
+you want to be able to rebuild it in order to be able to iterate over it.
+
+44
+00:03:52,340 --> 00:03:59,100
+And finally it's teamwork so you need tools to share the knowledge that you have when
+
+45
+00:03:59,180 --> 00:04:02,100
+you run these experiments.
+
+46
+00:04:02,100 --> 00:04:10,220
+So today I'm not going to talk about all these solutions which are great but I call them
+
+47
+00:04:10,220 --> 00:04:19,220
+monolithic because they provide you with all you need to do a ML project but it's not very
+
+48
+00:04:19,220 --> 00:04:23,740
+easy to customize them.
+
+49
+00:04:23,740 --> 00:04:31,820
+Instead ICCARA I think we are good Python developers so instead I propose to build an
+
+50
+00:04:31,820 --> 00:04:38,300
+ML experiment tracking system with smaller bricks which are DVC and streamlit and it
+
+51
+00:04:38,300 --> 00:04:45,660
+will allow you to build a system that is fully customizable.
+
+52
+00:04:45,660 --> 00:04:49,460
+So let's do machine learning.
+
+53
+00:04:49,460 --> 00:04:57,580
+For the purpose of this talk I will use this cats and dogs image classification program.
+
+54
+00:04:57,580 --> 00:05:04,740
+It's adapted from a TensorFlow tutorial and basically the goal is to build a model that
+
+55
+00:05:04,740 --> 00:05:10,140
+given an input image says whether it's a cat or a dog.
+
+56
+00:05:11,140 --> 00:05:14,820
+A few words about the dataset.
+
+57
+00:05:14,820 --> 00:05:16,980
+It's available in TensorFlow dataset.
+
+58
+00:05:16,980 --> 00:05:24,740
+It's 3000 images and here you can see some examples of cats and dogs.
+
+59
+00:05:24,740 --> 00:05:29,180
+So how do we do this?
+
+60
+00:05:29,180 --> 00:05:36,260
+We are going to build a training pipeline which has four steps.
+
+61
+00:05:36,380 --> 00:05:38,980
+The first step is to download the dataset.
+
+62
+00:05:38,980 --> 00:05:42,380
+Then we have to prepare the dataset.
+
+63
+00:05:42,380 --> 00:05:48,740
+We need to split the dataset in three parts, train, validation and test set.
+
+64
+00:05:48,740 --> 00:05:53,780
+And then I need to train a model over the train and val sets.
+
+65
+00:05:53,780 --> 00:05:59,980
+And finally I need to evaluate this model so that I get a metric to know if it's working
+
+66
+00:05:59,980 --> 00:06:03,620
+good.
+
+67
+00:06:03,660 --> 00:06:07,100
+I'm going quickly over the script.
+
+68
+00:06:07,100 --> 00:06:11,620
+Basically it's adapted from the TensorFlow tutorial you can find online.
+
+69
+00:06:11,620 --> 00:06:17,620
+So the train script basically what it does is it imports parameters.
+
+70
+00:06:17,620 --> 00:06:19,860
+It loads the data.
+
+71
+00:06:19,860 --> 00:06:28,020
+It defines a model here and then it trains here.
+
+72
+00:06:28,020 --> 00:06:31,540
+The training, there are two steps during the training.
+
+73
+00:06:31,540 --> 00:06:35,780
+The first is frozen and then it's unfrozen.
+
+74
+00:06:38,820 --> 00:06:46,380
+So let's say we want to run an experiment.
+
+75
+00:06:46,380 --> 00:06:48,180
+So what do we need to do?
+
+76
+00:06:48,180 --> 00:06:50,300
+First we need to set up the experiment.
+
+77
+00:06:50,300 --> 00:06:55,220
+So we need to define which model we want to use on which data, define the parameters and
+
+78
+00:06:55,220 --> 00:06:56,660
+so on.
+
+79
+00:06:56,740 --> 00:07:03,140
+To do that I can track whatever I do with using GitHub because it's code.
+
+80
+00:07:03,140 --> 00:07:07,980
+Basically it's code or it's configuration files that I can track with Git.
+
+81
+00:07:07,980 --> 00:07:10,980
+So I'm happy with this step.
+
+82
+00:07:10,980 --> 00:07:13,340
+Then I need to run the pipeline.
+
+83
+00:07:13,340 --> 00:07:20,780
+To do that I need to run the script in the right order, which is, I'm not super happy
+
+84
+00:07:20,780 --> 00:07:26,860
+with that because it's easy to mix up steps.
+
+85
+00:07:26,860 --> 00:07:30,980
+And then I need to save the results because when I execute the training pipeline it will
+
+86
+00:07:30,980 --> 00:07:38,940
+produce files, for instance the model weights, the matrix files and so on.
+
+87
+00:07:38,940 --> 00:07:41,680
+So I need to put it somewhere.
+
+88
+00:07:41,680 --> 00:07:47,340
+And finally I need to keep track of the experiment itself.
+
+89
+00:07:47,340 --> 00:07:54,420
+Which model did they use, which parameters, which data and so on.
+
+90
+00:07:54,420 --> 00:07:58,140
+I need tools to do this properly.
+
+91
+00:07:58,140 --> 00:08:01,260
+So it's time to introduce DVC.
+
+92
+00:08:01,260 --> 00:08:06,460
+DVC stands for Data Version Control.
+
+93
+00:08:06,460 --> 00:08:10,460
+It's a Python library so you can just pip install it.
+
+94
+00:08:10,620 --> 00:08:18,820
+What it does is that it allows you to track huge files that you don't want to version
+
+95
+00:08:18,820 --> 00:08:23,620
+with Git because it's too heavy.
+
+96
+00:08:23,620 --> 00:08:30,020
+It will replace this huge file by small metadata files that you can track with Git.
+
+97
+00:08:30,020 --> 00:08:36,540
+So it's very similar to Git LFS for instance.
+
+98
+00:08:36,540 --> 00:08:38,420
+The API is very similar to Git.
+
+99
+00:08:38,420 --> 00:08:43,220
+So if you know how to use Git it's pretty much the same with DVC.
+
+100
+00:08:43,220 --> 00:08:48,100
+Instead of Git add your file you just DVC add your file.
+
+101
+00:08:48,100 --> 00:09:02,460
+And there is also a remote data storage mechanism so you can DVC push pull to save your results.
+
+102
+00:09:02,500 --> 00:09:08,100
+What is really good with DVC is this reproducible pipeline feature.
+
+103
+00:09:08,100 --> 00:09:14,540
+So in DVC you can track the data but you can also track the way you produce data.
+
+104
+00:09:14,540 --> 00:09:26,380
+Say for instance here I have a two stage pipeline that will consume file A, B, C and in the
+
+105
+00:09:26,380 --> 00:09:30,100
+end will compute a file E.
+
+106
+00:09:30,340 --> 00:09:34,180
+All I need to do is to define the pipeline in the YAML file.
+
+107
+00:09:34,180 --> 00:09:37,660
+I just define the two stages.
+
+108
+00:09:37,660 --> 00:09:45,060
+To do that I give the command and I declare the dependencies and the output.
+
+109
+00:09:45,060 --> 00:09:51,340
+Whenever I want to execute the pipeline I just run DVC repro and this will resolve the
+
+110
+00:09:51,340 --> 00:09:55,580
+DAG so that it knows in which order to execute the stage.
+
+111
+00:09:55,580 --> 00:10:03,020
+It will execute the stages and it will track the input and output data with DVC.
+
+112
+00:10:03,020 --> 00:10:09,420
+There is also a caching mechanism so that whenever the dependencies of a stage didn't
+
+113
+00:10:09,420 --> 00:10:16,460
+change it will restore automatically the output so that it speeds up a little bit the pipeline
+
+114
+00:10:16,460 --> 00:10:18,620
+execution.
+
+115
+00:10:18,620 --> 00:10:23,860
+So let's go back to our training pipeline.
+
+116
+00:10:23,860 --> 00:10:27,980
+As before we have two more files.
+
+117
+00:10:27,980 --> 00:10:40,420
+Now I have a DVC.yml file in which I define the four stages of my pipelines.
+
+118
+00:10:40,420 --> 00:10:48,900
+I have a parameter file where I define all the parameters for my training pipeline and
+
+119
+00:10:48,940 --> 00:10:58,540
+This parameter I directly injected in the pipeline definition for instance here.
+
+120
+00:10:58,540 --> 00:11:05,300
+So let's say I want to give a second try to run my experiment.
+
+121
+00:11:05,300 --> 00:11:12,220
+The first step is pretty much the same but to modify the pipeline or parameters I directly
+
+122
+00:11:12,220 --> 00:11:16,260
+modify the DVC.yml and params.yml files.
+
+123
+00:11:16,260 --> 00:11:19,060
+To run the pipeline it's much more easy now.
+
+124
+00:11:19,060 --> 00:11:23,940
+I just run DVC repro and that's it.
+
+125
+00:11:23,940 --> 00:11:31,140
+To save the results I have nothing to do because DVC will automatically track the output data.
+
+126
+00:11:31,140 --> 00:11:39,660
+Now regarding the experiment tracking I'm still not happy with that because whenever
+
+127
+00:11:39,660 --> 00:11:46,140
+you execute a pipeline it will create metadata files that you can track with Git so the
+
+128
+00:11:46,140 --> 00:11:48,340
+experiment it's tracked.
+
+129
+00:11:48,340 --> 00:11:55,140
+You can access it with Git log but what you will get it's only the commit names and you
+
+130
+00:11:55,140 --> 00:11:57,260
+see all commits in your project.
+
+131
+00:11:57,260 --> 00:12:02,220
+You see experiment commits together with code commits so it's not very convenient.
+
+132
+00:12:02,220 --> 00:12:09,020
+The data is tracked but it's not very easy to access.
+
+133
+00:12:09,700 --> 00:12:19,620
+Another difference between classical software engineering is that when you do machine learning
+
+134
+00:12:19,620 --> 00:12:21,780
+it's not a linear work.
+
+135
+00:12:21,780 --> 00:12:26,820
+When you do classical software engineering it's mostly linear.
+
+136
+00:12:26,820 --> 00:12:34,820
+You have branches but when you code in your branch you do one commit after the other and
+
+137
+00:12:34,820 --> 00:12:36,980
+it's linear.
+
+138
+00:12:36,980 --> 00:12:44,340
+In data science whenever you train a model usually you train it with a lot of different
+
+139
+00:12:44,340 --> 00:12:48,540
+hyperparameters so it's not linear.
+
+140
+00:12:48,540 --> 00:13:00,180
+In DVC there is another feature which is called experiment that allows you to track experiment
+
+141
+00:13:00,180 --> 00:13:02,220
+in a non-linear way.
+
+142
+00:13:02,460 --> 00:13:11,340
+I will not enter into details but what you need to see here is that it will create commits
+
+143
+00:13:11,340 --> 00:13:16,180
+whenever you execute a pipeline and it will track them, these commits, with custom Git
+
+144
+00:13:16,180 --> 00:13:20,660
+references and it's not linear.
+
+145
+00:13:20,660 --> 00:13:34,300
+Since you have references for your experiment commits you also have commands to access them.
+
+146
+00:13:34,300 --> 00:13:41,820
+So let's say I want to see all the experiments from my repository.
+
+147
+00:13:41,820 --> 00:13:47,780
+I can run this command, dvc explist, and it will give me something like that.
+
+148
+00:13:47,900 --> 00:13:55,980
+Here you see the parent commit and here you have all the experiments that arise from it.
+
+149
+00:13:55,980 --> 00:14:06,540
+Now if I want to access the details of this experiment I just run dvc exp show and I can
+
+150
+00:14:06,540 --> 00:14:08,820
+provide the commit hash.
+
+151
+00:14:17,820 --> 00:14:21,820
+I need to compile first.
+
+152
+00:14:29,820 --> 00:14:31,820
+Here it goes.
+
+153
+00:14:31,820 --> 00:14:40,820
+Now I have the details of all the experiments that derive from this Git commit.
+
+154
+00:14:40,860 --> 00:14:48,860
+So I have the metrics, the accuracy, I have all the parameters and so on.
+
+155
+00:14:48,860 --> 00:14:59,300
+So let's get back to running an experiment.
+
+156
+00:14:59,300 --> 00:15:07,780
+Whenever I want to set up an experiment I just create a new run of the pipeline by overriding
+
+157
+00:15:07,780 --> 00:15:09,220
+some parameters.
+
+158
+00:15:09,620 --> 00:15:18,620
+So instead of running dvc repro I run dvc exp run and I use this set params option to override
+
+159
+00:15:18,620 --> 00:15:22,620
+whatever parameter I want to override.
+
+160
+00:15:22,620 --> 00:15:28,620
+There is a queue mechanism so I can flush the queue and execute all the experiments in it by running
+
+161
+00:15:28,620 --> 00:15:31,620
+dvc exp run run all.
+
+162
+00:15:32,020 --> 00:15:38,020
+In the end the output data will be automatically tracked by dvc.
+
+163
+00:15:40,020 --> 00:15:49,020
+Regarding the experiment tracking I can access all the experiment details by running dvc exp show.
+
+164
+00:15:51,020 --> 00:15:53,020
+So it's much better now.
+
+165
+00:15:53,420 --> 00:16:02,420
+Let's take a step back and let's have a look at the main experiment tracking system features.
+
+166
+00:16:02,420 --> 00:16:10,420
+So with dvc we are very good at logging experiment data on tracking the produced data.
+
+167
+00:16:10,420 --> 00:16:20,420
+It's also very good for reproducibility because whenever I want to rerun an experiment I just
+
+168
+00:16:20,820 --> 00:16:27,820
+have to check out the commit and run dvc repro and it will execute the experiment the same way.
+
+169
+00:16:29,820 --> 00:16:35,820
+Regarding the other features comparing experiments, organizing experiments and collaboration I
+
+170
+00:16:35,820 --> 00:16:38,820
+can do it in command line but it's not very convenient.
+
+171
+00:16:38,820 --> 00:16:42,820
+I need I could improve it with UI.
+
+172
+00:16:43,220 --> 00:16:48,220
+So it's time to introduce streamlit.
+
+173
+00:16:48,220 --> 00:16:55,220
+Streamlit as I say in the website it's a faster way to build and share data apps.
+
+174
+00:16:55,220 --> 00:16:58,220
+So it's a python library.
+
+175
+00:16:58,220 --> 00:17:03,220
+You can just pip install it and use it.
+
+176
+00:17:03,620 --> 00:17:13,620
+And what it does is that it allows you to build an app without knowledge of how to build a web application.
+
+177
+00:17:13,620 --> 00:17:21,620
+It's only python and it's very simple to understand how it works.
+
+178
+00:17:21,620 --> 00:17:28,620
+So as you may have noticed the slides I'm showing you are dynamic.
+
+179
+00:17:29,020 --> 00:17:34,020
+It's because I made the slides with streamlit.
+
+180
+00:17:36,020 --> 00:17:39,020
+So let's have a quick demo.
+
+181
+00:17:39,020 --> 00:17:44,020
+In streamlit you can display whatever you want.
+
+182
+00:17:44,020 --> 00:17:46,020
+So you can write text like that.
+
+183
+00:17:46,020 --> 00:17:49,020
+So here you see the rendering.
+
+184
+00:17:49,020 --> 00:17:55,020
+You can have more complex rendering for instance I don't know latex formula.
+
+185
+00:17:55,420 --> 00:18:00,420
+You can render images like that.
+
+186
+00:18:02,420 --> 00:18:07,420
+And you can render more complex data.
+
+187
+00:18:07,420 --> 00:18:18,420
+For instance let's say I have a data frame here.
+
+188
+00:18:18,820 --> 00:18:27,820
+You just run st.dataframe and it will show you this nice table.
+
+189
+00:18:27,820 --> 00:18:32,820
+So it's very easy to show whatever data you want to show in your web app.
+
+190
+00:18:32,820 --> 00:18:37,820
+And it's also easy to make interaction.
+
+191
+00:18:37,820 --> 00:18:47,820
+For instance let's say I want a slider.
+
+192
+00:18:48,820 --> 00:18:53,820
+So here I define a slider between 0 and 100.
+
+193
+00:18:53,820 --> 00:19:02,820
+And whenever I change the slider you see here the chosen value gets updated to 35.
+
+194
+00:19:02,820 --> 00:19:06,820
+And I write the result here which is here.
+
+195
+00:19:06,820 --> 00:19:10,820
+So whenever I change it it gets updated here.
+
+196
+00:19:10,820 --> 00:19:13,820
+So it's very easy to build interaction.
+
+197
+00:19:14,220 --> 00:19:19,220
+And it allows you to build things like that.
+
+198
+00:19:19,220 --> 00:19:30,220
+Let's say I want to investigate my model and I want to see on which images the model is not sure.
+
+199
+00:19:30,220 --> 00:19:35,220
+So the model it outputs a probability between 0 and 1 of being a cat or a dog.
+
+200
+00:19:35,220 --> 00:19:39,220
+0 being it's a cat and 1 it's a dog.
+
+201
+00:19:39,620 --> 00:19:46,620
+So let's say I want to see images where the model is pretty sure it's a cat.
+
+202
+00:19:46,620 --> 00:19:50,620
+So here I have such images.
+
+203
+00:19:50,620 --> 00:19:56,620
+And let's say I want to see images where the model is not sure.
+
+204
+00:19:56,620 --> 00:19:59,620
+So close to 50%.
+
+205
+00:19:59,620 --> 00:20:06,620
+And here you can see there are three images that correspond to the slider values.
+
+206
+00:20:07,020 --> 00:20:12,020
+And this one is interesting because there is a cat and a dog on the same image.
+
+207
+00:20:14,020 --> 00:20:23,020
+So to build this streamlit application in the right part it's only a few lines of code that are here.
+
+208
+00:20:23,020 --> 00:20:28,020
+So what I do is that I load the predictions from a CSV file.
+
+209
+00:20:28,020 --> 00:20:33,020
+Then I define a slider with a double entry here.
+
+210
+00:20:33,420 --> 00:20:40,420
+And finally I get the two thresholds and I use them to filter the prediction.
+
+211
+00:20:40,420 --> 00:20:47,420
+And I use st.image to plot the corresponding images.
+
+212
+00:20:47,420 --> 00:20:50,420
+So very easy to use.
+
+213
+00:20:50,420 --> 00:20:52,420
+And I can do a lot more.
+
+214
+00:20:52,420 --> 00:20:59,420
+For instance I can directly test the model on whatever image I want.
+
+215
+00:20:59,820 --> 00:21:04,820
+So for instance here I have an upload widget.
+
+216
+00:21:04,820 --> 00:21:09,820
+So let's say I want to try it on a cat.
+
+217
+00:21:10,820 --> 00:21:13,820
+And here the model says it's a cat.
+
+218
+00:21:13,820 --> 00:21:15,820
+And it's pretty sure it's a cat.
+
+219
+00:21:15,820 --> 00:21:17,820
+So it's working well.
+
+220
+00:21:17,820 --> 00:21:21,820
+Now let's say I want to try my model on edge cases.
+
+221
+00:21:21,820 --> 00:21:24,820
+Let's take this one for instance.
+
+222
+00:21:25,220 --> 00:21:30,220
+So obviously I don't have Lion in the train or the test set.
+
+223
+00:21:30,220 --> 00:21:39,220
+And with streamlit it's very easy to build a UI to test the model on whatever image you want.
+
+224
+00:21:39,220 --> 00:21:48,220
+So here I get the image and the model says surprisingly that it's pretty sure it's a dog.
+
+225
+00:21:51,220 --> 00:21:53,220
+How do I do that?
+
+226
+00:21:53,620 --> 00:21:56,620
+The code is a bit longer but not that long.
+
+227
+00:21:58,620 --> 00:22:01,620
+I have a function that loads the model with stanza flow.
+
+228
+00:22:01,620 --> 00:22:08,620
+I get the upload widget with st.fileuploader.
+
+229
+00:22:08,620 --> 00:22:11,620
+I get the uploaded image in here.
+
+230
+00:22:11,620 --> 00:22:13,620
+It's a pillow image.
+
+231
+00:22:14,020 --> 00:22:25,020
+And if I upload the file then I open the file and I pass it to the model and print the prediction.
+
+232
+00:22:25,020 --> 00:22:27,020
+And that's it.
+
+233
+00:22:33,020 --> 00:22:37,020
+What if now we combine strengths of both tools?
+
+234
+00:22:37,020 --> 00:22:42,020
+On one hand, DVC is very good at tracking the data.
+
+235
+00:22:42,420 --> 00:22:47,420
+But it does not provide any tool to build complex visualization.
+
+236
+00:22:47,420 --> 00:22:55,420
+On the other hand, streamlit is very good at building interactive web app on complex data visualization.
+
+237
+00:22:55,420 --> 00:23:02,420
+So let's combine them to build something like that.
+
+238
+00:23:04,420 --> 00:23:09,420
+So here it's a table of experiments application.
+
+239
+00:23:09,820 --> 00:23:13,820
+Here you have a table with all experiments.
+
+240
+00:23:13,820 --> 00:23:18,820
+It's very similar to what you get when you run DVCX show.
+
+241
+00:23:18,820 --> 00:23:20,820
+But it's in streamlit.
+
+242
+00:23:20,820 --> 00:23:24,820
+So since it's in streamlit, I can do whatever I want with it.
+
+243
+00:23:24,820 --> 00:23:29,820
+For instance, I can sort the experiment by accuracy.
+
+244
+00:23:30,820 --> 00:23:37,820
+And since this data is available, I can easily plot whatever I want.
+
+245
+00:23:38,220 --> 00:23:42,220
+So this is the accuracy across experiments.
+
+246
+00:23:42,220 --> 00:23:46,220
+But I can print the number of frozen epochs.
+
+247
+00:23:47,220 --> 00:23:51,220
+And I can have more complex plots.
+
+248
+00:23:51,220 --> 00:23:57,220
+So here for instance, I plot the number of unfrozen epochs against the accuracy.
+
+249
+00:23:57,220 --> 00:24:01,220
+But I can change dynamically this.
+
+250
+00:24:01,620 --> 00:24:06,620
+So all these interfaces, the code is here.
+
+251
+00:24:06,620 --> 00:24:09,620
+So it's a bit longer, but it's not that long.
+
+252
+00:24:09,620 --> 00:24:14,620
+And the most important part in this code is these three lines.
+
+253
+00:24:14,620 --> 00:24:19,620
+Because they are the ones where I fetch the experiment information.
+
+254
+00:24:22,620 --> 00:24:25,620
+So let's see how it works.
+
+255
+00:24:26,020 --> 00:24:29,020
+So let's see how it works.
+
+256
+00:24:31,020 --> 00:24:36,020
+First, I create a DVC repro in Python.
+
+257
+00:24:36,020 --> 00:24:39,020
+It's very similar to the Git Python API.
+
+258
+00:24:39,020 --> 00:24:47,020
+And then I retrieve all the experiment commits by running this experiments.ls.
+
+259
+00:24:47,020 --> 00:24:53,020
+It's similar to the DVCX list command.
+
+260
+00:24:53,420 --> 00:24:55,420
+But it's in Python.
+
+261
+00:24:55,420 --> 00:25:00,420
+And what it gets you is this dictionary where you have the parent commit here
+
+262
+00:25:00,420 --> 00:25:04,420
+and the list of experiments that derive from that commit.
+
+263
+00:25:05,420 --> 00:25:10,420
+Now that I have this, I can run DVCX show, but in Python,
+
+264
+00:25:10,420 --> 00:25:13,420
+providing the references here.
+
+265
+00:25:13,420 --> 00:25:18,420
+And what I will get is anything I need.
+
+266
+00:25:18,820 --> 00:25:23,820
+Here I have the two parent commits.
+
+267
+00:25:23,820 --> 00:25:29,820
+And for each of them, I have for each experiment,
+
+268
+00:25:29,820 --> 00:25:34,820
+the list of used parameters, the dependencies,
+
+269
+00:25:34,820 --> 00:25:39,820
+the outputs, the metrics, and the experience name.
+
+270
+00:25:40,820 --> 00:25:47,820
+So once I get that, it's very easy to build the table of experiments.
+
+271
+00:25:48,220 --> 00:25:57,220
+Because all I need to do is to use Streamlit to show the data the way I want.
+
+272
+00:25:58,220 --> 00:26:01,220
+So here I retrieve the experiment metadata.
+
+273
+00:26:01,220 --> 00:26:05,220
+I just flatten the data and put it in the data frame.
+
+274
+00:26:05,220 --> 00:26:11,220
+I use a ggrid Streamlit library.
+
+275
+00:26:11,220 --> 00:26:14,220
+A ggrid is originally a JavaScript library.
+
+276
+00:26:14,220 --> 00:26:17,220
+And there is a Streamlit component that wraps it.
+
+277
+00:26:17,620 --> 00:26:22,620
+And I show the table here.
+
+278
+00:26:22,620 --> 00:26:29,620
+And after that, it's very easy to build the plot with Streamlit.
+
+279
+00:26:31,620 --> 00:26:36,620
+Something else I could do is a diffing app.
+
+280
+00:26:37,620 --> 00:26:40,620
+It's similar to when you code.
+
+281
+00:26:40,620 --> 00:26:45,620
+You want to compare branches when you do a pull request, for instance,
+
+282
+00:26:46,020 --> 00:26:49,020
+to see the difference between your code.
+
+283
+00:26:49,020 --> 00:26:52,020
+Here it's the same. You want to compare two models.
+
+284
+00:26:52,020 --> 00:27:00,020
+So let's say I want to see the images on which two models disagree.
+
+285
+00:27:01,020 --> 00:27:06,020
+So here I have two selectors to select the experiment I want to compare.
+
+286
+00:27:06,020 --> 00:27:09,020
+So let's say I take this one.
+
+287
+00:27:10,020 --> 00:27:13,020
+OK, it seems they agree.
+
+288
+00:27:13,420 --> 00:27:22,420
+OK, so this one is very interesting because, as you can see, the accuracy is the same.
+
+289
+00:27:23,420 --> 00:27:28,420
+But there are two images on which the model disagrees.
+
+290
+00:27:29,420 --> 00:27:32,420
+So the two labels are cats and dogs.
+
+291
+00:27:33,420 --> 00:27:38,420
+And the first model is wrong on the first image.
+
+292
+00:27:38,420 --> 00:27:41,420
+And the second model is wrong on the second image.
+
+293
+00:27:41,820 --> 00:27:44,820
+And here I see the two images.
+
+294
+00:27:47,820 --> 00:27:51,820
+So this is the code to build this diffing app.
+
+295
+00:27:51,820 --> 00:28:00,820
+And what is important in here is the way I load the data.
+
+296
+00:28:00,820 --> 00:28:07,820
+Because to get, to build, to know on which images the model disagrees,
+
+297
+00:28:08,220 --> 00:28:13,220
+I need to load the predictions that are tracked on different commits.
+
+298
+00:28:14,220 --> 00:28:19,220
+So the predictions file, it's not on my current raw space.
+
+299
+00:28:19,220 --> 00:28:22,220
+It's stored in another commit.
+
+300
+00:28:23,220 --> 00:28:29,220
+So to do that, I use the dvcopen function,
+
+301
+00:28:29,220 --> 00:28:34,220
+which is very similar to the core open python function,
+
+302
+00:28:34,620 --> 00:28:39,620
+except that it takes a commit revision as an argument.
+
+303
+00:28:40,620 --> 00:28:45,620
+And what it will do is that it will yield a file descriptor
+
+304
+00:28:45,620 --> 00:28:48,620
+that you can use to do whatever you want.
+
+305
+00:28:48,620 --> 00:28:53,620
+Here I just read the CSV file with pandas.
+
+306
+00:28:56,620 --> 00:29:00,620
+So once I have this, it's very easy to build this
+
+307
+00:29:01,020 --> 00:29:08,020
+because all I need to do is to retrieve the two commits
+
+308
+00:29:08,020 --> 00:29:11,020
+I selected from the select box here.
+
+309
+00:29:12,020 --> 00:29:15,020
+This is the first commit revision.
+
+310
+00:29:15,020 --> 00:29:20,020
+And then I load the prediction providing the commit.
+
+311
+00:29:20,020 --> 00:29:25,020
+And once I have the data frame,
+
+312
+00:29:25,420 --> 00:29:32,420
+I simply can merge them and compute which images the both models disagree.
+
+313
+00:29:33,420 --> 00:29:35,420
+And that's it.
+
+314
+00:29:36,420 --> 00:29:41,420
+So to sum up, if we take a step back,
+
+315
+00:29:43,420 --> 00:29:48,420
+as I showed you, Streamlit allows to build a very custom web application
+
+316
+00:29:48,420 --> 00:29:52,420
+that allows you to compare experiments, organize your experiments.
+
+317
+00:29:52,820 --> 00:29:55,820
+And it's also very convenient for collaboration
+
+318
+00:29:55,820 --> 00:29:58,820
+because as Streamlit, it's just Python script.
+
+319
+00:29:58,820 --> 00:30:00,820
+You can just version them.
+
+320
+00:30:00,820 --> 00:30:03,820
+You can share them across the team.
+
+321
+00:30:03,820 --> 00:30:08,820
+And you can improve them during the project lifetime.
+
+322
+00:30:12,820 --> 00:30:17,820
+So to sum up, the main advantages of this approach
+
+323
+00:30:18,220 --> 00:30:21,220
+is that you can do whatever you want with the UI.
+
+324
+00:30:21,220 --> 00:30:24,220
+It's very customizable.
+
+325
+00:30:24,220 --> 00:30:29,220
+You can make evolve the UI.
+
+326
+00:30:30,220 --> 00:30:35,220
+And there is practically no limit to what you can do
+
+327
+00:30:36,220 --> 00:30:39,220
+whenever Streamlit allows you to do it.
+
+328
+00:30:40,220 --> 00:30:43,220
+And it's close to zero setup time
+
+329
+00:30:43,220 --> 00:30:46,220
+because you just pip install div.
+
+330
+00:30:46,620 --> 00:30:49,620
+And you can go.
+
+331
+00:30:49,620 --> 00:30:52,620
+There is no infrastructure behind it.
+
+332
+00:30:52,620 --> 00:30:55,620
+You don't need Kubernetes or whatever.
+
+333
+00:30:56,620 --> 00:31:00,620
+On the other hand, it requires that you have some software engineering skills
+
+334
+00:31:00,620 --> 00:31:03,620
+because if in your team you have data scientists
+
+335
+00:31:03,620 --> 00:31:08,620
+that are not comfortable with software engineering,
+
+336
+00:31:08,620 --> 00:31:10,620
+it might not be a good idea.
+
+337
+00:31:10,620 --> 00:31:15,620
+Probably a better idea to go with MLflow.
+
+338
+00:31:16,020 --> 00:31:21,020
+And since it's code, you have to maintain that code
+
+339
+00:31:21,020 --> 00:31:24,020
+to deal with technical debt.
+
+340
+00:31:25,020 --> 00:31:30,020
+The next step here, I just show you a few examples of Streamlit apps.
+
+341
+00:31:31,020 --> 00:31:34,020
+But you have to start it locally.
+
+342
+00:31:35,020 --> 00:31:40,020
+The next step is to deploy them in a remote server
+
+343
+00:31:40,020 --> 00:31:42,020
+so that anyone can access them,
+
+344
+00:31:42,020 --> 00:31:45,020
+including non-combat developers.
+
+345
+00:31:45,420 --> 00:31:48,420
+Including non-technical team members.
+
+346
+00:31:50,420 --> 00:31:54,420
+And there are many other tools that are provided with Streamlit and DVC.
+
+347
+00:31:54,420 --> 00:31:57,420
+For instance, with DVC you have CML
+
+348
+00:31:57,420 --> 00:32:00,420
+that stands for Continuous Machine Learning.
+
+349
+00:32:00,420 --> 00:32:05,420
+It allows you to branch your pipeline execution with your CI-CD.
+
+350
+00:32:06,420 --> 00:32:09,420
+So say whenever you push on some branches
+
+351
+00:32:09,420 --> 00:32:12,420
+it will automatically trigger a training or something like that.
+
+352
+00:32:12,820 --> 00:32:15,820
+So that's it for me.
+
+353
+00:32:15,820 --> 00:32:17,820
+Thank you for your attention.
+
+354
+00:32:17,820 --> 00:32:22,820
+And you can find the code for the pipelines on the slides
+
+355
+00:32:22,820 --> 00:32:27,820
+on this repo and you can find me on Twitter or on GitHub.
+
+356
+00:32:27,820 --> 00:32:29,820
+Thank you very much.
+
+357
+00:32:35,820 --> 00:32:40,820
+And for the questions, if you have any, Antoine will be out on the corridor.
+
+358
+00:32:41,220 --> 00:32:44,220
+Thank you Antoine very much.
+
+359
+00:32:44,220 --> 00:32:46,220
+Thank you.
+

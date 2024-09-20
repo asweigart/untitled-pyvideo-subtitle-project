@@ -1,0 +1,1568 @@
+1
+00:00:00,000 --> 00:00:07,480
+Good morning.
+
+2
+00:00:07,480 --> 00:00:12,560
+Thank you for picking this as your first talk, not counting the keynote.
+
+3
+00:00:12,560 --> 00:00:16,720
+Today we're going to be talking about code quality metrics, which is something that's
+
+4
+00:00:16,720 --> 00:00:20,040
+of great interest to us down at Sorcery.
+
+5
+00:00:20,040 --> 00:00:24,760
+And we're going to be talking in particular about how to use and how not to use code quality
+
+6
+00:00:24,760 --> 00:00:25,760
+metrics.
+
+7
+00:00:25,760 --> 00:00:29,320
+So let's start off by talking about code reviews.
+
+8
+00:00:29,320 --> 00:00:31,880
+Who here does code reviews?
+
+9
+00:00:31,880 --> 00:00:34,400
+Who gets their code reviewed from time to time?
+
+10
+00:00:34,400 --> 00:00:35,400
+Raise your hands.
+
+11
+00:00:35,400 --> 00:00:36,400
+Yeah, that's pretty much everyone.
+
+12
+00:00:36,400 --> 00:00:37,400
+Who does code reviews?
+
+13
+00:00:37,400 --> 00:00:38,920
+Who code reviews for other people?
+
+14
+00:00:38,920 --> 00:00:40,920
+Yeah, that's quite a lot of most of us here.
+
+15
+00:00:40,920 --> 00:00:43,560
+Who's a solo developer and doesn't do any code reviews at all?
+
+16
+00:00:43,560 --> 00:00:46,480
+Yeah, I thought it might be one or two.
+
+17
+00:00:46,480 --> 00:00:52,320
+And who thinks their code reviews are objective?
+
+18
+00:00:52,320 --> 00:00:53,320
+That's what I thought.
+
+19
+00:00:53,320 --> 00:00:56,880
+So today we're going to be talking a little bit about how to introduce some objectivity
+
+20
+00:00:56,880 --> 00:01:02,120
+into your code reviews in certain situations.
+
+21
+00:01:02,120 --> 00:01:11,600
+So for that, we are going to introduce some metrics, then try to show how you can gain
+
+22
+00:01:11,600 --> 00:01:14,160
+insights from those metrics.
+
+23
+00:01:14,160 --> 00:01:22,880
+And we think it's very important to talk about the pitfalls of those as well.
+
+24
+00:01:22,880 --> 00:01:26,720
+I'm Reka and my colleague is Ben.
+
+25
+00:01:26,720 --> 00:01:33,600
+We both work at Sorcery on code quality tools, which includes refactoring automation and
+
+26
+00:01:33,600 --> 00:01:35,040
+automated code reviews.
+
+27
+00:01:35,040 --> 00:01:39,960
+So that's one of the reasons why we are so interested in this topic.
+
+28
+00:01:39,960 --> 00:01:47,720
+And in the years before joining Sorcery, I worked at FinTech APIs.
+
+29
+00:01:47,720 --> 00:01:53,640
+And as I said, I'm Ben and before joining Sorcery, I did a PhD in material science and
+
+30
+00:01:53,640 --> 00:02:00,880
+then worked as a data analyst and data engineer at a FinTech company.
+
+31
+00:02:00,880 --> 00:02:04,280
+So throughout this presentation, we're going to be looking at a few code snippets.
+
+32
+00:02:04,280 --> 00:02:07,880
+We're going to be doing some code review, in fact.
+
+33
+00:02:07,880 --> 00:02:11,120
+And as we go, we're going to be normally going to write and I just want to get your initial
+
+34
+00:02:11,120 --> 00:02:12,120
+opinion.
+
+35
+00:02:12,120 --> 00:02:15,240
+And the reason for this is that these code quality metrics are sort of designed to mirror
+
+36
+00:02:15,320 --> 00:02:19,800
+our personal biases, our personal feelings about what good code looks like.
+
+37
+00:02:19,800 --> 00:02:24,480
+So when we see these things on the screen, I'm going to call out on the right and let
+
+38
+00:02:24,480 --> 00:02:25,480
+me know which one you prefer.
+
+39
+00:02:25,480 --> 00:02:27,320
+Let's get started with the first one.
+
+40
+00:02:27,320 --> 00:02:32,480
+We've got two snippets on screen and without any sort of in-depth reading into what these
+
+41
+00:02:32,480 --> 00:02:38,800
+do, who prefers the code snippet on your left, the one on my right?
+
+42
+00:02:38,800 --> 00:02:39,800
+One person.
+
+43
+00:02:39,800 --> 00:02:40,800
+Interesting.
+
+44
+00:02:40,800 --> 00:02:43,840
+And who prefers the one on the left, my left, your right?
+
+45
+00:02:44,520 --> 00:02:45,520
+That's most people.
+
+46
+00:02:45,520 --> 00:02:46,520
+That's kind of what we guessed.
+
+47
+00:02:46,520 --> 00:02:52,200
+And when we talk about these sorts of pieces of code, we've generally got several bits
+
+48
+00:02:52,200 --> 00:02:55,360
+and pieces of code.
+
+49
+00:02:55,360 --> 00:03:00,000
+Things like whether it is Pythonic, whether it is elegant, whether it is short, whether
+
+50
+00:03:00,000 --> 00:03:01,000
+it is flat.
+
+51
+00:03:01,000 --> 00:03:03,400
+We talk about naming conventions.
+
+52
+00:03:03,400 --> 00:03:10,200
+And all of these are very useful terms, but they fall into a bit of a bit of a region
+
+53
+00:03:10,200 --> 00:03:14,960
+of difficulty if we're not thinking more specifically about how to apply those terms.
+
+54
+00:03:18,960 --> 00:03:20,960
+So to introduce our very...
+
+55
+00:03:20,960 --> 00:03:22,960
+All right.
+
+56
+00:03:22,960 --> 00:03:24,960
+All right.
+
+57
+00:03:24,960 --> 00:03:28,960
+So to introduce our...
+
+58
+00:03:28,960 --> 00:03:32,960
+So again, very similar to what we've seen in the past.
+
+59
+00:03:33,720 --> 00:03:42,720
+So again, very similar question to the previous one.
+
+60
+00:03:42,720 --> 00:03:47,840
+Please take a look at these code two snippets and raise your hands if you prefer the one
+
+61
+00:03:47,840 --> 00:03:50,200
+on the left.
+
+62
+00:03:50,200 --> 00:03:55,120
+And please raise your hands if you prefer the one on the right.
+
+63
+00:03:55,120 --> 00:04:00,920
+And probably the reason is that the second one is significantly short, which introduces
+
+64
+00:04:01,120 --> 00:04:06,200
+our first very simple but surprisingly useful metric functional length.
+
+65
+00:04:06,200 --> 00:04:14,720
+And here we counted the statements in these snippets, but in Python it's even simpler
+
+66
+00:04:14,720 --> 00:04:23,360
+to count the lines, which is often very close to the number of statements at least.
+
+67
+00:04:23,360 --> 00:04:28,620
+And this can already give us some good feeling about how complicated the code is.
+
+68
+00:04:28,620 --> 00:04:34,620
+So if you come to the conclusion after this talk that the other metrics are way too complicated,
+
+69
+00:04:34,620 --> 00:04:39,620
+not worth the hassle, that is already a way to make your conversations about code a bit
+
+70
+00:04:39,620 --> 00:04:42,900
+more specific and a bit more numeric.
+
+71
+00:04:42,900 --> 00:04:48,300
+And one thing which functional length has in common with the more sophisticated metrics
+
+72
+00:04:48,300 --> 00:04:50,660
+that it definitely has its limitations.
+
+73
+00:04:51,260 --> 00:05:00,060
+As this one single statement shows, it's not always a good thing to strive for the shortest
+
+74
+00:05:00,060 --> 00:05:04,140
+possible solution.
+
+75
+00:05:04,140 --> 00:05:11,140
+So this introduces the next, a bit more sophisticated quality metric.
+
+76
+00:05:11,140 --> 00:05:13,460
+Which snippet do you prefer from these two?
+
+77
+00:05:13,460 --> 00:05:18,940
+Please raise your hands if you like more the one on the left.
+
+78
+00:05:19,020 --> 00:05:23,220
+Thanks a lot and raise your hands if you prefer the one on the right.
+
+79
+00:05:23,220 --> 00:05:25,340
+Thanks.
+
+80
+00:05:25,340 --> 00:05:31,220
+And here the difference isn't in size, but rather in complexity, which leads to our next metric.
+
+81
+00:05:31,220 --> 00:05:36,220
+Yeah, so we all know the danger of one-liners.
+
+82
+00:05:36,220 --> 00:05:40,340
+This next metric is a way of sort of overcoming some of the difficulty in describing code
+
+83
+00:05:40,340 --> 00:05:42,260
+in terms of shortness.
+
+84
+00:05:42,260 --> 00:05:46,580
+Cyclomatic complexity is essentially a measure of the number of branches in your code.
+
+85
+00:05:46,820 --> 00:05:49,860
+There's a more mathematical description, but we don't really need to get into it.
+
+86
+00:05:49,860 --> 00:05:53,260
+The right here shows, has seven branches.
+
+87
+00:05:53,260 --> 00:05:56,900
+And by a branch we just mean different routes that might happen through the code depending
+
+88
+00:05:56,900 --> 00:05:59,900
+on the initial conditions.
+
+89
+00:05:59,900 --> 00:06:04,220
+And the one on the left, the sort of intuitively nicer one, nominally only has one branch.
+
+90
+00:06:04,220 --> 00:06:12,340
+Now I've put, because in practice it's obviously more than one niche way through this code.
+
+91
+00:06:12,340 --> 00:06:16,220
+But the cyclomatic complexity was developed quite some time ago.
+
+92
+00:06:16,220 --> 00:06:20,100
+The calculation is simple for every if statement, every try, accept block, and there's a few
+
+93
+00:06:20,100 --> 00:06:21,300
+other conditions as well.
+
+94
+00:06:21,300 --> 00:06:27,180
+We just add one, and that is the total cyclomatic complexity of the code.
+
+95
+00:06:27,180 --> 00:06:33,180
+As I said, this was developed quite some time ago, back in the 70s.
+
+96
+00:06:33,180 --> 00:06:44,580
+And it was at a time when code was significantly more monolithic than it is today.
+
+97
+00:06:44,620 --> 00:06:49,460
+This is a famous photo of Margaret Hamilton with her code for the Apollo 13 program.
+
+98
+00:06:49,460 --> 00:06:52,260
+When testability and maintainability were really important.
+
+99
+00:06:52,260 --> 00:06:56,220
+Testability in particular is closely related to cyclomatic complexity.
+
+100
+00:06:56,220 --> 00:07:00,380
+The more branches you have in a piece of code, the more things you need to test going through it.
+
+101
+00:07:00,380 --> 00:07:03,100
+So that was why it was developed and why it's still hanging around.
+
+102
+00:07:03,100 --> 00:07:08,500
+It is quite useful just as that first guess of how do we go beyond function length.
+
+103
+00:07:08,500 --> 00:07:11,820
+But it too has its limitations.
+
+104
+00:07:11,820 --> 00:07:14,980
+These two pieces of code are a bit more similar than the ones we've seen.
+
+105
+00:07:14,980 --> 00:07:21,220
+But just as again, rough intuition, who prefers the one on my right on your left?
+
+106
+00:07:21,220 --> 00:07:24,260
+And who prefers the one on my left, your right?
+
+107
+00:07:24,260 --> 00:07:32,060
+Yeah, so that leads into the development of cyclomatic complexity into our next metric.
+
+108
+00:07:32,060 --> 00:07:36,060
+This is called cognitive complexity.
+
+109
+00:07:36,100 --> 00:07:40,860
+And both of these snippets have a cyclomatic complexity of three.
+
+110
+00:07:40,860 --> 00:07:45,860
+But the major difference is that on the left we have a nested structure.
+
+111
+00:07:45,860 --> 00:07:50,700
+And on the right we have exactly three top level branches.
+
+112
+00:07:50,700 --> 00:07:57,500
+And this is something which cyclomatic complexity doesn't make a difference of.
+
+113
+00:07:57,500 --> 00:08:03,300
+But cognitive complexity penalizes not just new branches, but every nested structure,
+
+114
+00:08:03,300 --> 00:08:10,020
+which gives this very short snippet a cognitive complexity score of eight.
+
+115
+00:08:10,020 --> 00:08:17,980
+And cognitive complexity was developed as an improvement of cyclomatic complexity.
+
+116
+00:08:17,980 --> 00:08:22,020
+And one significant difference between the two metrics is the nesting,
+
+117
+00:08:22,020 --> 00:08:23,660
+which we have just presented.
+
+118
+00:08:23,660 --> 00:08:27,020
+Another one is that it also penalizes recursion.
+
+119
+00:08:27,020 --> 00:08:30,900
+And on the other hand, it tries to incentivize good coding practices,
+
+120
+00:08:31,180 --> 00:08:38,700
+which it calls shorthand structures, which summarize multiple lines of code in one.
+
+121
+00:08:38,700 --> 00:08:41,500
+And this is something where Python really shines, for example,
+
+122
+00:08:41,500 --> 00:08:44,500
+with list comprehensions and context managers.
+
+123
+00:08:45,620 --> 00:08:48,900
+And cognitive complexity is much newer.
+
+124
+00:08:48,900 --> 00:08:50,940
+So it was developed in 2016.
+
+125
+00:08:50,940 --> 00:08:55,140
+And I encourage you to check out the Sonar's paper,
+
+126
+00:08:55,140 --> 00:08:59,420
+which has been updated since then regularly.
+
+127
+00:08:59,500 --> 00:09:04,260
+And in the introduction, they mentioned that cyclomatic complexity
+
+128
+00:09:04,260 --> 00:09:09,020
+does a good job of providing testability, especially branch coverage.
+
+129
+00:09:09,020 --> 00:09:15,060
+But maintainability is a different thing, which has a lot of other components.
+
+130
+00:09:15,060 --> 00:09:20,500
+And one thing which they put a lot of emphasis on is readability for humans.
+
+131
+00:09:20,500 --> 00:09:23,500
+And that's why, for example, nesting and
+
+132
+00:09:23,500 --> 00:09:26,860
+recursion are regarded as not so great features.
+
+133
+00:09:27,860 --> 00:09:32,260
+Of course, cyclomatic and cognitive complexity,
+
+134
+00:09:32,260 --> 00:09:37,020
+both have their limitations as well.
+
+135
+00:09:37,020 --> 00:09:40,380
+Because here, both scores for this snippet would be one.
+
+136
+00:09:40,380 --> 00:09:44,700
+But probably, you still wouldn't describe this as really readable.
+
+137
+00:09:47,620 --> 00:09:50,980
+So to motivate our next metric, we're gonna do a little exercise here.
+
+138
+00:09:50,980 --> 00:09:52,420
+It's not code review.
+
+139
+00:09:52,420 --> 00:09:53,620
+There are three numbers on screen.
+
+140
+00:09:53,620 --> 00:09:55,340
+And the next slide is gonna be blank.
+
+141
+00:09:55,340 --> 00:09:58,380
+And I'm gonna ask you to put your hand up if you'd feel confident remembering
+
+142
+00:09:58,380 --> 00:09:59,420
+these three numbers.
+
+143
+00:10:01,460 --> 00:10:03,180
+Hands up.
+
+144
+00:10:03,180 --> 00:10:04,220
+Good.
+
+145
+00:10:04,220 --> 00:10:05,100
+I'd expect nothing less.
+
+146
+00:10:07,660 --> 00:10:08,780
+Seven numbers on screen now.
+
+147
+00:10:08,780 --> 00:10:11,780
+I'm gonna give you three, two, one to remember.
+
+148
+00:10:13,260 --> 00:10:15,900
+Who would feel confident remembering those seven numbers after that?
+
+149
+00:10:17,060 --> 00:10:18,300
+Yeah, okay, about half people.
+
+150
+00:10:18,300 --> 00:10:19,820
+That's kind of what we'd expect.
+
+151
+00:10:19,820 --> 00:10:20,980
+You can see what's coming next.
+
+152
+00:10:23,060 --> 00:10:25,300
+Two, one.
+
+153
+00:10:25,300 --> 00:10:28,220
+And who'd feel confident reciting out those numbers?
+
+154
+00:10:28,220 --> 00:10:29,100
+I think there's 13 there.
+
+155
+00:10:30,180 --> 00:10:31,180
+No one, interesting.
+
+156
+00:10:31,180 --> 00:10:32,220
+We'll come back to that in a sec.
+
+157
+00:10:34,580 --> 00:10:35,260
+Well, that's cheating.
+
+158
+00:10:37,980 --> 00:10:41,460
+So this is a very well-known psychological phenomenon.
+
+159
+00:10:41,460 --> 00:10:45,220
+It's difficult to keep more than about seven things in your brain for
+
+160
+00:10:45,220 --> 00:10:46,020
+short periods.
+
+161
+00:10:46,020 --> 00:10:49,700
+So this motivates our next metric, which we call working memory.
+
+162
+00:10:49,700 --> 00:10:53,580
+And this is a very much work in progress thing that was developed down,
+
+163
+00:10:53,620 --> 00:10:55,740
+that's also by Brendan and Nick.
+
+164
+00:10:55,740 --> 00:10:59,460
+So there's a number of ways we could describe the calculation for
+
+165
+00:10:59,460 --> 00:11:00,460
+working memory.
+
+166
+00:11:00,460 --> 00:11:02,980
+This is the one I've chosen for this talk.
+
+167
+00:11:02,980 --> 00:11:04,740
+The essential idea is that for each statement,
+
+168
+00:11:04,740 --> 00:11:06,900
+we look at the number of variables in use.
+
+169
+00:11:06,900 --> 00:11:09,740
+We look at the number of variables which are no longer in use, but
+
+170
+00:11:09,740 --> 00:11:12,940
+you might need to keep in your brain to work out what's gonna happen.
+
+171
+00:11:12,940 --> 00:11:14,900
+And we also add an additional penalty for
+
+172
+00:11:14,900 --> 00:11:19,060
+conditions because the context matters, basically.
+
+173
+00:11:19,060 --> 00:11:20,860
+As we work through a function or something,
+
+174
+00:11:20,900 --> 00:11:25,100
+we look at the peak cognitive complexity and we use that to describe,
+
+175
+00:11:25,100 --> 00:11:26,300
+sorry, the peak working memory and
+
+176
+00:11:26,300 --> 00:11:30,660
+we use that to describe the overall working memory of that piece of code.
+
+177
+00:11:33,420 --> 00:11:34,660
+And as I already mentioned,
+
+178
+00:11:34,660 --> 00:11:37,780
+this is based on the sort of seven plus two rule in psychology.
+
+179
+00:11:39,660 --> 00:11:43,540
+Now, you might sort of think, well, I don't need to remember everything.
+
+180
+00:11:43,540 --> 00:11:44,420
+And that's 100% true.
+
+181
+00:11:44,420 --> 00:11:48,740
+It's one of the major limitations of the working memory as a metric.
+
+182
+00:11:48,740 --> 00:11:52,300
+For instance, if you knew that these numbers we just looked at were part of
+
+183
+00:11:52,300 --> 00:11:54,940
+the digits of pi, you might have a much easier time
+
+184
+00:11:54,940 --> 00:11:58,180
+reciting or being confident about those last few numbers.
+
+185
+00:11:58,180 --> 00:12:01,460
+Does anyone know pi to 25ish places?
+
+186
+00:12:01,460 --> 00:12:01,960
+Yay.
+
+187
+00:12:01,960 --> 00:12:07,300
+So this, as I said, one of the main limitations is it's very difficult to
+
+188
+00:12:07,300 --> 00:12:12,100
+specify what people need to know as they're reading code.
+
+189
+00:12:12,100 --> 00:12:15,780
+Do they need to remember the elements of the standard library?
+
+190
+00:12:15,860 --> 00:12:19,420
+Do they need to remember the context of the package that they're working in?
+
+191
+00:12:19,420 --> 00:12:21,940
+There's a sort of element of expertise that comes in here.
+
+192
+00:12:21,940 --> 00:12:24,260
+So it's subjective and it's a bit difficult to define, but
+
+193
+00:12:24,260 --> 00:12:28,980
+it is quite well rooted in psychology and in code style, as we'll see in a bit.
+
+194
+00:12:31,660 --> 00:12:34,180
+So we have just seen four different metrics.
+
+195
+00:12:35,340 --> 00:12:40,300
+Two of them were trying to measure the size of a code snippet and
+
+196
+00:12:40,300 --> 00:12:42,540
+two of them the complexity.
+
+197
+00:12:42,540 --> 00:12:48,100
+And for both, we have a human focused and a code focused view.
+
+198
+00:12:48,100 --> 00:12:53,540
+And what this small matrix is trying to show us that it's not that one of those
+
+199
+00:12:53,540 --> 00:12:57,460
+is necessarily better than the other, but these are all important aspects of
+
+200
+00:12:57,460 --> 00:12:58,820
+readability.
+
+201
+00:12:58,820 --> 00:13:03,660
+And it really makes sense to try to improve all of them.
+
+202
+00:13:03,660 --> 00:13:07,820
+So to shorten your functions and aim for conciseness,
+
+203
+00:13:07,820 --> 00:13:12,460
+to reduce the cyclomatic complexity and create specific methods,
+
+204
+00:13:13,380 --> 00:13:17,660
+which don't have too many branches, reducing a cognitive complexity by
+
+205
+00:13:17,660 --> 00:13:22,180
+nesting those branches, also following the Xenoph Bison.
+
+206
+00:13:22,180 --> 00:13:27,780
+And also reducing the working memory by being conscious about the scope
+
+207
+00:13:27,780 --> 00:13:29,980
+of the variables we introduce.
+
+208
+00:13:32,220 --> 00:13:35,500
+And we have already seen four metrics,
+
+209
+00:13:35,500 --> 00:13:39,460
+which sometimes perhaps contradict each other.
+
+210
+00:13:39,500 --> 00:13:44,380
+And sometimes it would be perhaps nice to have one single score showing whether
+
+211
+00:13:44,380 --> 00:13:46,980
+a code has gotten better or worse.
+
+212
+00:13:46,980 --> 00:13:52,180
+So at Sorcery, for example, we use a weighted average for this.
+
+213
+00:13:52,180 --> 00:13:57,020
+And another very interesting attempt for this is the maintainability index
+
+214
+00:13:57,020 --> 00:13:59,900
+in PyCon 2019.
+
+215
+00:13:59,900 --> 00:14:03,700
+That was an excellent about this from Anthony Show.
+
+216
+00:14:03,700 --> 00:14:06,220
+So if you are interested in metrics generally,
+
+217
+00:14:06,220 --> 00:14:08,700
+I encourage you to check out the video about that.
+
+218
+00:14:10,220 --> 00:14:15,220
+So let's take a look at some ways we can measure some of these things for
+
+219
+00:14:15,220 --> 00:14:17,380
+real repositories.
+
+220
+00:14:17,380 --> 00:14:20,100
+So here I've got a type of chart.
+
+221
+00:14:20,100 --> 00:14:21,020
+It's called a box and plot.
+
+222
+00:14:21,020 --> 00:14:23,860
+If anyone's familiar with Seaborn, you may have played around with this.
+
+223
+00:14:23,860 --> 00:14:27,500
+Box and plot is basically a sort of discretized distribution.
+
+224
+00:14:27,500 --> 00:14:30,980
+It's one way of, it's an extension of a box plot essentially.
+
+225
+00:14:30,980 --> 00:14:34,180
+And each of the boxes corresponds to a quartile.
+
+226
+00:14:34,180 --> 00:14:36,620
+And what we're looking at here is the function length for
+
+227
+00:14:36,620 --> 00:14:39,380
+all the functions in some of these repos.
+
+228
+00:14:39,380 --> 00:14:41,740
+We haven't picked these for any particular reason other than that they
+
+229
+00:14:41,740 --> 00:14:45,300
+are popular, they're well tested, and they're quite familiar to people.
+
+230
+00:14:46,740 --> 00:14:48,780
+Notice on the bottom, I've got a log scale.
+
+231
+00:14:48,780 --> 00:14:52,940
+So these metrics on the far right are particularly long functions.
+
+232
+00:14:52,940 --> 00:14:55,980
+We've got functions with well over 100 lines in them.
+
+233
+00:14:55,980 --> 00:14:58,180
+There's a couple of things I want to draw your attention to.
+
+234
+00:14:58,180 --> 00:15:01,780
+One is the line down the middle of the box represents the median.
+
+235
+00:15:01,780 --> 00:15:05,060
+And what I found really interesting looking at this, the first time was, well,
+
+236
+00:15:05,060 --> 00:15:08,220
+the median of all of these, the median function length in all of these packages
+
+237
+00:15:08,820 --> 00:15:11,580
+approximately the same, it's between five and six.
+
+238
+00:15:11,580 --> 00:15:16,700
+And that just indicates, well, if we want our code to be maintainable,
+
+239
+00:15:16,700 --> 00:15:23,460
+easy to use open source stuff, any of the five to six lines in your function,
+
+240
+00:15:23,460 --> 00:15:24,900
+that's a good style guide.
+
+241
+00:15:24,900 --> 00:15:27,780
+And that's the thing that I want to draw from this.
+
+242
+00:15:27,780 --> 00:15:31,100
+The other thing is, as I already mentioned, there are serious outliers.
+
+243
+00:15:31,100 --> 00:15:33,780
+And we'll talk a bit in a moment about why the outliers are important.
+
+244
+00:15:34,300 --> 00:15:39,620
+As well as function length, we can look at the cyclomatic complexity,
+
+245
+00:15:39,620 --> 00:15:41,220
+that's in blue, and the cognitive complexity.
+
+246
+00:15:41,220 --> 00:15:43,420
+I've drawn these side by side because they're quite similar.
+
+247
+00:15:43,420 --> 00:15:47,020
+The only thing I'm going to draw attention to beyond the last slide was, well,
+
+248
+00:15:47,020 --> 00:15:49,740
+as we'd expect, the cognitive complexity is a little bit more than the
+
+249
+00:15:49,740 --> 00:15:53,340
+cyclomatic complexity for most of these repositories, as we'd expect.
+
+250
+00:15:55,460 --> 00:15:58,620
+The working memory, and this is something I alluded to earlier, again,
+
+251
+00:15:58,620 --> 00:16:02,060
+the median of all of these repositories has an approximately equivalent working
+
+252
+00:16:02,060 --> 00:16:07,220
+memory. And that's really nice because, and it says, oh, whether by design or
+
+253
+00:16:07,220 --> 00:16:12,780
+from a happy accident, these functions have grown to have a working memory
+
+254
+00:16:12,780 --> 00:16:17,100
+about nine. That's within the sort of, you know, parameters of what we can keep
+
+255
+00:16:17,100 --> 00:16:20,860
+in our brains. So it's a good indication that the psychology that was developed
+
+256
+00:16:20,860 --> 00:16:24,420
+for the working memory metric is actually seen in practice even without trying.
+
+257
+00:16:24,420 --> 00:16:34,300
+Another interesting way to look at these numbers is to compare the numbers of the
+
+258
+00:16:34,300 --> 00:16:41,020
+same repository across time. And here we can see the cognitive complexity of a
+
+259
+00:16:41,020 --> 00:16:47,020
+specific repository. So you can find some more similar analysis at repoanalysis.com.
+
+260
+00:16:47,020 --> 00:16:51,180
+Here we just picked the repo, which shows a pattern which is probably a bit typical.
+
+261
+00:16:51,660 --> 00:16:56,780
+So we see cognitive complexity, so the lower numbers are better. And we see that
+
+262
+00:16:56,780 --> 00:17:02,020
+this package started out with a fairly high complexity. Then around version 0.8,
+
+263
+00:17:02,020 --> 00:17:06,620
+there was a big rewrite which significantly decreased this complexity.
+
+264
+00:17:06,620 --> 00:17:11,060
+And since then, there is a trend of sometimes going a bit up when new features
+
+265
+00:17:11,060 --> 00:17:16,140
+are added and then come a period of refactoring and stabilizing where it
+
+266
+00:17:16,140 --> 00:17:21,900
+complexity goes down. This is the repository where we show where the data
+
+267
+00:17:21,900 --> 00:17:27,540
+comes from because it is our own. And here you can again see the cognitive
+
+268
+00:17:27,540 --> 00:17:36,180
+complexity. And it looks like quite good. So since 0.8, we have added quite a lot
+
+269
+00:17:36,180 --> 00:17:41,020
+of new features and the cognitive complexity has been still decreasing
+
+270
+00:17:41,020 --> 00:17:49,820
+continuously. So everything nice. That's another representation of the very same
+
+271
+00:17:49,820 --> 00:17:54,820
+repo. And it tells a little bit of a different story because we see that while
+
+272
+00:17:54,820 --> 00:18:00,380
+the average complexity has been decreasing, we have also managed to add new
+
+273
+00:18:00,380 --> 00:18:07,340
+outliers in this period. And I think this is a very general pattern which we tend
+
+274
+00:18:07,380 --> 00:18:14,700
+to oversee that even if we really care about quality and know how to try to
+
+275
+00:18:14,700 --> 00:18:20,540
+improve it, we still add new outliers and it means we add new technical depth.
+
+276
+00:18:23,660 --> 00:18:29,780
+Let's talk quickly about code quality. And I'm going to draw an analogy with test
+
+277
+00:18:29,780 --> 00:18:34,900
+coverage as another metric that we're probably quite familiar with. High test
+
+278
+00:18:34,940 --> 00:18:38,940
+coverage, as we all know, doesn't necessarily mean that your tests are great.
+
+279
+00:18:38,940 --> 00:18:44,220
+There's lots of ways that we can test things badly that nevertheless cover all
+
+280
+00:18:44,220 --> 00:18:49,780
+of our code. However, it's important to note that low test coverage probably means
+
+281
+00:18:49,780 --> 00:18:54,380
+your tests are pretty bad. And there's an analogy here with the code quality
+
+282
+00:18:54,380 --> 00:18:59,980
+metrics. High code quality or good metrics, short functions, low cognitive
+
+283
+00:18:59,980 --> 00:19:04,500
+complexity. That doesn't mean that your code is good. However, having high
+
+284
+00:19:04,500 --> 00:19:09,020
+numbers of these functions probably indicates that your code is bad. And
+
+285
+00:19:09,020 --> 00:19:12,540
+that's how we interpret some of these things. The higher numbers are less
+
+286
+00:19:12,540 --> 00:19:13,860
+useful than the lower numbers.
+
+287
+00:19:17,620 --> 00:19:23,420
+So at the beginning, we mentioned that these metrics can help us in various
+
+288
+00:19:23,420 --> 00:19:28,940
+conversations about code. And one of these decisions is refactor or rewrite.
+
+289
+00:19:29,380 --> 00:19:33,740
+So for example, let's assume that you are developing an application for an online
+
+290
+00:19:33,740 --> 00:19:38,460
+conference and you need to handle time zones. And there is already some time zone
+
+291
+00:19:38,460 --> 00:19:42,300
+package in your organization which has been used occasionally. And there is a
+
+292
+00:19:42,300 --> 00:19:46,260
+discussion within the team members. Some of them say that, yes, we obviously
+
+293
+00:19:46,260 --> 00:19:50,460
+should reuse what we already have. While other team members say that, oh, no, that
+
+294
+00:19:50,460 --> 00:19:55,180
+code is quite difficult to understand. We are afraid that it contains some hidden
+
+295
+00:19:55,180 --> 00:19:59,020
+bugs. Let's just write something completely new. And this is the kind of
+
+296
+00:19:59,020 --> 00:20:02,540
+conversation which has the danger of getting emotional pretty quickly,
+
+297
+00:20:02,540 --> 00:20:09,060
+especially if the author of the library is involved. And we definitely don't say
+
+298
+00:20:09,060 --> 00:20:13,100
+that this kind of a chart will give you an explicit answer whether to refactor
+
+299
+00:20:13,100 --> 00:20:19,340
+or rewrite. But it can give some good hints that, yes, there are many quite...
+
+300
+00:20:20,020 --> 00:20:24,460
+So the majority of this library looks quite good. But again, we have some quite
+
+301
+00:20:24,460 --> 00:20:29,140
+big outliers. And taking a look at these very complex functions is probably what
+
+302
+00:20:29,140 --> 00:20:35,580
+should decide whether it's worth keeping working with this. Besides that,
+
+303
+00:20:36,340 --> 00:20:41,820
+another decision where these metrics can give us some guidances, what to refactor
+
+304
+00:20:42,300 --> 00:20:49,220
+and how to refactor. So regarding what, again, the outliers, like there is some
+
+305
+00:20:49,220 --> 00:20:55,020
+functions with complexity around 70 there. So if you have something like a
+
+306
+00:20:55,260 --> 00:20:59,940
+cleanup week or whatever, probably these are the ones where it makes sense to
+
+307
+00:20:59,940 --> 00:21:04,180
+focus the most effort. And probably these are the ones which need the more
+
+308
+00:21:04,180 --> 00:21:08,260
+additional test cases because they are the most probable to hide some bugs.
+
+309
+00:21:09,340 --> 00:21:15,100
+And regarding how to refactor, usually these different metrics tend to correlate
+
+310
+00:21:15,100 --> 00:21:20,860
+strongly with each other. So shorter functions are also less complex. And if
+
+311
+00:21:21,740 --> 00:21:25,940
+there is a big discrepancy between them, that's often a sign that some specific
+
+312
+00:21:25,940 --> 00:21:31,180
+kind of refactoring would be beneficial. So this is, again, an example from
+
+313
+00:21:31,180 --> 00:21:36,540
+thisrepoanalysis.com. And this specific... In this module, the average functional
+
+314
+00:21:36,540 --> 00:21:42,780
+length is just under three. But the average working memory is above 13,
+
+315
+00:21:42,780 --> 00:21:50,300
+which is definitely above that optimal range. And this is an indication that
+
+316
+00:21:50,300 --> 00:21:54,220
+we try to probably squeeze a bit too much information and too many different
+
+317
+00:21:54,220 --> 00:22:01,300
+variables into those short functions. So in that case, we probably are missing
+
+318
+00:22:01,300 --> 00:22:04,820
+some levels of abstraction and we should introduce new data structures,
+
+319
+00:22:04,820 --> 00:22:10,980
+new classes, something like that. So that's to summarize this section.
+
+320
+00:22:11,460 --> 00:22:16,580
+It seems that there is a general agreement on some elements of good code
+
+321
+00:22:16,620 --> 00:22:21,060
+style, like this median functional length of five, six, which I'm presenting,
+
+322
+00:22:21,060 --> 00:22:28,020
+and that keeping the working memory under 10 is the idea. It's very important
+
+323
+00:22:28,020 --> 00:22:33,180
+to say that poor quality provides more information than good quality numbers
+
+324
+00:22:33,180 --> 00:22:37,740
+because good quality code can be still difficult to under... So code with good
+
+325
+00:22:37,740 --> 00:22:43,500
+numbers can be still difficult to understand. And when you are doing such
+
+326
+00:22:43,540 --> 00:22:47,660
+analysis, probably the most valuable information are the outliers,
+
+327
+00:22:47,660 --> 00:22:50,180
+which show some areas for improvement.
+
+328
+00:22:52,940 --> 00:22:55,380
+Also, we've seen some ways that we can use code quality metrics,
+
+329
+00:22:55,380 --> 00:22:58,020
+but the title of the talk includes a bit about how we should not use
+
+330
+00:22:58,020 --> 00:23:00,260
+code quality metrics. So we're gonna go through a bit of that now.
+
+331
+00:23:02,180 --> 00:23:05,540
+One obvious problem with metrics in general is that they're typically
+
+332
+00:23:05,540 --> 00:23:09,340
+gameable. We all know of ways that we can come up with
+
+333
+00:23:10,140 --> 00:23:13,860
+systems to do code coverage, for example, that doesn't actually test anything.
+
+334
+00:23:13,860 --> 00:23:18,020
+I also heard a story yesterday of somebody who'd wrote a package which had
+
+335
+00:23:18,020 --> 00:23:21,820
+100% code coverage in their tests, but none of the tests contain any
+
+336
+00:23:21,820 --> 00:23:24,940
+assert statements. This is the kind of thing that can cause a problem.
+
+337
+00:23:26,140 --> 00:23:30,260
+We also really shouldn't be looking at using these types of metrics as developer
+
+338
+00:23:30,260 --> 00:23:36,780
+performance metrics. They are biased. They adhere to a particular style,
+
+339
+00:23:37,260 --> 00:23:40,660
+and those styles aren't universal, and they certainly aren't necessarily
+
+340
+00:23:40,660 --> 00:23:44,220
+applicable depending on the type of project you're approaching.
+
+341
+00:23:44,220 --> 00:23:48,420
+We've also mentioned something about average code quality here.
+
+342
+00:23:48,420 --> 00:23:51,900
+Averaging is a real problem for these types of metrics because,
+
+343
+00:23:51,900 --> 00:23:56,860
+as we've already seen, they tend to live on a sort of logarithmic style scale.
+
+344
+00:23:56,860 --> 00:24:00,900
+And the average, that dotted line on your far left there,
+
+345
+00:24:00,900 --> 00:24:04,580
+that's way skewed low. The thing that we're most interested in probably
+
+346
+00:24:04,620 --> 00:24:10,660
+is these outliers. So averaging, ranking, and sort of trying to use these things
+
+347
+00:24:10,660 --> 00:24:16,140
+as developer performance indicators would, I think, become a real problem.
+
+348
+00:24:19,340 --> 00:24:24,060
+Besides that, it's important to mention that code quality contains some elements
+
+349
+00:24:24,060 --> 00:24:29,180
+which aren't captured by any of these metrics. And here we see some examples
+
+350
+00:24:29,180 --> 00:24:34,140
+for bad naming, like not-so-descriptive names and descriptive names,
+
+351
+00:24:34,180 --> 00:24:40,020
+but not consistent terminology. Another important aspect is that these metrics
+
+352
+00:24:40,020 --> 00:24:46,460
+are all quite on a short scale, so they measure functions or perhaps
+
+353
+00:24:46,460 --> 00:24:51,620
+a module level, but they don't tell us anything about the structure of a project,
+
+354
+00:24:51,620 --> 00:24:57,180
+and also not about the external API of it and how convenient it is to use it.
+
+355
+00:24:57,180 --> 00:25:05,140
+So let's wrap up. We've seen a number of code quality metrics today.
+
+356
+00:25:05,140 --> 00:25:09,020
+This is by far, this is very much not an exhaustive list, but as we saw
+
+357
+00:25:09,020 --> 00:25:12,740
+from the matrix, it does sort of tend to capture a reasonable subset
+
+358
+00:25:12,740 --> 00:25:16,460
+of what we'd expect to understand about our code quality. So we talked
+
+359
+00:25:16,460 --> 00:25:19,140
+about the function length, probably one you already all knew about,
+
+360
+00:25:19,140 --> 00:25:22,620
+things about the cyclomatic complexity, the cognitive complexity,
+
+361
+00:25:22,620 --> 00:25:24,220
+and this idea of working memory.
+
+362
+00:25:25,060 --> 00:25:31,420
+And we have seen some areas where these metrics can provide valuable
+
+363
+00:25:31,420 --> 00:25:38,380
+information, so they can be a good input to various conversations and trying
+
+364
+00:25:38,380 --> 00:25:43,860
+to make them a bit more objective. They can also serve as code style checks,
+
+365
+00:25:44,500 --> 00:25:50,460
+so especially for things like method lengths or also the more complex things
+
+366
+00:25:50,500 --> 00:25:56,700
+for working memory. They are a great way to identifying areas for improvement
+
+367
+00:25:56,700 --> 00:26:02,180
+and pieces of the code which are most probable to have some problems
+
+368
+00:26:02,180 --> 00:26:07,420
+and bugs, and they can also help us with some more complex decisions
+
+369
+00:26:07,420 --> 00:26:09,020
+like refactor and rewrite.
+
+370
+00:26:12,220 --> 00:26:15,180
+We've been through the limitations of all of these metrics and also metrics
+
+371
+00:26:15,180 --> 00:26:19,980
+in general. We certainly shouldn't be using these metrics as the only measure
+
+372
+00:26:19,980 --> 00:26:23,580
+of code quality. We should be very careful with our aggregations,
+
+373
+00:26:23,580 --> 00:26:26,820
+and they shouldn't be used in rankings. There's one more final point I'd like
+
+374
+00:26:26,820 --> 00:26:30,580
+to make, which is that like everything, like a lot of the tools we use,
+
+375
+00:26:30,580 --> 00:26:35,300
+code quality metrics are just a tool. You can't determine correctness using
+
+376
+00:26:35,300 --> 00:26:40,060
+code quality, and that's the final line. It is a tool to help us write good.
+
+377
+00:26:40,060 --> 00:26:43,540
+It's not going to tell us whether or not the code is correct and is doing
+
+378
+00:26:43,540 --> 00:26:46,420
+the thing that it's supposed to do, and that's why we're all here.
+
+379
+00:26:46,420 --> 00:26:48,740
+For those who might not be able to read this, this is one of my favorite
+
+380
+00:26:48,780 --> 00:26:54,100
+XKCD comics, four-star rating on an app which has a good UI.
+
+381
+00:26:54,100 --> 00:26:57,900
+It doesn't crash. You can set multiple locations,
+
+382
+00:26:57,900 --> 00:26:59,540
+but doesn't warn about tornadoes.
+
+383
+00:27:02,660 --> 00:27:03,220
+Thank you very much.
+
+384
+00:27:03,220 --> 00:27:09,900
+We would like to thank you to all the sources which you have used here
+
+385
+00:27:09,900 --> 00:27:16,180
+and also to the developers of these various metrics. You can check out these
+
+386
+00:27:16,220 --> 00:27:19,780
+if you are interested in learning more about them, and you will find a list
+
+387
+00:27:19,780 --> 00:27:24,580
+of these sources and some metrics about various open source repositories
+
+388
+00:27:24,580 --> 00:27:32,620
+at repoanalysis.com. You can contact us at the Sourcery booth number 713
+
+389
+00:27:32,620 --> 00:27:37,780
+or in the hallway here during the conference and at GitHub after the
+
+390
+00:27:37,780 --> 00:27:38,500
+conference.
+
+391
+00:27:42,820 --> 00:27:45,300
+Yeah. As I said, come and find us. We're happy to talk,
+
+392
+00:27:45,300 --> 00:27:50,100
+and we're typically friendly, and we won't judge your code. Thank you.
+

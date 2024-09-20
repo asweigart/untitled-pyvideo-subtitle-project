@@ -1,0 +1,1656 @@
+1
+00:00:00,000 --> 00:00:07,600
+Hello, everyone.
+
+2
+00:00:07,600 --> 00:00:09,340
+Welcome back.
+
+3
+00:00:09,340 --> 00:00:16,560
+We have last talk of the day by Jess Ford on the model review, improving transparency,
+
+4
+00:00:16,560 --> 00:00:20,120
+reproducibility, and knowledge sharing using MLflow.
+
+5
+00:00:20,120 --> 00:00:23,360
+Over to you, Jess.
+
+6
+00:00:23,360 --> 00:00:25,520
+All right.
+
+7
+00:00:25,520 --> 00:00:26,520
+Thanks everyone for being here.
+
+8
+00:00:26,760 --> 00:00:30,840
+I know it's not the first time somebody has said this, but I'm so excited to be here in
+
+9
+00:00:30,840 --> 00:00:31,840
+person.
+
+10
+00:00:31,840 --> 00:00:36,120
+So thanks for coming out to the last session of the day.
+
+11
+00:00:36,120 --> 00:00:39,640
+I'll be talking about the model review with MLflow.
+
+12
+00:00:39,640 --> 00:00:41,440
+To introduce myself, I'm Jess.
+
+13
+00:00:41,440 --> 00:00:44,480
+I am a snowboarder first and foremost.
+
+14
+00:00:44,480 --> 00:00:47,640
+That's the reason I'm currently living here in Salt Lake City.
+
+15
+00:00:47,640 --> 00:00:53,080
+It's the reason I did my PhD up in Vancouver, Canada, and pretty much every other major
+
+16
+00:00:53,080 --> 00:00:56,040
+life decision that I've made.
+
+17
+00:00:56,040 --> 00:01:02,120
+I'm currently working as a machine learning engineer at Cash App, which is a part of Block,
+
+18
+00:01:02,120 --> 00:01:05,480
+which you might know by the former name Square.
+
+19
+00:01:05,480 --> 00:01:12,400
+My team works on natural language understanding applications in the customer support space.
+
+20
+00:01:12,400 --> 00:01:19,600
+And today, I'm going to tell you why my team decided to adopt a process for a model review.
+
+21
+00:01:19,600 --> 00:01:24,840
+I'll explain what that means and introduce the primary tool that we're using for review,
+
+22
+00:01:24,840 --> 00:01:26,760
+which is MLflow.
+
+23
+00:01:26,760 --> 00:01:31,000
+The bulk of this talk will be an intro to MLflow tracking.
+
+24
+00:01:31,000 --> 00:01:35,920
+And then I'll wrap up by explaining how MLflow is allowing us to solve some of these problems
+
+25
+00:01:35,920 --> 00:01:37,640
+that I'm going to get into.
+
+26
+00:01:37,640 --> 00:01:38,960
+All right.
+
+27
+00:01:38,960 --> 00:01:43,640
+So when I joined Cash App about a year and a half ago, our team had recently doubled
+
+28
+00:01:43,640 --> 00:01:48,400
+in size, and we were increasingly deploying more and more models.
+
+29
+00:01:48,400 --> 00:01:53,920
+But we didn't have any great record keeping on exactly what was in production, how those
+
+30
+00:01:53,960 --> 00:02:00,680
+models had been trained, or just kind of generally what tricks or modeling approaches were working
+
+31
+00:02:00,680 --> 00:02:03,200
+well in our space.
+
+32
+00:02:03,200 --> 00:02:08,040
+So what if a model needed to be retrained?
+
+33
+00:02:08,040 --> 00:02:14,040
+A new team member joined and wanted to build off work that somebody else had done.
+
+34
+00:02:14,040 --> 00:02:20,720
+And what was the precision supposed to be on that model before we deployed it?
+
+35
+00:02:20,760 --> 00:02:26,000
+So the answer to questions like this would be like, let me see if I can find that notebook.
+
+36
+00:02:26,000 --> 00:02:30,820
+And people are pretty good about keeping track of their notebooks that they had used and
+
+37
+00:02:30,820 --> 00:02:32,400
+maybe checking them into GitHub.
+
+38
+00:02:32,400 --> 00:02:39,200
+But as you can imagine, this is not a robust or certainly foolproof way to be keeping track
+
+39
+00:02:39,200 --> 00:02:40,920
+of this kind of stuff.
+
+40
+00:02:40,920 --> 00:02:48,000
+So we decided that we needed to set some goals for what a new process might look like for
+
+41
+00:02:48,000 --> 00:02:49,820
+us.
+
+42
+00:02:49,820 --> 00:02:54,580
+Number one, we wanted more transparency, some kind of record keeping of exactly what we
+
+43
+00:02:54,580 --> 00:02:56,780
+were deploying.
+
+44
+00:02:56,780 --> 00:03:02,820
+We wanted some reproducibility of past experiments that had been done, ease of building off of
+
+45
+00:03:02,820 --> 00:03:08,180
+them by other people on the team or even the same person later on.
+
+46
+00:03:08,180 --> 00:03:12,780
+And we wanted a format for knowledge sharing so we could actually learn from each other,
+
+47
+00:03:12,780 --> 00:03:17,220
+get new people on the team up to speed much quicker.
+
+48
+00:03:18,180 --> 00:03:23,420
+On top of all of this, we didn't want to add a bunch of manual work to all the other things
+
+49
+00:03:23,420 --> 00:03:24,420
+we need to do.
+
+50
+00:03:24,420 --> 00:03:27,620
+So we wanted to, whatever we were going to adopt, we wanted to be able to automate as
+
+51
+00:03:27,620 --> 00:03:30,500
+much of this stuff as we could.
+
+52
+00:03:32,580 --> 00:03:34,980
+So there's a comparison here.
+
+53
+00:03:34,980 --> 00:03:36,260
+I'm talking about a model review.
+
+54
+00:03:36,260 --> 00:03:40,220
+There's obviously a thing called a code review.
+
+55
+00:03:40,220 --> 00:03:46,380
+We review code to get more eyes on codes, pot bugs, other issues before we deploy.
+
+56
+00:03:46,420 --> 00:03:53,260
+So code requests create a nice record of commits to your software and ideally also some documentation
+
+57
+00:03:53,260 --> 00:03:59,820
+about decisions that you made or trade-offs that you considered in your design.
+
+58
+00:03:59,820 --> 00:04:03,580
+And they give us this nice opportunity for learning from each other.
+
+59
+00:04:03,580 --> 00:04:07,020
+When you're reviewing someone else's code or getting a review from someone else on your
+
+60
+00:04:07,020 --> 00:04:11,460
+team, this is a great opportunity to learn from each other.
+
+61
+00:04:11,460 --> 00:04:14,220
+So there's some parallels here.
+
+62
+00:04:14,220 --> 00:04:19,780
+And there's some similarities between a code and a model review in that there's some code.
+
+63
+00:04:19,780 --> 00:04:24,860
+You've written some training script or maybe a Jupyter notebook where you've defined some
+
+64
+00:04:24,860 --> 00:04:26,940
+code that trains your model.
+
+65
+00:04:26,940 --> 00:04:31,900
+But that's kind of where the similarities end.
+
+66
+00:04:31,900 --> 00:04:37,300
+Because for a machine learning model, there's a whole bunch of other contexts that's important
+
+67
+00:04:37,300 --> 00:04:42,180
+beyond just the Python code that you wrote that trains the thing.
+
+68
+00:04:42,180 --> 00:04:47,500
+So namely, what was the model performance?
+
+69
+00:04:47,500 --> 00:04:49,500
+How well did it do on your test set?
+
+70
+00:04:49,500 --> 00:04:53,180
+That's not obviously hard-coded in your training script.
+
+71
+00:04:53,180 --> 00:04:56,460
+What data did you use and what did you do to it?
+
+72
+00:04:56,460 --> 00:05:00,500
+You might be able to get some of that from your training script, but there might be some
+
+73
+00:05:00,500 --> 00:05:02,980
+additional context there.
+
+74
+00:05:02,980 --> 00:05:05,660
+And then there's this whole process thing.
+
+75
+00:05:05,660 --> 00:05:10,220
+All the things you tried that didn't really work before you got to this final model that
+
+76
+00:05:11,020 --> 00:05:14,220
+think is really great and you want to deploy.
+
+77
+00:05:14,220 --> 00:05:19,280
+So for all these reasons, we can't really review a model just by looking at the code.
+
+78
+00:05:19,280 --> 00:05:23,760
+So it goes beyond just a code review.
+
+79
+00:05:23,760 --> 00:05:29,740
+And so this led us to MLflow, which is an open source platform for managing the end-to-end
+
+80
+00:05:29,740 --> 00:05:33,380
+machine learning lifecycle is what it says in their docs.
+
+81
+00:05:33,380 --> 00:05:36,740
+And MLflow has a few separate components under it.
+
+82
+00:05:36,740 --> 00:05:41,780
+So there is the tracking, which is useful for keeping records of your machine learning
+
+83
+00:05:41,780 --> 00:05:43,180
+experiments.
+
+84
+00:05:43,180 --> 00:05:47,680
+There's the projects piece, which is a special way to format your code that makes it easy
+
+85
+00:05:47,680 --> 00:05:50,580
+to reproduce runs.
+
+86
+00:05:50,580 --> 00:05:56,840
+And there's a models piece that's a special MLflow way to save your model that makes it
+
+87
+00:05:56,840 --> 00:06:02,060
+easy to deploy in different deployment situations.
+
+88
+00:06:02,060 --> 00:06:03,900
+There's also a fourth piece that's kind of newer.
+
+89
+00:06:03,900 --> 00:06:08,740
+That's the model registry that lets you manage the model lifecycle.
+
+90
+00:06:08,740 --> 00:06:13,420
+So MLflow was really nice because it's pretty language and library agnostic.
+
+91
+00:06:13,420 --> 00:06:18,780
+It's not tied to TensorFlow or any other specific machine learning library.
+
+92
+00:06:18,780 --> 00:06:20,820
+And it's got APIs for different languages.
+
+93
+00:06:20,820 --> 00:06:28,900
+I'll be using Python here, but it's pretty flexible for different use cases.
+
+94
+00:06:29,140 --> 00:06:34,740
+In this talk, I'm going to be focusing specifically on the MLflow tracking piece of MLflow.
+
+95
+00:06:34,740 --> 00:06:39,940
+So tracking lets you easily log pretty much anything that you'd like to keep track of.
+
+96
+00:06:39,940 --> 00:06:45,940
+So in the context of machine learning, this is probably your parameters, the metrics that
+
+97
+00:06:45,940 --> 00:06:47,580
+you care about.
+
+98
+00:06:47,580 --> 00:06:53,980
+You can track arbitrary things like plots or text files or Jupyter notebooks, which
+
+99
+00:06:53,980 --> 00:06:58,660
+are all random files like that would be considered artifacts in MLflow.
+
+100
+00:06:58,660 --> 00:07:02,400
+You might want to track the versions of code that you're running and the training data
+
+101
+00:07:02,400 --> 00:07:04,980
+that you used.
+
+102
+00:07:04,980 --> 00:07:08,980
+So you can pip install MLflow to get started.
+
+103
+00:07:08,980 --> 00:07:15,660
+And I'm going to work through a few examples, starting super small.
+
+104
+00:07:15,660 --> 00:07:22,660
+So here I'm going to import MLflow, and I'm going to log a parameter and a metric.
+
+105
+00:07:22,660 --> 00:07:28,340
+So parameters and metrics are both key value pairs where the value is numeric and the key
+
+106
+00:07:28,580 --> 00:07:30,100
+is any arbitrary string.
+
+107
+00:07:30,100 --> 00:07:35,180
+So you can name your parameters and metrics anything you like.
+
+108
+00:07:35,180 --> 00:07:43,460
+And the first time I log something, what's called an MLflow run will be started automatically.
+
+109
+00:07:43,460 --> 00:07:45,940
+And I'll show you examples in a moment of what that looks like.
+
+110
+00:07:45,940 --> 00:07:49,680
+But you can think of a run as a group of things that are logged together that makes sense
+
+111
+00:07:49,680 --> 00:07:51,740
+as a group.
+
+112
+00:07:51,740 --> 00:07:58,780
+And then I'm going to end my run to kind of end that group of things.
+
+113
+00:07:58,780 --> 00:08:07,300
+A slightly more step up from that would be I'm going to, in this example, I'm going to
+
+114
+00:08:07,300 --> 00:08:09,740
+start my run explicitly.
+
+115
+00:08:09,740 --> 00:08:13,720
+So in the rest of the examples, I'll be using this context manager framework.
+
+116
+00:08:13,720 --> 00:08:18,180
+So MLflow start run, I can actually give my run a nice useful name that I can refer to
+
+117
+00:08:18,180 --> 00:08:19,580
+later.
+
+118
+00:08:19,580 --> 00:08:25,340
+And then just like in the previous example, I'm going to log a parameter and a metric.
+
+119
+00:08:25,340 --> 00:08:28,100
+And then I'm also going to log an artifact.
+
+120
+00:08:28,100 --> 00:08:33,520
+So this will be, I'm just going to create and write to disk a silly little one line
+
+121
+00:08:33,520 --> 00:08:34,820
+file here.
+
+122
+00:08:34,820 --> 00:08:39,980
+And then I can log it using log artifact and giving it the path to my file.
+
+123
+00:08:39,980 --> 00:08:41,220
+Okay.
+
+124
+00:08:41,220 --> 00:08:42,780
+So I'm logging some things.
+
+125
+00:08:42,780 --> 00:08:45,940
+Where do these go and how is that useful?
+
+126
+00:08:45,940 --> 00:08:50,780
+If you have MLflow installed, you can just run MLflow UI in your terminal and this is
+
+127
+00:08:50,780 --> 00:08:53,460
+going to spin up a little server for you.
+
+128
+00:08:53,460 --> 00:08:58,120
+So we can go to that URL that's shown there in the output.
+
+129
+00:08:58,120 --> 00:09:00,500
+And you would see something that looks like this.
+
+130
+00:09:00,500 --> 00:09:04,900
+So this is the default MLflow experiments page.
+
+131
+00:09:04,900 --> 00:09:11,540
+And what this gives you is a table of all of the MLflow runs that you have run.
+
+132
+00:09:11,540 --> 00:09:18,300
+So at this point, we've got two rows in this table for the first thing we ran that we didn't
+
+133
+00:09:18,300 --> 00:09:22,940
+explicitly name and then this last run where we named it log artifacts.
+
+134
+00:09:22,940 --> 00:09:27,540
+And you can see here there's the metrics and the parameters are kind of shown here at this
+
+135
+00:09:27,540 --> 00:09:29,700
+high level view.
+
+136
+00:09:29,700 --> 00:09:30,980
+And we can click into one of these.
+
+137
+00:09:30,980 --> 00:09:36,060
+So I'm going to click into this log artifacts example and go to the run page.
+
+138
+00:09:36,060 --> 00:09:41,980
+So here we've got our log artifacts run and there's some metadata up top.
+
+139
+00:09:41,980 --> 00:09:48,060
+So we've got the date that this was ran, how long it took, a few other details.
+
+140
+00:09:48,060 --> 00:09:52,380
+And then scrolling down, we have a section for all of the parameters and all of the metrics
+
+141
+00:09:52,380 --> 00:09:54,780
+that I logged in this case.
+
+142
+00:09:54,780 --> 00:09:58,820
+Down under artifacts, we've got our text file.
+
+143
+00:09:58,820 --> 00:10:02,980
+And so I can actually click on that and see it rendered for me nicely in the browser,
+
+144
+00:10:02,980 --> 00:10:05,340
+which can be kind of helpful.
+
+145
+00:10:05,340 --> 00:10:11,700
+You also see here that MLflow is telling me the actual path location of this artifact.
+
+146
+00:10:11,700 --> 00:10:17,820
+So when I ran this, I was working in this MLflow tutorial directory on my laptop in
+
+147
+00:10:17,820 --> 00:10:19,620
+my home directory.
+
+148
+00:10:19,620 --> 00:10:24,380
+And an MLruns folder was created there, which is where all of this stuff is being logged
+
+149
+00:10:24,380 --> 00:10:26,780
+by default.
+
+150
+00:10:26,780 --> 00:10:36,140
+So by default, if we don't do any fancy setup, we're just writing things to our local machine.
+
+151
+00:10:36,140 --> 00:10:40,180
+And so this works well if you are working by yourself, you want to just get up and running
+
+152
+00:10:40,180 --> 00:10:41,180
+quickly.
+
+153
+00:10:41,180 --> 00:10:46,420
+But if you're wanting to share links to your runs with your teammates or maybe to have
+
+154
+00:10:46,420 --> 00:10:52,380
+everyone write to the same experiment so you can compare different models like in a leaderboard
+
+155
+00:10:53,380 --> 00:10:56,980
+You'd want to set up probably a remote tracking server.
+
+156
+00:10:56,980 --> 00:10:59,140
+And then everyone can be logging to that location.
+
+157
+00:10:59,140 --> 00:11:02,360
+And there's different kinds of back end setups that you can make there.
+
+158
+00:11:02,360 --> 00:11:07,300
+So these are just a couple of many different configurations that are shown on the MLflow
+
+159
+00:11:07,300 --> 00:11:08,900
+docs page.
+
+160
+00:11:08,900 --> 00:11:13,980
+So that's where we're writing to a place.
+
+161
+00:11:13,980 --> 00:11:15,620
+How can we access that?
+
+162
+00:11:15,620 --> 00:11:18,060
+I showed you already the MLflow tracking UI.
+
+163
+00:11:18,060 --> 00:11:21,220
+And that's what I'm going to use throughout examples in this talk because it makes nice
+
+164
+00:11:21,260 --> 00:11:22,820
+visuals and it's super handy.
+
+165
+00:11:22,820 --> 00:11:26,000
+But you can also access all this data programmatically.
+
+166
+00:11:26,000 --> 00:11:32,180
+So there's an API that lets you pull back results from your runs.
+
+167
+00:11:32,180 --> 00:11:33,820
+All right.
+
+168
+00:11:33,820 --> 00:11:36,160
+So nothing so far has been machine learning specific.
+
+169
+00:11:36,160 --> 00:11:39,820
+You could use MLflow tracking to log whatever you like.
+
+170
+00:11:39,820 --> 00:11:41,640
+But I work on machine learning.
+
+171
+00:11:41,640 --> 00:11:43,660
+So we're going to do a machine learning example.
+
+172
+00:11:43,660 --> 00:11:49,340
+So in the rest of these examples, I'll be using this data set called the 20 Newsgroup
+
+173
+00:11:49,340 --> 00:11:50,340
+data set.
+
+174
+00:11:50,460 --> 00:11:52,900
+It's one that you can get through SKLearn.
+
+175
+00:11:52,900 --> 00:11:56,700
+It's a whole bunch of text documents discussing different topics.
+
+176
+00:11:56,700 --> 00:11:59,020
+And I'm just going to use two of those topics.
+
+177
+00:11:59,020 --> 00:12:02,900
+And we're going to be building binary classifiers to distinguish between text that is about
+
+178
+00:12:02,900 --> 00:12:05,660
+baseball versus hockey.
+
+179
+00:12:05,660 --> 00:12:10,980
+In the interest of time, I'm not going to go through the steps of loading that data
+
+180
+00:12:10,980 --> 00:12:13,500
+up and transforming it.
+
+181
+00:12:13,500 --> 00:12:18,060
+But I'll share links to this notebook if you're interested in how that's done.
+
+182
+00:12:18,060 --> 00:12:19,180
+All right.
+
+183
+00:12:19,180 --> 00:12:21,860
+So this example looks a little longer.
+
+184
+00:12:21,860 --> 00:12:25,460
+But most of it is just standard Scikit-learn stuff.
+
+185
+00:12:25,460 --> 00:12:27,020
+So let me walk through what's important here.
+
+186
+00:12:27,020 --> 00:12:32,180
+So like in the previous example, I'm starting my run with the context manager.
+
+187
+00:12:32,180 --> 00:12:35,540
+And I'm going to name this hockey versus baseball, because that's what we're going to train a
+
+188
+00:12:35,540 --> 00:12:38,380
+model to distinguish between.
+
+189
+00:12:38,380 --> 00:12:46,700
+This top section, I am instantiating and fitting a simple logistic regression classifier.
+
+190
+00:12:46,700 --> 00:12:50,580
+And I'm going to get predictions for my train and my test set.
+
+191
+00:12:50,580 --> 00:12:51,780
+And I'm going to make a plot.
+
+192
+00:12:51,780 --> 00:12:54,320
+So I'm going to plot the precision recall.
+
+193
+00:12:54,320 --> 00:12:59,420
+And I'm just going to save that as a PNG file.
+
+194
+00:12:59,420 --> 00:13:01,860
+So all of that was just normal SKLearn stuff.
+
+195
+00:13:01,860 --> 00:13:04,060
+Now we're going to track things.
+
+196
+00:13:04,060 --> 00:13:07,020
+So here are all the MLflow commands that I ran.
+
+197
+00:13:07,020 --> 00:13:10,700
+So I'm going to log the parameters that I passed to the model.
+
+198
+00:13:10,700 --> 00:13:17,300
+I'm going to log metrics for the training and validation accuracy.
+
+199
+00:13:17,300 --> 00:13:21,860
+And then I'm going to log that plot that I made, as well as this notebook itself that
+
+200
+00:13:21,860 --> 00:13:23,180
+I'm running the code from.
+
+201
+00:13:23,180 --> 00:13:25,540
+So those can both be done with log artifact.
+
+202
+00:13:25,540 --> 00:13:27,980
+And then, of course, I probably want to track that trained model.
+
+203
+00:13:27,980 --> 00:13:31,240
+So that's the final line here.
+
+204
+00:13:31,240 --> 00:13:37,980
+So let's jump over to the MLflow UI and see what that looks like.
+
+205
+00:13:37,980 --> 00:13:41,540
+So here's our run page for hockey versus baseball.
+
+206
+00:13:41,540 --> 00:13:43,340
+I've got my parameters.
+
+207
+00:13:43,340 --> 00:13:45,060
+I've got metrics.
+
+208
+00:13:45,060 --> 00:13:48,900
+And then scrolling down, I have the Jupyter notebook that I ran this from.
+
+209
+00:13:48,900 --> 00:13:53,780
+I've got my plot, which, if I click on it, gets rendered for me in the browser, which
+
+210
+00:13:53,780 --> 00:13:54,960
+is handy.
+
+211
+00:13:54,960 --> 00:13:56,460
+And then I have the model.
+
+212
+00:13:56,460 --> 00:13:58,420
+So there's a folder here.
+
+213
+00:13:58,420 --> 00:14:04,580
+If I click into that folder, this is the standard structure that you would see for MLflow models.
+
+214
+00:14:04,580 --> 00:14:10,620
+So I've got the model itself, which, for scikit-learn, is this model.pickle file.
+
+215
+00:14:10,620 --> 00:14:14,280
+I've got a conda.yml and a requirements.text.
+
+216
+00:14:14,280 --> 00:14:18,780
+And those can be used to recreate the actual environment that I trained this model in.
+
+217
+00:14:18,780 --> 00:14:24,780
+And then there's this ML model file that's a special MLflow thing that specifies the
+
+218
+00:14:24,780 --> 00:14:27,300
+types of flavors that this model is available in.
+
+219
+00:14:27,300 --> 00:14:31,220
+So this model is available in the scikit-learn flavor.
+
+220
+00:14:31,260 --> 00:14:36,300
+All models in MLflow are also available as a Python flavor.
+
+221
+00:14:36,300 --> 00:14:39,900
+And I'm not going to get too much into MLflow models in this talk, but I did kind of want
+
+222
+00:14:39,900 --> 00:14:46,900
+to highlight this because the MLflow UI gives you this really handy little snippet here automatically
+
+223
+00:14:46,900 --> 00:14:53,500
+that shows you how you could load up your model just from knowing the run ID and run
+
+224
+00:14:53,500 --> 00:14:57,380
+inference using a built-in Python function in MLflow.
+
+225
+00:14:57,540 --> 00:15:02,600
+It gives you little snippets here of how you could run inference on a Spark or a Pandas
+
+226
+00:15:02,600 --> 00:15:04,060
+data frame.
+
+227
+00:15:04,060 --> 00:15:07,620
+So that's pretty cool, I think.
+
+228
+00:15:07,620 --> 00:15:11,460
+Scrolling back up to the top of that run, I did want to give a quick shout out to this
+
+229
+00:15:11,460 --> 00:15:13,460
+notes section.
+
+230
+00:15:13,460 --> 00:15:18,820
+The notes section lets you write arbitrary markdown and then have that nicely rendered
+
+231
+00:15:18,820 --> 00:15:19,820
+in the UI.
+
+232
+00:15:19,820 --> 00:15:27,140
+So this is a great place to record any extra context, notes to yourself, things that weren't
+
+233
+00:15:27,180 --> 00:15:30,180
+recorded automatically but are helpful.
+
+234
+00:15:30,180 --> 00:15:32,980
+Okay.
+
+235
+00:15:32,980 --> 00:15:35,340
+So moving on to auto logging.
+
+236
+00:15:35,340 --> 00:15:41,300
+So in this last example with this machine learning model, we trained a model and then
+
+237
+00:15:41,300 --> 00:15:44,660
+we manually MLflow tracked each of the things we wanted.
+
+238
+00:15:44,660 --> 00:15:50,660
+So we tracked the parameters, we tracked some metrics that we defined, we tracked the plot,
+
+239
+00:15:50,660 --> 00:15:52,660
+but we had to add lines for all of that.
+
+240
+00:15:52,900 --> 00:15:58,340
+MLflow has this kind of newer thing called auto logging, which is super powerful.
+
+241
+00:15:58,340 --> 00:16:02,860
+And basically it allows you to use a single line of code to automatically track a whole
+
+242
+00:16:02,860 --> 00:16:07,500
+bunch of useful stuff relevant to the model that you're training.
+
+243
+00:16:07,500 --> 00:16:13,500
+So it's supported for all the types of libraries that I've used for modeling and a whole wedge
+
+244
+00:16:13,500 --> 00:16:14,500
+more.
+
+245
+00:16:14,500 --> 00:16:17,660
+So check out the docs if you don't see your favorite one here.
+
+246
+00:16:17,660 --> 00:16:20,100
+But let's see what that looks like.
+
+247
+00:16:20,100 --> 00:16:25,020
+So for another scikit-learn example, I'm going super minimal here.
+
+248
+00:16:25,020 --> 00:16:28,900
+I'm going to import and train a random forest classifier.
+
+249
+00:16:28,900 --> 00:16:36,540
+So here I'm just adding a single line of code, MLflow sklearn autolog, and then I fit the
+
+250
+00:16:36,540 --> 00:16:37,900
+model and that's it.
+
+251
+00:16:37,900 --> 00:16:44,900
+So starting super basic, let's see what's available to us from that one line in the
+
+252
+00:16:44,900 --> 00:16:46,380
+UI.
+
+253
+00:16:46,380 --> 00:16:48,300
+So I didn't name this run.
+
+254
+00:16:48,300 --> 00:16:51,380
+I get some kind of default run name up top.
+
+255
+00:16:51,380 --> 00:16:55,100
+But take a look at all of the things that get recorded for me automatically.
+
+256
+00:16:55,100 --> 00:16:57,940
+So first of all, this was a random forest model.
+
+257
+00:16:57,940 --> 00:17:00,020
+I pretty much went with defaults.
+
+258
+00:17:00,020 --> 00:17:02,580
+I set the number of trees.
+
+259
+00:17:02,580 --> 00:17:05,820
+But all of the things I could have set are being recorded for me.
+
+260
+00:17:05,820 --> 00:17:11,020
+So if I went back and trained another model, I would still have the comparison here for
+
+261
+00:17:11,020 --> 00:17:13,940
+all of the settings that existed.
+
+262
+00:17:13,940 --> 00:17:15,860
+I also get a bunch of metrics for free.
+
+263
+00:17:15,860 --> 00:17:16,860
+So out of the box.
+
+264
+00:17:17,020 --> 00:17:23,380
+I didn't specify any, but I get accuracy, F1, precision recall, some others.
+
+265
+00:17:23,380 --> 00:17:25,860
+And then of course, I get my model.
+
+266
+00:17:25,860 --> 00:17:27,020
+That's important.
+
+267
+00:17:27,020 --> 00:17:28,900
+And I get some plots for free.
+
+268
+00:17:28,900 --> 00:17:35,220
+So I get, in this case, a confusion matrix, a precision recall curve, and the ROC curve.
+
+269
+00:17:35,220 --> 00:17:39,980
+So that all comes for free with that one line.
+
+270
+00:17:39,980 --> 00:17:41,460
+Let's look at a second example.
+
+271
+00:17:41,460 --> 00:17:44,580
+So this time we'll do a TensorFlow Keras example.
+
+272
+00:17:45,540 --> 00:17:48,980
+It's going to look a little bit longer here.
+
+273
+00:17:48,980 --> 00:17:55,740
+But the main takeaway is that we've really just got the context manager here to start
+
+274
+00:17:55,740 --> 00:17:56,500
+our run.
+
+275
+00:17:56,500 --> 00:18:00,420
+And then we just have this one line of auto logging.
+
+276
+00:18:00,420 --> 00:18:02,860
+I'm going to name my run SportsNeuralNet.
+
+277
+00:18:02,860 --> 00:18:07,260
+And then I'll parameterize the name with a couple of parameters that I'm going to use
+
+278
+00:18:07,260 --> 00:18:08,260
+in my model.
+
+279
+00:18:08,260 --> 00:18:12,300
+So all the rest of this is boilerplate TensorFlow.
+
+280
+00:18:12,300 --> 00:18:20,140
+So I'm just defining a really simple dense neural network with one hidden layer of arbitrary
+
+281
+00:18:20,140 --> 00:18:21,140
+size.
+
+282
+00:18:21,140 --> 00:18:27,740
+And then I set a few things that I need, like a loss and an optimizer metrics.
+
+283
+00:18:27,740 --> 00:18:31,740
+I'm going to track accuracy in the area under the ROC curve.
+
+284
+00:18:31,740 --> 00:18:37,540
+And then I just compile and fit my model for, I'll train it for 40, 40 epochs.
+
+285
+00:18:37,540 --> 00:18:39,140
+And so TensorFlow does its thing.
+
+286
+00:18:39,140 --> 00:18:41,300
+It spits out all its training logs.
+
+287
+00:18:41,340 --> 00:18:48,140
+And when it's done, we can jump back over to the MLflow tracking UI and see what we get.
+
+288
+00:18:49,620 --> 00:18:56,020
+So here is my SportsNeuralNet 32 dimension learning rate 0.1 model.
+
+289
+00:18:56,020 --> 00:19:00,220
+And again, similar to SKLearn, but different parameters here.
+
+290
+00:19:00,220 --> 00:19:04,140
+All of the things I could have set on this TensorFlow model are getting recorded for me.
+
+291
+00:19:04,980 --> 00:19:12,100
+And I get my area under the ROC curve and my accuracy, as well as the loss on the training
+
+292
+00:19:12,100 --> 00:19:15,180
+and the validation data.
+
+293
+00:19:15,180 --> 00:19:20,740
+Down under Artifacts now, for a TensorFlow model, I'm going to get this model summary.text.
+
+294
+00:19:20,740 --> 00:19:24,300
+So if you've worked with TensorFlow, you've probably seen the model summary you can print
+
+295
+00:19:24,300 --> 00:19:27,020
+is like a nice text description of your model.
+
+296
+00:19:27,020 --> 00:19:29,540
+We get TensorBoard logs for free.
+
+297
+00:19:29,540 --> 00:19:30,820
+That's pretty cool.
+
+298
+00:19:30,820 --> 00:19:31,820
+And then we get the model.
+
+299
+00:19:31,820 --> 00:19:35,700
+So this looks a little bit more complicated because the TensorFlow saved model format
+
+300
+00:19:35,700 --> 00:19:40,140
+involves more stuff than the scikit-learn example that I showed previously.
+
+301
+00:19:40,140 --> 00:19:42,100
+But the basic structure here is the same.
+
+302
+00:19:42,100 --> 00:19:43,980
+We've got the actual model.
+
+303
+00:19:43,980 --> 00:19:47,940
+We have an ML model file specifying MLflow flavors.
+
+304
+00:19:47,940 --> 00:19:51,220
+And then we have these files that are related to the environment that we're running in.
+
+305
+00:19:53,500 --> 00:19:54,260
+All right.
+
+306
+00:19:54,260 --> 00:20:00,740
+And you might have noticed that the metrics on these run pages look like links.
+
+307
+00:20:00,740 --> 00:20:01,740
+And they are.
+
+308
+00:20:01,740 --> 00:20:06,260
+If I click on one of these links, I would be taken to a metrics page.
+
+309
+00:20:06,260 --> 00:20:12,620
+So here I can select whatever metrics I like for the y-axis and plot them as a function
+
+310
+00:20:12,620 --> 00:20:14,740
+of training step or of time.
+
+311
+00:20:14,740 --> 00:20:16,260
+And I get these nice training curves.
+
+312
+00:20:16,260 --> 00:20:20,940
+So this is like a TensorBoard style view that just kind of comes for free in the MLflow
+
+313
+00:20:20,940 --> 00:20:25,020
+UI and I think is super handy for the work that I do.
+
+314
+00:20:25,020 --> 00:20:26,060
+OK.
+
+315
+00:20:26,060 --> 00:20:30,780
+So everything so far, we've been looking at one MLflow run at a time, which is cool.
+
+316
+00:20:30,780 --> 00:20:34,460
+But things become really powerful and we want to compare different models.
+
+317
+00:20:34,460 --> 00:20:37,980
+So let's see how we can do that.
+
+318
+00:20:37,980 --> 00:20:42,900
+That last example I showed with the sports neural net, I trained a few different variations
+
+319
+00:20:42,900 --> 00:20:43,900
+of that.
+
+320
+00:20:43,900 --> 00:20:50,140
+So here in my table, I've got six different MLflow runs with different hidden dimension
+
+321
+00:20:50,140 --> 00:20:52,980
+sizes and different learning rates.
+
+322
+00:20:52,980 --> 00:20:56,320
+And this gives me like a leaderboard style view where I can sort.
+
+323
+00:20:56,320 --> 00:21:01,640
+So if I care about accuracy, I could do a descending sort on this column and I see like
+
+324
+00:21:01,640 --> 00:21:04,240
+my top model on top.
+
+325
+00:21:04,240 --> 00:21:08,720
+And maybe I want to compare, you know, what was the difference between these top few models?
+
+326
+00:21:08,720 --> 00:21:12,840
+I can check these boxes and hit the compare button.
+
+327
+00:21:12,840 --> 00:21:18,840
+And this takes me to a view where I have a column for each of those three runs I'm comparing
+
+328
+00:21:18,840 --> 00:21:23,920
+and I can scroll through the parameters and the metrics and MLflow really nicely just
+
+329
+00:21:23,920 --> 00:21:25,760
+highlights for me when things are different.
+
+330
+00:21:25,760 --> 00:21:32,260
+So I actually don't have to read super carefully to see what the difference was.
+
+331
+00:21:32,260 --> 00:21:38,840
+And if I click into one of these metrics links here, I'll be taken to a view that looks similar
+
+332
+00:21:38,840 --> 00:21:40,360
+to what I just showed.
+
+333
+00:21:40,360 --> 00:21:46,280
+But now instead of comparing multiple metrics for one model, I'm comparing one metric across
+
+334
+00:21:46,280 --> 00:21:48,560
+several different models.
+
+335
+00:21:48,560 --> 00:21:56,000
+So here I can see that my, the blue line, the model with the higher learning rate converged
+
+336
+00:21:56,000 --> 00:21:58,680
+a bit faster than the other models.
+
+337
+00:21:58,680 --> 00:22:00,640
+All right.
+
+338
+00:22:00,640 --> 00:22:07,720
+So that is the kind of end of the little intro to MLflow.
+
+339
+00:22:07,720 --> 00:22:13,200
+Now I'm going to talk about how we're actually using MLflow in a model review process.
+
+340
+00:22:13,200 --> 00:22:19,760
+So step one for us was to create and maintain some common training infrastructure.
+
+341
+00:22:19,760 --> 00:22:24,400
+So some code that our whole team can use when we're training models that's flexible enough
+
+342
+00:22:24,400 --> 00:22:29,480
+for different use cases and works for most of our problems.
+
+343
+00:22:29,480 --> 00:22:34,480
+Once we have that, we can embed MLflow tracking throughout that.
+
+344
+00:22:34,480 --> 00:22:38,960
+And this is important because we don't want to have to remember to add some MLflow tracking
+
+345
+00:22:38,960 --> 00:22:39,960
+commands.
+
+346
+00:22:39,960 --> 00:22:42,560
+We don't want to be thinking all the time about what's important to track.
+
+347
+00:22:42,560 --> 00:22:44,800
+We want this to be taken care of automatically.
+
+348
+00:22:44,800 --> 00:22:47,480
+And so that's what we do.
+
+349
+00:22:47,480 --> 00:22:49,080
+This just lives in our code.
+
+350
+00:22:49,080 --> 00:22:52,480
+And any time we train a model, we just get all of this stuff recorded.
+
+351
+00:22:52,480 --> 00:22:58,040
+So we track our training parameters, including a pointer to the data set that we're using.
+
+352
+00:22:58,040 --> 00:23:02,920
+We track our metrics that our team cares about.
+
+353
+00:23:02,920 --> 00:23:04,220
+Our environment.
+
+354
+00:23:04,220 --> 00:23:09,260
+For us, that's our Docker image, the version of code that we're using, and the actual training
+
+355
+00:23:09,260 --> 00:23:12,320
+script or the notebook that we're running from.
+
+356
+00:23:12,360 --> 00:23:17,080
+And of course, we save our trained model, as well as a few artifacts that we need for
+
+357
+00:23:17,080 --> 00:23:19,440
+deployment on our infrastructure.
+
+358
+00:23:19,440 --> 00:23:25,160
+And then there are some custom plots and analyses that we like to do on our team that help us
+
+359
+00:23:25,160 --> 00:23:30,960
+understand maybe some caveats or things to think about with our model or just for debugging
+
+360
+00:23:30,960 --> 00:23:35,160
+purposes as we're iterating.
+
+361
+00:23:35,160 --> 00:23:38,140
+We use that note section I mentioned for context.
+
+362
+00:23:38,900 --> 00:23:42,980
+It's great that we're tracking all these parameters and other things automatically,
+
+363
+00:23:42,980 --> 00:23:44,460
+but there's always other stuff.
+
+364
+00:23:44,460 --> 00:23:48,860
+There's always other things that you want to make a note of.
+
+365
+00:23:48,860 --> 00:23:53,780
+And so in particular, we write up a little bit about what the business problem is that
+
+366
+00:23:53,780 --> 00:23:59,900
+we're solving, maybe some notes about things that we tried that didn't work, and basically
+
+367
+00:23:59,900 --> 00:24:03,340
+anything that you can think of that would be useful to you if you were to return to
+
+368
+00:24:03,340 --> 00:24:08,700
+this model in like a month or a year when you don't remember everything or for someone
+
+369
+00:24:08,700 --> 00:24:10,340
+else on your team.
+
+370
+00:24:10,340 --> 00:24:15,500
+So we follow those steps when we have a model that we like.
+
+371
+00:24:15,500 --> 00:24:21,100
+And then before we deploy it, we require a model review.
+
+372
+00:24:21,100 --> 00:24:26,860
+So for us, this looks like sharing a link to the MLflow run with everyone else on the
+
+373
+00:24:26,860 --> 00:24:27,900
+team.
+
+374
+00:24:27,900 --> 00:24:33,160
+We select a couple of reviewers from the team whose job it is to kind of read through that
+
+375
+00:24:33,160 --> 00:24:39,620
+pretty carefully, look at the code that's associated with it, and then attend a 30-minute
+
+376
+00:24:39,620 --> 00:24:46,480
+meeting to discuss, ask questions, maybe make suggestions, things like that.
+
+377
+00:24:46,480 --> 00:24:48,520
+All right.
+
+378
+00:24:48,520 --> 00:24:55,200
+So circling back to the goals that we had for model review, transparency.
+
+379
+00:24:55,200 --> 00:25:00,800
+We're achieving this by having shareable links to basically all of the details of a model
+
+380
+00:25:00,800 --> 00:25:03,440
+that we trained.
+
+381
+00:25:03,440 --> 00:25:07,900
+Reproducibility is greatly improved because now we're recording everything that we need
+
+382
+00:25:07,900 --> 00:25:15,040
+to actually recreate a training run or to build off a model that some of our team member
+
+383
+00:25:15,040 --> 00:25:17,440
+trained.
+
+384
+00:25:17,440 --> 00:25:18,440
+Knowledge sharing.
+
+385
+00:25:18,440 --> 00:25:21,440
+This happens both through this review process, but also just generally.
+
+386
+00:25:21,440 --> 00:25:27,280
+It's super nice to be able to send a link to an MLflow run to your colleague just to
+
+387
+00:25:27,280 --> 00:25:31,160
+to kind of discuss things that you're working on.
+
+388
+00:25:31,160 --> 00:25:35,080
+And MLflow is really helpful for this because it consolidates all these details about the
+
+389
+00:25:35,080 --> 00:25:38,800
+model in one place.
+
+390
+00:25:38,800 --> 00:25:44,040
+So in summary, MLflow is a really lightweight and powerful way to track machine learning
+
+391
+00:25:44,040 --> 00:25:45,040
+experiments.
+
+392
+00:25:45,040 --> 00:25:48,880
+If you're just getting started, autologging, just like a one-liner in your code, can get
+
+393
+00:25:48,880 --> 00:25:51,200
+you a really, really long way.
+
+394
+00:25:51,200 --> 00:25:57,200
+I only talked about MLflow tracking, but you should also check out MLflow projects, models,
+
+395
+00:25:57,200 --> 00:26:01,040
+and model registry, which are pretty cool.
+
+396
+00:26:01,040 --> 00:26:06,200
+My team's using MLflow tracking to automatically keep records of everything that we train and
+
+397
+00:26:06,200 --> 00:26:09,760
+to review models before we deploy them.
+
+398
+00:26:09,760 --> 00:26:12,700
+And this review process that I've described, this is a total work in process.
+
+399
+00:26:12,700 --> 00:26:13,760
+This is evolving.
+
+400
+00:26:13,760 --> 00:26:19,160
+If any of you have different or similar processes in place to achieve these kinds of goals,
+
+401
+00:26:19,160 --> 00:26:20,640
+I would really love to talk to you.
+
+402
+00:26:20,640 --> 00:26:22,680
+So please find me afterwards.
+
+403
+00:26:23,680 --> 00:26:28,560
+I want to hear how other people are managing this kind of thing.
+
+404
+00:26:28,560 --> 00:26:30,480
+This presentation is a Jupyter Notebook.
+
+405
+00:26:30,480 --> 00:26:33,040
+It's on GitHub at that link.
+
+406
+00:26:33,040 --> 00:26:37,880
+If you think that sounds fun, you want to use MLflow and train models and stuff like
+
+407
+00:26:37,880 --> 00:26:42,800
+that, my team in particular is hiring for machine learning engineers.
+
+408
+00:26:42,800 --> 00:26:46,280
+Cash App in general is hiring all across the place, growing pretty rapidly.
+
+409
+00:26:46,280 --> 00:26:48,200
+It's a super fun place to work.
+
+410
+00:26:48,200 --> 00:26:49,820
+I'd recommend you apply.
+
+411
+00:26:50,020 --> 00:26:52,620
+I guess questions will be outside.
+
+412
+00:26:52,620 --> 00:26:55,220
+But yeah, please come talk to me.
+
+413
+00:26:55,220 --> 00:26:56,220
+And thanks for your time.
+
+414
+00:26:56,220 --> 00:26:57,220
+Applause
+

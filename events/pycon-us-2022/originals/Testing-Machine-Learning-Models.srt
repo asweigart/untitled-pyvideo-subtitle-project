@@ -1,0 +1,1516 @@
+1
+00:00:00,000 --> 00:00:07,000
+Hello everyone. Today we have the pleasure of having Mr. Kidman present a paper on testing
+
+2
+00:00:11,520 --> 00:00:18,520
+machine learning models.
+
+3
+00:00:19,520 --> 00:00:20,520
+Yes.
+
+4
+00:00:20,520 --> 00:00:27,520
+Echo, echo, echo. Yes, yes, yes. Fantastic.
+
+5
+00:00:30,000 --> 00:00:37,000
+All right. Well, thank you everyone for coming. Testing and quality of ML systems. That's
+
+6
+00:00:37,200 --> 00:00:42,160
+what I'm going to be talking about. Just like they said, my name is Carlos Kidman. A few
+
+7
+00:00:42,160 --> 00:00:46,480
+things about me really fast. I'm the head of engineering at an AI company right now.
+
+8
+00:00:46,480 --> 00:00:51,480
+Before this I was an engineering manager at Adobe around an organization called Automation
+
+9
+00:00:51,480 --> 00:00:55,520
+and Productivity Engineering. We use machine learning there as well. I do lots of stuff
+
+10
+00:00:55,520 --> 00:01:00,640
+with open source including my own projects. The one I'm most known for is PyLinium,
+
+11
+00:01:00,640 --> 00:01:04,840
+which is just a simple wrap around Selenium and PyTest. I do lots of keynote speaking
+
+12
+00:01:04,840 --> 00:01:10,560
+all over the world. This is my first PyCon. Yes, I'm so excited. Yay, PyCon. I also have
+
+13
+00:01:10,560 --> 00:01:16,320
+a stream on Twitch once or twice a week depending on how I feel. Then I have a YouTube channel.
+
+14
+00:01:16,320 --> 00:01:20,440
+My most exciting one I feel is that I'm the founder of QAP or QA at the point, which is
+
+15
+00:01:20,440 --> 00:01:25,560
+the software testing and quality community here in Utah. Yes, Utah based for anyone else.
+
+16
+00:01:25,560 --> 00:01:29,880
+If you are a tester and you're in Utah, you should be part of this community because it's
+
+17
+00:01:29,880 --> 00:01:36,880
+pretty amazing. Going right into it. I feel like when it comes to software testing and
+
+18
+00:01:37,240 --> 00:01:41,960
+quality in traditional software developments, it's a pretty common topic. You have software
+
+19
+00:01:41,960 --> 00:01:47,400
+testers. You have people that are in the testing space like SREs, stuff like that. When it
+
+20
+00:01:47,440 --> 00:01:53,400
+comes to machine learning and AI, it's as if it's a new field it feels like. There's
+
+21
+00:01:53,400 --> 00:01:58,160
+not a whole lot that happens in that space. This is what got me really interested in how
+
+22
+00:01:58,160 --> 00:02:04,360
+do we monitor, how do we measure, how do we test and measure the quality of these ML systems
+
+23
+00:02:04,360 --> 00:02:09,080
+that we're building. Now that I've been in this space for about five years now and building
+
+24
+00:02:09,080 --> 00:02:13,780
+these models, they've definitely gotten better from when we first started even just five
+
+25
+00:02:13,780 --> 00:02:18,520
+years ago. Some people have been doing it way longer than I have. Like I said, testing
+
+26
+00:02:18,520 --> 00:02:25,280
+is relatively new to this space. Toolsy and Jacqueline back in 2019, they learned at Google
+
+27
+00:02:25,280 --> 00:02:31,900
+that if they didn't do software testing early and often, they ran into a lot of problems
+
+28
+00:02:31,900 --> 00:02:36,700
+once they deployed their models into production, once they deployed these systems. In their
+
+29
+00:02:36,700 --> 00:02:40,660
+talk here at Google I.O., they talked about here's some of the things that we learned,
+
+30
+00:02:40,660 --> 00:02:43,580
+here's some of the things that we do now and we try to bring in software testing as
+
+31
+00:02:43,580 --> 00:02:48,720
+early as possible. To make sure they're all on the same page, because I don't really know
+
+32
+00:02:48,720 --> 00:02:53,460
+where everyone is at, you may be brand new to Python, you may be a machine learning engineer
+
+33
+00:02:53,460 --> 00:02:57,620
+right now, I don't know. We're going to go through a very simple exercise here with a
+
+34
+00:02:57,620 --> 00:03:02,460
+very common machine learning application, which is prediction. Jay Alomar said this
+
+35
+00:03:02,460 --> 00:03:07,620
+really well. He said prediction is predicting values based on patterns and other existing
+
+36
+00:03:07,620 --> 00:03:13,180
+values. Once we understand this a little bit, we'll be like, wow, machine learning. Let's
+
+37
+00:03:13,180 --> 00:03:18,500
+say that we are the machine learning engineers at this grocery store and our job is to predict
+
+38
+00:03:18,500 --> 00:03:23,260
+how much we think customers will spend when they come in. Let's say we have this as our
+
+39
+00:03:23,260 --> 00:03:28,660
+data set. A group of one person comes in, they spend $10. Group of two, they spend $20.
+
+40
+00:03:28,660 --> 00:03:32,900
+Group of four, they spend $40. If I were to ask you how much do you think three people
+
+41
+00:03:32,940 --> 00:03:39,940
+spend, what would you say? 30, right? How did you come up with the answer of 30? Because
+
+42
+00:03:42,980 --> 00:03:49,700
+we're smart, Carlo. Yes, you found this magical number of 10, which happens to be the relationship
+
+43
+00:03:49,700 --> 00:03:54,860
+between the numbers in this table. If you were to grab three and then multiply it by
+
+44
+00:03:54,860 --> 00:04:01,300
+10, very easily, 30. If I said seven, you would say 70. On and on we go. Someone said
+
+45
+00:04:01,620 --> 00:04:07,900
+regression. Exactly. This is essentially how machine learning models work. In this case,
+
+46
+00:04:07,900 --> 00:04:13,860
+this is a supervised learning thing. Yes, it finds these relationships between the data
+
+47
+00:04:13,860 --> 00:04:20,860
+and that's what it outputs. In the top here, this is the paradigm of traditional programming
+
+48
+00:04:21,060 --> 00:04:26,940
+where we define the rules, put in the data, and then we get answers right back out. Let's
+
+49
+00:04:26,940 --> 00:04:31,580
+say we had a function that was called is even and you passed in the number three, you'll
+
+50
+00:04:31,580 --> 00:04:35,420
+have some rules in there to determine that it's either true, it's even, or false, it's
+
+51
+00:04:35,420 --> 00:04:40,340
+odd. Writing unit tests for that should be fairly simple. Assert that if I pass in three,
+
+52
+00:04:40,340 --> 00:04:44,700
+I get false. If I put in two, I get true. Machine learning is a little bit different
+
+53
+00:04:44,700 --> 00:04:49,980
+because here you input the answers and the data and the machine learning algorithm determines
+
+54
+00:04:49,980 --> 00:04:54,940
+what the rules are instead. The output is going to be different. What makes this difficult
+
+55
+00:04:55,060 --> 00:05:00,540
+when it comes to software testing is the fact that it is not guaranteed that the group of
+
+56
+00:05:00,540 --> 00:05:06,260
+three people are going to spend $30. They might spend $28. They might spend $50. They
+
+57
+00:05:06,260 --> 00:05:10,140
+might walk in and then just go to the bathroom and then leave. They might not spend anything
+
+58
+00:05:10,140 --> 00:05:15,420
+at all. Because of that, it's difficult to say, well, let me assert that $30 is the case.
+
+59
+00:05:15,420 --> 00:05:20,860
+Instead, you have these rules that get outputted. You have these ranges, these boundaries. It's
+
+60
+00:05:21,260 --> 00:05:26,460
+traditional programming. In this case, there's different points of fault inside of machine
+
+61
+00:05:26,460 --> 00:05:31,680
+learning system. One of the big ones is obviously the data set. The data is what drives the
+
+62
+00:05:31,680 --> 00:05:36,720
+entire machine learning system. If there's problems inside the data set, you're already
+
+63
+00:05:36,720 --> 00:05:43,720
+going to have issues with what gets outputted. Software testing can happen really early and
+
+64
+00:05:43,740 --> 00:05:46,900
+later as well. That's what we're going to be talking about today is the testing and
+
+65
+00:05:46,900 --> 00:05:52,900
+quality of these things. In software testing, we have this concept called shift left. Does
+
+66
+00:05:52,900 --> 00:05:59,900
+anyone want to take a stab at what shift left means? We were hired by data stack. I like
+
+67
+00:06:02,420 --> 00:06:09,420
+that a lot. Anyone else? Do it earlier. The white text there kind of throws it off. Anyway,
+
+68
+00:06:10,480 --> 00:06:14,100
+if you were to take the software development life cycle, which is usually a circle diagram
+
+69
+00:06:14,100 --> 00:06:17,620
+and it's like step one is planning, step two is design, step three is implemented,
+
+70
+00:06:17,620 --> 00:06:21,100
+and you deploy and all the good stuff. If you were to take that circle and flatten it
+
+71
+00:06:21,100 --> 00:06:26,900
+out where step one is on the left, step one is on the left, and the last step is on the
+
+72
+00:06:26,900 --> 00:06:30,700
+right, when we talk about shift left, we're talking about trying to bring a lot of these
+
+73
+00:06:30,700 --> 00:06:35,740
+quality and software testing practices as early in the process as we possibly can. A
+
+74
+00:06:35,740 --> 00:06:40,740
+lot of companies, they will do all of their development right in the middle. Usually,
+
+75
+00:06:40,740 --> 00:06:45,060
+you'll get requirements from UX or product or business. You build the thing and when
+
+76
+00:06:45,060 --> 00:06:48,340
+you're ready to deploy, you give it to someone else. They deploy it. They observe it. They
+
+77
+00:06:48,340 --> 00:06:53,740
+monitor it. They operate it. Shift left is talking about how can we include our software
+
+78
+00:06:53,740 --> 00:06:58,140
+testers, our developers, as much of the team as we possibly can as early in the process
+
+79
+00:06:58,140 --> 00:07:05,140
+because the more you are there in the design of things, the better things will happen downstream.
+
+80
+00:07:06,100 --> 00:07:11,740
+Let's say we take an example project that we're building, a new ML project, and let's
+
+81
+00:07:11,740 --> 00:07:16,220
+go through the process here so we can see what this will look like. Step one is we want
+
+82
+00:07:16,220 --> 00:07:20,940
+to define the problem. What are we trying to solve? In the previous example with the
+
+83
+00:07:20,940 --> 00:07:25,540
+grocery store, the problem was we want to predict how much people will spend. That's
+
+84
+00:07:25,540 --> 00:07:30,300
+not a very good problem statement though because why are we wanting to do that? It could be
+
+85
+00:07:30,300 --> 00:07:34,980
+that for the grocery store, we care about preventing understocking or overstocking,
+
+86
+00:07:34,980 --> 00:07:41,420
+especially with perishables like milk or dairy. If I buy too little of milk and then people
+
+87
+00:07:41,420 --> 00:07:44,940
+come in expecting milk, well, now I'm losing money as a business because I don't have
+
+88
+00:07:44,940 --> 00:07:50,140
+any milk for them. We overstock. We buy tons of milk, but then we only sell half of our
+
+89
+00:07:50,140 --> 00:07:55,840
+stock. Then the rest of my stock goes to waste. I lose all that money. It's also a problem.
+
+90
+00:07:55,840 --> 00:07:59,820
+It could be that we're using machine learning to help prevent the understocking and overstocking
+
+91
+00:07:59,820 --> 00:08:05,380
+problem. A much better problem statement than can we predict how much money is going to
+
+92
+00:08:05,380 --> 00:08:13,260
+be spent by people? Moving on, who is the ML system for? Again, back in our example
+
+93
+00:08:13,260 --> 00:08:17,900
+here, is this for the people doing stocking at night? Is this for the store manager? Is
+
+94
+00:08:17,900 --> 00:08:21,940
+this for the VP of the region? Is this for who's going to be using this thing? It could
+
+95
+00:08:21,940 --> 00:08:27,220
+be that the ML system is to feed another ML system. That could be the case as well. Who's
+
+96
+00:08:27,220 --> 00:08:34,020
+the system ultimately for? Then, of course, does this even need machine learning? When
+
+97
+00:08:34,020 --> 00:08:38,260
+I first started, you better believe I was like, wow, I know how to do a few little simple
+
+98
+00:08:38,260 --> 00:08:42,620
+machine learning things. Can I apply to everything? A lot of the time, the answer is yes, but
+
+99
+00:08:42,620 --> 00:08:46,740
+sometimes you don't want to do that. What the is even is odd. Imagine applying machine
+
+100
+00:08:46,740 --> 00:08:51,820
+learning to. Tell me if three is odd. Probably not the best example.
+
+101
+00:08:51,820 --> 00:08:56,660
+Moving on, number two is define, success, and assess risk. Success, assess. Man, English
+
+102
+00:08:56,660 --> 00:09:01,860
+is hard. You want to start by defining initial baselines. In doing this, let me go a few
+
+103
+00:09:01,860 --> 00:09:07,100
+more right here. That creative proof of concept is one of the most underrated pieces that
+
+104
+00:09:07,100 --> 00:09:13,380
+teams miss right now. Because it's so easy now to build these machine learning models
+
+105
+00:09:13,380 --> 00:09:17,020
+with things like transformers, for example, you can get to predicting things within a
+
+106
+00:09:17,020 --> 00:09:22,260
+few lines of code. You might try those out and say, well, this is good enough to start
+
+107
+00:09:22,260 --> 00:09:26,900
+just building things. When instead, if you build a proof of concept and actually start
+
+108
+00:09:26,900 --> 00:09:31,500
+defining these baselines for what success looks like and what risks you want to avoid
+
+109
+00:09:31,500 --> 00:09:35,460
+or mitigate or prevent, this is going to force you into building something that's a lot more
+
+110
+00:09:35,460 --> 00:09:40,440
+practical rather than the shiny toy that is a transformer, let's say.
+
+111
+00:09:40,440 --> 00:09:43,180
+We're dealing with a lot of data, so of course there's going to be privacy and security
+
+112
+00:09:43,220 --> 00:09:48,700
+risks as well. Again, another piece that a lot of people don't think about. Then of course,
+
+113
+00:09:48,700 --> 00:09:52,180
+one of my favorite questions here is do we even have the proper resources to do this?
+
+114
+00:09:52,180 --> 00:09:56,220
+If we were building an ML system that was meant to detect cancer in patients, let's
+
+115
+00:09:56,220 --> 00:10:00,780
+say, me, Carlos Kidman, am the worst possible person to tell you if this thing is working
+
+116
+00:10:00,780 --> 00:10:06,380
+or not. Even though I may be a software tester by trade, I would suck at testing that system
+
+117
+00:10:06,380 --> 00:10:12,380
+because I myself don't know how to detect cancer even manually. Do we have experts that
+
+118
+00:10:12,380 --> 00:10:16,260
+can help in our team to make sure that we're building the right thing the right way that
+
+119
+00:10:16,260 --> 00:10:21,340
+is actually helping? Another example would be sentiment analysis. I'd probably want some
+
+120
+00:10:21,340 --> 00:10:25,860
+linguists on my team, for example. Do we have the proper resources?
+
+121
+00:10:25,860 --> 00:10:29,820
+Number three is design the initial architecture. Which database or tables are we going to pull
+
+122
+00:10:29,820 --> 00:10:35,140
+data from? What does our ELT process look like? Is this going to be behind a rest service?
+
+123
+00:10:35,140 --> 00:10:39,180
+Is it going to be on a mobile device? It might not have internet, if that's the case. How
+
+124
+00:10:39,180 --> 00:10:42,940
+are we going to monitor this, monitor and measure it as we're developing it? What about
+
+125
+00:10:42,940 --> 00:10:49,580
+when it's inside production? How are we going to monitor things as well? Yeah, I'll just
+
+126
+00:10:49,580 --> 00:10:53,980
+keep going because of time. Number four is to collect data. Where is the data coming
+
+127
+00:10:53,980 --> 00:10:56,460
+from? This is a little bit different than what I asked before in the databases because
+
+128
+00:10:56,460 --> 00:11:01,940
+this might be our data is coming from recordings at a traffic camera. This could be we're recording
+
+129
+00:11:01,940 --> 00:11:06,460
+user session data and that's being streamed in. The different sources you have will also
+
+130
+00:11:07,140 --> 00:11:10,380
+determine how you do a lot of this as well. Is this different than staging your dev? Are
+
+131
+00:11:10,380 --> 00:11:14,540
+you just grabbing things from production and cloning it into a staged database? Or are
+
+132
+00:11:14,540 --> 00:11:19,980
+you doing some different filtering? How much of it is synthetic versus actual prod data?
+
+133
+00:11:19,980 --> 00:11:23,340
+Where are we storing the data? Is the data being streamed or batched? Basically, at the
+
+134
+00:11:23,340 --> 00:11:26,580
+end of the day, what I'm trying to get at is you've got to understand the data journey
+
+135
+00:11:26,580 --> 00:11:31,900
+that it's going through. It's not enough to just say, well, as the machine learning engineering
+
+136
+00:11:31,940 --> 00:11:36,460
+team, I just know that Snowflake has all my data in these few tables. I don't need to
+
+137
+00:11:36,460 --> 00:11:40,140
+know what happens before that. All I care about are my tables and that's enough for
+
+138
+00:11:40,140 --> 00:11:45,940
+me. It's really hard to do software testing if you're oblivious to what's happening beforehand.
+
+139
+00:11:45,940 --> 00:11:50,740
+Let's take a simple diagram here. This is a very simple ELT process. On the left, it
+
+140
+00:11:50,740 --> 00:11:55,260
+starts there and then goes to the right. We have our sources coming from user sessions.
+
+141
+00:11:55,260 --> 00:11:58,740
+Customers on a website, they're doing things and kind of like Google Analytics, data is
+
+142
+00:11:58,740 --> 00:12:02,900
+being streamed in. In this case, we're using Kinesis to stream the data in and loading
+
+143
+00:12:02,900 --> 00:12:07,460
+it into S3. We're using that as our data lake, let's say. From there, we have some
+
+144
+00:12:07,460 --> 00:12:10,660
+DAGs that do transformations and there's different transformations depending on where the data
+
+145
+00:12:10,660 --> 00:12:15,020
+is going to eventually land. For example, we have Neptune and Snowflake and we're putting
+
+146
+00:12:15,020 --> 00:12:20,460
+data in those places. As software testers, we care about every single one of these steps.
+
+147
+00:12:20,460 --> 00:12:24,580
+Why? Because each one of these steps, there's going to be risk in each one of those. If
+
+148
+00:12:25,340 --> 00:12:30,780
+down for whatever reason, then everything downstream gets screwed. We want to make sure
+
+149
+00:12:30,780 --> 00:12:35,060
+that we have not just testing and monitoring in place, but also fault tolerant practices.
+
+150
+00:12:35,060 --> 00:12:39,340
+If Kinesis were to hiccup, would we know about that? Would we be able to automatically get
+
+151
+00:12:39,340 --> 00:12:44,660
+it back up and going again? That's all part of software quality. We care about these steps
+
+152
+00:12:44,660 --> 00:12:47,540
+to make sure that once everything on the right hand side over here, you can't see it, but
+
+153
+00:12:47,540 --> 00:12:52,180
+this is probably where the machine learning stuff lives, that that has the best data that
+
+154
+00:12:52,180 --> 00:12:56,860
+you possibly can. When we say what's good data, we have to define those things. You
+
+155
+00:12:56,860 --> 00:13:02,860
+don't just get good data by writing these theoretical tests that I'm talking about.
+
+156
+00:13:02,860 --> 00:13:06,180
+Number five is then preparing data. Now we're getting into actual machine learning stuff.
+
+157
+00:13:06,180 --> 00:13:10,620
+Now you're preparing data. What shapes does data need to be in? What are the data types?
+
+158
+00:13:10,620 --> 00:13:15,260
+Are there any missing values or errors? Basically, poop data makes poop models. This is where
+
+159
+00:13:15,260 --> 00:13:20,140
+a lot of our machine learning engineers, the AI, the data scientists, they're doing a lot
+
+160
+00:13:20,140 --> 00:13:24,500
+of testing here already. I'm going to go through this part pretty quick, but already
+
+161
+00:13:24,500 --> 00:13:29,180
+lots of experimentation, lots of testing happens here. I have data analysts for things like
+
+162
+00:13:29,180 --> 00:13:34,340
+this and data engineers because I am not the best. We have these people because we know
+
+163
+00:13:34,340 --> 00:13:38,860
+that this ML systems, the lifeblood is the data. We want to have people, you may call
+
+164
+00:13:38,860 --> 00:13:43,500
+them testers, but they'll be data analysts in your HR tool, but they're still testing
+
+165
+00:13:43,500 --> 00:13:49,700
+the data. Next up, we have training and validating models. We experiment and compare models,
+
+166
+00:13:49,860 --> 00:13:54,660
+capture training validation metrics, visualize results, tune weights and parameters, and
+
+167
+00:13:54,660 --> 00:14:01,660
+hopefully using tests, exploratory and automated, to help you as you're doing this. In a previous
+
+168
+00:14:02,260 --> 00:14:09,260
+team that I had, they would do all of their experiments all locally and they would open
+
+169
+00:14:09,260 --> 00:14:12,740
+a new tab in VS Code and be like, here's the results. Then for the next run, they'd
+
+170
+00:14:12,740 --> 00:14:17,220
+open a new tab and be like, okay, here's the new results. Very manual process. Nowadays,
+
+171
+00:14:17,220 --> 00:14:24,220
+we have companies and platforms that are building tools specifically to help you track
+
+172
+00:14:24,380 --> 00:14:28,580
+all of your experiments and test results. Hopefully, you can use some automation as
+
+173
+00:14:28,580 --> 00:14:35,580
+well to help out, to speed things up. We'll have some examples here soon.
+
+174
+00:14:38,180 --> 00:14:40,500
+When I talk about validation, the reason why I call it that is because I want it to be
+
+175
+00:14:40,500 --> 00:14:44,900
+a little bit different than what we refer to as testing. Validation is how well does
+
+176
+00:14:44,940 --> 00:14:49,740
+the model perform against a data set it's never seen before? Even though, yes, you can
+
+177
+00:14:49,740 --> 00:14:53,780
+call it testing as well because it kind of is. You do a test, training split and whatnot.
+
+178
+00:14:53,780 --> 00:14:57,100
+I'm calling it validation just so that we don't overload the word test too much because
+
+179
+00:14:57,100 --> 00:15:01,940
+it's pretty overloaded. You can think that during training, maybe our model has a 95%
+
+180
+00:15:01,940 --> 00:15:08,500
+accuracy. Wow, so smart, so great. Then during validation, it's 76% accuracy. Some people
+
+181
+00:15:08,500 --> 00:15:11,900
+would say, well, this looks like a great indication of overfitting because my model knows the
+
+182
+00:15:11,900 --> 00:15:16,300
+training data really, really well. Yet, I'm saying testing is a different thing than
+
+183
+00:15:16,300 --> 00:15:23,300
+this as well. The only reason I have facial hair is so I can do this.
+
+184
+00:15:24,180 --> 00:15:31,020
+Step number seven is then testing the models. What behaviors does the model show? Does it
+
+185
+00:15:31,020 --> 00:15:35,900
+demonstrate harmful biases? Does it meet those actual privacy and security requirements that
+
+186
+00:15:35,900 --> 00:15:41,860
+we have? Is it performant and reliable? Performant in this case is, for example, can it have
+
+187
+00:15:42,220 --> 00:15:47,620
+a very large load of users using it at one time? Can it withstand things like adversarial
+
+188
+00:15:47,620 --> 00:15:52,820
+attacks which is now more about the robustness of the model than anything? Does it solve
+
+189
+00:15:52,820 --> 00:15:56,860
+the problems that we set out to solve? So the understocking, overstocking, is it actually
+
+190
+00:15:56,860 --> 00:15:59,820
+solving that problem or not? Or is it only doing a really good job of predicting how
+
+191
+00:15:59,820 --> 00:16:06,820
+much people spend? Then, of course, do our customers enjoy using our ML system? Sometimes
+
+192
+00:16:06,820 --> 00:16:11,500
+they may not even know that they're using it. That might be a good indication. Who knows?
+
+193
+00:16:11,540 --> 00:16:15,740
+Do they enjoy using it? A lot of people are wary of AI because, like, I don't want the
+
+194
+00:16:15,740 --> 00:16:20,140
+machines to do everything and they have, you know, there's some truth in that. So you want
+
+195
+00:16:20,140 --> 00:16:23,140
+to make sure that they can trust your system, they like using it, and they want to keep
+
+196
+00:16:23,140 --> 00:16:25,460
+using it.
+
+197
+00:16:25,460 --> 00:16:29,020
+Number eight is then deploy the model. Again, is this going to be, is the model itself going
+
+198
+00:16:29,020 --> 00:16:32,940
+to be behind the rest of GraphQL service? Is it going to be on a mobile device? Maybe
+
+199
+00:16:32,940 --> 00:16:37,320
+an airplane or self-driving car? Maybe it's a model to tell you that you need to restock
+
+200
+00:16:37,320 --> 00:16:41,100
+your fridge and buy some more eggs. You ran out. Or maybe it's supposed to give you diagnostic
+
+201
+00:16:41,100 --> 00:16:45,820
+information about a turbine, right? Is it a serverless function? Maybe feeding other
+
+202
+00:16:45,820 --> 00:16:51,540
+things? For software testers, when you talk about, like, a rest of GraphQL service, well,
+
+203
+00:16:51,540 --> 00:16:55,940
+there's lots of API testing techniques we can use, right? We can use the requests library
+
+204
+00:16:55,940 --> 00:16:59,260
+in Python in order to make these requests and see that the responses we get back are
+
+205
+00:16:59,260 --> 00:17:04,700
+good. We think of performance, we can use Locust IO to do performance testing and see
+
+206
+00:17:04,700 --> 00:17:09,260
+how many requests can my model handle at one time? Can it handle a million predictions
+
+207
+00:17:09,260 --> 00:17:14,060
+within a second? Interesting questions that you ask in order to test and, you know, measure
+
+208
+00:17:14,060 --> 00:17:17,420
+the quality of things.
+
+209
+00:17:17,420 --> 00:17:21,180
+And then step number nine, you observe and iterate. And this is, you know, you monitor,
+
+210
+00:17:21,180 --> 00:17:24,380
+measure, learn, insights, learn. This is, you're operating in production now. So big
+
+211
+00:17:24,380 --> 00:17:29,700
+terms like observability, operability, these things come to mind when I think of the step
+
+212
+00:17:29,700 --> 00:17:33,860
+nine. And if you're not sure what these terms mean, it's a great thing to note down, do
+
+213
+00:17:33,860 --> 00:17:36,620
+some research afterward because they're pretty awesome topics.
+
+214
+00:17:36,620 --> 00:17:42,260
+All right. So through all those steps, what we're thinking about is how can we prevent
+
+215
+00:17:42,260 --> 00:17:48,420
+risk? How can we mitigate risk? How can we detect risk or problems? Right? When I think
+
+216
+00:17:48,420 --> 00:17:54,380
+of prevent, that's where the shift left happens. It's not easy to prevent if I don't holistically
+
+217
+00:17:54,380 --> 00:17:57,740
+know what my ecosystem is going to have. If I don't holistically know the problem we're
+
+218
+00:17:57,740 --> 00:18:01,580
+trying to solve, how customers are going to end up actually using this thing, it's difficult
+
+219
+00:18:02,060 --> 00:18:07,780
+to prevent problems. Right? And so in software testing, we'll do things like risk storming,
+
+220
+00:18:07,780 --> 00:18:11,660
+example mapping, and different collaborative techniques. You've probably heard of behavior-driven
+
+221
+00:18:11,660 --> 00:18:15,420
+development. In order to get the team on the same page as to what do we care about, what
+
+222
+00:18:15,420 --> 00:18:21,420
+heuristics matter to us when it comes to this MLSystem we're building. Mitigation is, when
+
+223
+00:18:21,420 --> 00:18:28,420
+I think of mitigation, I'm thinking of things like blue-green deployments, feature flags,
+
+224
+00:18:28,420 --> 00:18:33,560
+TB testing. How can we prevent or mitigate as much risk as possible? For example, going
+
+225
+00:18:33,560 --> 00:18:37,540
+back to the cancer detection, I may want to just release my MLSystem to one doctor that's
+
+226
+00:18:37,540 --> 00:18:41,100
+working with us closely to say, how is it working for you, and get some feedback from
+
+227
+00:18:41,100 --> 00:18:44,980
+them. If things are working well, let me release it to the whole hospital now. Let me release
+
+228
+00:18:44,980 --> 00:18:51,500
+it to then 5% of my customer base, then 50%, and so on and so forth. Right? And then detection
+
+229
+00:18:51,500 --> 00:18:56,040
+is where you'll have test automation, because those kind of functional tests can detect problems
+
+230
+00:18:56,040 --> 00:19:00,880
+and that kind of stuff. So lots of different techniques you can use when you're thinking
+
+231
+00:19:00,880 --> 00:19:05,400
+about software testing and quality. So Zillow, this is a very common problem. Hopefully people
+
+232
+00:19:05,400 --> 00:19:09,720
+have seen this before. Zillow is a real estate company, and they wanted to build an MLSystem
+
+233
+00:19:09,720 --> 00:19:14,840
+back in, I want to say, 2019 and 2020, that would allow them to automatically buy properties
+
+234
+00:19:14,840 --> 00:19:20,240
+and then sell them at a higher price later on and make a bunch of money. They would hire
+
+235
+00:19:20,240 --> 00:19:23,840
+hundreds of people in order to do all this analysis themselves, and so they thought,
+
+236
+00:19:23,840 --> 00:19:27,960
+well, we don't need hundreds of people if our machine learning system can do this all
+
+237
+00:19:27,960 --> 00:19:35,000
+on its own. Sounds fantastic. And at the beginning it worked really, really well. But then eventually
+
+238
+00:19:35,000 --> 00:19:40,120
+it went down very fast. Right? They actually had to let go, I want to say it was like 25
+
+239
+00:19:40,120 --> 00:19:45,840
+to 50% of their workforce. They let go. Because, oh, there it is. Because there was a huge
+
+240
+00:19:45,840 --> 00:19:49,120
+problem. And this person tweeted on the right-hand side saying, I sold my house to Zillow last
+
+241
+00:19:49,120 --> 00:19:54,400
+week for 550,000. They called me to buy it back. I offered 350,000 and they accepted
+
+242
+00:19:54,400 --> 00:19:58,800
+it on the spot. So within a week they made $200,000 just because they took advantage
+
+243
+00:19:58,800 --> 00:20:05,200
+of the MLSystem that Zillow had. So what do you think happened? How could that possibly
+
+244
+00:20:05,200 --> 00:20:09,800
+happen where things worked so well and then eventually things went obviously so bad? Anyone
+
+245
+00:20:09,800 --> 00:20:16,800
+have any ideas? There's an adversarial attack. What was that over there?
+
+246
+00:20:19,120 --> 00:20:26,120
+Yes. Whoa, yes. Lots of different things, right? And I would say every single one of
+
+247
+00:20:27,640 --> 00:20:34,640
+you are absolutely right. What was that, sorry? Yeah, the feature engineering could have been
+
+248
+00:20:35,720 --> 00:20:40,920
+off as well. And yes, that was definitely a huge part of it too. There was a lot of problems.
+
+249
+00:20:40,920 --> 00:20:45,160
+So we'll go through this part really quick. But there was poor data quality. There was
+
+250
+00:20:45,560 --> 00:20:49,560
+it was easy to game the system. They were entirely dependent on the MLSystem. So there
+
+251
+00:20:49,560 --> 00:20:54,480
+was very little to no human intervention for this MLSystem. So it could automatically
+
+252
+00:20:54,480 --> 00:21:00,360
+buy properties and sell them however it wanted to. Now this was done before COVID as well.
+
+253
+00:21:00,360 --> 00:21:05,240
+So when I say risk from external factors, once COVID hit and the market went crazy,
+
+254
+00:21:05,240 --> 00:21:09,400
+instead of pausing the system going, well, let's take a second to step back, it stayed
+
+255
+00:21:09,400 --> 00:21:14,280
+on. And so as the market changed and it was trained on historical data when there was
+
+256
+00:21:14,280 --> 00:21:21,280
+no COVID, all of a sudden there is COVID and they didn't do anything about it. Goodness,
+
+257
+00:21:22,400 --> 00:21:27,040
+lots of problems. So the one that I took away from this was it was good at first and it
+
+258
+00:21:27,040 --> 00:21:31,760
+got worse over time. And this is one of the big problems that we have, not just in machine
+
+259
+00:21:31,760 --> 00:21:35,400
+learning but in software development as well. You have a team of developers, they build
+
+260
+00:21:35,400 --> 00:21:40,400
+something, deploy it, and then they immediately move on to the next task because that's what
+
+261
+00:21:40,400 --> 00:21:44,360
+we do. So it may have been great for the first three months. Oh, Carlos, we monitored
+
+262
+00:21:44,360 --> 00:21:48,960
+for three months and everything looked great. It's time for us to move on to the next thing.
+
+263
+00:21:48,960 --> 00:21:55,280
+And yet after three months, COVID happened and then things blew up. So this is where
+
+264
+00:21:55,280 --> 00:21:58,040
+the concept of shift right comes into play. Who would have thought, right? Doesn't that
+
+265
+00:21:58,040 --> 00:22:03,960
+make sense? Shift right. This is what happens post deployment and maybe during deployment
+
+266
+00:22:03,960 --> 00:22:08,720
+too, but post deployment. And so I mentioned SREs or site reliability engineering. A lot
+
+267
+00:22:08,720 --> 00:22:12,880
+of them live in the right because they care about what happens inside of production and
+
+268
+00:22:12,880 --> 00:22:19,040
+you have probably a team of people observing this and working with it. So I made this diagram,
+
+269
+00:22:19,040 --> 00:22:22,120
+a really simple one just so you can kind of see that instead of it being this linear thing
+
+270
+00:22:22,120 --> 00:22:25,800
+that I talked about, right? It's meant to be this infinity loop. It's meant to be,
+
+271
+00:22:25,800 --> 00:22:31,440
+and this is a diagram of MLOps by the way, but it's meant to be you continue to observe,
+
+272
+00:22:31,440 --> 00:22:34,960
+you continue to iterate, and you don't stop, right? There's going to be things that you're
+
+273
+00:22:34,960 --> 00:22:38,920
+going to optimize in your data collection, optimize in data preparation, optimize in
+
+274
+00:22:38,920 --> 00:22:43,240
+your training and probably retraining. If you're not doing these things, then you run
+
+275
+00:22:43,240 --> 00:22:48,200
+the risk of things like data drift happening to your application, right? And then immediate
+
+276
+00:22:48,200 --> 00:22:53,800
+biases like historical bias get introduced. So of course MLOps requires good processes,
+
+277
+00:22:53,800 --> 00:22:57,800
+testing and automation. This is much easier said than done, of course, as is with anything
+
+278
+00:22:57,800 --> 00:23:02,080
+that involves humans. It's pretty difficult to have something that's really robust that
+
+279
+00:23:02,080 --> 00:23:07,160
+everyone feels great, you know? But alas. So let's go right into testing techniques
+
+280
+00:23:07,160 --> 00:23:11,240
+now so then we can wrap it up with concrete things that you can take away. So the first
+
+281
+00:23:11,240 --> 00:23:15,920
+one is adversarial attacks. This is you trying to exploit the model, trying to find its weaknesses
+
+282
+00:23:15,920 --> 00:23:20,440
+and take advantage of them just like the person did with selling their house and then rebuying
+
+283
+00:23:20,440 --> 00:23:27,240
+it. So on the left here you see a turtle, and in this case the MLO system that's already
+
+284
+00:23:27,240 --> 00:23:32,560
+been trained, deployed to production and everything is identifying this turtle as
+
+285
+00:23:32,560 --> 00:23:38,920
+a rifle. I think this is a rifle, Carlos. Well, it's funny and yet at the same time
+
+286
+00:23:38,920 --> 00:23:42,400
+what are the potential implications or risks that happen because it thinks a turtle is
+
+287
+00:23:42,400 --> 00:23:46,800
+a rifle? Hopefully no one's walking their turtle and then the SWAT team shows up and
+
+288
+00:23:46,800 --> 00:23:52,080
+picks it up. On the right hand side here we have a stop sign. And in this case the self-driving
+
+289
+00:23:53,080 --> 00:23:59,080
+saw this as a 45 mile per hour speed limit sign just with a few stickers placed on top
+
+290
+00:23:59,080 --> 00:24:04,200
+of it. Now again this may seem like a really simple example but that's not uncommon in
+
+291
+00:24:04,200 --> 00:24:08,560
+the real world. There might be graffiti on the stop sign. If there's a graffiti on the
+
+292
+00:24:08,560 --> 00:24:13,560
+stop sign and doesn't see it as a stop sign anymore you're probably going to kill someone.
+
+293
+00:24:13,560 --> 00:24:18,920
+Interesting. Moving on, in this case this is security AI. On the left hand side it detects
+
+294
+00:24:18,920 --> 00:24:23,560
+a person very nicely. On the right hand side this person is completely invisible to the
+
+295
+00:24:23,560 --> 00:24:30,240
+system. All because they're wearing a colorful little square. And I have in my house right
+
+296
+00:24:30,240 --> 00:24:34,220
+now I have a security system like this that detects animals. There's a dog walking across
+
+297
+00:24:34,220 --> 00:24:39,400
+your driveway. It can detect these things. So if people can be invisible to this MLO
+
+298
+00:24:39,400 --> 00:24:43,240
+system, security AI that I purchased, that I'm spending money for, they can just walk
+
+299
+00:24:43,240 --> 00:24:48,700
+right into my house no problem. Well that's scary for me as a consumer, right? So become
+
+300
+00:24:48,700 --> 00:24:51,900
+the attacker. I'm going to go through this really quick. It's not only for computer
+
+301
+00:24:51,900 --> 00:24:55,380
+vision. Obviously I'm showing computer vision because it's the one that you can see and
+
+302
+00:24:55,380 --> 00:24:59,740
+look at. You don't have to be a data scientist or an analyst to create these attacks. You
+
+303
+00:24:59,740 --> 00:25:04,660
+don't have to know how to code either. If you take my course on test automation university
+
+304
+00:25:04,660 --> 00:25:09,180
+that is called Intro to Testing Machine Learning Models, I actually show notebooks and code
+
+305
+00:25:09,180 --> 00:25:14,200
+that you can use in order to do these kinds of attacks. Be a part of threat modeling.
+
+306
+00:25:14,200 --> 00:25:16,820
+If you don't know what threat modeling is, that's another thing to write down and do
+
+307
+00:25:16,820 --> 00:25:22,500
+research afterward. And then of course be creative and design tests and attacks. Sometimes
+
+308
+00:25:22,500 --> 00:25:26,700
+you have to be creative to find these solutions like us using the earth as a satellite. That
+
+309
+00:25:26,700 --> 00:25:30,860
+was pretty insane, right? Being creative with these kinds of things.
+
+310
+00:25:30,860 --> 00:25:34,860
+All right, now for behavioral testing. This is us when I talked about testing behaviors
+
+311
+00:25:34,860 --> 00:25:38,660
+and whatnot. This is what I'm talking about. Behavioral testing. This is beyond accuracy
+
+312
+00:25:38,660 --> 00:25:44,460
+in those lost metrics. You have to define those desired capabilities during design,
+
+313
+00:25:44,660 --> 00:25:48,180
+right? That's the shift left aspect of it. You can't just say, well, let's make sure
+
+314
+00:25:48,180 --> 00:25:52,660
+that turtles don't look like rifles. That might not fit your context of what you're
+
+315
+00:25:52,660 --> 00:25:56,880
+building. You and your team have to decide what are these capabilities we care about?
+
+316
+00:25:56,880 --> 00:26:00,940
+What should it be able to do and what shouldn't it be able to do? If there's a problem with
+
+317
+00:26:00,940 --> 00:26:04,300
+it, how are we going to raise that problem in an elegant way to our users?
+
+318
+00:26:04,300 --> 00:26:09,140
+The second part, testing behaviors, gives a more accurate picture of model performance.
+
+319
+00:26:09,140 --> 00:26:13,340
+This team that actually wrote this white paper, they said that they created twice as many
+
+320
+00:26:13,340 --> 00:26:17,260
+tests and found almost three times as many bugs because they were doing this collaborative
+
+321
+00:26:17,260 --> 00:26:22,820
+design, that shift left approach and then moving into development.
+
+322
+00:26:22,820 --> 00:26:26,700
+So what does this look like in the real world? On the left hand side, you can see the capabilities
+
+323
+00:26:26,700 --> 00:26:32,020
+that they defined. One of them was vocabulary. If you could only have 5,000 tokens inside
+
+324
+00:26:32,020 --> 00:26:36,460
+your vocabulary, well, those 5,000 tokens better be high quality words. For example,
+
+325
+00:26:36,460 --> 00:26:41,540
+the word and, probably you don't want that in your vocabulary, right? The next one,
+
+326
+00:26:41,540 --> 00:26:46,620
+any R is named entity recognition and then negation as well. Those are the rows. The
+
+327
+00:26:46,620 --> 00:26:50,620
+columns they had were different testing types. You have the minimal functionality tests,
+
+328
+00:26:50,620 --> 00:26:55,400
+invariance and directional. We'll get into some examples of this. On the right hand side,
+
+329
+00:26:55,400 --> 00:26:58,620
+they have a table of test cases that they're going to be using to test these different
+
+330
+00:26:58,620 --> 00:27:03,580
+capabilities. So you can see like on the right hand side, it says, I can't recommend the
+
+331
+00:27:03,580 --> 00:27:08,500
+food. They expected it to be a negative sentiment and yet the model returned, it was a positive
+
+332
+00:27:08,500 --> 00:27:13,580
+sentiment so the test failed. Enough of these tests they had and after all the tests executed,
+
+333
+00:27:13,580 --> 00:27:19,020
+it had a failure rate of 76.4%. Why does this matter? Well, it matters because, and I'll
+
+334
+00:27:19,020 --> 00:27:25,020
+go through this really quick, it matters because you're able to test multiple models at once
+
+335
+00:27:25,020 --> 00:27:29,180
+very, very quickly. Now I know this is a little hard to see. All of these rows here, these
+
+336
+00:27:29,180 --> 00:27:32,820
+are all the capabilities. So you see like robustness and temporal, there's different
+
+337
+00:27:32,820 --> 00:27:36,980
+capabilities here. But what I care about the most is this section here. This is the failure
+
+338
+00:27:37,020 --> 00:27:42,560
+rate for all the models they're comparing. To zoom in on one of them, they have the failure
+
+339
+00:27:42,560 --> 00:27:46,620
+rate for there's a model from Microsoft, a model from Google, a model from Amazon and
+
+340
+00:27:46,620 --> 00:27:51,460
+then Burt and Roberta. The two tests they have here are the companies Australian, that
+
+341
+00:27:51,460 --> 00:27:55,580
+should be neutral sentiment. This is a private aircraft, that should be neutral sentiment
+
+342
+00:27:55,580 --> 00:28:00,180
+as well and yet Burt had a really hard time determining this. And these were all state
+
+343
+00:28:00,180 --> 00:28:06,380
+of the art models. So again, past just the training and validation, there's more to be
+
+344
+00:28:06,620 --> 00:28:11,860
+tested, right? These behaviors especially. Now fair and responsible AI, this is testing
+
+345
+00:28:11,860 --> 00:28:17,380
+for harmful biases. So in this case, if you look at like this is, in this paper they were
+
+346
+00:28:17,380 --> 00:28:22,040
+trying to show here's data generation and in here all the red bits you see are different
+
+347
+00:28:22,040 --> 00:28:26,660
+types of harmful biases. Zillow had the historical bias problem where they trained the model
+
+348
+00:28:26,660 --> 00:28:30,980
+on things before COVID and then it sucked during COVID. Representation bias, measurement
+
+349
+00:28:30,980 --> 00:28:35,340
+bias and then as you're modeling and building things, even more biases, biases everywhere,
+
+350
+00:28:35,340 --> 00:28:41,580
+all around. So fairness, when we talk about fairness, there's a few aspects. You can
+
+351
+00:28:41,580 --> 00:28:45,980
+have fairness by data, fairness by measurement and modeling and fairness by design. Let's
+
+352
+00:28:45,980 --> 00:28:51,300
+go through some examples. Back in 2017, Google wanted to create an MLS system that could
+
+353
+00:28:51,300 --> 00:28:55,740
+detect toxicity online. This would be great for moderators in a chat room, maybe a video
+
+354
+00:28:55,740 --> 00:29:00,580
+game or whatnot, right? So on the top they had, if they put in I am straight, the model
+
+355
+00:29:00,580 --> 00:29:06,700
+said this is 4% toxic, basically not toxic at all. But if you put in I am gay, the model
+
+356
+00:29:06,700 --> 00:29:13,700
+said this is 86% toxic, showing a harmful bias. So they decided, well, I wonder what
+
+357
+00:29:15,460 --> 00:29:21,140
+other things it has a harmful bias with our system. So they put I am gay, queer, Muslim,
+
+358
+00:29:21,140 --> 00:29:25,660
+Jewish, Christian, straight and notice the score of how toxic the machine learning system
+
+359
+00:29:25,660 --> 00:29:32,180
+saw this as. While us changing just the token, that is an example of invariance testing.
+
+360
+00:29:32,180 --> 00:29:37,540
+If I only change one word, does it change sentiment? How positive or negative, in this
+
+361
+00:29:37,540 --> 00:29:42,300
+case how toxic does this become? You can measure these things and do a lot of software testing
+
+362
+00:29:42,300 --> 00:29:47,740
+against them. In this case, this is Google Translate. On the left-hand side you have
+
+363
+00:29:47,740 --> 00:29:51,260
+Turkish. Turkish doesn't have gender. For example, in Spanish you do, right, like you
+
+364
+00:29:51,260 --> 00:29:56,580
+have lasilla and things like that. When it translated to English, it automatically assumed
+
+365
+00:29:56,580 --> 00:30:03,580
+that a nurse is she and doctor is he, showing a harmful bias, right? Another example, Casey
+
+366
+00:30:03,980 --> 00:30:07,380
+is my friend, how do we know if Casey is male, how do we know if they are female, non-binary?
+
+367
+00:30:07,380 --> 00:30:12,540
+We don't. We don't have that context. So by design what they did instead was how about
+
+368
+00:30:12,540 --> 00:30:18,740
+we show them the different answers and the user can select the option that matches their
+
+369
+00:30:18,740 --> 00:30:24,180
+context. So when I want to translate friend into Spanish, you get amigo or amiga, which
+
+370
+00:30:24,180 --> 00:30:31,180
+one fits what you're trying to do. So to recap, we have the shift left, shift right,
+
+371
+00:30:31,460 --> 00:30:36,260
+adversarial attacks, testing behaviors and the overall experience, test fairness, harmful
+
+372
+00:30:36,260 --> 00:30:42,820
+biases, and of course, hopefully this helps you get some ideas as to what you can search,
+
+373
+00:30:42,820 --> 00:30:46,340
+different testing techniques you can use in order to test for these different things.
+
+374
+00:30:46,340 --> 00:30:49,380
+And if you need help, software testers are here. You should leverage them because they
+
+375
+00:30:49,380 --> 00:30:53,580
+can help you out. We need better testing all around in a very holistic way. So with that
+
+376
+00:30:53,580 --> 00:30:57,380
+said, that's it. That's all I have for this presentation. I do have code examples for
+
+377
+00:30:57,380 --> 00:31:01,340
+anyone that is interested in seeing how these tests can be written in a test automation
+
+378
+00:31:01,340 --> 00:31:05,520
+format, but otherwise I'm ready for questions or I think we're actually close to time.
+
+379
+00:31:05,520 --> 00:31:05,940
+So thank you.
+

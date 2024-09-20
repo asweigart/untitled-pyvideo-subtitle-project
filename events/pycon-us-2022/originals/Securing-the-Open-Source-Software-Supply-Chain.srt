@@ -1,0 +1,2276 @@
+1
+00:00:00,000 --> 00:00:06,840
+Open-source security team.
+
+2
+00:00:06,840 --> 00:00:12,240
+And today he's going to talk about us, how we can secure our open-source software supply
+
+3
+00:00:12,240 --> 00:00:13,240
+chain.
+
+4
+00:00:13,240 --> 00:00:14,240
+Thank you.
+
+5
+00:00:14,240 --> 00:00:17,240
+Dustin, take it away.
+
+6
+00:00:17,240 --> 00:00:18,240
+Thanks.
+
+7
+00:00:18,240 --> 00:00:19,240
+Hi, everybody.
+
+8
+00:00:19,240 --> 00:00:25,180
+Oh, it's so nice to be in person and have you all here.
+
+9
+00:00:25,180 --> 00:00:27,560
+So like Bernat said, I'm Dustin.
+
+10
+00:00:27,560 --> 00:00:28,560
+I have a couple hats.
+
+11
+00:00:28,600 --> 00:00:32,600
+One, I'm a software engineer on Google's open-source security team.
+
+12
+00:00:32,600 --> 00:00:34,200
+This is a new team at Google.
+
+13
+00:00:34,200 --> 00:00:39,480
+Our mission is to make open-source software that Google and the rest of the world uses
+
+14
+00:00:39,480 --> 00:00:40,480
+more secure.
+
+15
+00:00:40,480 --> 00:00:44,760
+I'm also a director of the Python Software Foundation, where I help ensure the long-term
+
+16
+00:00:44,760 --> 00:00:49,720
+success of one very big open-source Python project that you have probably heard of, Python
+
+17
+00:00:49,720 --> 00:00:51,200
+itself.
+
+18
+00:00:51,200 --> 00:00:55,520
+And I'm also a maintainer of the Python Package Index, where I help ensure the long-term success
+
+19
+00:00:55,680 --> 00:01:01,840
+of hundreds of thousands of tiny little Python projects that you might have never heard of.
+
+20
+00:01:01,840 --> 00:01:06,120
+I'm going to be a bit unconventional and start with a Q&A, but I'm also going to be the one
+
+21
+00:01:06,120 --> 00:01:08,560
+asking the questions and then I'm also going to answer them.
+
+22
+00:01:08,560 --> 00:01:11,160
+So bear with me.
+
+23
+00:01:11,160 --> 00:01:14,160
+And the reason is because I think there's some really important questions that we should
+
+24
+00:01:14,160 --> 00:01:18,240
+all be asking around open-source security right now, or the questions that you might
+
+25
+00:01:18,240 --> 00:01:19,240
+already have.
+
+26
+00:01:19,240 --> 00:01:20,240
+I'm going to try and preempt them.
+
+27
+00:01:20,240 --> 00:01:24,480
+The first is, is it safe to use open-source software?
+
+28
+00:01:24,480 --> 00:01:27,920
+This might be a question that you came here with today.
+
+29
+00:01:27,920 --> 00:01:33,080
+Maybe you've heard a lot about security challenges in open-source, things happening in the news.
+
+30
+00:01:33,080 --> 00:01:36,920
+You might have doubts or fears about the viability of using open-source.
+
+31
+00:01:36,920 --> 00:01:40,400
+So I'm here to tell you that is it safe to use open-source software?
+
+32
+00:01:40,400 --> 00:01:41,400
+Yes.
+
+33
+00:01:41,400 --> 00:01:46,960
+The reality is that every day all kinds of open-source software is deployed and somehow
+
+34
+00:01:46,960 --> 00:01:48,440
+it all works.
+
+35
+00:01:48,440 --> 00:01:53,080
+And as someone whose career exists because people use open-source software, I want to
+
+36
+00:01:53,160 --> 00:01:54,160
+tell you yes.
+
+37
+00:01:54,160 --> 00:01:55,360
+Like, yes, it is secure.
+
+38
+00:01:55,360 --> 00:01:59,400
+But you might say, wait, Dustin, didn't you just say that your job was to make open-source
+
+39
+00:01:59,400 --> 00:02:00,400
+more secure?
+
+40
+00:02:00,400 --> 00:02:04,520
+Doesn't that also imply that open-source software isn't quite as safe as it could be?
+
+41
+00:02:04,520 --> 00:02:05,520
+And so kind of also yes.
+
+42
+00:02:05,520 --> 00:02:10,120
+So I really want to say yes with like a giant asterisk.
+
+43
+00:02:10,120 --> 00:02:12,400
+And so basically it depends on how you use it.
+
+44
+00:02:12,400 --> 00:02:15,440
+And also it depends on what your threat model is.
+
+45
+00:02:15,440 --> 00:02:18,700
+You want to read that whole paragraph, catch me afterwards.
+
+46
+00:02:18,700 --> 00:02:21,100
+So maybe a better question to be asking is this.
+
+47
+00:02:21,100 --> 00:02:25,060
+How can we use open-source software safely?
+
+48
+00:02:25,060 --> 00:02:27,540
+If we're already using open-source, how can we use it more safely?
+
+49
+00:02:27,540 --> 00:02:31,460
+And if you're not, what should you be aware of?
+
+50
+00:02:31,460 --> 00:02:35,020
+So I want to start with what the software supply chain is.
+
+51
+00:02:35,020 --> 00:02:38,900
+Software supply chain is everything that it takes to produce your software, every other
+
+52
+00:02:38,900 --> 00:02:43,260
+piece of software, every piece of infrastructure, just everything that is a dependency for you
+
+53
+00:02:43,260 --> 00:02:45,920
+to create and use software.
+
+54
+00:02:45,920 --> 00:02:48,960
+So what is the secure software supply chain?
+
+55
+00:02:48,960 --> 00:02:52,400
+This is all those things and they're also definitely not compromised.
+
+56
+00:02:52,400 --> 00:02:57,440
+You may ask why is software supply chain security such a big deal?
+
+57
+00:02:57,440 --> 00:03:01,560
+And the reason is basically because virtually everyone uses open-source software.
+
+58
+00:03:01,560 --> 00:03:04,520
+Anyone who says they don't probably don't have a great idea of what software they're
+
+59
+00:03:04,520 --> 00:03:05,520
+using.
+
+60
+00:03:05,520 --> 00:03:09,400
+And in the past we made a lot of assumptions about how open-source software is created,
+
+61
+00:03:09,400 --> 00:03:12,560
+how it's distributed, how it's consumed, et cetera.
+
+62
+00:03:12,680 --> 00:03:17,200
+And some of these assumptions were that things wouldn't go wrong and these assumptions were
+
+63
+00:03:17,200 --> 00:03:18,800
+wrong.
+
+64
+00:03:18,800 --> 00:03:22,960
+But these problems have always existed, so possibly a better question is why is software
+
+65
+00:03:22,960 --> 00:03:26,600
+supply chain security such a big deal right now?
+
+66
+00:03:26,600 --> 00:03:32,280
+And part of this is because there's an incredible amount of scrutiny being paid to recent compromises.
+
+67
+00:03:32,280 --> 00:03:33,600
+We have all sorts of things happening.
+
+68
+00:03:33,600 --> 00:03:36,520
+Malicious libraries are published on package indexes.
+
+69
+00:03:36,520 --> 00:03:40,240
+There are new types of supply chain attacks affecting large corporations.
+
+70
+00:03:40,240 --> 00:03:46,160
+We have an unintentional remote code execution in an extremely widely used Java logging library.
+
+71
+00:03:46,160 --> 00:03:51,000
+That vulnerability was so fun that we did it twice.
+
+72
+00:03:51,000 --> 00:03:57,040
+We had an entirely new class of malware, protestware.
+
+73
+00:03:57,040 --> 00:04:00,280
+And we have SolarWinds, which I think just about everyone and their mother has heard
+
+74
+00:04:00,280 --> 00:04:04,720
+about by now, but this was described as a worst nightmare cyber attack.
+
+75
+00:04:04,720 --> 00:04:09,680
+And mostly it was described as a worst nightmare cyber attack because it was extremely sophisticated
+
+76
+00:04:09,840 --> 00:04:12,560
+and it directly attacked the US government.
+
+77
+00:04:12,560 --> 00:04:18,680
+But the main reason why so much scrutiny is being paid to the open source software supply
+
+78
+00:04:18,680 --> 00:04:23,520
+chain right now, the main reason is because of this.
+
+79
+00:04:23,520 --> 00:04:28,720
+Executive order 14028, which is on improving the nation's cybersecurity, which means that
+
+80
+00:04:28,720 --> 00:04:33,400
+actually the reason that supply chain security is a big deal is because the president said
+
+81
+00:04:33,400 --> 00:04:34,400
+so.
+
+82
+00:04:34,400 --> 00:04:35,640
+Does anyone get that reference?
+
+83
+00:04:35,640 --> 00:04:37,280
+I don't know.
+
+84
+00:04:37,280 --> 00:04:41,360
+So for anyone not based in the US or for anyone based in the US who isn't up on how their
+
+85
+00:04:41,360 --> 00:04:45,160
+government works, an executive order is kind of like an email from your boss telling you
+
+86
+00:04:45,160 --> 00:04:46,160
+what to do.
+
+87
+00:04:46,160 --> 00:04:50,120
+So this has the effect of setting policy for the entire executive branch of the federal
+
+88
+00:04:50,120 --> 00:04:51,920
+government in the US.
+
+89
+00:04:51,920 --> 00:04:55,760
+And it's also kind of like placing an order at a restaurant in the sense that you kind
+
+90
+00:04:55,760 --> 00:05:00,080
+of say what you want to happen and then people go off and they try and figure out what that
+
+91
+00:05:00,080 --> 00:05:02,200
+means and how to make it happen.
+
+92
+00:05:02,200 --> 00:05:05,000
+And maybe that takes a while to come back to you.
+
+93
+00:05:05,000 --> 00:05:08,920
+So this executive order was published about a year ago and we're still at the everyone
+
+94
+00:05:08,920 --> 00:05:12,640
+is kind of trying to figure out how to make it happen stage.
+
+95
+00:05:12,640 --> 00:05:16,280
+This executive order has a number of directives, but it specifically calls out the software
+
+96
+00:05:16,280 --> 00:05:17,480
+supply chain.
+
+97
+00:05:17,480 --> 00:05:21,480
+And if you think for a minute that this is just limited to the government, remember that
+
+98
+00:05:21,480 --> 00:05:23,080
+the government uses a lot of software.
+
+99
+00:05:23,080 --> 00:05:26,040
+They use a lot of the same software that you and I use.
+
+100
+00:05:26,040 --> 00:05:31,160
+So in terms of this order, they sort of have a viral effect of improving software security
+
+101
+00:05:31,160 --> 00:05:32,200
+for everyone.
+
+102
+00:05:32,200 --> 00:05:34,900
+This is a good type of virus.
+
+103
+00:05:34,900 --> 00:05:38,740
+So one last question you might have, how are we going to make this happen?
+
+104
+00:05:38,740 --> 00:05:40,780
+And that's what I'd like to tell you about in this talk.
+
+105
+00:05:40,780 --> 00:05:42,420
+I don't have all the answers.
+
+106
+00:05:42,420 --> 00:05:46,260
+I don't have a crystal ball, but there's some really interesting stuff happening and I want
+
+107
+00:05:46,260 --> 00:05:49,500
+you to be aware of it all and also how it might affect you.
+
+108
+00:05:49,500 --> 00:05:52,360
+So let's go on to part two.
+
+109
+00:05:52,360 --> 00:05:56,020
+Before I launch into a bunch of new tools and new technologies that you might have never
+
+110
+00:05:56,020 --> 00:06:00,600
+heard of because they were like maybe created last year, I want to take a minute to sort
+
+111
+00:06:01,600 --> 00:06:05,800
+level of understanding, define some terms, draw some parallels to stuff that you are
+
+112
+00:06:05,800 --> 00:06:07,480
+already familiar with.
+
+113
+00:06:07,480 --> 00:06:11,480
+And we're going to do the AVCs of secure software supply chains.
+
+114
+00:06:11,480 --> 00:06:13,360
+So A is for artifact.
+
+115
+00:06:13,360 --> 00:06:17,820
+An artifact is in this context a single unique blob of data.
+
+116
+00:06:17,820 --> 00:06:19,480
+It's probably a file.
+
+117
+00:06:19,480 --> 00:06:23,240
+You might also call this a package, a project, a release, a distribution, a wheel, a B-disk,
+
+118
+00:06:23,240 --> 00:06:24,280
+an S-disk.
+
+119
+00:06:24,280 --> 00:06:25,880
+They're all artifacts, right?
+
+120
+00:06:25,880 --> 00:06:29,640
+We don't really use the word artifact too much in the context of Python and packaging,
+
+121
+00:06:29,720 --> 00:06:34,680
+but basically you can consider every single individual file on PyPI as an artifact.
+
+122
+00:06:34,680 --> 00:06:37,600
+A is also for attestation.
+
+123
+00:06:37,600 --> 00:06:41,560
+Generally this means that there is evidence or proof of something and in the context of
+
+124
+00:06:41,560 --> 00:06:47,360
+supply chains, this is a cryptographically secure and verifiable proof that something
+
+125
+00:06:47,360 --> 00:06:48,360
+happened.
+
+126
+00:06:48,360 --> 00:06:49,520
+Really anything that you want.
+
+127
+00:06:49,520 --> 00:06:54,140
+But the attestation itself is metadata, which can be anything, and then that's cryptographically
+
+128
+00:06:54,140 --> 00:06:56,160
+secure which means it's been signed.
+
+129
+00:06:56,160 --> 00:07:00,500
+And it's verifiable meaning that I can go and see where the attestation was generated
+
+130
+00:07:00,500 --> 00:07:04,560
+and ensure that the output is what I'm expecting.
+
+131
+00:07:04,560 --> 00:07:06,640
+Don't worry, I'm not going to do this many for all the letters.
+
+132
+00:07:06,640 --> 00:07:07,640
+A is also for...
+
+133
+00:07:07,640 --> 00:07:09,160
+There's a lot of As though.
+
+134
+00:07:09,160 --> 00:07:10,960
+A is also for advisory.
+
+135
+00:07:10,960 --> 00:07:15,600
+An advisory is the public disclosure of a known vulnerability for an artifact or a series
+
+136
+00:07:15,600 --> 00:07:16,600
+of artifacts.
+
+137
+00:07:16,600 --> 00:07:18,960
+So you might call these CVEs.
+
+138
+00:07:18,960 --> 00:07:24,560
+They are created by maintainers or security researchers to share knowledge with the public
+
+139
+00:07:24,560 --> 00:07:26,280
+about a known issue.
+
+140
+00:07:26,280 --> 00:07:29,360
+And advisories only exist for vulnerabilities that we know about.
+
+141
+00:07:29,360 --> 00:07:30,360
+That's important.
+
+142
+00:07:30,360 --> 00:07:32,440
+B is for build.
+
+143
+00:07:32,440 --> 00:07:37,720
+Build is the process of turning a source tree, like a Git repo, into an artifact.
+
+144
+00:07:37,720 --> 00:07:40,780
+So sometimes this is also called compilation maybe.
+
+145
+00:07:40,780 --> 00:07:44,680
+Some ecosystems, they build on release and they distribute built artifacts.
+
+146
+00:07:44,680 --> 00:07:46,600
+That's kind of what we do with Python.
+
+147
+00:07:46,600 --> 00:07:50,120
+Some ecosystems only distribute source and they let the build happen when you go to install
+
+148
+00:07:50,120 --> 00:07:51,120
+it.
+
+149
+00:07:51,120 --> 00:07:53,120
+We kind of also do that with Python.
+
+150
+00:07:53,120 --> 00:07:56,040
+A build environment is the place where the build happens.
+
+151
+00:07:56,040 --> 00:07:58,520
+So hopefully it's not like your laptop.
+
+152
+00:07:58,520 --> 00:08:01,040
+Hopefully it's something else, maybe a little more secure.
+
+153
+00:08:01,040 --> 00:08:03,240
+But that's what a build is.
+
+154
+00:08:03,240 --> 00:08:04,920
+C is for certificates.
+
+155
+00:08:04,920 --> 00:08:08,280
+Certificates underpin a lot of modern security on the web.
+
+156
+00:08:08,280 --> 00:08:12,400
+And it's a way to derive trust from some root called certificate authority.
+
+157
+00:08:12,400 --> 00:08:17,800
+So in the past, getting a certificate was a long, lengthy, potentially expensive process.
+
+158
+00:08:17,800 --> 00:08:22,160
+And now with new technology like Let's Encrypt, it's very easy to get a certificate.
+
+159
+00:08:22,200 --> 00:08:26,200
+And we'll see how certificates can be used in the supply chain later.
+
+160
+00:08:26,200 --> 00:08:27,400
+D is for digest.
+
+161
+00:08:27,400 --> 00:08:31,960
+When I say digest, I'm almost always referring to a hash digest, which is essentially a unique
+
+162
+00:08:31,960 --> 00:08:36,000
+value that will reproducibly represent some blob of data.
+
+163
+00:08:36,000 --> 00:08:37,380
+And it's not reversible.
+
+164
+00:08:37,380 --> 00:08:42,160
+Think of like if you've heard of MD5, SHA-256, these are hash digests.
+
+165
+00:08:42,160 --> 00:08:48,580
+E is for ephemeral, meaning short-lived, transitory, disappearing quickly.
+
+166
+00:08:48,580 --> 00:08:51,920
+And when I say ephemeral, I'm almost always going to be talking about the ephemerality
+
+167
+00:08:51,960 --> 00:08:55,160
+in the context of cryptographic keys and signing.
+
+168
+00:08:55,160 --> 00:08:58,560
+So normally when you do cryptographic keys and signing, your private key is something
+
+169
+00:08:58,560 --> 00:09:03,200
+that you generate once and you try your best to never lose.
+
+170
+00:09:03,200 --> 00:09:07,240
+But an ephemeral key is generated on the fly when you need it.
+
+171
+00:09:07,240 --> 00:09:09,800
+It's used once or for a not very long period of time.
+
+172
+00:09:09,800 --> 00:09:11,640
+And then you throw it away.
+
+173
+00:09:11,640 --> 00:09:16,120
+I'll explain why I want you to throw away your private keys later.
+
+174
+00:09:16,120 --> 00:09:17,120
+F is for fuzzing.
+
+175
+00:09:17,120 --> 00:09:22,240
+Fuzzing is using special tools to generally wildly varying inputs and unexpected inputs
+
+176
+00:09:22,240 --> 00:09:23,760
+to your program.
+
+177
+00:09:23,760 --> 00:09:28,240
+It's not super widely used in Python, but it's generally starting to be considered a
+
+178
+00:09:28,240 --> 00:09:31,160
+best practice in terms of software security.
+
+179
+00:09:31,160 --> 00:09:32,880
+G is for Google.
+
+180
+00:09:32,880 --> 00:09:34,280
+Oh, hey, that's where I work.
+
+181
+00:09:34,280 --> 00:09:36,960
+I didn't have a great one for G, believe it or not.
+
+182
+00:09:36,960 --> 00:09:42,280
+So I wanted to take a minute to just try and kind of explain why Google even cares about
+
+183
+00:09:42,280 --> 00:09:43,280
+supply chain security.
+
+184
+00:09:43,280 --> 00:09:45,800
+Because you might have heard that Google has a monorepo.
+
+185
+00:09:45,800 --> 00:09:50,080
+And what this means is in practice, while software engineers at Google can use third
+
+186
+00:09:50,080 --> 00:09:52,920
+party packages, we don't install them from PyPI.
+
+187
+00:09:52,920 --> 00:09:57,360
+Essentially, a single version of the source is checked into the monorepo and then everyone
+
+188
+00:09:57,360 --> 00:09:59,280
+uses the same version.
+
+189
+00:09:59,280 --> 00:10:01,920
+And generally what that means is that a lot of the open source tools and technology I'm
+
+190
+00:10:01,920 --> 00:10:05,800
+sharing with you aren't directly applicable to Google itself.
+
+191
+00:10:05,800 --> 00:10:07,960
+But that's also a gross oversimplification.
+
+192
+00:10:07,960 --> 00:10:12,120
+In reality, there are teams at Google that do install software from PyPI.
+
+193
+00:10:12,120 --> 00:10:16,720
+And we also have lots of customers who are definitely installing software from PyPI.
+
+194
+00:10:16,720 --> 00:10:17,720
+And we want to protect them.
+
+195
+00:10:17,720 --> 00:10:22,320
+And we probably have to protect them because the federal government is almost definitely
+
+196
+00:10:22,320 --> 00:10:23,800
+one of our customers.
+
+197
+00:10:23,800 --> 00:10:27,760
+So we have a lot of experience in bringing untrusted third party code in and ensuring
+
+198
+00:10:27,760 --> 00:10:28,760
+that it's secure.
+
+199
+00:10:28,760 --> 00:10:32,400
+So we're interested in applying these things externally so that everyone can benefit from
+
+200
+00:10:32,400 --> 00:10:38,280
+it and that our customers and et cetera can benefit from it as well.
+
+201
+00:10:38,280 --> 00:10:39,320
+H is for hardware key.
+
+202
+00:10:39,320 --> 00:10:41,440
+This is different than a public private key.
+
+203
+00:10:41,440 --> 00:10:44,800
+It's a physical device that you put into your computer and it gives you the ability
+
+204
+00:10:44,800 --> 00:10:46,920
+to do two factor authentication.
+
+205
+00:10:46,920 --> 00:10:50,040
+It is arguably the best way to do two factor authentication.
+
+206
+00:10:50,040 --> 00:10:54,560
+They are not cheap, but I recommend getting one if you currently use two factor authentication.
+
+207
+00:10:54,560 --> 00:10:57,960
+If you're not using two factor, you should be using that as well.
+
+208
+00:10:57,960 --> 00:10:58,960
+I is for identity.
+
+209
+00:10:58,960 --> 00:11:03,840
+Generally, when we're talking about identities, we're referring to the identities of individuals.
+
+210
+00:11:03,840 --> 00:11:06,880
+Email addresses, GitHub handles, that kind of thing.
+
+211
+00:11:06,880 --> 00:11:11,360
+But we're kind of entering a point where pretty much anything can have a unique and verifiable
+
+212
+00:11:11,360 --> 00:11:15,840
+identity such as a workflow on GitHub actions.
+
+213
+00:11:15,840 --> 00:11:20,080
+These identities, along with some new technologies I'll talk about shortly, can be used as signing
+
+214
+00:11:20,080 --> 00:11:22,880
+identities, which is really interesting.
+
+215
+00:11:22,880 --> 00:11:23,880
+J is for Joe Biden.
+
+216
+00:11:23,880 --> 00:11:26,680
+Shout out to Joe Biden for the executive order.
+
+217
+00:11:26,680 --> 00:11:27,880
+The executive order is going to be great.
+
+218
+00:11:27,880 --> 00:11:31,960
+It's going to inject a lot of time, money, and energy into an area of technology that
+
+219
+00:11:31,960 --> 00:11:32,960
+desperately needs it.
+
+220
+00:11:32,960 --> 00:11:35,840
+A lot of people have been working on this for a long time and suddenly everyone else
+
+221
+00:11:35,840 --> 00:11:36,840
+is seeing the light.
+
+222
+00:11:36,840 --> 00:11:37,840
+K is for key.
+
+223
+00:11:38,320 --> 00:11:39,320
+K is for key.
+
+224
+00:11:39,320 --> 00:11:42,120
+We were talking about public keys before, but by the power of math, a key lets you sign
+
+225
+00:11:42,120 --> 00:11:46,120
+something with your private key, distribute that thing, the signature, and your public
+
+226
+00:11:46,120 --> 00:11:52,840
+key, and consumers can verify that it was indeed you, the key holder, that signed it.
+
+227
+00:11:52,840 --> 00:11:53,840
+L is for lock file.
+
+228
+00:11:53,840 --> 00:11:58,200
+A lock file is a complete itemization of exactly what artifacts should be installed for an
+
+229
+00:11:58,200 --> 00:11:59,200
+application.
+
+230
+00:11:59,200 --> 00:12:03,960
+This includes version pins and artifact hashes as well, hash digests.
+
+231
+00:12:03,960 --> 00:12:06,400
+Support for lock files varies from ecosystem to the next.
+
+232
+00:12:06,400 --> 00:12:10,360
+This is like go.mod, package lock.json, pip file.lock.
+
+233
+00:12:10,360 --> 00:12:14,760
+Python has historically been not super great about supporting lock files, but it is definitely
+
+234
+00:12:14,760 --> 00:12:15,760
+getting better.
+
+235
+00:12:15,760 --> 00:12:19,320
+M is for money.
+
+236
+00:12:19,320 --> 00:12:20,360
+Real talk.
+
+237
+00:12:20,360 --> 00:12:25,480
+We don't always like to talk about it, but software costs money to make even and especially
+
+238
+00:12:25,480 --> 00:12:27,080
+free and open source software.
+
+239
+00:12:27,080 --> 00:12:31,160
+A lot of the new tools and technologies that I'm describing were not created for free out
+
+240
+00:12:31,160 --> 00:12:35,080
+of goodwill, but in exchange for money.
+
+241
+00:12:35,080 --> 00:12:39,320
+Providing the security practices of the entire software supply chain is not a small feat
+
+242
+00:12:39,320 --> 00:12:43,200
+and is not going to happen overnight and is not going to happen for free.
+
+243
+00:12:43,200 --> 00:12:46,960
+There are a lot of organizations that are making huge commitments of money to ensure
+
+244
+00:12:46,960 --> 00:12:49,800
+that this happens.
+
+245
+00:12:49,800 --> 00:12:50,800
+N is for non-forgeable.
+
+246
+00:12:50,800 --> 00:12:56,200
+Non-forgeable is mostly used in the context of an attestation, and it means that the content
+
+247
+00:12:56,200 --> 00:13:00,780
+of the attestation, the thing that you're actually attesting to, can't be modified.
+
+248
+00:13:00,780 --> 00:13:05,740
+So if I'm attesting that I ran a build in some build environment from, let's say, a
+
+249
+00:13:05,740 --> 00:13:10,820
+get-sha and a non-forgeable attestation is going to tell me that it can't be modified
+
+250
+00:13:10,820 --> 00:13:12,980
+by someone, by some malicious actor.
+
+251
+00:13:12,980 --> 00:13:15,780
+It's only going to refer to that build.
+
+252
+00:13:15,780 --> 00:13:17,200
+O is for open ID connect.
+
+253
+00:13:17,200 --> 00:13:20,620
+If you haven't heard of this, I suspect that you're going to start hearing a lot more about
+
+254
+00:13:20,620 --> 00:13:22,780
+it both in this talk and afterwards.
+
+255
+00:13:22,780 --> 00:13:29,700
+So this is an identity layer on top of OAuth 2, and this allows services to provide, verify,
+
+256
+00:13:29,700 --> 00:13:33,240
+change identities, the identities that we talked about before.
+
+257
+00:13:33,240 --> 00:13:39,100
+So already a lot of CI services are providing OIDC identities for the runs of their workflows,
+
+258
+00:13:39,100 --> 00:13:42,300
+and this is really powerful for reasons that I will get to later.
+
+259
+00:13:42,300 --> 00:13:44,380
+P is for provenance.
+
+260
+00:13:44,380 --> 00:13:45,980
+Provenance is the paper trail.
+
+261
+00:13:45,980 --> 00:13:50,580
+This can take a lot of forms, but think of it as a series of verifiable attestations
+
+262
+00:13:50,580 --> 00:13:54,460
+that tell you everything you need to know about an artifact, where it came from, where
+
+263
+00:13:54,460 --> 00:13:57,940
+it was built, who built it, who signed it, everything about it.
+
+264
+00:13:57,940 --> 00:14:00,420
+Basically the history of an artifact.
+
+265
+00:14:00,420 --> 00:14:01,980
+P is also for policy.
+
+266
+00:14:01,980 --> 00:14:06,380
+A policy is a way that you describe the sort of security features that you want or expect
+
+267
+00:14:06,380 --> 00:14:11,260
+to be present, either in your library, your application, your repo, an organization on
+
+268
+00:14:11,260 --> 00:14:16,860
+GitHub, and ideally this policy can then be evaluated to tell you whether you're within
+
+269
+00:14:16,860 --> 00:14:20,340
+the policy that you defined or not.
+
+270
+00:14:20,340 --> 00:14:21,340
+Q is for quick.
+
+271
+00:14:21,340 --> 00:14:27,900
+Let's move on to R. R is for remediation, and it's usually used in the context of vulnerability.
+
+272
+00:14:27,900 --> 00:14:31,340
+It can also be used to refer to policies as well.
+
+273
+00:14:31,340 --> 00:14:35,180
+Remediation means to fix something that's wrong, and so for a vulnerability, if you
+
+274
+00:14:35,180 --> 00:14:37,660
+remediate it, you've removed the vulnerability.
+
+275
+00:14:37,660 --> 00:14:39,940
+You've upgraded to a fixed version.
+
+276
+00:14:39,940 --> 00:14:45,300
+And also ideally remediation is easy or possibly automatic.
+
+277
+00:14:45,300 --> 00:14:46,300
+S is for signature.
+
+278
+00:14:46,300 --> 00:14:49,660
+A signature is what you get when you sign something like an artifact with a cryptographic
+
+279
+00:14:49,660 --> 00:14:50,660
+key.
+
+280
+00:14:50,660 --> 00:14:54,500
+It represents a verifiable proof that the key holder was in possession of the key that
+
+281
+00:14:54,500 --> 00:14:55,500
+generated the signature.
+
+282
+00:14:55,500 --> 00:14:58,340
+Think of it as a rubber stamp of approval.
+
+283
+00:14:58,340 --> 00:15:00,500
+T is for transparency log.
+
+284
+00:15:00,500 --> 00:15:05,820
+Transparency log is a public immutable record of signed metadata attestations.
+
+285
+00:15:05,820 --> 00:15:06,820
+That's it.
+
+286
+00:15:06,820 --> 00:15:07,820
+I sign something.
+
+287
+00:15:07,820 --> 00:15:11,020
+I publish the details to the transparency log, and it is there forever for anyone to
+
+288
+00:15:11,020 --> 00:15:13,500
+look at and verify.
+
+289
+00:15:13,500 --> 00:15:17,820
+U is for vulnerability.
+
+290
+00:15:17,820 --> 00:15:21,780
+A bug in software with security-related consequences.
+
+291
+00:15:21,780 --> 00:15:25,580
+These are either known or unknown, and if you find a good way of turning the ladder
+
+292
+00:15:25,580 --> 00:15:29,660
+into the former, I want to talk to you afterwards.
+
+293
+00:15:29,660 --> 00:15:30,660
+And Z is for zero.
+
+294
+00:15:30,660 --> 00:15:34,660
+This is the number of questions I'll take about what happened to W, X, and Y.
+
+295
+00:15:34,660 --> 00:15:35,660
+All right.
+
+296
+00:15:35,660 --> 00:15:38,340
+I hope you enjoyed that.
+
+297
+00:15:38,340 --> 00:15:41,860
+So part three, how can we use open source safely?
+
+298
+00:15:41,860 --> 00:15:46,220
+Now I explained some of these kind of details and concepts to you.
+
+299
+00:15:46,220 --> 00:15:48,660
+Let's put them all together into something that we can do.
+
+300
+00:15:48,660 --> 00:15:55,020
+I did a talk on this last year, and a lot has changed in the last year.
+
+301
+00:15:55,020 --> 00:15:59,820
+So last year, what I said what we can do, circa 2021, is let's use HTTPS everywhere.
+
+302
+00:15:59,820 --> 00:16:01,140
+We're kind of already doing that.
+
+303
+00:16:01,140 --> 00:16:04,500
+Lock files, compile dependencies, vulnerability notifications, tough namespaces.
+
+304
+00:16:04,500 --> 00:16:05,500
+Cool.
+
+305
+00:16:05,500 --> 00:16:06,500
+I'm not going to explain any of that.
+
+306
+00:16:06,500 --> 00:16:07,500
+That was a year ago.
+
+307
+00:16:07,500 --> 00:16:08,500
+We've made a lot of progress.
+
+308
+00:16:08,500 --> 00:16:11,460
+You can go back and watch my talk if you're interested in those things.
+
+309
+00:16:11,460 --> 00:16:16,540
+I'm talking about what else we can do to fix this.
+
+310
+00:16:16,540 --> 00:16:18,060
+My talk last year, I kind of waved my hand.
+
+311
+00:16:18,060 --> 00:16:20,860
+Here's some hypothetical stuff we can do to do better.
+
+312
+00:16:20,860 --> 00:16:23,460
+And we've kind of started to implement that, and those things have started to happen.
+
+313
+00:16:23,460 --> 00:16:29,620
+So I'm going to outline those that exist that you can use now and introduce you to them.
+
+314
+00:16:29,620 --> 00:16:32,500
+So the first thing that's new is community advisory databases.
+
+315
+00:16:32,500 --> 00:16:36,380
+Actually, some of these existed before, but the Python one did not.
+
+316
+00:16:36,380 --> 00:16:42,140
+And this is a centralized ecosystem-specific public repository for a security advisory.
+
+317
+00:16:42,140 --> 00:16:46,780
+And the goal is to make it easier to both report and discover security advisories.
+
+318
+00:16:47,180 --> 00:16:50,460
+Remember, an advisory is a notification about vulnerability.
+
+319
+00:16:50,460 --> 00:16:51,980
+So these exist for most major ecosystems.
+
+320
+00:16:51,980 --> 00:16:53,820
+This is what the Python one looks like.
+
+321
+00:16:53,820 --> 00:16:56,100
+It's a PyPA advisory database.
+
+322
+00:16:56,100 --> 00:17:02,340
+And what it does is it has a list of vulnerabilities listed in the open SSF open source vulnerability
+
+323
+00:17:02,340 --> 00:17:03,340
+format.
+
+324
+00:17:03,340 --> 00:17:07,100
+OSV also has an API, and it acts as a vendor neutral aggregator.
+
+325
+00:17:07,100 --> 00:17:11,700
+And it pulls in advisories from all these different repositories and redistributes them.
+
+326
+00:17:11,700 --> 00:17:16,420
+So OSV actually pulls from this repository when new advisories are published, and then
+
+327
+00:17:16,420 --> 00:17:18,660
+actually in turn publishes those back to PyPI.
+
+328
+00:17:18,660 --> 00:17:22,340
+So then PyPI knows which dependencies or which projects have vulnerabilities.
+
+329
+00:17:22,340 --> 00:17:25,460
+Here's an example of a recent advisory for Django.
+
+330
+00:17:25,460 --> 00:17:29,140
+It's not a great example, actually, but it's kind of just a giant YAML file.
+
+331
+00:17:29,140 --> 00:17:31,300
+But you're not supposed to read these by hand.
+
+332
+00:17:31,300 --> 00:17:32,300
+Definitely not.
+
+333
+00:17:32,300 --> 00:17:36,120
+So the other thing we have to go along with this is vulnerability auditing software.
+
+334
+00:17:36,120 --> 00:17:38,420
+And so these also aren't specifically new.
+
+335
+00:17:38,420 --> 00:17:40,460
+Similar software has existed before.
+
+336
+00:17:40,460 --> 00:17:45,580
+But we now have for the first time a community-supported open source vulnerability auditing software
+
+337
+00:17:45,700 --> 00:17:52,300
+for the Python ecosystem, and that I'm really excited to introduce because I helped build
+
+338
+00:17:52,300 --> 00:17:53,300
+it.
+
+339
+00:17:53,300 --> 00:17:58,420
+And this uses the advisory database that I previously mentioned and the API that OSV
+
+340
+00:17:58,420 --> 00:17:59,420
+provides to PyPI.
+
+341
+00:17:59,420 --> 00:18:01,380
+So this tool is called pip audit.
+
+342
+00:18:01,380 --> 00:18:03,260
+I helped create and release this.
+
+343
+00:18:03,260 --> 00:18:04,260
+It's a third-party tool.
+
+344
+00:18:04,260 --> 00:18:06,460
+It's not part of pip itself yet.
+
+345
+00:18:06,460 --> 00:18:09,700
+You run this locally maybe as part of your release or your process, your integration
+
+346
+00:18:09,700 --> 00:18:10,700
+tests.
+
+347
+00:18:10,700 --> 00:18:11,700
+You can run it in a container.
+
+348
+00:18:11,700 --> 00:18:13,660
+You can run it against a requirements file.
+
+349
+00:18:13,700 --> 00:18:18,980
+And it will tell you if there are any known vulnerabilities present in your environment
+
+350
+00:18:18,980 --> 00:18:21,460
+or requirements file.
+
+351
+00:18:21,460 --> 00:18:26,340
+This allows you to be confident that you're not going to deploy something with a vulnerability.
+
+352
+00:18:26,340 --> 00:18:27,340
+Use it kind of like this.
+
+353
+00:18:27,340 --> 00:18:29,420
+You can audit local environment, just run pip audit.
+
+354
+00:18:29,420 --> 00:18:30,660
+You can pass a requirements file.
+
+355
+00:18:30,660 --> 00:18:35,340
+This behaves just like pip install, same flags and the same syntax and everything.
+
+356
+00:18:35,340 --> 00:18:37,780
+When you run it, it'll tell you, I found a vulnerability.
+
+357
+00:18:37,780 --> 00:18:38,780
+It's in this package.
+
+358
+00:18:38,780 --> 00:18:40,380
+Here's the version you should upgrade to.
+
+359
+00:18:40,380 --> 00:18:42,640
+Here's the vulnerability ID.
+
+360
+00:18:42,640 --> 00:18:44,680
+You can also automatically remediate that.
+
+361
+00:18:44,680 --> 00:18:45,680
+You can read that.
+
+362
+00:18:45,680 --> 00:18:49,320
+So this, if you run pip audit double-fix, it'll just go and upgrade those and fix it
+
+363
+00:18:49,320 --> 00:18:50,320
+for you as well.
+
+364
+00:18:50,320 --> 00:18:52,400
+It'll rewrite your requirements file to fix it as well.
+
+365
+00:18:52,400 --> 00:18:53,400
+So this is really cool.
+
+366
+00:18:53,400 --> 00:18:58,920
+I'd love for people to start using this more and just sort of avoid these vulnerabilities.
+
+367
+00:18:58,920 --> 00:19:01,920
+Go ahead and run it on your laptop right now and see if you have anything installed that
+
+368
+00:19:01,920 --> 00:19:02,920
+has a vulnerability.
+
+369
+00:19:04,920 --> 00:19:08,280
+Okay, another thing that's kind of new and fun and interesting is artifact signing.
+
+370
+00:19:08,280 --> 00:19:11,440
+And you might say, wait, signing is definitely not new.
+
+371
+00:19:11,440 --> 00:19:14,160
+Because historically, this has meant GPG.
+
+372
+00:19:14,160 --> 00:19:16,520
+And that technology has been around forever.
+
+373
+00:19:16,520 --> 00:19:22,440
+And if you're not familiar with GPG, historically, this post by Donald kind of sums up how the
+
+374
+00:19:22,440 --> 00:19:24,760
+Python packaging community has approached signing.
+
+375
+00:19:24,760 --> 00:19:29,480
+And if you actually read this post, you realize that the issue is not with signing as a technology
+
+376
+00:19:29,480 --> 00:19:30,480
+itself.
+
+377
+00:19:30,480 --> 00:19:31,480
+That's the boring, easy part.
+
+378
+00:19:31,480 --> 00:19:33,840
+The hard part is about trust and identity.
+
+379
+00:19:33,840 --> 00:19:36,800
+So right now, you can sign anything that you want on PyPI.
+
+380
+00:19:36,800 --> 00:19:39,160
+You can upload that signature alongside your release.
+
+381
+00:19:39,160 --> 00:19:41,320
+But distributing your public key is up to you.
+
+382
+00:19:41,320 --> 00:19:44,080
+And having people trust that public key is also up to you.
+
+383
+00:19:44,080 --> 00:19:46,640
+And so in practice, nobody does this.
+
+384
+00:19:46,640 --> 00:19:47,640
+Why?
+
+385
+00:19:47,640 --> 00:19:49,920
+First, GPG is confusing and unfriendly.
+
+386
+00:19:49,920 --> 00:19:52,560
+Who has manually signed something with GPG before?
+
+387
+00:19:52,560 --> 00:19:54,520
+Who enjoyed that experience?
+
+388
+00:19:54,520 --> 00:19:55,920
+Case in point.
+
+389
+00:19:55,920 --> 00:19:59,720
+It's not like automated git commits and things like that.
+
+390
+00:19:59,720 --> 00:20:02,160
+It's not a fun, it's not a friendly experience.
+
+391
+00:20:02,160 --> 00:20:05,920
+Second, GPG requires humans to not be humans.
+
+392
+00:20:05,920 --> 00:20:09,720
+It requires users to maintain their private keys essentially indefinitely.
+
+393
+00:20:10,280 --> 00:20:13,440
+I was talking to Paul before, I don't know if he's in here, and he said something which
+
+394
+00:20:13,440 --> 00:20:17,520
+I really like, which is GPG would be really great if you could go around permanently stapling
+
+395
+00:20:17,520 --> 00:20:19,880
+everyone's private keys to their foreheads.
+
+396
+00:20:19,880 --> 00:20:21,080
+You can't do that.
+
+397
+00:20:21,080 --> 00:20:25,040
+People will lose their keys.
+
+398
+00:20:25,040 --> 00:20:27,320
+Third reason why, GPG relies on a web of trust.
+
+399
+00:20:27,320 --> 00:20:29,040
+So GPG is great at signing.
+
+400
+00:20:29,040 --> 00:20:31,240
+It doesn't solve the problem of trust and identity.
+
+401
+00:20:31,240 --> 00:20:35,280
+Even if an artifact, let's say on PyPI, is signed, how do you know that you can trust
+
+402
+00:20:35,280 --> 00:20:36,280
+that signature?
+
+403
+00:20:37,040 --> 00:20:41,440
+It assumes that you or someone you know has met the signer, verified their public key
+
+404
+00:20:41,440 --> 00:20:45,720
+and their identity, and it's not actually a reasonable thing to do with the size of modern
+
+405
+00:20:45,720 --> 00:20:47,880
+open open-source software.
+
+406
+00:20:47,880 --> 00:20:50,880
+So we have a new technology called SigStore.
+
+407
+00:20:50,880 --> 00:20:56,120
+It's a new project by the Linux Foundation that's being built across multiple vendors,
+
+408
+00:20:56,120 --> 00:21:00,440
+including Google, and it's a new way to think about signatures, identities, and trust.
+
+409
+00:21:00,440 --> 00:21:05,040
+First, when you go to sign something with SigStore, you throw away your keys.
+
+410
+00:21:05,040 --> 00:21:09,560
+The first thing you do is generate an ephemeral public and private key, and that means that
+
+411
+00:21:09,560 --> 00:21:12,000
+the signing keys are used once and then they're gone forever.
+
+412
+00:21:12,000 --> 00:21:14,520
+You never see them, you never touch them, or interact with them.
+
+413
+00:21:14,520 --> 00:21:17,440
+You are supposed to lose them.
+
+414
+00:21:17,440 --> 00:21:19,640
+The second thing you do is you provide an identity.
+
+415
+00:21:19,640 --> 00:21:23,160
+This could be an OIDC identity created by an identity provider.
+
+416
+00:21:23,160 --> 00:21:25,880
+Right now, SigStore supports Google, GitHub, Microsoft.
+
+417
+00:21:25,880 --> 00:21:30,400
+Remember, this is built on top of OAuth, as well as some fine-grained OIDC identities
+
+418
+00:21:30,400 --> 00:21:33,120
+provided by environments like GitHub Actions.
+
+419
+00:21:34,040 --> 00:21:38,000
+The next thing you do is bind that key and identity to a signing certificate.
+
+420
+00:21:38,000 --> 00:21:42,680
+You provide your public key that is ephemeral to a certificate authority, and it gives you
+
+421
+00:21:42,680 --> 00:21:43,680
+back a certificate.
+
+422
+00:21:43,680 --> 00:21:48,720
+This authority binds these keys to the identity and the artifact, and sort of like let's encrypt
+
+423
+00:21:48,720 --> 00:21:50,040
+but on a micro scale.
+
+424
+00:21:50,040 --> 00:21:54,600
+You're getting a certificate essentially for every time you want to sign something.
+
+425
+00:21:54,600 --> 00:21:59,040
+Then you sign it quickly, because signing certificates are only valid for a short period
+
+426
+00:21:59,040 --> 00:22:01,840
+of time to prevent abuse.
+
+427
+00:22:01,840 --> 00:22:04,120
+Then you publish in the transparency log.
+
+428
+00:22:04,120 --> 00:22:08,600
+Every signature is stored in a log that can be searched and can't be tampered with.
+
+429
+00:22:08,600 --> 00:22:12,000
+This is used later when you go and verify a signature.
+
+430
+00:22:12,000 --> 00:22:16,120
+The end result is you have the artifact that you started with, you get a new signature,
+
+431
+00:22:16,120 --> 00:22:20,840
+you get a certificate that binds the identity you provided, which might be your email address
+
+432
+00:22:20,840 --> 00:22:24,600
+or your GitHub repository, to that signature.
+
+433
+00:22:24,600 --> 00:22:28,080
+Then you put that entry in a public log, which records all of it.
+
+434
+00:22:28,080 --> 00:22:30,840
+If this sounds like a lot of manual steps, you are not wrong.
+
+435
+00:22:30,840 --> 00:22:34,360
+This is why Sixdoor provides clients.
+
+436
+00:22:34,360 --> 00:22:39,120
+Originally Sixdoor was primarily focused on the container ecosystem, but it has now grown.
+
+437
+00:22:39,120 --> 00:22:43,640
+We just produced a new Python native client for Sixdoor.
+
+438
+00:22:43,640 --> 00:22:46,920
+It's called Sixdoor on PyPI, but you can install it directly there.
+
+439
+00:22:46,920 --> 00:22:51,280
+It's a native Python client for signing and verifying signatures with Sixdoor.
+
+440
+00:22:51,280 --> 00:22:55,920
+Not focused on containers, focused on signing any binary blob, but this could be a Python
+
+441
+00:22:55,920 --> 00:22:56,920
+package.
+
+442
+00:22:56,920 --> 00:22:58,360
+It could be anything you want, really.
+
+443
+00:22:58,360 --> 00:23:03,000
+This includes detecting ambient credentials, which means if you try to sign in an environment
+
+444
+00:23:03,000 --> 00:23:06,680
+that provides an OIDC identity, it will use that automatically.
+
+445
+00:23:06,680 --> 00:23:08,600
+Right now it just supports actions.
+
+446
+00:23:08,600 --> 00:23:13,440
+This is not feature complete yet, but there is a beta release now on PyPI, and we are
+
+447
+00:23:13,440 --> 00:23:17,400
+working towards a 1.0 release.
+
+448
+00:23:17,400 --> 00:23:18,400
+Some other things we can do.
+
+449
+00:23:18,400 --> 00:23:20,400
+Better, more secure build infrastructure.
+
+450
+00:23:20,400 --> 00:23:24,000
+There's lots of different environments, ecosystems, where software can be built.
+
+451
+00:23:24,000 --> 00:23:27,600
+Some properties increase security, others don't.
+
+452
+00:23:27,600 --> 00:23:33,040
+There's a new standard for describing the level of security for where artifacts are
+
+453
+00:23:33,040 --> 00:23:34,040
+built, and that's called SALSA.
+
+454
+00:23:34,040 --> 00:23:37,520
+I don't know if you can see that super well.
+
+455
+00:23:37,520 --> 00:23:42,080
+SALSA is S-L-S-A, Supply Chain Levels for Software Artifacts, pronounced SALSA.
+
+456
+00:23:42,080 --> 00:23:43,080
+It's a security framework.
+
+457
+00:23:43,080 --> 00:23:46,520
+It's not a framework in the sense of a tool that you can use, but a way to think about
+
+458
+00:23:46,520 --> 00:23:50,840
+how secure is this supply chain that I'm using to produce an artifact.
+
+459
+00:23:50,840 --> 00:23:53,960
+Given build process, it might produce an artifact that's also level one.
+
+460
+00:23:54,400 --> 00:23:57,400
+Another thing that is new is attestations.
+
+461
+00:23:57,400 --> 00:24:01,200
+Attestations are where we're going to prove that an artifact was created at a certain
+
+462
+00:24:01,200 --> 00:24:04,880
+SALSA level or at a certain level of security.
+
+463
+00:24:04,880 --> 00:24:08,320
+One exciting technology in this space that you might not have heard of is Intodo.
+
+464
+00:24:08,320 --> 00:24:11,320
+Intodo is a way to, well, here it is.
+
+465
+00:24:11,320 --> 00:24:15,640
+It's a universal standard for all ecosystems to describe the integrity of an artifact and
+
+466
+00:24:15,640 --> 00:24:17,840
+proof of what was done at each of the levels.
+
+467
+00:24:17,840 --> 00:24:22,720
+It's a universal standard for all ecosystems to describe the integrity of an artifact and
+
+468
+00:24:22,800 --> 00:24:25,440
+proof of what was done at each step to build it.
+
+469
+00:24:25,440 --> 00:24:29,160
+Make it transparent, make it public, show people exactly how something was built so
+
+470
+00:24:29,160 --> 00:24:30,160
+they can verify it.
+
+471
+00:24:33,040 --> 00:24:36,240
+New is also ways to enforce security policies for source control.
+
+472
+00:24:36,240 --> 00:24:39,880
+So we have some tools in GitHub right now built in that allow us to do this.
+
+473
+00:24:39,880 --> 00:24:43,880
+This is above and beyond what you can do with your regular source repository.
+
+474
+00:24:43,880 --> 00:24:46,880
+So All-Star is a GitHub application.
+
+475
+00:24:46,880 --> 00:24:52,040
+It enforces best practices, allows you to set a policy for your repository or your entire
+
+476
+00:24:52,160 --> 00:24:56,160
+organization and do things like branch protection, detect if you have checked in
+
+477
+00:24:56,160 --> 00:25:00,680
+binary artifacts, whether you have outside collaborators, enabled fuzzing, that kind of thing.
+
+478
+00:25:00,680 --> 00:25:03,080
+So I was talking about Six Store at Python.
+
+479
+00:25:03,080 --> 00:25:08,200
+Here's one that I just generated the other day because we had people that were admins
+
+480
+00:25:08,200 --> 00:25:11,320
+on the repository who weren't actually in the organization because we had just
+
+481
+00:25:11,320 --> 00:25:12,680
+transferred it there.
+
+482
+00:25:12,680 --> 00:25:15,240
+So this is cool because it will alert you when there's security violations that
+
+483
+00:25:15,240 --> 00:25:16,240
+violate your policy.
+
+484
+00:25:17,400 --> 00:25:21,720
+And the last thing I want to highlight, super exciting stuff, is new security features
+
+485
+00:25:21,720 --> 00:25:22,720
+for PyPI.
+
+486
+00:25:22,720 --> 00:25:26,320
+And these are kind of announcements because we haven't really publicly said that this
+
+487
+00:25:26,320 --> 00:25:27,320
+stuff is happening.
+
+488
+00:25:27,320 --> 00:25:29,560
+So I hope you're excited.
+
+489
+00:25:29,560 --> 00:25:33,400
+Coming soon to PyPI is voluntary two-factor authentication requirements.
+
+490
+00:25:33,400 --> 00:25:37,080
+So if you're a project maintainer on PyPI, you will soon be able to check a box that
+
+491
+00:25:37,080 --> 00:25:41,320
+says all of my collaborators must have two-factor authentication enabled or they will not be
+
+492
+00:25:41,320 --> 00:25:44,040
+able to do anything to this project.
+
+493
+00:25:44,040 --> 00:25:45,040
+The reason we're...
+
+494
+00:25:45,040 --> 00:25:46,040
+Don't clap.
+
+495
+00:25:46,040 --> 00:25:47,040
+There's a long list.
+
+496
+00:25:47,040 --> 00:25:48,640
+Clap at the end.
+
+497
+00:25:48,640 --> 00:25:52,920
+The reason we're doing this is because we're also implementing a two-factor mandy for critical
+
+498
+00:25:52,920 --> 00:25:53,920
+projects.
+
+499
+00:25:53,920 --> 00:25:54,920
+Don't clap.
+
+500
+00:25:54,920 --> 00:25:56,440
+Clap at the end.
+
+501
+00:25:56,440 --> 00:26:00,540
+Top 1% of projects by downloads plus some other critical projects like dependencies
+
+502
+00:26:00,540 --> 00:26:04,800
+of PyPI itself will be included in this mandy, which means that all collaborators on those
+
+503
+00:26:04,800 --> 00:26:08,520
+projects will be required to use two-factor authentication.
+
+504
+00:26:08,520 --> 00:26:09,520
+That's going to be a lot of people.
+
+505
+00:26:09,520 --> 00:26:11,400
+Most of those people don't have hardware keys.
+
+506
+00:26:11,400 --> 00:26:13,040
+I said hardware keys are expensive before.
+
+507
+00:26:13,040 --> 00:26:14,460
+What are we going to do about that?
+
+508
+00:26:14,460 --> 00:26:16,280
+We are doing a hardware key giveaway.
+
+509
+00:26:16,280 --> 00:26:21,600
+We're going to give away 4,000 Google Titan security keys to PyPI maintainers of critical
+
+510
+00:26:21,600 --> 00:26:22,600
+projects.
+
+511
+00:26:22,600 --> 00:26:25,480
+This doesn't happen yet because we're waiting for them to come back in stock.
+
+512
+00:26:25,480 --> 00:26:29,040
+It's too large of an order, but it's going to happen very soon and you will hear about
+
+513
+00:26:29,040 --> 00:26:31,360
+it and it's going to be very exciting.
+
+514
+00:26:31,360 --> 00:26:35,160
+Another thing that's coming soon, credentialless publication via OIDC.
+
+515
+00:26:35,160 --> 00:26:39,320
+One really nice thing that OIDC enables when you have it in your build environment is that
+
+516
+00:26:39,320 --> 00:26:41,720
+OIDC allows you to exchange identities.
+
+517
+00:26:41,720 --> 00:26:45,600
+If you have an authorized identity of a build environment and you've told PyPI, I trust
+
+518
+00:26:45,600 --> 00:26:51,680
+that identity to publish to PyPI, PyPI can exchange that identity for an identity on
+
+519
+00:26:51,680 --> 00:26:52,680
+PyPI.
+
+520
+00:26:52,680 --> 00:26:54,920
+I'm waving my hands here because we're not totally sure what that means yet.
+
+521
+00:26:54,920 --> 00:27:01,800
+That will allow you to publish a package to PyPI and say without passwords, without API
+
+522
+00:27:01,800 --> 00:27:06,480
+tokens or anything at all just by trusting the repository that has the workflow and that
+
+523
+00:27:06,480 --> 00:27:07,480
+identity.
+
+524
+00:27:07,480 --> 00:27:11,520
+Also coming soon, I feel like I say this every year, but PEP 458 is actually happening and
+
+525
+00:27:11,520 --> 00:27:14,360
+that's for repository signed metadata via TuF.
+
+526
+00:27:14,360 --> 00:27:19,760
+And PEP 480 is going to get a big update to talk about developer signed artifacts which
+
+527
+00:27:19,760 --> 00:27:23,240
+is end-to-end signing which you might guess what we're going to talk about there.
+
+528
+00:27:23,240 --> 00:27:26,900
+All right, to wrap up, what else can we do to fix these things?
+
+529
+00:27:26,900 --> 00:27:29,040
+One improvement is vendor neutral collaboration.
+
+530
+00:27:29,040 --> 00:27:32,680
+The reason that Sixstore and Salsa and all these things are going to be successful is
+
+531
+00:27:32,680 --> 00:27:36,880
+because we have lots of people and lots of organizations working together at these companies
+
+532
+00:27:36,880 --> 00:27:38,720
+via the OpenSSF.
+
+533
+00:27:38,720 --> 00:27:43,660
+This is a new nonprofit, part of the Linux Foundation that brings together all these
+
+534
+00:27:43,660 --> 00:27:48,140
+large organizations including Google to work together on essentially making the software
+
+535
+00:27:48,140 --> 00:27:50,900
+supply chain more secure.
+
+536
+00:27:50,900 --> 00:27:55,000
+This organization is also bringing and collecting more funding for security projects.
+
+537
+00:27:55,000 --> 00:27:58,980
+The cost of these projects is being supported by big vendors, but there's likely need for
+
+538
+00:27:58,980 --> 00:28:01,260
+support in your ecosystem as well.
+
+539
+00:28:01,260 --> 00:28:05,680
+So financially sponsoring your local Python Software Foundation makes things like this
+
+540
+00:28:05,680 --> 00:28:09,980
+possible, allows us to contribute to these security features.
+
+541
+00:28:10,220 --> 00:28:14,480
+Your organization can become a member of the OpenSSF.
+
+542
+00:28:14,480 --> 00:28:17,420
+And other thing is more users and more contributors.
+
+543
+00:28:17,420 --> 00:28:20,480
+Use these tools, come contribute, they're open source.
+
+544
+00:28:20,480 --> 00:28:21,480
+Try this stuff out.
+
+545
+00:28:21,480 --> 00:28:22,940
+Tell us how it works for you.
+
+546
+00:28:22,940 --> 00:28:24,540
+Share your experience.
+
+547
+00:28:24,540 --> 00:28:25,920
+Possibly become a contributor.
+
+548
+00:28:25,920 --> 00:28:28,380
+It's all open source.
+
+549
+00:28:28,380 --> 00:28:30,760
+So here's my predictions for the next year.
+
+550
+00:28:30,760 --> 00:28:34,420
+If you're an open source software repository or package installer or maintainer and there's
+
+551
+00:28:34,420 --> 00:28:39,280
+a couple of us in this room, brace for interest and funding.
+
+552
+00:28:39,280 --> 00:28:43,920
+And I hope you can ride that wave and make the most of it and really invest in your project.
+
+553
+00:28:43,920 --> 00:28:49,040
+If you're an open source maintainer, brace for people asking you to adopt new security
+
+554
+00:28:49,040 --> 00:28:55,480
+practices and ask you to pick up new features and do new things and turn on two factor authentication.
+
+555
+00:28:55,480 --> 00:28:57,480
+We're trying to lift the entire ecosystem here.
+
+556
+00:28:57,480 --> 00:29:01,600
+So you're going to get a lot of feedback from everyone asking you to help do that.
+
+557
+00:29:01,600 --> 00:29:04,520
+If you're an open source consumer, educate yourself.
+
+558
+00:29:04,520 --> 00:29:08,420
+You're likely going to hear a lot about this stuff more and more as there's this increasing
+
+559
+00:29:08,420 --> 00:29:13,300
+crescendo of voices and make yourself aware.
+
+560
+00:29:13,300 --> 00:29:15,140
+Real quick, I want to do two shout outs.
+
+561
+00:29:15,140 --> 00:29:17,820
+First to William Woodruff and Alex Cameron at Trail of Bits.
+
+562
+00:29:17,820 --> 00:29:22,060
+They've been instrumental in helping build both Six-Store Python and PIP audit.
+
+563
+00:29:22,060 --> 00:29:23,060
+Shout out to them.
+
+564
+00:29:23,060 --> 00:29:26,340
+I also want to give a huge shout out to the PyCon staff.
+
+565
+00:29:26,340 --> 00:29:29,900
+Everything they've dealt with with the pandemic to bring this conference back and in person,
+
+566
+00:29:29,900 --> 00:29:31,740
+they absolutely deserve your thanks.
+
+567
+00:29:31,740 --> 00:29:35,980
+If you see them, let them know that you appreciate them and the work that they're doing.
+
+568
+00:29:35,980 --> 00:29:36,980
+Thanks.
+
+569
+00:29:36,980 --> 00:29:37,700
+I'll see you all next year.
+

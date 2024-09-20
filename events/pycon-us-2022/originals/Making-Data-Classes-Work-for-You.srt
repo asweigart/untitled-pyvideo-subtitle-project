@@ -1,0 +1,1076 @@
+1
+00:00:00,000 --> 00:00:12,280
+Dear ladies and gentlemen, we'll have Mr. Bruce Echel giving a presentation on making
+
+2
+00:00:12,280 --> 00:00:15,280
+data classes work for you.
+
+3
+00:00:15,280 --> 00:00:17,280
+Okay, all right.
+
+4
+00:00:17,280 --> 00:00:19,040
+Sounds like it's working.
+
+5
+00:00:19,040 --> 00:00:28,040
+So all of the, this is really examples, and all the examples are on the GitHub repo.
+
+6
+00:00:28,040 --> 00:00:33,600
+So it's my repo and look for data classes as types.
+
+7
+00:00:33,600 --> 00:00:38,520
+Should be easy to find even if you forget it.
+
+8
+00:00:38,520 --> 00:00:46,680
+And this started from, I do a podcast with my friend James Ward and we interviewed somebody
+
+9
+00:00:46,680 --> 00:00:53,480
+who had created a, they called it Smart Types Library for Scala, and something just kind
+
+10
+00:00:53,480 --> 00:00:54,480
+of clicked.
+
+11
+00:00:54,800 --> 00:00:58,320
+I've been studying functional programming a lot in the last few years and something
+
+12
+00:00:58,320 --> 00:01:06,360
+just kind of came together and I'm hoping that that happens for you during this presentation.
+
+13
+00:01:06,360 --> 00:01:17,680
+So I'm going to start with, normally if your type doesn't, if your type is incorrect you
+
+14
+00:01:17,680 --> 00:01:19,740
+should throw an exception.
+
+15
+00:01:19,940 --> 00:01:27,740
+I want to show all of the errors and so I created this little function that checks
+
+16
+00:01:27,740 --> 00:01:33,220
+the expression and it has a couple of error messages.
+
+17
+00:01:33,220 --> 00:01:37,300
+The second one is usually out of range, that's why I separated it.
+
+18
+00:01:37,300 --> 00:01:41,580
+Normally you would use an assert to check things and throw an exception, but I want
+
+19
+00:01:41,580 --> 00:01:47,100
+to see all of the errors that happen in the example, so I wrote this.
+
+20
+00:01:48,060 --> 00:01:51,700
+Not terribly important, but you need to see what it was.
+
+21
+00:01:51,700 --> 00:01:54,660
+And let's make this bigger.
+
+22
+00:01:54,660 --> 00:02:06,060
+Okay, so suppose we have a very simple system where we want to do some kind of customer
+
+23
+00:02:06,060 --> 00:02:13,100
+feedback, so we're going to have a thing called stars and the value should be between
+
+24
+00:02:13,100 --> 00:02:15,860
+1 and 10.
+
+25
+00:02:15,860 --> 00:02:20,660
+You know how customer feedback systems work, you can never actually give it zero stars.
+
+26
+00:02:20,660 --> 00:02:29,780
+So it'll be 1 to 10 and typical way we do this is just by using an int.
+
+27
+00:02:29,780 --> 00:02:38,460
+So an int is a type that has a value between minus very big number to plus very big number.
+
+28
+00:02:38,820 --> 00:02:47,020
+We want to adapt it to use for our stars so that it's between 1 and 10.
+
+29
+00:02:47,020 --> 00:02:53,580
+What this means, what we typically do is we say, okay, every time I use this, if you're
+
+30
+00:02:53,580 --> 00:02:59,060
+going to do it right, I need to check the argument to make sure that it's actually
+
+31
+00:02:59,060 --> 00:03:02,940
+between 1 and 10 so my stars are correct.
+
+32
+00:03:02,940 --> 00:03:08,420
+And so I do that there and in this other function where I use, everywhere you use it, you need
+
+33
+00:03:08,500 --> 00:03:10,540
+to check that it's correct.
+
+34
+00:03:10,540 --> 00:03:17,020
+Now some of you might be looking at this going, oh, but you're returning stars plus 5, so
+
+35
+00:03:17,020 --> 00:03:21,940
+what if you start out with stars that's 10, then you're going to return something that's
+
+36
+00:03:21,940 --> 00:03:22,940
+15.
+
+37
+00:03:22,940 --> 00:03:27,940
+Well, we can only say that we're returning an int because, well, that's all we have
+
+38
+00:03:27,940 --> 00:03:29,260
+in this situation.
+
+39
+00:03:29,260 --> 00:03:34,500
+So we don't really know that we're returning a stars object in this case, we're just returning
+
+40
+00:03:34,580 --> 00:03:42,100
+an int, so maybe it's okay that stars plus 5 or stars times 5 is okay.
+
+41
+00:03:42,100 --> 00:03:44,660
+Maybe that's fine, I don't know.
+
+42
+00:03:44,660 --> 00:03:49,100
+But if we do want it to be a proper star, then we've got a problem there too.
+
+43
+00:03:49,100 --> 00:03:56,460
+So this really isn't a very satisfying solution, plus any time I add a new function or if I
+
+44
+00:03:56,460 --> 00:04:01,980
+were to change something about stars, I'd have to go back here and make sure that every
+
+45
+00:04:02,020 --> 00:04:08,300
+place that I did a check, I'd have to change it.
+
+46
+00:04:08,300 --> 00:04:11,820
+So we got this stuff distributed all over the place.
+
+47
+00:04:11,820 --> 00:04:18,820
+Let's see if we can look at this a little different, oops, wrong way.
+
+48
+00:04:22,660 --> 00:04:26,140
+How do we solve this problem traditionally?
+
+49
+00:04:26,140 --> 00:04:29,780
+Well now traditionally, this is one of the things that objects were supposed to solve
+
+50
+00:04:29,780 --> 00:04:31,140
+for us.
+
+51
+00:04:31,220 --> 00:04:34,500
+The key was encapsulation.
+
+52
+00:04:34,500 --> 00:04:41,500
+So the idea is that here in my constructor, first of all, in Python by tradition, we say
+
+53
+00:04:44,020 --> 00:04:48,060
+if it's preceded by an underscore, that means it's private.
+
+54
+00:04:48,060 --> 00:04:54,780
+You can actually go in there and look at it and modify it if you want to, but that's what
+
+55
+00:04:54,780 --> 00:04:57,980
+we call private.
+
+56
+00:04:57,980 --> 00:05:04,980
+So we'll make it private, and then further down here, we're going to set, use the property
+
+57
+00:05:05,780 --> 00:05:12,780
+decorator to allow you to read it, but since there's no writer, then you can only read
+
+58
+00:05:16,300 --> 00:05:16,620
+it.
+
+59
+00:05:16,620 --> 00:05:23,620
+So pretty good, we've encapsulated it, we've hidden it inside of the class, and everywhere,
+
+60
+00:05:24,180 --> 00:05:31,180
+each of the methods that I use, I need to perform, well when I go into it, I need to
+
+61
+00:05:32,620 --> 00:05:38,060
+perform some kind of precondition check, which is in this case, the number of stars that
+
+62
+00:05:38,060 --> 00:05:45,060
+you pass me, still an int, I'll check with my condition function to make sure that that's
+
+63
+00:05:45,060 --> 00:05:50,700
+not too big, and then I'll perform some sort of internal operation, and then I'll do a
+
+64
+00:05:50,700 --> 00:05:55,940
+post condition check to make sure that I haven't messed anything up, and I need to do that
+
+65
+00:05:55,940 --> 00:06:02,940
+every method that I have for my class, and the condition is simply using my check to,
+
+66
+00:06:07,160 --> 00:06:14,160
+if you pass an argument, then it checks the argument, and if you don't pass in an argument,
+
+67
+00:06:14,640 --> 00:06:20,760
+it checks self dot underscore number, the local number value.
+
+68
+00:06:20,760 --> 00:06:26,680
+All right, well this was the promise of object-oriented programming, that we would have this encapsulation
+
+69
+00:06:26,680 --> 00:06:31,520
+and we keep everything safe, and at the time that I got started in it, which is when it
+
+70
+00:06:31,520 --> 00:06:37,040
+was really starting to show up, seemed like a great idea, seemed like a much better idea
+
+71
+00:06:37,040 --> 00:06:44,040
+than what we had before with plain old functions, but this still looks pretty messy, and it's
+
+72
+00:06:44,160 --> 00:06:51,160
+not, well, it doesn't seem great. Down here I'm just showing that because I didn't have
+
+73
+00:06:56,280 --> 00:07:03,280
+a setter, it prevents mutation and you get an attribute error, and it's a lot of work,
+
+74
+00:07:03,360 --> 00:07:07,160
+and if I were to add another method, I'd have to make sure, or if somebody else comes
+
+75
+00:07:07,160 --> 00:07:11,320
+along and adds another method, they would have to know what to do to make sure that
+
+76
+00:07:11,320 --> 00:07:17,360
+they did the proper precondition and postcondition checks, so it's not terribly satisfying,
+
+77
+00:07:17,360 --> 00:07:24,360
+so let's look at another approach, which is data classes.
+
+78
+00:07:24,680 --> 00:07:31,000
+So the idea of a data class is, and this is, I've actually lost track of when this was
+
+79
+00:07:31,000 --> 00:07:38,000
+added to Python. Thank you, 3.7, was added in 3.7, and basically what you're able to
+
+80
+00:07:39,000 --> 00:07:46,000
+do is define these class properties, so this is a property of the class, and then the data
+
+81
+00:07:47,000 --> 00:07:54,000
+class, I want to call it decorator, but that's not the right thing. What are we, we do call
+
+82
+00:07:54,000 --> 00:07:59,000
+them decorators, okay, because I know too many languages and I get the terminologies mixed
+
+83
+00:07:59,000 --> 00:08:06,000
+up, so the data class decorator then takes this information and manufactures this class
+
+84
+00:08:06,320 --> 00:08:13,320
+for you, which has a number of attributes, including, it takes these properties, these
+
+85
+00:08:14,280 --> 00:08:21,280
+class properties, and creates a constructor based on those that uses those in the order
+
+86
+00:08:21,840 --> 00:08:28,840
+in which you define them, and you need the type annotations in order for it to know what
+
+87
+00:08:28,920 --> 00:08:34,880
+to do with them, and so it creates a constructor that you can call, don't have to give it
+
+88
+00:08:34,880 --> 00:08:41,880
+the arguments names, but you can, and each of the fields now has the same property in
+
+89
+00:08:46,480 --> 00:08:53,480
+the object, so you can access name, number, depth, and then, oh, I had a default argument
+
+90
+00:08:53,880 --> 00:09:00,880
+here, so, and here's where I call the default, use the default argument. It creates a Dunder
+
+91
+00:09:01,880 --> 00:09:08,880
+EQ, so you can compare one of these messenger objects with another. It, there's a replace
+
+92
+00:09:10,680 --> 00:09:17,160
+function that allows you to take an existing object and make a new object with one or more
+
+93
+00:09:17,160 --> 00:09:24,160
+of the properties given different values. It's, in our, well, when you're looking at
+
+94
+00:09:24,160 --> 00:09:31,160
+things in terms of functional programming, you get into this immutability idea, and you,
+
+95
+00:09:31,720 --> 00:09:36,320
+the more you use it, the more you like it, so we'll look at that a little later. These
+
+96
+00:09:36,320 --> 00:09:42,800
+are still, by default, mutable, so one of the things that that means is that I can't
+
+97
+00:09:42,800 --> 00:09:48,880
+use it as a key in a dictionary, and if I try to do that, it'll tell me it's unhashable,
+
+98
+00:09:48,880 --> 00:09:54,760
+and the reason it's unhashable is because all of the properties are mutable, and it
+
+99
+00:09:54,760 --> 00:10:01,760
+builds the hash key, the way that it indexes into the dictionary, it builds the hash key
+
+100
+00:10:01,880 --> 00:10:06,600
+using all of those properties, and so if they're mutable, that means you could put the hash
+
+101
+00:10:06,600 --> 00:10:11,000
+key in, you could modify the properties, and then when you're looking something up, it
+
+102
+00:10:11,000 --> 00:10:15,440
+would generate a different hash key, and so you wouldn't be able to find the thing, so
+
+103
+00:10:15,440 --> 00:10:22,440
+it just prevents it, and this is standard with any kind of hashing system across all
+
+104
+00:10:23,080 --> 00:10:30,080
+languages. If it's mutable, that's kind of a bad idea.
+
+105
+00:10:31,080 --> 00:10:36,800
+There is one more thing we'd like to add here, which is data classes have this option
+
+106
+00:10:36,800 --> 00:10:43,440
+that allows you to say that the objects are frozen, and so what this means is that the
+
+107
+00:10:43,440 --> 00:10:50,440
+constructor that it generates will make all of these properties immutable. Well, I mean,
+
+108
+00:10:50,440 --> 00:10:55,640
+technically, it's Python, you can always mush things around, but if you try to modify
+
+109
+00:10:55,640 --> 00:11:01,720
+these things, you will get a frozen instance error. It will tell you that, oh, you can't
+
+110
+00:11:01,720 --> 00:11:05,560
+do that because you said that this was supposed to be frozen.
+
+111
+00:11:05,560 --> 00:11:11,600
+So now we've got something where, and this is much closer to what you do in functional
+
+112
+00:11:11,600 --> 00:11:17,140
+programming, and we'll see the benefits of that in a second, and so one of the things
+
+113
+00:11:17,140 --> 00:11:24,140
+that we see is that we're able to use the object as a key for our hash table because
+
+114
+00:11:25,520 --> 00:11:32,520
+if it's immutable, then it will automatically create the Dunder hash function, and so it's
+
+115
+00:11:33,000 --> 00:11:40,000
+happy with that, so we can use it as a key in a dictionary, and here we look it up.
+
+116
+00:11:42,600 --> 00:11:47,400
+So in functional programming, well, one of the things that I was confused by for a long
+
+117
+00:11:47,400 --> 00:11:53,540
+time is a phrase that I heard, I don't know, it was probably Luca Cardelli or somebody,
+
+118
+00:11:53,540 --> 00:11:59,640
+one of the early type people say that a class is not a type, and I didn't really know what
+
+119
+00:11:59,640 --> 00:12:06,640
+that meant, but in functional programming, they talk about this a lot, and the phrase
+
+120
+00:12:06,640 --> 00:12:13,640
+that you will sometimes hear is that a type is a set of values, and that is much easier
+
+121
+00:12:13,640 --> 00:12:20,640
+for me to think about. It's just some way to define a finite set of values, and one
+
+122
+00:12:20,640 --> 00:12:24,640
+of the things that you try and do, well, a couple of things you do in functional programming,
+
+123
+00:12:24,640 --> 00:12:29,640
+one is that you make everything immutable so that you don't have to think about protecting
+
+124
+00:12:29,640 --> 00:12:34,640
+that data. It's protected by default because you can't change it, and so it simplifies
+
+125
+00:12:35,640 --> 00:12:41,640
+everything, you don't have to have this cluster of methods around your data to protect it.
+
+126
+00:12:41,640 --> 00:12:47,640
+You say, here's my data, you can't change it, so you can read it, but you can't modify
+
+127
+00:12:47,640 --> 00:12:53,640
+it, everything's safe. The other thing that you want to do with types typically is to
+
+128
+00:12:53,640 --> 00:13:00,640
+make impossible values unrepresentable. So in our case with the stars example, what we
+
+129
+00:13:01,640 --> 00:13:08,640
+want to do is the impossible values are anything except for the values between 1 and 10, and
+
+130
+00:13:09,640 --> 00:13:16,640
+so we'll start out by saying, all right, here's my stars class, and it's a data class,
+
+131
+00:13:17,640 --> 00:13:23,640
+it's immutable, here's the number of stars, and then the other thing that you get with
+
+132
+00:13:23,640 --> 00:13:29,640
+data classes is this dunder post init function, because the data class takes your information
+
+133
+00:13:30,640 --> 00:13:36,640
+and it generates the constructor for you, and so there would probably be some way to
+
+134
+00:13:36,640 --> 00:13:41,640
+go and muck about with the constructor, but it's much easier to say, all right, automate
+
+135
+00:13:41,640 --> 00:13:46,640
+the constructor, and then once it's done, I'll run this function post init, and I'll
+
+136
+00:13:46,640 --> 00:13:50,640
+check the values. That's typically what you're doing with post init, you might be able to
+
+137
+00:13:50,640 --> 00:13:56,640
+do something else with it, but the intent of it was so you can check the results of
+
+138
+00:13:56,640 --> 00:14:02,640
+this object that you've just constructed, and so here's the one place now where I do
+
+139
+00:14:02,640 --> 00:14:09,640
+my check to make sure it's within the range 1 through 10, and now when I have my functions
+
+140
+00:14:11,640 --> 00:14:15,640
+that operate on the stars objects, notice they're no longer methods, I suppose they
+
+141
+00:14:15,640 --> 00:14:21,640
+could be, but it's just a lot easier to think about them as stand-alone functions that accept
+
+142
+00:14:21,640 --> 00:14:27,640
+stars objects and return stars objects. Now I don't have to worry about testing before
+
+143
+00:14:28,640 --> 00:14:33,640
+or after I modify them or any of that stuff, that's all taken care of because the only
+
+144
+00:14:33,640 --> 00:14:39,640
+kind of stars objects you can even create are the correct ones, and also notice that
+
+145
+00:14:41,640 --> 00:14:47,640
+here I actually am returning a stars object, and so it's clear when you read it that,
+
+146
+00:14:47,640 --> 00:14:52,640
+oh yeah, whereas before I was returning an int, it could be a star, it could be a not,
+
+147
+00:14:52,640 --> 00:14:57,640
+here it's very clear that I'm returning a stars object, and when I perform this operation
+
+148
+00:14:57,640 --> 00:15:03,640
+here, if it goes out of range, the construction process, including the post init, automatically
+
+149
+00:15:05,640 --> 00:15:11,640
+discovers if I've done something wrong, and so what I want to point out here is how much
+
+150
+00:15:11,640 --> 00:15:17,640
+simpler and clearer this is, because here in the stars class, I define exactly what
+
+151
+00:15:22,640 --> 00:15:28,640
+it is, and I can't create any of these objects that are incorrect, and so for the rest of
+
+152
+00:15:29,640 --> 00:15:35,640
+the program, I don't even have to think about it, and that's kind of the aha moment that
+
+153
+00:15:35,640 --> 00:15:41,640
+I want to initially get you to, to say, oh, I should do it this way, this is going to
+
+154
+00:15:42,640 --> 00:15:48,640
+make my life much, much easier, and it's going to reduce all kinds of errors now, and if
+
+155
+00:15:48,640 --> 00:15:54,640
+anybody uses my stars object later, if I decided to change the top number to five instead of
+
+156
+00:15:55,640 --> 00:16:01,640
+ten, everything is going to be fine, or at least if there are problems, they're going to be
+
+157
+00:16:01,640 --> 00:16:07,640
+discovered immediately, I don't have to go through my code looking for all these tests.
+
+158
+00:16:07,640 --> 00:16:13,640
+All right, so now let's look at the next thing that we try and do in functional programming,
+
+159
+00:16:15,640 --> 00:16:21,640
+which is composing things together, so we have all these small pieces that work well, and
+
+160
+00:16:21,640 --> 00:16:27,640
+then we want to be able to put them together, and what I'm going to compose here is a data class
+
+161
+00:16:27,640 --> 00:16:33,640
+that's going to be a copy of the data class that we're going to be using from other data classes,
+
+162
+00:16:33,640 --> 00:16:39,640
+so this will be, ultimately what we want to do is create a person, and the person is going to
+
+163
+00:16:39,640 --> 00:16:45,640
+contain a full name, a date of birth, and an email address, so might as well make those into
+
+164
+00:16:45,640 --> 00:16:51,640
+data classes as well, so the full name has some, so the post init now is going to be
+
+165
+00:16:51,640 --> 00:16:57,640
+checking the validity of the name after it's been initialized, and one of the tests I'm going to do
+
+166
+00:16:57,640 --> 00:17:03,640
+is to make sure that there are two names, and so I split it, and if it's greater than, let's see,
+
+167
+00:17:03,640 --> 00:17:09,640
+if it is, yeah, it should be greater than one, and if it is not, if there's only one name, then it
+
+168
+00:17:09,640 --> 00:17:15,640
+says, oh, you have to have two names, and you'd want to do all kinds of other things there, but you can do
+
+169
+00:17:15,640 --> 00:17:21,640
+that all in this one place where you're talking about the name, and then once it's created, then you
+
+170
+00:17:21,640 --> 00:17:27,640
+don't have to worry about it being used any other place. The second place is the birth date, and for
+
+171
+00:17:27,640 --> 00:17:33,640
+the others of these, I'm just going to show some sort of checking is taking place. We'll actually
+
+172
+00:17:33,640 --> 00:17:39,640
+look at birth date in a second, and then the email address does some sort of checking, and now we can
+
+173
+00:17:39,640 --> 00:17:45,640
+compose a new data class from the existing data classes, and you'll note that the constructor that it
+
+174
+00:17:45,640 --> 00:17:51,640
+creates requires you to pass the name and the birth date and the email address in, so it's very clear
+
+175
+00:17:51,640 --> 00:17:57,640
+and readable what you get, and then, so if we go ahead and print that, you can see
+
+176
+00:17:57,640 --> 00:18:05,640
+that the birth date is the same as the birth date, and then the birth date is the same as the birth date,
+
+177
+00:18:05,640 --> 00:18:11,640
+and then, so if we go ahead and print that, you can see it performs the checking
+
+178
+00:18:11,640 --> 00:18:17,640
+as part of this person constructor. It calls the constructors for all of the
+
+179
+00:18:17,640 --> 00:18:23,640
+individual parts, and then it displays, and this is one thing I didn't mention before, that
+
+180
+00:18:23,640 --> 00:18:29,640
+the data class also generates a nice dunder stir for you, so that it
+
+181
+00:18:29,640 --> 00:18:35,640
+produces something you'd have to do yourself normally, creating a new class to make a readable
+
+182
+00:18:35,640 --> 00:18:41,640
+string output, and so you can see this produces that for you as well.
+
+183
+00:18:41,640 --> 00:18:47,640
+All right, so now I sort of waved my hands over the birth date,
+
+184
+00:18:47,640 --> 00:18:53,640
+but that's kind of an interesting one to delve into a little bit more, and so let's look at
+
+185
+00:18:53,640 --> 00:18:59,640
+So, the thing is, what we want to look at is the value of using these types,
+
+186
+00:18:59,640 --> 00:19:05,640
+and data classes are really great, but enums are also a way to define a type,
+
+187
+00:19:05,640 --> 00:19:11,640
+because with enums, you have a set of values. You have a finite set of values,
+
+188
+00:19:11,640 --> 00:19:17,640
+it's defined at, well, call it compile time, as well,
+
+189
+00:19:17,640 --> 00:19:23,640
+I mean, it's there before, whereas the data classes we've seen are actually created at run time,
+
+190
+00:19:23,640 --> 00:19:29,640
+whereas enums are created at compile time, and one of the benefits of that is that
+
+191
+00:19:29,640 --> 00:19:35,640
+your IDE can use that to do completion, or whatever, if you've got an enum,
+
+192
+00:19:35,640 --> 00:19:41,640
+and it can tell you, here are the options, and you can just select for them, and other more
+
+193
+00:19:41,640 --> 00:19:47,640
+sophisticated things are possible. So, let's look at the building a date,
+
+194
+00:19:47,640 --> 00:19:53,640
+and so we're going to have, we're going to follow this pattern with frozen data classes,
+
+195
+00:19:53,640 --> 00:19:59,640
+we've got a day, and it has the day number, and we're going to check,
+
+196
+00:19:59,640 --> 00:20:05,640
+we're going to do a basic check, which obviously isn't a very good idea,
+
+197
+00:20:05,640 --> 00:20:11,640
+but just for starters, we're going to say this day has got to be between 1 and 31.
+
+198
+00:20:11,640 --> 00:20:17,640
+And the year, we'll say, alright, this is somebody's birth date,
+
+199
+00:20:17,640 --> 00:20:23,640
+so probably nobody's alive before 1900, and definitely not,
+
+200
+00:20:23,640 --> 00:20:29,640
+no birth dates after 2022, so that will be our post-enum check.
+
+201
+00:20:29,640 --> 00:20:35,640
+And now for the month, we'll use an enum.
+
+202
+00:20:35,640 --> 00:20:41,640
+And so, this allows me to have names for all the months,
+
+203
+00:20:41,640 --> 00:20:47,640
+and again, I can't remember when this feature was added,
+
+204
+00:20:47,640 --> 00:20:53,640
+but you can assign each enum value to an object,
+
+205
+00:20:53,640 --> 00:20:59,640
+and it might have even been 310. In this case, the object is just going to be a tuple,
+
+206
+00:20:59,640 --> 00:21:05,640
+and the number is the month number that we traditionally use,
+
+207
+00:21:05,640 --> 00:21:11,640
+and then over here we have the days of, you know, how many days can be in that month.
+
+208
+00:21:11,640 --> 00:21:17,640
+And so, one of the things we can do is, we've got a static method here,
+
+209
+00:21:17,640 --> 00:21:23,640
+and I can say, give me month, month number, and of course it has to make sure that that month number is within range,
+
+210
+00:21:23,640 --> 00:21:29,640
+and if it is, it goes ahead and produces the object associated with that number.
+
+211
+00:21:29,640 --> 00:21:35,640
+And here is where we're solving the day of the month problem.
+
+212
+00:21:35,640 --> 00:21:41,640
+So, if I have a month, and I have a day, I can pass the day into the month,
+
+213
+00:21:41,640 --> 00:21:47,640
+and it says, okay, what's the number of that day, and then I'll index into the tuple for that month,
+
+214
+00:21:47,640 --> 00:21:53,640
+and make sure that it's less than or equal to that.
+
+215
+00:21:53,640 --> 00:21:59,640
+So, now we can guarantee that the days of the month are proper.
+
+216
+00:21:59,640 --> 00:22:05,640
+And so, now I can do this composition thing again, where I take the birth date,
+
+217
+00:22:05,640 --> 00:22:11,640
+the day, the year, and those will do whatever checks they need to do as that is being created,
+
+218
+00:22:11,640 --> 00:22:17,640
+and then in the post-init check, all I need to do is take the day,
+
+219
+00:22:17,640 --> 00:22:23,640
+and pass it into check day for my month, and it automatically checks to make sure that the day is within range.
+
+220
+00:22:23,640 --> 00:22:29,640
+Okay, so that's pretty cool, and now I've got a set of these,
+
+221
+00:22:29,640 --> 00:22:35,640
+and it'll see, it'll go through and validate all of them.
+
+222
+00:22:35,640 --> 00:22:41,640
+So, my birth date apparently is okay, and then we've got a bunch of things that check and discover that,
+
+223
+00:22:41,640 --> 00:22:47,640
+oh, these things are out of range, gives me all that information that they're all out of range.
+
+224
+00:22:47,640 --> 00:22:53,640
+And so, it's, I don't know, I was quite delighted to discover this,
+
+225
+00:22:53,640 --> 00:22:59,640
+and also I did some tests, because initially I think I just found somebody's example where they used a tuple,
+
+226
+00:22:59,640 --> 00:23:05,640
+and I said, oh, you can use tuples, but then I did a test to find out that, oh, yeah, you can assign it to any object at all,
+
+227
+00:23:05,640 --> 00:23:11,640
+which of course, why wouldn't you be able to, it's Python.
+
+228
+00:23:11,640 --> 00:23:17,640
+All right, so the month, so I used, for the months, I used the month,
+
+229
+00:23:17,640 --> 00:23:23,640
+and the month can also be used, be created using data classes,
+
+230
+00:23:23,640 --> 00:23:29,640
+but it's a lot more complicated than just using any num,
+
+231
+00:23:29,640 --> 00:23:35,640
+and that's really the point of this example,
+
+232
+00:23:35,640 --> 00:23:41,640
+and remember all these examples are on the GitHub repository,
+
+233
+00:23:41,640 --> 00:23:47,640
+so you can just look through them, and they're exactly what you're seeing here.
+
+234
+00:23:47,640 --> 00:23:53,640
+And so, I could do the same thing that I did before, and then I could actually use the data class,
+
+235
+00:23:53,640 --> 00:23:59,640
+frozen data class, for a month, and you can see it's significantly messier,
+
+236
+00:23:59,640 --> 00:24:05,640
+and harder to follow, so that's a good thing to know.
+
+237
+00:24:05,640 --> 00:24:11,640
+Like, when you have a finite number of elements, if you can put them in an enum,
+
+238
+00:24:11,640 --> 00:24:17,640
+that'll probably be much better than using the data class approach.
+
+239
+00:24:17,640 --> 00:24:23,640
+If you have a lot of elements, or you only need to create some of them,
+
+240
+00:24:23,640 --> 00:24:29,640
+then the data class approach is going to probably be better.
+
+241
+00:24:29,640 --> 00:24:35,640
+So, I'm just going to show that it works, but that it's messier and less maintainable.
+
+242
+00:24:35,640 --> 00:24:41,640
+Alright, so I think, yep, that's everything.
+
+243
+00:24:41,640 --> 00:24:49,640
+Alright, so I did get through, we have five minutes left, but I guess we can't do questions, is that correct?
+
+244
+00:24:49,640 --> 00:24:55,640
+We can do questions? We can do questions this time.
+
+245
+00:24:55,640 --> 00:24:59,640
+Alright, so I've got five minutes for questions.
+
+246
+00:24:59,640 --> 00:25:03,640
+Are there any questions? Yes?
+
+247
+00:25:03,640 --> 00:25:23,640
+So, is the question, can you take an existing class and freeze it?
+
+248
+00:25:23,640 --> 00:25:33,640
+Oh, can you freeze individual fields?
+
+249
+00:25:33,640 --> 00:25:43,640
+I didn't encounter that, so I can't really say, I mean, maybe, but I didn't encounter that.
+
+250
+00:25:43,640 --> 00:25:49,640
+So, I'm guessing probably not. Oh, we have an expert, no.
+
+251
+00:25:49,640 --> 00:25:53,640
+Other questions?
+
+252
+00:25:53,640 --> 00:26:01,640
+Oh, so you can individually make them read-only properties, like I did in the normal class example.
+
+253
+00:26:01,640 --> 00:26:05,640
+But you do that by hand, yeah.
+
+254
+00:26:05,640 --> 00:26:27,640
+Okay.
+
+255
+00:26:27,640 --> 00:26:33,640
+So, my observation was that I did not account for leap years, but there might be some clever way to do it.
+
+256
+00:26:33,640 --> 00:26:39,640
+Yes, that's a good point, yeah. Somebody else is going to notice that too.
+
+257
+00:26:39,640 --> 00:26:55,640
+Anything else? Yes?
+
+258
+00:26:55,640 --> 00:27:07,640
+Does it check the what?
+
+259
+00:27:07,640 --> 00:27:27,640
+Okay, you guys understood the question better than I did.
+
+260
+00:27:27,640 --> 00:27:35,640
+Yeah, person is simply calling the constructors for the base types, for the composed types, I should say.
+
+261
+00:27:35,640 --> 00:27:41,640
+Okay, alright.
+
+262
+00:27:41,640 --> 00:27:49,640
+Oh, wait, no, we have one here.
+
+263
+00:27:49,640 --> 00:27:59,640
+No, I'm not, but I mean, I've heard about them more, mostly just recently, so I didn't.
+
+264
+00:27:59,640 --> 00:28:03,640
+Yes.
+
+265
+00:28:03,640 --> 00:28:17,640
+Another thing is this adders library that, yeah, so I should probably say adders and, yeah.
+
+266
+00:28:17,640 --> 00:28:29,640
+Yeah, there's a lot of work going on, but once you see the benefit of doing it this way, you can see why other people are working on making it better.
+
+267
+00:28:29,640 --> 00:28:31,640
+Alright, I think we're done.
+
+268
+00:28:31,640 --> 00:28:33,640
+Thank you very much for the great presentation.
+
+269
+00:28:33,640 --> 00:28:37,640
+Thank you.
+

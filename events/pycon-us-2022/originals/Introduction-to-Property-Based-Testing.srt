@@ -1,0 +1,2752 @@
+1
+00:00:00,000 --> 00:00:12,000
+So let's jump into it. Thank you all for coming. I know this tutorial hasn't been up for terribly
+
+2
+00:00:12,000 --> 00:00:16,880
+long. In fact, I was asked to deliver it last week when someone else had visa trouble getting
+
+3
+00:00:16,880 --> 00:00:23,440
+into the country for the conference. So without further ado, my name is Zach Hatfield-Dodds.
+
+4
+00:00:23,440 --> 00:00:28,440
+I'm the maintainer of Python's leading library for property-based testing and also the PyTest
+
+5
+00:00:28,440 --> 00:00:34,240
+core team, which you may have heard of. And I'm going to walk you through how I think
+
+6
+00:00:34,240 --> 00:00:40,360
+about property-based testing and how I think you can apply it in your code bases. And so
+
+7
+00:00:40,360 --> 00:00:44,640
+the tutorial or workshop is basically in four parts. Before the break, I'm going to walk
+
+8
+00:00:44,640 --> 00:00:50,920
+through what is property-based testing anyway and show you some examples. Then part two,
+
+9
+00:00:50,920 --> 00:00:55,320
+still before the break, we're going to look at how you describe test data using hypothesis,
+
+10
+00:00:55,800 --> 00:01:00,200
+and I'll get into what that means in part one. Then at 10.30, between two and three,
+
+11
+00:01:00,200 --> 00:01:04,920
+we're going to take our coffee break. We'll come back at 11 and start talking about what
+
+12
+00:01:04,920 --> 00:01:09,520
+I call test tactics, like design patterns for property-based tests, and then round the
+
+13
+00:01:09,520 --> 00:01:13,360
+workshop by talking about the practicalities in part four, the kind of stuff that you need
+
+14
+00:01:13,360 --> 00:01:19,360
+to know to actually apply it in your open source projects or at work. How does configuration
+
+15
+00:01:19,360 --> 00:01:22,600
+work? What's the update schedule like? How does it interoperate with other libraries?
+
+16
+00:01:22,600 --> 00:01:29,800
+That kind of thing. Sound good? Awesome. I love an engaged class. So property-based testing 101.
+
+17
+00:01:29,800 --> 00:01:41,760
+I will have a slides link up in half an hour or so. So I kind of want to start with, well,
+
+18
+00:01:41,760 --> 00:01:45,360
+what is testing anyway? When I tell you it's property-based testing, what do I mean by
+
+19
+00:01:45,360 --> 00:01:51,920
+testing? Testing for me is the art and science of running your code and then checking that it did
+
+20
+00:01:51,920 --> 00:01:56,600
+the right thing. Or sometimes just checking that it didn't do the wrong thing. In Python,
+
+21
+00:01:56,600 --> 00:02:00,320
+that means usually that we run the code, and if it didn't raise an exception, then it's
+
+22
+00:02:00,320 --> 00:02:05,000
+good. And if it gave us the result we expected, that's even better. There's a whole lot of
+
+23
+00:02:05,000 --> 00:02:09,800
+tools and techniques which are really useful for writing correct code or having high productivity
+
+24
+00:02:09,800 --> 00:02:14,720
+on a software engineering team which are not testing. I think all these things are great,
+
+25
+00:02:14,720 --> 00:02:19,320
+putting assertions in your code, using a type checker if that's appropriate to the situation,
+
+26
+00:02:19,560 --> 00:02:25,080
+peer code review, drinking coffee or perhaps even getting enough sleep if you're a real wild guy.
+
+27
+00:02:25,080 --> 00:02:32,520
+But they're not testing, so I'm not discussing them further today. And then there are a thousand
+
+28
+00:02:32,520 --> 00:02:38,720
+taxonomies of different kinds of tests. One that I find useful is just the list here. So we've got
+
+29
+00:02:38,720 --> 00:02:43,880
+unit tests which typically test something pretty small. There's integration tests that are exactly
+
+30
+00:02:43,960 --> 00:02:51,000
+the same as unit tests but with a bigger unit. We've got snapshot tests where you run your software
+
+31
+00:02:51,000 --> 00:02:55,520
+and save the output so that you can check that future runs with an updated version produce the
+
+32
+00:02:55,520 --> 00:03:02,360
+same output. This is useful because you can't really check correctness using a snapshot test.
+
+33
+00:03:02,360 --> 00:03:07,120
+There's parameterized tests that have a list of possible inputs and maybe their corresponding
+
+34
+00:03:07,120 --> 00:03:11,560
+outputs and you run those through. Function tests where you just throw random stuff into your software
+
+35
+00:03:11,560 --> 00:03:16,680
+and see if it crashes. And then what we're talking about today, property-based tests. And as an
+
+36
+00:03:16,680 --> 00:03:24,400
+extension that I'm barely going to talk about at all, stateful model-based tests. I'm going to be
+
+37
+00:03:24,400 --> 00:03:29,400
+doing a few examples. So my friend David, who started the project, says every time someone
+
+38
+00:03:29,400 --> 00:03:34,600
+reversing a list twice gives you the same list, to demonstrate property-based testing, I take a
+
+39
+00:03:34,600 --> 00:03:40,920
+drink. This isn't a drinking game, I just hate bad examples. Let's make our founding and most
+
+40
+00:03:40,920 --> 00:03:45,120
+common example a non-generalizable property of a function that's almost impossible to get wrong.
+
+41
+00:03:45,120 --> 00:03:49,960
+What could possibly go wrong with that? So in deference to my friend David, we're going to be
+
+42
+00:03:49,960 --> 00:03:56,520
+talking about sorting. Now, these are kind of classic unit tests. We say that if we sort the
+
+43
+00:03:56,520 --> 00:04:02,640
+list one, two, three, we expect to get the list one, two, three. Let's just pretend here that
+
+44
+00:04:02,640 --> 00:04:07,040
+Python doesn't have a sorted function yet. So we're kind of having to implement that for
+
+45
+00:04:07,040 --> 00:04:13,000
+ourselves. And we can also test that if we sort a list of floating point numbers, 3.0, 2.0, 1.0,
+
+46
+00:04:13,000 --> 00:04:19,840
+we should get 1.0, 2.0, 3.0 out. And we can also sort strings, not just numbers. We can sort lists
+
+47
+00:04:19,840 --> 00:04:26,360
+of anything that can be compared. And so if we sort b, a, we should get a, b, c. All make sense?
+
+48
+00:04:26,360 --> 00:04:34,720
+A parameterized test might look a little like this. We just supply a list of the arguments and
+
+49
+00:04:35,280 --> 00:04:41,840
+the corresponding expected result. And so at this point, like honestly, we haven't gained much at
+
+50
+00:04:41,840 --> 00:04:45,600
+all by going here. And in fact, we've lost our function names on the test, which describe what
+
+51
+00:04:45,600 --> 00:04:50,760
+we're actually doing. But a parameterized test does make it easy to drop in another few cases
+
+52
+00:04:50,760 --> 00:04:56,160
+later. If we discover that there was an edge case we weren't handling, or we want to test empty lists
+
+53
+00:04:56,160 --> 00:05:00,360
+or list of more elements, it's much easier just to drop them into a list here than to write a whole
+
+54
+00:05:00,360 --> 00:05:05,160
+new test function. And it's easier to be confident that the body of the test function is always the
+
+55
+00:05:05,160 --> 00:05:13,120
+same because you've only got one test body. But sometimes, like to be honest, the problem is we're
+
+56
+00:05:13,120 --> 00:05:18,960
+only testing short lists here because it's a pain in the neck to write out really long examples. So
+
+57
+00:05:18,960 --> 00:05:23,960
+if we didn't have to write out the result by hand as well, that would be helpful for testing more
+
+58
+00:05:23,960 --> 00:05:31,080
+complicated code. And so in this case, we're saying, well, if we already had a trusted sort
+
+59
+00:05:31,080 --> 00:05:35,560
+function that we knew someone had implemented correctly, or maybe this is the version from
+
+60
+00:05:35,560 --> 00:05:41,000
+before we did a bunch of performance optimizations, or a single threaded version, or just the old
+
+61
+00:05:41,000 --> 00:05:45,400
+version, this situation comes up more often than you'd expect where you actually have two
+
+62
+00:05:45,400 --> 00:05:49,960
+different functions. And in this case, you can just come up with your inputs and then check that you
+
+63
+00:05:49,960 --> 00:05:57,160
+get the same result from each of those functions. And then if you don't even have a trusted
+
+64
+00:05:57,160 --> 00:06:03,880
+implementation, there are still things you can check. So this test says if we sort any of these
+
+65
+00:06:03,880 --> 00:06:10,320
+input lists and then take the pairs out of the output, so the zeroth and first elements, the
+
+66
+00:06:10,320 --> 00:06:16,040
+first and second, the second and third, then the preceding element should be less than or equal to
+
+67
+00:06:16,040 --> 00:06:21,080
+the subsequent element. This is just saying the output from the sorted function must be in order.
+
+68
+00:06:21,080 --> 00:06:27,120
+And so we can check this kind of thing without even knowing how to sort something. I always stuff up
+
+69
+00:06:27,120 --> 00:06:34,800
+edge cases if I'm doing quick sort or something. But this is not a complete test. Does anyone have
+
+70
+00:06:34,800 --> 00:06:45,640
+an idea as to why? So it's just pairwise. But we can be pretty confident that if the first
+
+71
+00:06:45,640 --> 00:06:49,720
+element is less than the second and the second is less than the third, then we're still in order.
+
+72
+00:06:49,720 --> 00:06:59,760
+The problem here is that if sorted was defined as return empty list, this test would pass. Or even
+
+73
+00:06:59,760 --> 00:07:05,320
+if it was defined as return a list containing one, two, that's an ordered list. So we'd want to add
+
+74
+00:07:05,320 --> 00:07:11,120
+some extra assertions that say, well, we've got the same length of output and the same set of
+
+75
+00:07:11,120 --> 00:07:19,240
+elements. And to be honest, I think this is a good test for sorting. But if you sort of had your
+
+76
+00:07:19,240 --> 00:07:24,760
+enterprise software developer colleague from hell, whose goal was just to get the test passing and
+
+77
+00:07:24,760 --> 00:07:29,440
+nothing else because they like really strict test-driven development, this test would still not be
+
+78
+00:07:29,440 --> 00:07:44,480
+enough. Can anyone guess why? So if you gave it the list one, two, one, and sorted returned one, two,
+
+79
+00:07:44,480 --> 00:07:50,400
+two, this test would still pass. Because you've got the same number of elements and the same set
+
+80
+00:07:50,400 --> 00:07:58,120
+of elements, but you've messed around with the duplicate elements. So the mathematical definition
+
+81
+00:07:58,120 --> 00:08:04,120
+of sorting is that sorting is the permutation of your input sequence such that it is in pairwise
+
+82
+00:08:04,120 --> 00:08:11,000
+order. And so this test is a complete test for sorting. Any function which passes this test is
+
+83
+00:08:11,000 --> 00:08:17,200
+a correct sorting function. The only problem is that checking every permutation is just super slow.
+
+84
+00:08:17,200 --> 00:08:21,600
+So we don't actually want to do that. It's like cubic time and the length of the list. We might
+
+85
+00:08:21,600 --> 00:08:26,040
+instead check that the collections.counter, that is the number of each distinct element we have,
+
+86
+00:08:26,040 --> 00:08:33,120
+is the same in the input as the output. And so this is a fast, efficient test which will catch
+
+87
+00:08:33,120 --> 00:08:41,640
+any possible wrong sorting algorithm. And we've just discovered property-based testing. So this is
+
+88
+00:08:41,640 --> 00:08:45,480
+a test and it's got two properties that we're checking. The first is that the output is in
+
+89
+00:08:45,480 --> 00:08:50,720
+order and the second is that we have the same elements that we started with. And any function
+
+90
+00:08:50,720 --> 00:08:56,800
+which satisfies these two properties is a sorting function. That said, I think this is a fine test
+
+91
+00:08:56,800 --> 00:09:02,120
+as well. Your test doesn't have to catch every possible secretly evil input that is out to get
+
+92
+00:09:02,120 --> 00:09:08,000
+you. If it catches plausible mistakes, that is honestly all we need most of the time. The other
+
+93
+00:09:08,000 --> 00:09:12,680
+thing I'll say is that this is also a property. This is the property that the two functions give
+
+94
+00:09:12,680 --> 00:09:17,120
+equivalent outputs on the same input. And that's a really useful one. We'll come back to that later.
+
+95
+00:09:17,120 --> 00:09:25,680
+So to extend this with hypothesis, we take exactly the same test body here. But where I've just
+
+96
+00:09:25,680 --> 00:09:32,880
+kind of hand-waved, PyTest parameterize something and it's your problem to come up with that. The
+
+97
+00:09:32,880 --> 00:09:38,680
+problem that hypothesis solves is precisely coming up with those inputs. And so what we can do is we
+
+98
+00:09:38,680 --> 00:09:44,360
+can give it the given decorator. So given an argument which is one of either lists of integers
+
+99
+00:09:44,360 --> 00:09:50,520
+or floats or lists of strings, and the hypothesis framework will then generate many random examples
+
+100
+00:09:50,520 --> 00:09:56,320
+for you. And in fact, it will generate a random example that makes that test fail. Because we
+
+101
+00:09:56,320 --> 00:10:00,520
+assumed that numbers could be compared and not a number is a special floating point value which
+
+102
+00:10:00,520 --> 00:10:08,640
+comparison doesn't really work on the way you expect. But this test will pass again. So to
+
+103
+00:10:08,640 --> 00:10:13,200
+summarize this little introductory bit, the advantage of property-based testing is that it
+
+104
+00:10:13,240 --> 00:10:17,720
+helps us generate input data that we wouldn't have thought of otherwise. And that's particularly
+
+105
+00:10:17,720 --> 00:10:22,160
+useful because the edge cases you didn't think of are precisely the ones that you're likely to
+
+106
+00:10:22,160 --> 00:10:27,880
+have bugs with. And if I think of an edge case when I go to write a test, I usually just go check that
+
+107
+00:10:27,880 --> 00:10:34,560
+my code handles it too. So we can check that the result is not wrong even when we don't know the
+
+108
+00:10:34,560 --> 00:10:40,120
+correct answer or can't think of what the correct answer should be or indeed don't know how to get
+
+109
+00:10:40,120 --> 00:10:48,200
+the correct answer. Yep? It is very similar to fuzz testing. The difference is essentially that
+
+110
+00:10:48,200 --> 00:10:53,600
+fuzz testing tends to deal with sort of random bytes. So anything that can be represented in a
+
+111
+00:10:53,600 --> 00:10:59,560
+network packet or a file. Whereas property-based testing is much more structured. So we want
+
+112
+00:10:59,560 --> 00:11:04,400
+specifically lists of the things we've asked for rather than like any possible value. But you could
+
+113
+00:11:04,400 --> 00:11:11,880
+use hypothesis as a fuzz tester as well. And the last thing that I find using hypothesis, which kind
+
+114
+00:11:11,880 --> 00:11:16,760
+of surprised me when I started, is that often the bugs it finds are actually bugs in my understanding
+
+115
+00:11:16,760 --> 00:11:23,360
+of what the code is meant to do rather than the bugs in the code per se. You know, that some library
+
+116
+00:11:23,360 --> 00:11:28,600
+has a slightly different contract or semantics than I expected or that I didn't actually understand
+
+117
+00:11:28,600 --> 00:11:33,240
+the problem statement well enough to write a good test for it. Because it's a lot easier to kind of
+
+118
+00:11:33,240 --> 00:11:38,160
+go, well, this input gives me, oh, it's that output. Let me just paste that into the test. That's
+
+119
+00:11:38,160 --> 00:11:42,880
+actually a lot easier on your understanding of the code than having to think what should always be
+
+120
+00:11:42,880 --> 00:11:48,880
+true about my function. And then the last thing I want to claim, though I haven't demonstrated it
+
+121
+00:11:48,880 --> 00:11:54,400
+yet, is that you often don't even need assertions in your test. If you start calling your code with
+
+122
+00:11:54,400 --> 00:11:58,880
+like really weird but technically invalid input values, you will get a lot of internal errors. And
+
+123
+00:11:59,840 --> 00:12:05,080
+so if you can't think of any properties, you actually don't need any properties. Does not
+
+124
+00:12:05,080 --> 00:12:10,160
+raise an exception on valid input is a perfectly fine property to test. And at least in my code,
+
+125
+00:12:10,160 --> 00:12:19,760
+it's embarrassingly effective. So let's get set up on the notebook side of things. We're not going
+
+126
+00:12:19,760 --> 00:12:26,000
+to go through the exercises right now, but I want to get us set up here. So github.com
+
+127
+00:12:26,000 --> 00:12:34,640
+slash rsockels slash testing dash tutorial. And by your preference, you can either install things
+
+128
+00:12:34,640 --> 00:12:41,920
+locally as described in the readme in here, or you can just click on the links that will open a
+
+129
+00:12:41,920 --> 00:13:06,040
+notebook for you in my binder with Serow installation. All right. So having un-lost my video,
+
+130
+00:13:06,160 --> 00:13:13,440
+there we are. You may be familiar with the Hypothesis logo. It's a dragonfly because dragonflies
+
+131
+00:13:13,440 --> 00:13:23,680
+hunt and eat bugs. So with set up mostly in place, let's talk about part two before I break. And
+
+132
+00:13:23,680 --> 00:13:28,520
+this is how you can use Hypothesis to describe your data. So I showed off this a little with the
+
+133
+00:13:28,520 --> 00:13:34,400
+given decorator and the images and the floats. But we're going to go through a little more.
+
+134
+00:13:34,400 --> 00:13:40,280
+Hypothesis uses what we call strategies to describe your data. Similar libraries in other
+
+135
+00:13:40,280 --> 00:13:45,120
+languages call these generators. But of course, naming things is hard, and Python already has
+
+136
+00:13:45,120 --> 00:13:49,320
+generators, which are a completely different sort of thing. So we had to call them something else.
+
+137
+00:13:49,320 --> 00:13:54,160
+And there are a couple of different kinds of strategies that you're going to see a lot of.
+
+138
+00:13:54,160 --> 00:13:58,880
+The first is just strategies for what we call scalar values, things like none,
+
+139
+00:13:58,880 --> 00:14:04,440
+bullions, numbers of various kinds, strings, date times, time zones, whatever you want.
+
+140
+00:14:04,440 --> 00:14:09,440
+Then we've got strategies for collections, whether that's lists or dictionaries or tuples and so on.
+
+141
+00:14:09,440 --> 00:14:15,440
+We can modify strategies with map or filter and look, we're going to get through all of this on
+
+142
+00:14:15,440 --> 00:14:20,000
+subsequent slides. So I won't wait this one out for you. I'm also going to show you some recipes
+
+143
+00:14:20,120 --> 00:14:24,760
+that I hope are useful. And then we'll end up with some exercises, which take us through to the break
+
+144
+00:14:24,760 --> 00:14:31,600
+at 10.30, which just focus on generating useful data rather than actually using them in order to
+
+145
+00:14:31,600 --> 00:14:39,480
+test code. So for those scalar values, the bottom line is like, if you can describe what it is that
+
+146
+00:14:39,480 --> 00:14:46,160
+you want, you can generate it using hypothesis. So we have built in strategies for none and
+
+147
+00:14:46,160 --> 00:14:51,280
+for bullions, for numbers. Numbers all have a min value and a max value argument, which are
+
+148
+00:14:51,280 --> 00:14:56,720
+optional. So you can say not just give me any integer, but give me any positive integer or give
+
+149
+00:14:56,720 --> 00:15:04,600
+me a number between one and 10. For strings, like all collections, they have a minimum and a maximum
+
+150
+00:15:04,600 --> 00:15:08,920
+size that you can set. So you say, I don't want the empty string or I want strings, but only up to
+
+151
+00:15:08,920 --> 00:15:14,760
+six characters because that's all my database supports. You can also, for some of these,
+
+152
+00:15:14,760 --> 00:15:20,360
+specify, for example, which characters are valid. So you only want ASCII characters or you'll allow
+
+153
+00:15:20,360 --> 00:15:26,720
+Unicode characters or even match by regular expression. Dates, times, and time zones, I think,
+
+154
+00:15:26,720 --> 00:15:30,680
+speak for themselves and time zones will give you plenty of trouble when you're testing them. And
+
+155
+00:15:30,680 --> 00:15:35,160
+there's a bunch of other stuff, which you'll find in the documentation when you eventually need it.
+
+156
+00:15:35,160 --> 00:15:44,960
+So here's a very simple test. I mentioned before that does not raise an exception is a perfectly
+
+157
+00:15:44,960 --> 00:15:53,320
+fine property to test. And so in this test, we're saying given any binary, that is a bytes object,
+
+158
+00:15:53,320 --> 00:16:01,160
+a binary string, if we call the isBinaryString function from the binary or not package, it doesn't
+
+159
+00:16:01,160 --> 00:16:14,800
+crash. This seems kind of like a reasonable test to me, but it's shockingly effective. And sure
+
+160
+00:16:14,800 --> 00:16:20,400
+enough, when we first wrote this a few years ago, it crashed with a Unicode decoderror. This has
+
+161
+00:16:20,400 --> 00:16:24,000
+subsequently been fixed. There's no point testing open source code if you don't tell them about the
+
+162
+00:16:24,000 --> 00:16:29,360
+bugs and most people fix them very promptly. But internally, binary or not used a library called
+
+163
+00:16:29,360 --> 00:16:34,640
+Chardet, which detects character encodings. And in particular, it will give you a dictionary with
+
+164
+00:16:34,640 --> 00:16:40,680
+a couple of possibilities and then a confidence that it assigns to each possibility. And it turns
+
+165
+00:16:40,680 --> 00:16:45,960
+out that for some encodings, it just checks a few bytes at the start of the string to see whether
+
+166
+00:16:45,960 --> 00:16:52,960
+they're the magic bytes indicating that it's in a particular encoding. And then reports 100% confidence
+
+167
+00:16:52,960 --> 00:16:59,960
+without any implication that you actually can decode that encoding. But the binary or not developers,
+
+168
+00:16:59,960 --> 00:17:06,280
+I think, made the quite reasonable mistake in thinking that if they were told with 100% confidence
+
+169
+00:17:06,280 --> 00:17:09,840
+that a string of a particular encoding could just call decode, it didn't need to handle any error.
+
+170
+00:17:09,840 --> 00:17:19,200
+And so what we found here was that it wasn't so much that anybody had made a coding error as had
+
+171
+00:17:19,200 --> 00:17:26,800
+misunderstood the semantics of the function that we're using. So is this a bug? I guess it's a bug
+
+172
+00:17:26,800 --> 00:17:32,920
+in that something crashes, but it's not like we had a clear typo somewhere. Let's look at another one.
+
+173
+00:17:32,920 --> 00:17:41,000
+Mercurial is a version control system much like Git, which had to and from UTF-8 binary encoding.
+
+174
+00:17:41,000 --> 00:17:48,680
+And so an obvious property we could test there is that given any binary string, if we encode it to
+
+175
+00:17:48,680 --> 00:17:59,080
+UTF-8 and then back from UTF-8, we should get the same string back. And if we have a to UTF-8 thing
+
+176
+00:17:59,080 --> 00:18:05,560
+that should handle any binary string, so this test should work, it crashed too. I'm not sure if the
+
+177
+00:18:05,560 --> 00:18:12,160
+moral of this story should be hypothesis is great or unicode is really hard. But some combination
+
+178
+00:18:12,160 --> 00:18:17,680
+of those two, I think, is there. It, of course, has also been fixed. And then another great one.
+
+179
+00:18:18,200 --> 00:18:26,160
+In the Python standard library, we have datetimes. And the dateutil package can parse datetimes.
+
+180
+00:18:26,160 --> 00:18:32,360
+And so this is saying that if we have a datetime and we format it as an ISO 8601 formatted string,
+
+181
+00:18:32,360 --> 00:18:39,240
+so that's four digit year dash two digit month dash two digit day, a T, and then the time,
+
+182
+00:18:39,240 --> 00:18:43,640
+then we should be able to parse that string. And if we reformat the datetime we get, we should get
+
+183
+00:18:43,640 --> 00:18:50,240
+the same string again. And it's just easier to start by generating a datetime and formatting it
+
+184
+00:18:50,240 --> 00:18:54,520
+than it is to start by constructing a string which exactly represents a valid datetime format.
+
+185
+00:18:54,520 --> 00:19:03,920
+It turned out that this failed. Paul Gansler is a friend of mine. And it turns out that this
+
+186
+00:19:03,920 --> 00:19:12,200
+parser function failed if and only if you had a one digit year and the second equal to the year
+
+187
+00:19:12,200 --> 00:19:20,880
+value in case it would swap the year with the month. I don't think this would ever have been
+
+188
+00:19:20,880 --> 00:19:27,720
+caught without hypothesis. I will admit I'm also not sure who this would have hurt if it had never
+
+189
+00:19:27,720 --> 00:19:34,360
+been caught. But I think it is illustrative of the kind of thing that you can find with relatively
+
+190
+00:19:34,360 --> 00:19:40,840
+simple tests. So the point of this is not so much to tell you this bug is really important. As
+
+191
+00:19:41,480 --> 00:19:45,720
+very simple tests can find bugs that you never would have found by testing manually.
+
+192
+00:19:45,720 --> 00:19:53,000
+So having got the simplest possible data out of the way, let's talk about collections.
+
+193
+00:19:53,000 --> 00:20:05,720
+Yep. So for each of these, we'll get to this under the practicality section,
+
+194
+00:20:05,720 --> 00:20:10,760
+but there's just a setting for how many you want. By default it's about a hundred random
+
+195
+00:20:10,760 --> 00:20:15,560
+examples because that's a good trade off between speed for unit tests but also reasonably rigorous.
+
+196
+00:20:15,560 --> 00:20:23,920
+So the list strategy, as we saw way back in our sorting example, the list strategy just
+
+197
+00:20:23,920 --> 00:20:29,600
+takes a strategy for the elements of the list. That one's mandatory. And then optionally you
+
+198
+00:20:29,600 --> 00:20:35,360
+can give it size bounds and also specify whether you want it to be unique. And you can also give
+
+199
+00:20:35,360 --> 00:20:40,680
+it a function by which it should be unique. So for example, allow any string and none of them
+
+200
+00:20:40,680 --> 00:20:48,880
+should be the same as each other when they're lower cased. You can also turn this into dictionaries,
+
+201
+00:20:48,880 --> 00:20:53,280
+sets, iterables and so on. And for those common cases, we actually ship strategies for those
+
+202
+00:20:53,280 --> 00:21:00,200
+directly. The tuple strategy is a little different. It's for a fixed length tuple where you provide
+
+203
+00:21:00,200 --> 00:21:06,480
+a separate strategy for each index of the tuple. So if you want a tuple, for example, of an integer,
+
+204
+00:21:06,480 --> 00:21:10,720
+an integer and a string, you would use the tuple strategy and you would call it tuples,
+
+205
+00:21:10,720 --> 00:21:16,520
+integers, integers, text. And there you are. If you want a variable length tuple, you actually
+
+206
+00:21:16,520 --> 00:21:19,600
+start with the list strategy and then turn it into a tuple later, which we'll see on the next
+
+207
+00:21:19,600 --> 00:21:25,720
+slide. And then fixed dictionaries is just like tuples except also with dictionary keys. So you
+
+208
+00:21:25,720 --> 00:21:31,200
+can say I want a dictionary which always has the key a, which should be an integer, and may or
+
+209
+00:21:31,280 --> 00:21:40,000
+not have the key b, which is a string, for example. So here's another pretty simple test. We're
+
+210
+00:21:40,000 --> 00:21:45,800
+saying given lists of floating point numbers with at least one element in them, because you can't
+
+211
+00:21:45,800 --> 00:21:50,520
+take the minimum of an empty list, you just get a crash, then the minimum of the list should be
+
+212
+00:21:50,520 --> 00:21:55,400
+less than or equal to the mean, that is the average of the list, which is then in turn less
+
+213
+00:21:55,400 --> 00:22:08,120
+than or equal to the maximum of the list. Will this test pass? You're getting suspicious when I
+
+214
+00:22:08,120 --> 00:22:15,120
+ask this question, I like that. Yeah, that's the extension. If you think it's going to fail,
+
+215
+00:22:15,120 --> 00:22:24,840
+you've got to tell me why it's going to fail. This is where I tell you that hypothesis is a
+
+216
+00:22:24,840 --> 00:22:31,120
+great educational tool because it'll teach you about how Python works. Yep. Pretty much.
+
+217
+00:22:31,120 --> 00:22:38,440
+Specifically it fails quickly when we get an overflow error because internally mean might
+
+218
+00:22:38,440 --> 00:22:44,760
+be implemented by adding up your list of floats and then dividing by the length. And in this case,
+
+219
+00:22:44,760 --> 00:22:50,520
+the result of dividing was too large to be represented as a floating point number.
+
+220
+00:22:50,520 --> 00:23:03,600
+So when I spoke about turning lists into tuples, what I meant was using the map strategy. So the
+
+221
+00:23:03,600 --> 00:23:07,840
+map strategy, you pass it any callable, it could be a lambda, it could be a function,
+
+222
+00:23:07,840 --> 00:23:14,440
+it could even be a class like the tuple class. And it gives you a strategy which consists of
+
+223
+00:23:14,440 --> 00:23:18,760
+getting a value from the earlier strategy, calling that callable on it, and then giving
+
+224
+00:23:18,760 --> 00:23:25,160
+the result. So if you have lists of integers dot map tuple, this will generate a variable length
+
+225
+00:23:25,160 --> 00:23:32,840
+list of numbers and then call tuple on it to give you a variable length tuple. Pretty simple. Or in
+
+226
+00:23:32,840 --> 00:23:38,280
+the example here, if you have integers and then you map str on it, you will get maybe a minus sign
+
+227
+00:23:38,280 --> 00:23:45,880
+and then a bunch of digits as a str. Filter is kind of the corresponding strategy. Filter is for
+
+228
+00:23:45,880 --> 00:23:51,160
+where you have some rare things that can be generated that you don't actually want. So you
+
+229
+00:23:51,160 --> 00:23:56,080
+just supply a function and if it returns a falsy value, hypothesis will just get another value for
+
+230
+00:23:56,080 --> 00:24:03,240
+you behind the scenes. So this is really useful, for example, if you want any number but not zero,
+
+231
+00:24:03,240 --> 00:24:10,520
+because you would have a zero division error, for example. That said, if more than 20% of your
+
+232
+00:24:10,520 --> 00:24:15,280
+examples are being rejected, this does start to have performance implications because you are in
+
+233
+00:24:15,280 --> 00:24:20,080
+fact generating the earlier thing and then just throwing it away behind the scenes. So if you
+
+234
+00:24:20,080 --> 00:24:24,560
+reject more than 80 or 90%, hypothesis will actually start erroring out toward you. Like, hey,
+
+235
+00:24:24,560 --> 00:24:30,120
+hey, that filter is a little strict. See if you can find a way to use map, for example, to construct
+
+236
+00:24:30,120 --> 00:24:38,600
+something which is usually valid. So if you want a tuple of two integers in ascending order, you've
+
+237
+00:24:38,600 --> 00:24:43,560
+got kind of two ways to do it. The way with filter is just to supply something like lambda,
+
+238
+00:24:43,560 --> 00:24:49,440
+which just checks that it's what you want, that the first element is less than or equal to the
+
+239
+00:24:49,440 --> 00:24:54,840
+second element. The way with map would be to sort it and then turn it back into a tuple because
+
+240
+00:24:54,840 --> 00:25:03,240
+sorted returns a list. Does this make sense to people? All right, we're getting into the
+
+241
+00:25:03,240 --> 00:25:09,800
+special strategies here. Just is for where you have a value but you want a strategy. Just is a
+
+242
+00:25:09,800 --> 00:25:14,560
+special strategy which only ever returns the particular argument that you gave it. So for
+
+243
+00:25:14,560 --> 00:25:20,840
+example, if you ask for date times and you always want them to be in the UTC time zone, which is
+
+244
+00:25:20,840 --> 00:25:27,600
+nice for machine related things, you can say time zones is just UTC. Kind of reads like English.
+
+245
+00:25:27,600 --> 00:25:33,120
+Sampled from on the other hand is where you want one of some particular range of possibilities. So
+
+246
+00:25:33,120 --> 00:25:39,160
+you're okay with having an inner join or an outer join but it has to be one of those. Sampled from
+
+247
+00:25:39,160 --> 00:25:43,760
+also works really well with the nums. If you have like a flag where you can have read, write,
+
+248
+00:25:43,760 --> 00:25:50,000
+execute or read, write or read, execute or read, write, execute. Sampled from or behind the scenes
+
+249
+00:25:50,000 --> 00:25:57,880
+just create all those combinations for you. Another thing that we saw a while ago not sorted example
+
+250
+00:25:57,880 --> 00:26:03,520
+was one of, which is where you have two or more possible strategies and you would like a value
+
+251
+00:26:03,520 --> 00:26:10,920
+from any one of them. So behind the scenes if you have one of say integers or strings,
+
+252
+00:26:10,920 --> 00:26:15,160
+hypothesis will choose which strategy to draw from and then get an example from that for you.
+
+253
+00:26:15,160 --> 00:26:23,480
+Nothing is a little stranger. It's kind of the empty set of strategies. So if you have nothing,
+
+254
+00:26:23,480 --> 00:26:29,520
+the lists of nothing that will only ever generate the empty list. If you have one of integers or
+
+255
+00:26:29,520 --> 00:26:33,680
+nothing it will just always generate integers because there's nothing else to generate.
+
+256
+00:26:33,680 --> 00:26:41,400
+Thinking of strategies as sets of values kind of where you define your set as a construction
+
+257
+00:26:41,400 --> 00:26:45,840
+is pretty useful except that you can't subtract them or take the intersectional complement and
+
+258
+00:26:45,840 --> 00:26:52,560
+that's because if somebody has map, called map on their strategy for example, map is allowed to
+
+259
+00:26:52,560 --> 00:26:56,640
+have whatever side effects you like. So we have a Django plugin which will ensure that the user
+
+260
+00:26:56,720 --> 00:27:01,400
+model it generates is in the database for you and it's not quite clear what it would mean to
+
+261
+00:27:01,400 --> 00:27:06,200
+subtract that strategy from it. What like we generating user strategy and take it out of the
+
+262
+00:27:06,200 --> 00:27:15,840
+database when it wasn't there to start with. Who here has ever written a custom class? Yeah,
+
+263
+00:27:15,840 --> 00:27:20,880
+you might want to generate some with hypothesis and so builds is the way to do that. You give it your
+
+264
+00:27:20,880 --> 00:27:26,600
+class instance or for that matter anything else you can call and then strategies for the positional
+
+265
+00:27:26,600 --> 00:27:31,760
+and keyword arguments. It works pretty much how you would expect it. It draws those positional
+
+266
+00:27:31,760 --> 00:27:35,880
+keyword arguments from strategies to values and then calls your thing and returns whatever the
+
+267
+00:27:35,880 --> 00:27:43,600
+return value is. We'll cover builds in more detail later because it's got some nice type
+
+268
+00:27:43,600 --> 00:27:50,560
+inference stuff as well. If you have recursive data that also basically just works. So on the
+
+269
+00:27:50,920 --> 00:27:58,760
+slide here I've defined my favorite JSON strategy which says JSON is defined recursively. The base
+
+270
+00:27:58,760 --> 00:28:06,120
+case is you can have none, true or false, a number or a string or you can have a list of JSON values
+
+271
+00:28:06,120 --> 00:28:11,720
+or you can have a dictionary where the keys are strings and the values are JSON. That's just the
+
+272
+00:28:11,720 --> 00:28:17,040
+definition of JSON and that's how you write it with hypothesis. You have a recursive strategy
+
+273
+00:28:17,040 --> 00:28:22,840
+which is none or Booleans or floats or strings and the extension is lists of that or dictionaries
+
+274
+00:28:22,840 --> 00:28:30,320
+of text to that. So that can generate any possible valid JSON. In fact because we haven't specified
+
+275
+00:28:30,320 --> 00:28:37,840
+anything about NAND we might even go a little beyond the JSON spec. If you have type annotations
+
+276
+00:28:37,840 --> 00:28:41,680
+on things it's kind of nice if you don't have to retype out all the things that you've already
+
+277
+00:28:41,840 --> 00:28:47,800
+type annotated. So hypothesis will actually read those type annotations for you and work out how
+
+278
+00:28:47,800 --> 00:28:52,560
+to generate things from them. So there's a from type strategy where you can just hand it a type
+
+279
+00:28:52,560 --> 00:28:59,400
+and it will give you a strategy for instances of that type. It's also integrated with builds. So
+
+280
+00:28:59,400 --> 00:29:04,400
+if your class has four arguments that it requires and you've type annotated them you can just say
+
+281
+00:29:04,400 --> 00:29:09,120
+build me an instance of this and it will go off and work out how to construct everything that your
+
+282
+00:29:09,120 --> 00:29:19,920
+class needs in order to be built. It's pretty cheap. It's all memoised. I certainly wouldn't
+
+283
+00:29:19,920 --> 00:29:26,680
+think about the performance cost of it. Although this is really designed as a time saver. So it's
+
+284
+00:29:26,680 --> 00:29:31,640
+designed to make your code a little more elegant but also it should be possible to extend it
+
+285
+00:29:31,640 --> 00:29:37,160
+incrementally by hand. So for example you can let builds infer three out of your four arguments
+
+286
+00:29:37,200 --> 00:29:46,560
+and say oh age is an integer but really it had better be between say zero and 120. And if you have a
+
+287
+00:29:46,560 --> 00:29:51,400
+custom class where you have this kind of constraint you can also tell a hypothesis about that so that
+
+288
+00:29:51,400 --> 00:29:55,400
+everywhere else in your code base it will just be inferred with your particular strategy that you
+
+289
+00:29:55,400 --> 00:30:02,520
+designed. There are a couple of other things that work by inference. I mentioned the regular
+
+290
+00:30:02,520 --> 00:30:07,280
+expression support. If you want strings matching some regular expression you can just tell a
+
+291
+00:30:07,280 --> 00:30:13,920
+hypothesis here's the regex pattern give me strings that match it. If you're using NumPy
+
+292
+00:30:13,920 --> 00:30:20,040
+we've got from data type and some shape inference so you can pretty much just say here is my function
+
+293
+00:30:20,040 --> 00:30:25,600
+signature throw arrays at it for me. And if you're using Django there's from field and from model.
+
+294
+00:30:25,600 --> 00:30:33,520
+I actually like this as a general design pattern but a little bit of advice here. While it is a
+
+295
+00:30:33,520 --> 00:30:37,680
+useful design pattern which can save time and make testing a little easier to extend and integrate
+
+296
+00:30:37,680 --> 00:30:45,000
+the two important things are first you want to err on the side of guessing something very general.
+
+297
+00:30:45,000 --> 00:30:50,120
+You don't want to guess for example that an integer is always a positive integer or a float
+
+298
+00:30:50,120 --> 00:30:56,360
+is always a finite float and excluding that because if you do that you've just ruled out your tests
+
+299
+00:30:56,360 --> 00:31:01,840
+ever discovering something using those edge cases. So I tend to think that anything which we guess
+
+300
+00:31:01,840 --> 00:31:06,960
+for someone else should be very general and if they want something more specific or restricted
+
+301
+00:31:06,960 --> 00:31:13,720
+they should be responsible for writing that out explicitly. And the second is it's kind of an awful
+
+302
+00:31:13,720 --> 00:31:18,080
+user experience if you get most of the way through and then you realize that you just want to tweak
+
+303
+00:31:18,120 --> 00:31:23,320
+this one argument like three layers down and to do so you suddenly have to throw out all of the
+
+304
+00:31:23,320 --> 00:31:28,240
+dice inference and write it all out by hand. In hypothesis we try to avoid that. You should always
+
+305
+00:31:28,240 --> 00:31:33,720
+be able to only specify the things you want to specify and let hypothesis guess everything else
+
+306
+00:31:33,720 --> 00:31:46,160
+for you. This example is a somewhat more complicated test. So we have some kind of Django model for a
+
+307
+00:31:46,160 --> 00:31:52,280
+project. Maybe we're re-implementing Jira for some reason and we have a user model and so saying
+
+308
+00:31:52,280 --> 00:31:58,520
+like well given any project with a collaborator limit somewhere between 0 and 20 people and any
+
+309
+00:31:58,520 --> 00:32:05,280
+list of up to 20 users if we just add each of those users in turn well if we're at the collaboration
+
+310
+00:32:05,280 --> 00:32:10,400
+limit then we expect to get a limit reached exception and that the user we just tried to add will
+
+311
+00:32:10,400 --> 00:32:15,360
+not actually be on the project after that. It'd be a little embarrassing if our validation raised
+
+312
+00:32:15,360 --> 00:32:21,040
+an error after adding the user to the project over the limit and if we're not at the limit we
+
+313
+00:32:21,040 --> 00:32:28,520
+should just be able to add the user and then check that they're on the project. This one will fail
+
+314
+00:32:28,520 --> 00:32:36,480
+because we forgot to specify that users must be unique and so here we've got collaborators
+
+315
+00:32:36,480 --> 00:32:45,120
+a at a.com and a at a.com and so while we've raised an error that we were at our collaborator limit
+
+316
+00:32:45,120 --> 00:32:55,440
+the user we tried to add is already on the project. This probably isn't a bug but it does make me
+
+317
+00:32:55,440 --> 00:32:59,560
+think maybe we want a different flow if you're trying to add a user who's already on the project.
+
+318
+00:32:59,560 --> 00:33:11,160
+So I'm like is this a bug? I don't know but I'm glad I found it. Racing through. Who feels that
+
+319
+00:33:11,160 --> 00:33:20,960
+they're still with me at this point? Most people. Okay if you have data that has internal dependencies
+
+320
+00:33:20,960 --> 00:33:26,920
+like the example where we saw with tuples in order or things like you want a list and then
+
+321
+00:33:27,000 --> 00:33:34,120
+an index into the list or a string and then a slice out of the string. There are a couple of ways
+
+322
+00:33:34,120 --> 00:33:42,480
+to do that. Composite is the one that I recommend. Composite is as shown here it gives you this magic
+
+323
+00:33:42,480 --> 00:33:52,680
+first argument draw which you can use inside the function to draw a value from the strategy. So you
+
+324
+00:33:52,680 --> 00:33:58,840
+have a location strategy and you pick a factory from the available locations and then you pick
+
+325
+00:33:58,840 --> 00:34:07,440
+a power level that's limited by something about the factory. I kind of like what I call the
+
+326
+00:34:07,440 --> 00:34:11,480
+intercomposite pattern because it lets you do all your expensive validation once instead of
+
+327
+00:34:11,480 --> 00:34:18,680
+every time you draw a value. But in this case we should probably also consider can we just literally
+
+328
+00:34:18,680 --> 00:34:23,320
+have a function that returns a strategy? Python is kind of nice like this you can just have
+
+329
+00:34:23,320 --> 00:34:29,160
+functions which return things and this is generally a nice testing pattern. You can have a util file
+
+330
+00:34:29,160 --> 00:34:33,840
+somewhere where you define a whole bunch of helpers specific to your code base or project and then
+
+331
+00:34:33,840 --> 00:34:41,040
+just call them in your tests. Kind of like py test fixtures but more explicit. Data I'm going to skip
+
+332
+00:34:41,040 --> 00:34:45,920
+over it's kind of like composite but you can draw values inside your test. Very very flexible and
+
+333
+00:34:45,920 --> 00:34:51,600
+powerful. The downside is it's very very flexible and powerful. If you can use composite prefer to
+
+334
+00:34:51,600 --> 00:34:57,520
+do that instead. Last bit of this one before we jump into the exercises is just where to look for
+
+335
+00:34:57,520 --> 00:35:04,360
+these strategies. So the first argument is the hypothesis dot strategies sub module. From
+
+336
+00:35:04,360 --> 00:35:10,000
+hypothesis import strategies. And this is all the core things which don't have dependencies outside
+
+337
+00:35:10,000 --> 00:35:14,840
+the standard library. Or in a few cases like the time zone strategy that was added to the standard
+
+338
+00:35:14,840 --> 00:35:19,760
+library in Python 3.9. So if you're on earlier versions hypothesis will require the zone info
+
+339
+00:35:19,760 --> 00:35:24,960
+back port and will install that automatically for you. There's also some extras strategies in
+
+340
+00:35:24,960 --> 00:35:30,960
+hypothesis dot extra dot Django for example. Where we don't want to force everybody to install
+
+341
+00:35:30,960 --> 00:35:36,000
+lumpire and pandas and Django just to use hypothesis. But if you already have them installed you can
+
+342
+00:35:36,000 --> 00:35:42,160
+just import the relevant support. And then there's also a pile of third party extensions. Which I
+
+343
+00:35:42,200 --> 00:35:48,760
+won't get into but there's a few dozen of them these days. So let's jump into the exercises.
+
+344
+00:35:48,760 --> 00:35:58,040
+For this section we're going to go through to 10.30 which is 45 minutes or so of exercises. Just the
+
+345
+00:35:58,040 --> 00:36:06,000
+describing data notebook. So the exercises in the repo we have four parts. The first part I'm not
+
+346
+00:36:06,000 --> 00:36:08,920
+actually planning to go through today but there are a few that I'm going to run through later.
+
+347
+00:36:08,920 --> 00:36:17,720
+This was partly because for online tutorials I wasn't able to look over people's shoulder and
+
+348
+00:36:17,720 --> 00:36:23,000
+help them so it was useful to have that extra material. So we're looking at notebook two on
+
+349
+00:36:23,000 --> 00:36:26,760
+the describing data one. You should just be able to click the my binder link and have it open there.
+
+350
+00:36:26,760 --> 00:36:31,600
+And the idea here is really to teach you a way of thinking about strategies and how to compose them.
+
+351
+00:36:31,600 --> 00:36:36,320
+It's what I think of as a duct tape mindset right. Like if you can't fix it with duct tape the
+
+352
+00:36:36,320 --> 00:36:40,880
+answer is just more duct tape. If you can't generate the data with a strategy the answer is
+
+353
+00:36:40,880 --> 00:36:46,520
+more strategies. So without further ado let's jump into the exercises.
+
+354
+00:36:46,520 --> 00:37:07,120
+Alright. Welcome back everybody. I at least am feeling relaxed and refreshed. I stood up for a
+
+355
+00:37:07,120 --> 00:37:13,240
+while. Hopefully the rest of you are ready for part three as well. This is the bit where I do a
+
+356
+00:37:13,240 --> 00:37:21,760
+live demo. What's the first rule of live demos? Yeah well we'll see if we're following the laws
+
+357
+00:37:21,760 --> 00:37:29,640
+of live demos here. So so far what I've shown you is hypothesis as a tool to help you write better
+
+358
+00:37:29,640 --> 00:37:34,920
+tests. But when I came to PyCon a few years ago I bumped into a lot of people in the hallways and
+
+359
+00:37:34,920 --> 00:37:40,360
+some of them would say to me oh hypothesis like I use hypothesis that seems kind of cool and I
+
+360
+00:37:40,360 --> 00:37:44,800
+would get really excited be like that's great what do you use it for? They'd say oh well I wasn't
+
+361
+00:37:44,800 --> 00:37:51,760
+quite sure how to use it on my code so I don't use it. And as everybody knows every good programmer
+
+362
+00:37:51,760 --> 00:37:58,120
+knows every social problem has a technical solution. That's a lie but the technical solution in this
+
+363
+00:37:58,120 --> 00:38:03,480
+case is to have hypothesis actually write test code for you. So if you install hypothesis locally
+
+364
+00:38:03,480 --> 00:38:25,120
+which I don't seem to have done. First law of live demos. Oh man. I think I didn't activate the
+
+365
+00:38:25,120 --> 00:38:50,800
+virtual environment. If you install hypothesis and activate your virtual environment. Did I
+
+366
+00:38:50,800 --> 00:39:03,480
+just not press enter enough times? Okay let's ditch the scripted part and I'm gonna do it
+
+367
+00:39:03,480 --> 00:39:30,520
+completely live and try to remember what I was gonna demonstrate. Talk among yourselves for a
+
+368
+00:39:30,520 --> 00:39:37,280
+minute. Excellent we got here and hopefully subsequent runs will be faster. So the hypothesis
+
+369
+00:39:37,280 --> 00:39:45,280
+write command will write tests for you. For example we might ask hypothesis to write a test for the
+
+370
+00:39:45,280 --> 00:39:59,120
+sorted built in. I'm just suspecting that my development version of hypothesis is broken so let's go.
+
+371
+00:39:59,120 --> 00:40:19,240
+I swear my laptop isn't this slow most of the time.
+
+372
+00:40:29,120 --> 00:40:54,240
+I shouldn't have attempted the demo gods that's my problem. Okay let's just pretend that we have a live demo of the hypothesis ghostwriter. If you have a terminal or a notebook open you can hypothesis write various things and you will get test functions out. I'll come back to the demo once we've broken for exercises fix it and then show you after that.
+
+373
+00:40:55,120 --> 00:41:14,680
+So common test tactics. If we had seen the ghostwriter we would have seen the hypothesis can produce some of these tests for you. I think of these as common properties that you might want to test that is properties which are common to many different types or pieces of code that you might be working with.
+
+374
+00:41:15,520 --> 00:41:31,920
+And then some which are more situational but still useful. So the common ones are what I call the fuzzing or just the doesn't raise an exception property. In almost all cases we know that our code shouldn't raise an exception or maybe that it should raise an exception sometimes but only of a particular type.
+
+375
+00:41:31,920 --> 00:41:46,240
+Right that your request might have a not found error but it shouldn't have other kinds of errors. There are also round trip properties for example if you save your data to the database and then you load it back in you expect to always have the same data.
+
+376
+00:41:46,240 --> 00:41:49,120
+Or if you serialize it and then deserialize it.
+
+377
+00:41:51,520 --> 00:42:02,080
+You have equivalent functions which we saw in our first sorting example and then there are metamorphic properties which I'll talk to some of you later because they're particularly powerful but also quite domain specific.
+
+378
+00:42:03,120 --> 00:42:13,600
+Then there's situational ones like just checking that the output is reasonable. That's what we ended up doing with the sorting example. There's various mathematical properties and then there's stateful tests.
+
+379
+00:42:14,000 --> 00:42:16,000
+So I'll say again.
+
+380
+00:42:17,120 --> 00:42:19,920
+Just calling your code works embarrassingly well.
+
+381
+00:42:20,960 --> 00:42:24,400
+Because hypothesis will think of the edge cases that you didn't think of.
+
+382
+00:42:25,280 --> 00:42:28,800
+And therefore the test will find things that your ordinary tests haven't found yet.
+
+383
+00:42:30,960 --> 00:42:41,920
+Round trips every code base has them if your code base never loads or saves data or never reads or writes anything you can replace your code with pass and you will have less bugs.
+
+384
+00:42:42,880 --> 00:42:44,880
+And it will run very much faster.
+
+385
+00:42:45,520 --> 00:42:48,000
+This is what has called people call a pure function.
+
+386
+00:42:49,840 --> 00:43:06,480
+Some round trips that your code base specifically is likely to have save and load encode decode send receive for anyone working with networks converting between data formats or sometimes logical inverses for example if you factor out something multiplying the factors together should give you the original number.
+
+387
+00:43:07,440 --> 00:43:14,160
+So the reason I emphasize these is that especially the ones around loading and saving data are absolutely critical.
+
+388
+00:43:14,960 --> 00:43:22,240
+Like being able to load and save data is the foundation of any application if you can't load or save data without messing it up you have fundamental problems.
+
+389
+00:43:22,960 --> 00:43:34,800
+But those data formats also tend to be quite complicated they represent every edge case that your code base can represent and therefore they're more likely to have weird edge case bugs than much of your code.
+
+390
+00:43:35,760 --> 00:43:50,160
+And the last thing is that especially input and output learning and saving stuff tends to cross many abstraction layers often you'll have a network involved you'll have a file system you'll have operating system issues you'll have questions about what file names are valid or different operating.
+
+391
+00:43:51,440 --> 00:43:55,920
+And testing these using something like hypothesis can turn up those really weird rare bugs.
+
+392
+00:43:56,880 --> 00:44:06,480
+And the last reason that they're important is if you save data and you miss save data this is very hard to recover from right so you want to find the bugs early.
+
+393
+00:44:07,520 --> 00:44:09,280
+So property test your round trips.
+
+394
+00:44:10,480 --> 00:44:11,440
+Equivalent functions.
+
+395
+00:44:12,720 --> 00:44:19,040
+Some people might say but really Zach how many times am I going to implement the exact same function in my code base.
+
+396
+00:44:19,520 --> 00:44:27,120
+And you might think that you're not repeating yourself so you only have one copy but you can have simple things like varying the number of threads you run a function in.
+
+397
+00:44:28,160 --> 00:44:33,520
+Or the old version from before you refactored it should do the same thing as the new version after you refactored it.
+
+398
+00:44:34,240 --> 00:44:42,000
+Or sometimes you might have that if you call functions in different orders you expect to get the same result so it's a kind of equivalence that you can create for yourself.
+
+399
+00:44:42,960 --> 00:44:56,800
+And in some cases you might have functions which are equivalent only on a subset of inputs for example you wrote a more general version of the function but on the inputs that the old version also handled it should do the same thing and you can test that.
+
+400
+00:44:59,520 --> 00:45:09,600
+Another general property is just to validate the output are your numbers in the expected range are your probabilities between 0 and 1 is your string non empty or does it have a null character in the middle.
+
+401
+00:45:10,560 --> 00:45:15,520
+I prefer to write these as assertions in my code so they could get checked at runtime as well.
+
+402
+00:45:16,480 --> 00:45:27,600
+That's more of a debate specific thing though some people really don't like their code crashing in production and they would rather have a mistake in the data and a downtime incident that's basically a decision for you.
+
+403
+00:45:28,240 --> 00:45:44,080
+And then there are the mathematical properties this is actually what property based testing is named for the sort of algebraic properties from mathematics such as item potents for if you call a function on the result of the function call you get no further changes.
+
+404
+00:45:44,560 --> 00:45:54,320
+Commutativity so a plus B equals B plus a associativity and so on honestly these are pretty rare in Python code but if you have them you might as well test them.
+
+405
+00:45:55,040 --> 00:46:00,880
+And what we call model based or stateful testing.
+
+406
+00:46:01,440 --> 00:46:17,040
+Much time on and I don't have any exercises on this but I wanted to make you aware that it exists with stateful testing you define a state machine so what actions are available at each time step and hypothesis will then randomly explore sequences of actions for you.
+
+407
+00:46:17,680 --> 00:46:29,680
+So this is really useful where you're testing something like a library API we can set it up so that hypothesis can kind of act like the user and make a whole bunch of calls and sequence using the results from those calls as inputs to subsequent calls.
+
+408
+00:46:30,640 --> 00:46:36,640
+As you might imagine this is very powerful it's also a little tricky to teach so that's a separate workshop that I'm not teaching today.
+
+409
+00:46:40,000 --> 00:46:45,680
+Last kind of common set of patterns is what we call metamorphic relations.
+
+410
+00:46:46,640 --> 00:47:02,720
+The name comes out of academia so I'm sorry about that but the idea of a metamorphic relation is that property based testing lets you write tests where you don't necessarily know what the correct result from this input should be.
+
+411
+00:47:03,840 --> 00:47:11,440
+So you can still check the properties metamorphic testing is what you can do when you don't even know how to judge whether the result was correct.
+
+412
+00:47:11,440 --> 00:47:23,280
+So what you do is you generate an input and you get the result and then you change the input in some way that you know and get the corresponding result and you compare something about those results.
+
+413
+00:47:24,080 --> 00:47:34,960
+So for example for some financial calculation you might not know exactly what the results should be from some input but you do know that if you double all of your inputs you should double all of your outputs.
+
+414
+00:47:35,920 --> 00:47:42,800
+And so you can generate your input get the result double your inputs get the result and check that it was doubled.
+
+415
+00:47:43,760 --> 00:47:52,240
+This is especially useful for scientific code and engineering code where often we're running some kind of simulation or analysis precisely because we don't know what the answer should be.
+
+416
+00:47:53,200 --> 00:48:00,720
+But we often do know something about the variances or kind of higher level constraints like conservation of energy for example.
+
+417
+00:48:01,360 --> 00:48:12,160
+So some common ones here it's very popular in compiler testing this is the diagram you generate a random program compile it and call it with an input.
+
+418
+00:48:12,880 --> 00:48:21,360
+And then you randomize every part of that program that wasn't executed and you recompile it and you probably trigger very different compiler optimizations.
+
+419
+00:48:22,240 --> 00:48:28,640
+And if they're all correct compiler optimizations then you get the same result when you run that new program on the original input.
+
+420
+00:48:29,600 --> 00:48:33,920
+This is I think responsible for about 900 bugs in common compilers.
+
+421
+00:48:38,400 --> 00:48:46,480
+The last one is just if there are things that you could do which should have no effect checking that if you do them they have no effect is a metamorphic test.
+
+422
+00:48:47,520 --> 00:48:51,760
+Right you say if I call my phone and then do a no up no changes.
+
+423
+00:48:51,760 --> 00:49:05,520
+But like honestly the high level message if you have assertions and you check that your code doesn't raise unexpected exceptions on any valid input and you test your round trips you are basically done.
+
+424
+00:49:07,600 --> 00:49:18,960
+So certainly like when you go back to your work or your other projects and you think about do I want to use hypothesis don't worry about the fancy stuff until after you've done all of this and then decide whether you want to do more.
+
+425
+00:49:19,520 --> 00:49:25,520
+At that point you will probably also have a good sense of is property based testing valuable for your particular project.
+
+426
+00:49:26,320 --> 00:49:30,000
+But of course today we're going to do some more exercises.
+
+427
+00:49:32,080 --> 00:49:37,920
+So the exercises for part 3 are just the next notebook there's a couple of example functions to write tests for.
+
+428
+00:49:38,800 --> 00:49:46,560
+But if you have a simple function in your own code base that you'd like to work on or an open source thing this is very much a kind of pick a book.
+
+429
+00:49:46,960 --> 00:49:53,120
+This is very much a kind of pick a function try to identify the properties and then write a simple property based test.
+
+430
+00:49:54,240 --> 00:49:54,800
+Let's go.
+
+431
+00:49:56,000 --> 00:50:01,760
+I will circulate in a minute to assist but right now I'm just going to unplug and see if I can get my demo working.
+
+432
+00:50:05,760 --> 00:50:06,160
+Okay.
+
+433
+00:50:07,520 --> 00:50:14,800
+So I'll just interrupt the exercises briefly because I got my live demo working at least for the first step.
+
+434
+00:50:17,520 --> 00:50:25,920
+So the idea here is we have this hypothesis command and it turned out my laptop was really slow because it was low on battery so it's plugged in now and should be working.
+
+435
+00:50:27,120 --> 00:50:30,400
+And so if you ask hypothesis to write a test for the sorted function.
+
+436
+00:50:34,160 --> 00:50:34,640
+Then.
+
+437
+00:50:35,680 --> 00:50:44,480
+We hypothesis right sorted and we discovered that hypothesis will actually write a test which includes the key and reverse arguments to sort it.
+
+438
+00:50:44,560 --> 00:50:47,680
+And all of my test just completely ignored reverse.
+
+439
+00:50:48,880 --> 00:50:56,960
+So they assumed who is sorting in forward order but we might also want to test that if we pass reverse equals true that the pairwise ordering is in fact the other way around.
+
+440
+00:50:58,240 --> 00:51:11,920
+And so I find the ghost right a kind of useful for that by default it writes pie test style tests if you have pie test installed if you don't or if you ask for them it will write unit test style tests.
+
+441
+00:51:12,320 --> 00:51:14,320
+Tests which just.
+
+442
+00:51:15,440 --> 00:51:15,920
+Class.
+
+443
+00:51:17,680 --> 00:51:18,080
+Yep.
+
+444
+00:51:22,480 --> 00:51:22,960
+Here.
+
+445
+00:51:26,560 --> 00:51:29,280
+That is the name of a function or module.
+
+446
+00:51:32,480 --> 00:51:34,400
+Just anything that could be important.
+
+447
+00:51:34,960 --> 00:51:35,600
+All.
+
+448
+00:51:37,840 --> 00:51:44,320
+Yeah so this is just like there is a built in function called sorted if you wrote this for.
+
+449
+00:51:45,040 --> 00:51:52,000
+Well I mean we'll see in a moment if we wrote a test that asked dot literal of al is equivalent to the of al built in.
+
+450
+00:51:53,440 --> 00:51:58,880
+So literal of al is just like a vowel but only for Python literals we get a test.
+
+451
+00:51:59,840 --> 00:52:10,320
+And so we can from asked import of valor import asked and then access the of al attribute on it and then of al is just a Python built in so because try to notice how to access those.
+
+452
+00:52:11,120 --> 00:52:17,680
+And we have a fairly simple test we get a result from literal of al we get a result from a vowel and then we assert that they're equal.
+
+453
+00:52:20,080 --> 00:52:23,120
+This test also shows off some of the limitations of the ghostwriter.
+
+454
+00:52:24,080 --> 00:52:30,960
+Because if you look closely you'll notice that the arguments here and the arguments here share nothing in common.
+
+455
+00:52:33,440 --> 00:52:40,880
+Because the argument names to literal of al is no door string and source for a vowel so in this case you could start with the.
+
+456
+00:52:41,600 --> 00:52:44,400
+It to make a few edits in order to actually have a useful test.
+
+457
+00:52:45,440 --> 00:52:50,160
+If this one passes it will only ever do so by coincidence and it's a very unlikely coincidence.
+
+458
+00:52:53,760 --> 00:53:03,440
+If you want the sort of mathematical properties for example addition is associative and commutative and has an identity element which is zero.
+
+459
+00:53:06,160 --> 00:53:10,400
+Honestly, this one is just showing off there's probably no real reason to use it in practice.
+
+460
+00:53:12,320 --> 00:53:17,520
+A more realistic test is that we just want to test something about say gzip compression.
+
+461
+00:53:18,240 --> 00:53:26,640
+Right this and hypothesis will look in the gzip module find the compressed function and will also find that there is a gzip decompress function.
+
+462
+00:53:27,120 --> 00:53:31,040
+Like well, I bet if I compress something and then I decompress it I should get the thing back.
+
+463
+00:53:32,320 --> 00:53:36,960
+And so in this test what we need to do is specify that data is a binary string.
+
+464
+00:53:37,920 --> 00:53:48,160
+In this case, the function doesn't have type annotations or hypothesis would have guessed for us and it's data is also such a non descriptive name that I'm not really comfortable guessing what data should be.
+
+465
+00:53:48,880 --> 00:53:53,040
+So in this case we just leave a comment that says to do you know this is your problem now.
+
+466
+00:53:54,320 --> 00:53:56,560
+This is hopefully still like a useful starting point.
+
+467
+00:53:58,320 --> 00:54:00,880
+Yeah, a skeleton or like some template code yep.
+
+468
+00:54:00,880 --> 00:54:06,640
+Yep.
+
+469
+00:54:09,120 --> 00:54:13,680
+Hypothesis right my module dot my sub module dot my function.
+
+470
+00:54:16,720 --> 00:54:20,080
+So it doesn't look for the root directory it looks at things that can import.
+
+471
+00:54:21,040 --> 00:54:31,360
+So like you can often import things in the current module in the current directory sorry so if you have my script dot pi you can do my script dot whatever function.
+
+472
+00:54:32,000 --> 00:54:41,360
+But you can also do numpy dot map mall and it doesn't matter what your directory or if you can import numpy and access the map mall attribute will write a test for that for you.
+
+473
+00:54:46,720 --> 00:54:49,440
+I have a list of regular expressions and format patterns.
+
+474
+00:54:50,880 --> 00:54:55,920
+Those are in the hypothesis ghostwriter sub module.
+
+475
+00:54:57,600 --> 00:54:59,200
+For requests welcome to expand the list.
+
+476
+00:55:07,440 --> 00:55:19,520
+You could but honestly like it's not great for classes at the moment the ghostwriter is pretty good for functions and like okay ish for classes because it will just like call your method.
+
+477
+00:55:20,320 --> 00:55:30,720
+Like is that useful maybe but the real advantage of this I find is you can just point it in a module and you get a whole bunch of tests and I'll usually delete like 80% of them.
+
+478
+00:55:31,200 --> 00:55:35,600
+But the last 20% get me past the blank page problem when I open an editor and I'm like now what.
+
+479
+00:55:36,640 --> 00:55:43,840
+Well I just pipe the ghostwriter output into a file and then I know what I'm doing I go through and I delete all the tests that I don't think are useful.
+
+480
+00:55:44,080 --> 00:55:52,160
+And I look at the to do comments and like okay what strategy should this have and then I see what errors that raises I go is this the test is wrong the code is wrong.
+
+481
+00:55:52,960 --> 00:55:55,520
+It kind of lets you evolve rather than having to start from scratch.
+
+482
+00:55:58,160 --> 00:56:04,160
+And like sometimes it just works and gives you a great test first off which is nice but I'm not going to pretend it happens every time.
+
+483
+00:56:04,800 --> 00:56:08,080
+Yeah.
+
+484
+00:56:08,800 --> 00:56:18,720
+Yeah and part of this is sometimes the ghostwriter will write something like oh I didn't realize I could do it that way so it's it's designed to get you started to teach you what the basics look like.
+
+485
+00:56:22,080 --> 00:56:26,800
+So worked example json it turns out is a little more complicated than gzip.
+
+486
+00:56:28,720 --> 00:56:32,080
+Jason in Python accepts all of these arguments.
+
+487
+00:56:32,560 --> 00:56:47,040
+We've got allow and check circular encoder class default value insure asky indentation the object that's nothing so only specify the object object hook object pairs hook pass constant pass float pass in separators skip case sort case.
+
+488
+00:56:48,000 --> 00:57:03,360
+But then the body of the test is pretty much the same as we had for the other one right we dump our value like dump out json object to some value which will be a string and then we json dot loads that value and we'll get whatever the thing was back and then we said.
+
+489
+00:57:06,240 --> 00:57:12,000
+I cut this down a little just to ignore all of the arguments that I don't think we care about for the sake of this so.
+
+490
+00:57:12,160 --> 00:57:22,880
+We've just gone a little shorter and we've dropped in my little recursive json strategy that I showed you earlier in the tutorial so we've got our base case which is the scalar values in our extended lists or dictionaries.
+
+491
+00:57:23,760 --> 00:57:29,520
+So let's actually just run this test and see what pie test thinks of it who thinks this will pass.
+
+492
+00:57:34,800 --> 00:57:36,960
+Anyone else three people think it will pass.
+
+493
+00:57:38,400 --> 00:57:38,800
+No.
+
+494
+00:57:39,600 --> 00:57:43,200
+So let's let's see what we have here.
+
+495
+00:57:45,840 --> 00:57:49,040
+Hypothesis tells us that we found two distinct failures.
+
+496
+00:57:49,920 --> 00:58:00,640
+And it's also kind enough to tell us what both of them were so in this case the first one is that if allowed and is true and the object is then then of course not a number is not equal to itself.
+
+497
+00:58:02,560 --> 00:58:07,440
+So we'll add a filter to ensure that the object would generate is equal to itself for the next version.
+
+498
+00:58:08,800 --> 00:58:17,840
+And the other error that we get if we scroll down is that out of range float values are not json compliant and our failing value there.
+
+499
+00:58:18,960 --> 00:58:20,080
+Is infinity.
+
+500
+00:58:21,920 --> 00:58:26,640
+And according to a strict reading of the json specification you're only allowed to have finite numbers.
+
+501
+00:58:27,600 --> 00:58:38,960
+And python for reasons I believe involving back its compatibility calls the relevant argument allow and then but allow and then equals false also bands infinity.
+
+502
+00:58:41,520 --> 00:58:51,200
+So let's fix the test will say that allowed and is just always true into being any bullion and will also add this assume.
+
+503
+00:58:52,160 --> 00:58:56,960
+Assume is a hypothesis function which acts exactly like a filter but it's inside your test function.
+
+504
+00:58:58,000 --> 00:59:08,160
+So if you get to something we like well in order to make this assertion this thing also has to be true you can just assume that it's true and if it isn't hypothesis will throw that test case away and give you a new one.
+
+505
+00:59:09,760 --> 00:59:16,800
+But in a way that doesn't mean it's a test failure it means that it was an invalid test case exactly the same caveats as filter it's it's just filter.
+
+506
+00:59:17,760 --> 00:59:20,640
+So who thinks that this test will pass.
+
+507
+00:59:24,400 --> 00:59:26,080
+Man you are all cynics now.
+
+508
+00:59:27,920 --> 00:59:31,680
+Is how it feels to work with hypothesis you're doubting everything still fails.
+
+509
+00:59:33,600 --> 00:59:38,720
+So our object now is a list containing one value which is the floating point value.
+
+510
+00:59:40,720 --> 00:59:45,280
+I discovered this live on stage doing this demo to python conference a few years ago it turns.
+
+511
+00:59:46,240 --> 00:59:53,360
+Lists have this performance optimization or in order to avoid really expensive deep comparisons.
+
+512
+00:59:54,880 --> 00:59:56,480
+The first thing they will do is.
+
+513
+00:59:57,840 --> 01:00:06,240
+If two lists are the same list by identity so they're both just into this to the same thing and they're just equal they are the same list so they're equal.
+
+514
+01:00:07,200 --> 01:00:16,160
+And then if you compare call list on it so it's not the same list this is the bit blew my mind they then do the same trick to each of the respective elements.
+
+515
+01:00:16,960 --> 01:00:21,120
+So if the first element of list a is the first element of list B.
+
+516
+01:00:22,160 --> 01:00:24,960
+Then we'll just consider them equal without doing a deep comparison.
+
+517
+01:00:26,000 --> 01:00:28,960
+And this works for everything in python except not a number.
+
+518
+01:00:30,320 --> 01:00:30,880
+So there we are.
+
+519
+01:00:31,680 --> 01:00:33,920
+Who thinks.
+
+520
+01:00:34,640 --> 01:00:36,080
+But this test is going to pass.
+
+521
+01:00:36,800 --> 01:00:40,960
+So we've still just said we always allow man.
+
+522
+01:00:41,760 --> 01:00:50,720
+Which is to say we allow infinity now because we're just saying allow an equals false so will never generate not a number in the first place who thinks this test is going to pass.
+
+523
+01:00:53,920 --> 01:00:55,120
+Who thinks it's going to fail.
+
+524
+01:00:56,960 --> 01:00:58,720
+One hand two hands three hands.
+
+525
+01:01:00,960 --> 01:01:02,640
+You're all more engaged earlier.
+
+526
+01:01:13,440 --> 01:01:14,080
+The process.
+
+527
+01:01:15,520 --> 01:01:18,880
+So there we are and for fun.
+
+528
+01:01:19,920 --> 01:01:21,920
+I also mentioned numpy support.
+
+529
+01:01:22,880 --> 01:01:32,320
+Numpy has a map more function for those who like multiplying matrices together and hypothesis it's perfectly happy to fancy numerical stuff for you.
+
+530
+01:01:35,040 --> 01:01:38,880
+I will explain the details of this to anyone who actually asked me for it for now.
+
+531
+01:01:38,880 --> 01:01:43,680
+Thank you very much for watching my live demo and thank you to the demo gods for actually having it work.
+
+532
+01:01:43,680 --> 01:01:46,240
+Let's go back to exercises for another 15 minutes or so.
+
+533
+01:01:46,240 --> 01:01:46,400
+So.
+
+534
+01:01:50,400 --> 01:01:55,920
+So it's about 5 past 12 which means we've got about 20 minutes left of this tutorial.
+
+535
+01:01:57,120 --> 01:02:00,880
+So before we wrap up I wanted to talk to you about the last part.
+
+536
+01:02:01,840 --> 01:02:02,880
+Bring it into practice.
+
+537
+01:02:03,600 --> 01:02:04,080
+Where.
+
+538
+01:02:05,040 --> 01:02:16,080
+I've kind of shown you and hopefully you've gone through some exercises that make you more comfortable with writing strategies to generate data and also writing simple tests that use those strategies.
+
+539
+01:02:16,880 --> 01:02:22,880
+But if you're planning to apply this at work or in an open source project there's some other things you probably want to know as well.
+
+540
+01:02:23,760 --> 01:02:30,080
+For example how do you build a property based test suite not just one test but how does this fit into a broader strategy.
+
+541
+01:02:30,640 --> 01:02:37,280
+I'm going to talk about hypothesis settings and profiles for those and some other stuff which you'll see on those slides.
+
+542
+01:02:38,480 --> 01:02:45,040
+So the first thing I want to emphasize is that I definitely do not suggest that all of your tests should be property based tests.
+
+543
+01:02:46,240 --> 01:02:57,120
+In some code bases I've had literally one property based test I think black takes this approach there's just one test which says given any valid Python source file we should be able to format it.
+
+544
+01:02:59,520 --> 01:03:02,960
+Yeah and it turns out this is found quite a few bugs in black.
+
+545
+01:03:05,120 --> 01:03:12,400
+For most projects depending on what it's what kind of code you're writing somewhere between maybe 10% and 90% of your tests.
+
+546
+01:03:13,200 --> 01:03:21,040
+Can be property based or at least that's what I end up with for other projects I have worked on things where I look at it and go hypothesis is not a good fit here.
+
+547
+01:03:23,760 --> 01:03:34,240
+And then you probably also want to write custom strategies for your project you know maybe you have a particular class we use objects of this type all over your code base.
+
+548
+01:03:34,800 --> 01:03:47,760
+In that case I often end up with a sort of stress test strategies file that I can import from everywhere else which means I only have to update my strategy definitions in one place if I change something about my code base.
+
+549
+01:03:48,880 --> 01:04:00,880
+And this is a much nicer workflow than sort of the standard you have to write out all the examples by hand because it makes the work additive rather than multiplicative with the number of semantic tests that you want and the number of data edge cases that you have.
+
+550
+01:04:01,520 --> 01:04:07,200
+So a couple of patterns for that one is just have functions which return properties.
+
+551
+01:04:08,400 --> 01:04:12,720
+Maybe they use composite maybe they're just ordinary functions which strategies.
+
+552
+01:04:13,760 --> 01:04:14,480
+The even simple.
+
+553
+01:04:15,680 --> 01:04:23,040
+Assigned your strategy to a global variable and import it from somewhere else that's totally allowed sometimes the simple code is the best.
+
+554
+01:04:24,000 --> 01:04:40,960
+And then I've mentioned I think before there's the register type strategy function so if you have the custom type and your strategy for it needs to take some constraints into account you can register that with hypothesis so that whenever else we generate that type will do so respecting the constraints using that exact strategy that you provided.
+
+555
+01:04:44,080 --> 01:04:48,080
+I will confess I use a debugger sometimes and print debugging always.
+
+556
+01:04:48,480 --> 01:05:01,920
+The problem with print debugging with hypothesis is that you end up with like a thousand or at least a hundred times more prints than you expected so the hypothesis dot note function is just print but it only prints on the final example.
+
+557
+01:05:02,800 --> 01:05:12,160
+I was like better printing but still print debugging and there's also an event function if you want to sort of have aggregate statistics across all of your test runs.
+
+558
+01:05:13,120 --> 01:05:20,080
+You can get statistics which show you what proportion of the test cases we tried exhibited whatever string you passed.
+
+559
+01:05:21,360 --> 01:05:37,360
+And so if you pass the hypothesis statistics flag to pi test each test will output something like this so say well we were generating data it typically took between zero and thirty eight milliseconds to generate data which was about fifty five percent of total runtime we had this many passing and failing examples.
+
+560
+01:05:38,320 --> 01:05:43,680
+And in this case the events that I have was just the length of the very simple list input.
+
+561
+01:05:44,560 --> 01:05:46,720
+Obviously this could be whatever string you like.
+
+562
+01:05:49,440 --> 01:05:58,880
+And then during the shrink phase we were looking for a minimal failing example the test tended to be very quick we found one failure two examples and we found a middle example right off.
+
+563
+01:05:59,600 --> 01:06:12,880
+So settings settings are set from code we don't look at any environment variables but you guys can all write python code if you want them set by environment variables you can write the code that checks the environment variable event sets the set.
+
+564
+01:06:14,720 --> 01:06:25,120
+You can also set them as a decorator in your test function which is sort of the quick and dirty approach but works well when you're interactively doing stuff and the pi test command line does kind of plug through into the settings.
+
+565
+01:06:26,080 --> 01:06:38,000
+The main settings you want to look at there's a docs page with this on hypothesis read the docs but the two that you'll probably want for performance there's a deadline setting which says what is the longest to this test should take.
+
+566
+01:06:38,720 --> 01:06:48,960
+By default that's about 200 milliseconds that tends to be plenty for most unit test kind of things but can be a little slow for tests that use Django or NumPy or pandas.
+
+567
+01:06:49,520 --> 01:07:04,720
+In that case like don't stress just turn up the deadline the idea here is it catches things which are surprisingly slow so that you're aware that this particular test is much slower than you expected if you expect it to be slow you can just turn up the deadline or even disable it entirely.
+
+568
+01:07:05,840 --> 01:07:14,640
+And the other performance setting is max examples which is just how many test cases will hypothesis try your function on before it says yep looks like it's passing.
+
+569
+01:07:15,720 --> 01:07:16,760
+By default that's 100.
+
+570
+01:07:16,760 --> 01:07:26,360
+100 will obviously take 100 times longer than running on one example and be 100 times faster but 100 times less rigorous than running on 10,000 examples.
+
+571
+01:07:27,640 --> 01:07:32,840
+The reason it's 100 by default is that this seems to be a pretty good default for like unit test kind of workloads.
+
+572
+01:07:33,560 --> 01:07:42,520
+But if you've got a lot of hypothesis tests it might make sense to have like a nightly CI run when you turn that up a fair bit and just accept that it will take longer in order to maybe find some more bugs.
+
+573
+01:07:42,520 --> 01:07:43,080
+Make sense.
+
+574
+01:07:46,120 --> 01:07:53,080
+Some people like deterministic tests that's reasonable hypothesis supports it that's basically all I wanted to say there.
+
+575
+01:07:53,800 --> 01:08:07,240
+My colleague Nielsen LH has written nice blog post on this distinguishing between the kinds of tests where people run them just to find regressions they don't want to find bugs in general they just want to know if this pull request broke anything.
+
+576
+01:08:08,440 --> 01:08:09,000
+And then the.
+
+577
+01:08:09,960 --> 01:08:10,440
+And then the.
+
+578
+01:08:12,200 --> 01:08:24,440
+And then the opposite style where you're writing tests because you want to see if there are any bugs in your code and so you might actually want to run hypothesis with different settings for these two use cases so that you run it deterministically in CI.
+
+579
+01:08:24,920 --> 01:08:33,800
+And then for much longer and with a randomized mode overnight so you don't block someone's pull requests on finding an existing bug but you still do find the existing bugs another time.
+
+580
+01:08:33,800 --> 01:08:34,200
+Another time.
+
+581
+01:08:36,360 --> 01:08:50,440
+Random number generators everybody hates testing phone which is flaky because of random number generators hypothesis therefore will seed all the random number generators knows about at the start of every test and restore the state at the end so we don't induce weird correlations for you.
+
+582
+01:08:51,240 --> 01:08:58,840
+You can call hypothesis register random to tell us about another random number like random random class that you have somewhere.
+
+583
+01:08:59,480 --> 01:09:06,920
+If there's a library that you use which doesn't currently do this for you tell me and I'll probably just open a pull request form.
+
+584
+01:09:12,360 --> 01:09:15,080
+I mentioned everybody hates flaky tests.
+
+585
+01:09:16,120 --> 01:09:28,200
+Everybody also hates tests where you run the test and it fails and then you run the test again after making a small change in it passes you go did I fix the bug or did the test just not find the error again.
+
+586
+01:09:29,800 --> 01:09:41,080
+Hypothesis gets around this in a couple of ways the first is that we actually save every failing example in a local little database is in the dot hypothesis directory if you notice that.
+
+587
+01:09:41,640 --> 01:09:49,480
+So if you just rerun the test we will always start by replaying all of the failing examples that we found before to see whether or not they're still failing.
+
+588
+01:09:50,440 --> 01:10:03,880
+This means both that your debug cycle should be faster if it takes a few minutes to find the example the first time it should still replay within seconds on every subsequent run and it also means you can be confident that if it doesn't come back it's because you've actually fixed the bug.
+
+589
+01:10:05,720 --> 01:10:10,520
+You can also add the at example decorator did people do that in some of the exercises.
+
+590
+01:10:10,840 --> 01:10:23,160
+It's in the exercises further down this is just as well as having given supply strategies you can add an at example decorator with an exact value that you always want to test.
+
+591
+01:10:23,960 --> 01:10:33,720
+So in this case when you run give the test hypothesis will try it on localhost then it will try it on example.com and then it will start randomly generating examples for you.
+
+592
+01:10:33,720 --> 01:10:45,080
+If it fails in see I and you don't have the database handy hypothesis has a print blob setting which will default to true in see I and false locally.
+
+593
+01:10:45,960 --> 01:10:55,160
+Where we just print out this nasty basic 64 encoding thing in a decorator and use that as a database so we'll replay based on that decorator.
+
+594
+01:10:56,120 --> 01:11:04,680
+This is kind of ugly but it does mean that if it fails in see I you can still replay it locally and we think that's worth quite a lot of if that's what it takes.
+
+595
+01:11:07,160 --> 01:11:19,800
+If you're working on a team where multiple people are running tests using hypothesis you can just share the directory based database it kind of works in version control that we don't recommend it or you can put it on a file share somewhere whatever else.
+
+596
+01:11:20,440 --> 01:11:30,600
+But given that this is just like a blob of bytes with you know bytes keys to set of bytes values we would recommend using something like read this like a proper network data store.
+
+597
+01:11:31,400 --> 01:11:40,760
+And so this example says we have sort of two settings profiles we've got our see I profile where we're going to use the shared network database.
+
+598
+01:11:41,400 --> 01:11:56,360
+Read and write to it including deleting the stale examples from it and then we also have a dev profile for local development where we can read and write to our local directory based database but we can also read but not write to the shared database.
+
+599
+01:11:57,480 --> 01:12:02,280
+And this means the workflow for reproducing a failure from see I consists of run the test locally.
+
+600
+01:12:03,840 --> 01:12:06,440
+And it will automatically pick up that failure for you and reply it.
+
+601
+01:12:08,000 --> 01:12:10,360
+I tend to think that's pretty cool if you've got the infrastructure set up.
+
+602
+01:12:11,760 --> 01:12:24,840
+A few people asked me so when hypothesis is generating random examples how does it choose the examples the answer is mostly just a big pile of heuristics which tends to find a lot of bugs.
+
+603
+01:12:25,840 --> 01:12:34,560
+But where that's not enough we also have this target function where you can sort of do an optimized or a hill climbing search towards things.
+
+604
+01:12:35,240 --> 01:12:43,840
+So this is really useful for numeric things where your your test is basically that if you calculate something you're within some error tolerance.
+
+605
+01:12:44,840 --> 01:12:53,160
+And so you can target that amount of error and hypothesis will try variations on the things with the largest amount of error that it's found so far.
+
+606
+01:12:54,160 --> 01:13:07,040
+You can also just try things that don't themselves mean that your test is going to fail but seem like they might be correlated with failure like the number of tasks in the queue or the compression ratio or.
+
+607
+01:13:08,480 --> 01:13:17,000
+Maximum runtime or something like that it's not that running for a long time it means it's going to fail but it means that you're like more likely to fail in some sense.
+
+608
+01:13:17,000 --> 01:13:17,400
+It's.
+
+609
+01:13:19,960 --> 01:13:31,440
+Coverage guided fuzzing for people who like fuzzies just works you can plug a coverage guided fuzzer into the back of hypothesis and use that to run your property based tests using code coverage feedback.
+
+610
+01:13:33,600 --> 01:13:35,520
+Atheros is Google's take on this.
+
+611
+01:13:36,560 --> 01:13:38,720
+I think it's OK there are others.
+
+612
+01:13:39,800 --> 01:13:41,440
+My personal favorite is the one I built.
+
+613
+01:13:41,920 --> 01:13:42,400
+Uh.
+
+614
+01:13:43,440 --> 01:13:55,160
+So high profiles runs on test suites so instead of one function at a time it will dynamically allocate the compute to each test function according to the rate at which it's discovering new coverage.
+
+615
+01:13:57,000 --> 01:14:00,240
+It's nice you can find me later and talk to me about it if you're interested.
+
+616
+01:14:02,480 --> 01:14:11,080
+Once you install hypothesis you might someday wish to update it when we fix bugs even hypothesis has a few bugs though it is well tested using hypothesis as you would hope.
+
+617
+01:14:12,320 --> 01:14:14,880
+But we also add a lot of features of course on the regular.
+
+618
+01:14:15,840 --> 01:14:27,440
+We also do continuous deployment so every pull request that gets merged to hypothesis is immediately released as a new version you are welcome to drink from the fire hose or you can pin your dependencies and update on whatever schedule works for your team.
+
+619
+01:14:29,480 --> 01:14:36,760
+So thanks very much for coming to the tutorial I'm going to be around for some Q&A then thanks very much.
+
+620
+01:14:41,440 --> 01:14:52,360
+Otherwise I think we've got about 10 minutes left so we'll do Q&A exercise if you wish and then break for lunch.
+
+621
+01:14:52,840 --> 01:14:53,080
+There.
+
+622
+01:14:59,480 --> 01:15:17,160
+Uh so it is fiddly enough to get this to work correctly that I haven't bothered because you typically have multiple tests if you say run each of your tests independently so pie test and whatever processes and you'll just spread your tests across multiple processes and parallel that way.
+
+623
+01:15:18,160 --> 01:15:19,880
+You could in principle do it but.
+
+624
+01:15:20,680 --> 01:15:23,120
+It's enough trouble that we just have a bullet.
+
+625
+01:15:23,120 --> 01:15:23,600
+So.
+
+626
+01:15:44,680 --> 01:15:47,920
+Great question so how do you apply it as you're starting a new project.
+
+627
+01:15:49,200 --> 01:15:52,960
+I would go back to that side where I said like assert files round trips.
+
+628
+01:15:53,400 --> 01:15:59,200
+So I would make sure that I had good property based tests on my input and my output wherever I was loading or saving data.
+
+629
+01:16:00,560 --> 01:16:13,880
+For new projects I would probably try to think about like what is the class or the data type that represents the thing I load or save and make sure that whenever I change it I also update the strategy for generating instances of that.
+
+630
+01:16:14,560 --> 01:16:25,600
+And that would give me a lot of confidence that I can at least load and save data properly I try to make sure that when I have things that all my functions expect that I would just assert that those were true or.
+
+631
+01:16:26,600 --> 01:16:40,480
+Check that results were good to in the bodies of those functions and then just have hypothesis throw random inputs in a lot of things I think that's generically good advice for how to get started and then the more detailed stuff depends very much more on your particular project.
+
+632
+01:16:40,840 --> 01:16:53,440
+But as I said before if you have assertions in your code and you check your round trips with hypothesis you're in a good place and at that point if it's not obvious to you where to put another property based test maybe you don't need one.
+
+633
+01:17:06,880 --> 01:17:08,080
+Oh this is a good one.
+
+634
+01:17:11,440 --> 01:17:16,880
+So I'm the second leader of the hypothesis project the founder David McKeever.
+
+635
+01:17:18,280 --> 01:17:19,040
+Was.
+
+636
+01:17:20,280 --> 01:17:32,120
+In Switzerland and had quit his job and was moving back to England and realized that if he waited three weeks he would avoid getting taxed by two countries on all of that years income so the first draft of hypothesis was written for tax reasons.
+
+637
+01:17:33,120 --> 01:17:43,560
+You wanted a project to learn Python and this seems like an interesting project I then found it and got involved when a few years after that I was working as a research assistant.
+
+638
+01:17:44,120 --> 01:17:53,000
+And I had this nasty scientific data processing problem where I was also pretty bad at Python at the time so the script I'd written took 14 hours to run on the real data set.
+
+639
+01:17:53,720 --> 01:17:59,480
+So coded up I'd run it on all the smaller stuff and it worked and applied it to the big one and 14 hours later it would crash.
+
+640
+01:17:59,880 --> 01:18:09,720
+And when you're debug edit run see the crash cycle takes 14 hours it leaves you a lot of time for looking for better ways to test things.
+
+641
+01:18:11,640 --> 01:18:16,000
+I eventually worked out the library we were using just would not deal with a space in a header.
+
+642
+01:18:18,360 --> 01:18:29,080
+So once I've written the hypothesis test which knew how to generate arrays and random comments it found it's like if you have a thing with one element and a comment is a space a.
+
+643
+01:18:29,960 --> 01:18:30,760
+The test files.
+
+644
+01:18:32,120 --> 01:18:34,240
+Got it and at that point I was kind of hooked.
+
+645
+01:18:36,440 --> 01:18:36,800
+Yep.
+
+646
+01:18:47,560 --> 01:18:48,200
+Yeah.
+
+647
+01:18:51,240 --> 01:18:57,120
+It really depends on the code that you're testing and the strategy use.
+
+648
+01:18:57,640 --> 01:19:03,720
+I can't really say more than that beyond the odds are often better than you would think because it turns out.
+
+649
+01:19:04,440 --> 01:19:17,640
+Most failures can be reproduced with quite a small test case and that's why we think the shrinking or the example minimization is really useful because it's so much easier to understand what's going on when all the extraneous detail is just not there.
+
+650
+01:19:18,320 --> 01:19:23,360
+But that same bug would trigger on a commit of any links that had any space in it.
+
+651
+01:19:23,800 --> 01:19:35,440
+And so the original example it found was probably like thousands of lines or at least hundreds of lines and I think I might have turned up to like a hundred thousand examples because I was just desperate and I had 14 hours to kill.
+
+652
+01:19:36,880 --> 01:19:46,640
+And so at that point it's quite likely that it eventually stumbles across something which reproduces it and then hypothesis is very good at cutting that down to something which is also understandable by humans.
+
+653
+01:19:53,360 --> 01:20:03,840
+Yeah.
+
+654
+01:20:03,880 --> 01:20:13,920
+So how do you migrate an existing test suite I think there are basically two approaches the first is I would always just write a new property based test for saving and loading data like.
+
+655
+01:20:14,560 --> 01:20:24,760
+Or converted between two formats like you're going to have something which is around trip and round trips tend to be beautifully elegant properties to test and also find a whole pile of bugs.
+
+656
+01:20:26,360 --> 01:20:31,160
+The second thing is you could look for tests in your code base which are kind of like trying to be property based.
+
+657
+01:20:31,880 --> 01:20:45,720
+Where you might have a pie test parameterized with a whole bunch of cases you might think like I could probably work out what strategy would generate these and then maybe keep the interesting ones as the at example decorator so we still keep checking those two.
+
+658
+01:20:46,560 --> 01:20:56,640
+At example is great for regression tests you can write the specific regression case that you want to check for the at example decorator so it happens every time and then also check the more general given case.
+
+659
+01:20:57,440 --> 01:21:09,800
+So the parameterized ones often kind of want to be property based in some sense or just like another unit test which seems to be making like a general claim with reference to one example often you can think like how would I generalize this.
+
+660
+01:21:09,800 --> 01:21:24,720
+Yep yep you can supply some arguments with parameterized others with hypothesis others with fixtures others with explicit calls like.
+
+661
+01:21:25,560 --> 01:21:35,280
+Hypothesis I I do recommend using keyword arguments to given if you're going to mix them like this because if you do positionally can get pretty confusing which argument is coming from where.
+
+662
+01:21:40,040 --> 01:21:43,640
+Yeah.
+
+663
+01:22:04,640 --> 01:22:09,320
+I don't think we have documentation related specifically the sequel alchemy or to fast API.
+
+664
+01:22:09,800 --> 01:22:13,500
+But Pydantic does have some level of hypothesis support natively.
+
+665
+01:22:13,500 --> 01:22:19,480
+And so there's a documentation page on their website about how to use it with hypothesis.
+
+666
+01:22:19,480 --> 01:22:22,480
+That's where I would start.
+
+667
+01:22:22,480 --> 01:22:24,480
+Yep.
+
+668
+01:22:25,160 --> 01:22:27,160
+Yep.
+
+669
+01:22:35,160 --> 01:22:41,160
+Okay, so Shantanu and I both work at machine learning labs.
+
+670
+01:22:41,160 --> 01:22:45,160
+Testing machine learning code is notoriously difficult.
+
+671
+01:22:45,160 --> 01:22:49,160
+I like property-based testing partly because it means I don't need to know what the model should do.
+
+672
+01:22:49,840 --> 01:22:55,840
+In one case, I could just know that if I randomize the weights, it should perform worse.
+
+673
+01:22:55,840 --> 01:23:01,840
+In others, I could test not the whole model, but some gnarly numeric thing that I wrote
+
+674
+01:23:01,840 --> 01:23:07,840
+gives me the same results as a simpler PyTorch implementation or a NumPy implementation.
+
+675
+01:23:07,840 --> 01:23:11,840
+Often we end up doing terrible things in the name of high GPU performance.
+
+676
+01:23:11,840 --> 01:23:15,840
+And it's reassuring to be able to run the mathematical code in NumPy
+
+677
+01:23:16,520 --> 01:23:22,520
+and the awful gnarly kernel and check that they get the same results on all kinds of random inputs.
+
+678
+01:23:22,520 --> 01:23:24,520
+That's kind of where I would start.
+
+679
+01:23:24,520 --> 01:23:28,520
+You can think of these as like the equivalence property and then a metamorphic relation
+
+680
+01:23:28,520 --> 01:23:32,520
+that if we mess up the model weights, performance should not improve.
+
+681
+01:23:39,520 --> 01:23:41,520
+You could. I haven't.
+
+682
+01:23:41,520 --> 01:23:43,520
+I don't think that's specific to machine learning anymore.
+
+683
+01:23:44,200 --> 01:23:48,200
+If you have something like a web API, there's a tool called SchemaThesis that a friend of mine wrote
+
+684
+01:23:48,200 --> 01:23:53,200
+which will look at an open API or a Swagger schema or a GraphQL schema
+
+685
+01:23:53,200 --> 01:23:57,200
+and automatically come up with thousands of test cases for your API.
+
+686
+01:23:57,200 --> 01:24:01,200
+If you're testing a web API, I would reach for that rather than writing tests by hand.
+
+687
+01:24:07,200 --> 01:24:10,200
+If that's it then, thank you all so much for coming.
+
+688
+01:24:10,200 --> 01:24:13,880
+I hope you enjoyed the tutorial and enjoy lunch.
+

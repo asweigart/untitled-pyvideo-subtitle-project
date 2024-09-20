@@ -1,0 +1,2208 @@
+1
+00:00:00,000 --> 00:00:10,760
+So before we start, just a small story.
+
+2
+00:00:10,760 --> 00:00:14,560
+So imagine me as an intern in my first company.
+
+3
+00:00:14,560 --> 00:00:16,560
+I'm just in the meeting room, and we
+
+4
+00:00:16,560 --> 00:00:20,680
+are discussing how to build a good back end application.
+
+5
+00:00:20,680 --> 00:00:24,840
+And database comes into the topic.
+
+6
+00:00:24,840 --> 00:00:27,380
+And me being an intern, I got all excited.
+
+7
+00:00:27,380 --> 00:00:28,680
+And I was like, you know what?
+
+8
+00:00:29,600 --> 00:00:31,520
+Google Spanner, we should use Cockroach TV.
+
+9
+00:00:31,520 --> 00:00:33,960
+We should use some niche databases that
+
+10
+00:00:33,960 --> 00:00:35,600
+were really cool at the time.
+
+11
+00:00:35,600 --> 00:00:38,920
+And that made everyone aware that I
+
+12
+00:00:38,920 --> 00:00:40,760
+was the intern in the room.
+
+13
+00:00:40,760 --> 00:00:43,680
+But apart from that, after the meeting,
+
+14
+00:00:43,680 --> 00:00:47,960
+this person who I like to think of as my mentor
+
+15
+00:00:47,960 --> 00:00:49,400
+pulled me aside.
+
+16
+00:00:49,400 --> 00:00:51,800
+And he gave me this advice that stuck around.
+
+17
+00:00:51,800 --> 00:00:53,440
+So he told me, now whenever you want
+
+18
+00:00:53,440 --> 00:00:57,240
+to pick a database that you want to use for your project,
+
+19
+00:00:57,240 --> 00:01:00,520
+think of three reasons why you should not use Postgres.
+
+20
+00:01:00,520 --> 00:01:02,400
+And if you can give me three solid reasons,
+
+21
+00:01:02,400 --> 00:01:04,120
+then go ahead and think of another one,
+
+22
+00:01:04,120 --> 00:01:06,160
+or else just use Postgres.
+
+23
+00:01:06,160 --> 00:01:10,000
+And that actually confused me a bit.
+
+24
+00:01:10,000 --> 00:01:12,400
+I was like, I always thought developers
+
+25
+00:01:12,400 --> 00:01:15,840
+like to play around with toys, cool new tools, the niche new
+
+26
+00:01:15,840 --> 00:01:16,840
+thing in the market.
+
+27
+00:01:16,840 --> 00:01:17,680
+We like to use it.
+
+28
+00:01:17,680 --> 00:01:18,680
+We like to play around with it.
+
+29
+00:01:18,680 --> 00:01:20,800
+But with databases, I always saw that people
+
+30
+00:01:20,800 --> 00:01:22,200
+just like to keep it safe.
+
+31
+00:01:22,200 --> 00:01:25,160
+They always go with the default option.
+
+32
+00:01:25,160 --> 00:01:27,640
+And that made database kind of mystical for me,
+
+33
+00:01:27,640 --> 00:01:31,880
+because it's like this black box machine that just works
+
+34
+00:01:31,880 --> 00:01:34,160
+for almost everything that we want it to do.
+
+35
+00:01:34,160 --> 00:01:36,120
+And we can just tune it to make it do things.
+
+36
+00:01:36,120 --> 00:01:39,040
+And we have data engineers, database administrators
+
+37
+00:01:39,040 --> 00:01:40,840
+who take care of things for us.
+
+38
+00:01:40,840 --> 00:01:42,800
+So we just have fun with it.
+
+39
+00:01:42,800 --> 00:01:47,520
+But what made it mystical also made me curious about it.
+
+40
+00:01:47,520 --> 00:01:50,440
+So I wanted to break down what it all meant.
+
+41
+00:01:50,440 --> 00:01:53,200
+So why build your own database?
+
+42
+00:01:53,200 --> 00:01:54,280
+That's the first question.
+
+43
+00:01:55,080 --> 00:01:57,360
+The fact that it's mystical is not a good enough reason
+
+44
+00:01:57,360 --> 00:01:59,320
+for sane people.
+
+45
+00:01:59,320 --> 00:02:03,560
+So it essentially kind of helps break down the abstractions
+
+46
+00:02:03,560 --> 00:02:07,240
+that make up the database, the black box that it is.
+
+47
+00:02:07,240 --> 00:02:09,880
+And you can also kind of reason about bad performance
+
+48
+00:02:09,880 --> 00:02:12,400
+and bugs, which you can face when you're
+
+49
+00:02:12,400 --> 00:02:13,720
+kind of creating database.
+
+50
+00:02:13,720 --> 00:02:15,760
+There are actually a lot of concurrency bugs
+
+51
+00:02:15,760 --> 00:02:19,520
+that happen even in production grade Postgres databases.
+
+52
+00:02:19,520 --> 00:02:22,160
+But the timing has to be exactly right for you
+
+53
+00:02:22,160 --> 00:02:23,880
+to face those bugs.
+
+54
+00:02:24,120 --> 00:02:25,920
+They're really cool, though.
+
+55
+00:02:25,920 --> 00:02:28,520
+And then you can actually write better queries
+
+56
+00:02:28,520 --> 00:02:30,400
+if you know how your database is working,
+
+57
+00:02:30,400 --> 00:02:33,200
+like how it actually kind of fetches the data internally.
+
+58
+00:02:33,200 --> 00:02:37,080
+You can write good queries that don't take an hour to execute.
+
+59
+00:02:37,080 --> 00:02:38,320
+And also, it's fun.
+
+60
+00:02:40,880 --> 00:02:43,440
+So as the Victorian man once said,
+
+61
+00:02:43,440 --> 00:02:44,840
+what makes a database?
+
+62
+00:02:44,840 --> 00:02:46,720
+So that's the first question I asked myself
+
+63
+00:02:46,720 --> 00:02:49,600
+when I went ahead to build the database.
+
+64
+00:02:49,600 --> 00:02:53,240
+And fair warning, I was an intern during this time.
+
+65
+00:02:53,240 --> 00:02:56,280
+So I did not have a good idea on how databases were,
+
+66
+00:02:56,280 --> 00:02:59,280
+you know, what are they made of, what do they even do.
+
+67
+00:02:59,280 --> 00:03:02,040
+So this was what I had in my mind.
+
+68
+00:03:02,040 --> 00:03:03,760
+So this is me.
+
+69
+00:03:03,760 --> 00:03:06,000
+And then I just talked to the database.
+
+70
+00:03:06,000 --> 00:03:07,160
+And there is a base.
+
+71
+00:03:07,160 --> 00:03:08,600
+I don't know, is it a base?
+
+72
+00:03:08,600 --> 00:03:13,680
+And then I consider base to be how you talk to your database.
+
+73
+00:03:13,680 --> 00:03:17,920
+So it can be like your Python SQL Alchemy engine.
+
+74
+00:03:17,920 --> 00:03:21,280
+It can be your PG CLI tool.
+
+75
+00:03:21,280 --> 00:03:25,760
+It can be Table Plus, literally anything.
+
+76
+00:03:25,760 --> 00:03:27,800
+And then the base kind of talks to the data
+
+77
+00:03:27,800 --> 00:03:29,120
+that's there internally.
+
+78
+00:03:29,120 --> 00:03:31,320
+And it kind of returns the results to you.
+
+79
+00:03:31,320 --> 00:03:33,400
+This is how I kind of imagined the database
+
+80
+00:03:33,400 --> 00:03:37,960
+to be, which is not actually completely wrong.
+
+81
+00:03:37,960 --> 00:03:40,480
+But it has a lot of things inside.
+
+82
+00:03:40,480 --> 00:03:42,000
+And there are a bunch of utilities
+
+83
+00:03:42,000 --> 00:03:43,680
+that are in the background, a lot of crazy things
+
+84
+00:03:43,680 --> 00:03:45,180
+which we're going to discuss later.
+
+85
+00:03:45,180 --> 00:03:49,440
+But this is essentially what I thought it looked like.
+
+86
+00:03:49,600 --> 00:03:51,720
+First is the base, the part of the database
+
+87
+00:03:51,720 --> 00:03:55,520
+that you can use to talk to your database, essentially.
+
+88
+00:03:55,520 --> 00:03:59,160
+And fun fact, the database that I built is a good listener.
+
+89
+00:03:59,160 --> 00:04:02,760
+So you can talk to it really well.
+
+90
+00:04:02,760 --> 00:04:03,160
+Cool.
+
+91
+00:04:03,160 --> 00:04:05,600
+So I don't know, the code might be a little small.
+
+92
+00:04:05,600 --> 00:04:08,480
+So you should find it in the repo.
+
+93
+00:04:08,480 --> 00:04:10,240
+If you can see, awesome.
+
+94
+00:04:10,240 --> 00:04:12,040
+Good eyesight.
+
+95
+00:04:12,040 --> 00:04:18,640
+So I chose repo as my weapon of choice to talk to the database.
+
+96
+00:04:18,640 --> 00:04:20,480
+Initially, I thought of sending it pigeons,
+
+97
+00:04:20,480 --> 00:04:23,400
+but you know, repo worked out well for me.
+
+98
+00:04:23,400 --> 00:04:25,800
+You can use this really cool Python library
+
+99
+00:04:25,800 --> 00:04:28,440
+called prompt toolkit that I used
+
+100
+00:04:28,440 --> 00:04:31,240
+to kind of build a very simple CLI that
+
+101
+00:04:31,240 --> 00:04:34,640
+can be used as your interface to talk to your database.
+
+102
+00:04:34,640 --> 00:04:36,160
+So what I'm essentially doing here
+
+103
+00:04:36,160 --> 00:04:39,040
+is just defining a while true loop
+
+104
+00:04:39,040 --> 00:04:41,680
+so that my terminal keeps running.
+
+105
+00:04:41,680 --> 00:04:43,920
+And then I have a session that I start.
+
+106
+00:04:43,920 --> 00:04:45,680
+Oh, and by the way, I call my database
+
+107
+00:04:45,760 --> 00:04:52,160
+YITDB because it's a throwaway database, and you call it YIT.
+
+108
+00:04:52,160 --> 00:04:56,280
+So after we define a session, we have a query executor,
+
+109
+00:04:56,280 --> 00:04:59,560
+which you pass a SQL query to.
+
+110
+00:04:59,560 --> 00:05:01,520
+We'll discuss what that is.
+
+111
+00:05:01,520 --> 00:05:04,400
+And once you run it, it kind of gives you the result.
+
+112
+00:05:04,400 --> 00:05:06,360
+It kind of gives you the time it took to run it.
+
+113
+00:05:06,360 --> 00:05:08,560
+It kind of gives you what operation you ran.
+
+114
+00:05:08,560 --> 00:05:10,680
+And it kind of returns the results if it can.
+
+115
+00:05:10,680 --> 00:05:13,800
+Or if it faces any error in between the steps,
+
+116
+00:05:13,800 --> 00:05:16,120
+it's just going to say, I can't do it.
+
+117
+00:05:16,120 --> 00:05:18,360
+It is an error.
+
+118
+00:05:18,360 --> 00:05:20,240
+Yeah, so we're going to discuss what exactly
+
+119
+00:05:20,240 --> 00:05:22,600
+is happening in the classes that are defined here.
+
+120
+00:05:22,600 --> 00:05:25,440
+But this is the general structure.
+
+121
+00:05:25,440 --> 00:05:27,480
+So I briefly mentioned SQL.
+
+122
+00:05:27,480 --> 00:05:29,400
+This is how you talk to your database.
+
+123
+00:05:29,400 --> 00:05:32,720
+So SQL is your database's second language of choice,
+
+124
+00:05:32,720 --> 00:05:34,680
+first being love.
+
+125
+00:05:34,680 --> 00:05:38,520
+So SQL can be used to talk to database.
+
+126
+00:05:38,520 --> 00:05:41,240
+And there are several dialects of SQL that are present,
+
+127
+00:05:41,240 --> 00:05:42,760
+like really, really crazy dialects,
+
+128
+00:05:42,760 --> 00:05:46,840
+so much grammar that's there, which kind of put me to sleep
+
+129
+00:05:46,840 --> 00:05:48,600
+when I tried to do research on it.
+
+130
+00:05:48,600 --> 00:05:50,120
+There was so much.
+
+131
+00:05:50,120 --> 00:05:52,160
+So I decided to keep it really simple.
+
+132
+00:05:52,160 --> 00:05:56,800
+And I kind of defined, really took parts of the syntax,
+
+133
+00:05:56,800 --> 00:05:59,440
+kind of defined a grammar for SQL by myself.
+
+134
+00:05:59,440 --> 00:06:02,920
+So it's no longer a structured query language for me.
+
+135
+00:06:02,920 --> 00:06:03,800
+The structure is gone.
+
+136
+00:06:03,800 --> 00:06:06,000
+It's just a query language.
+
+137
+00:06:06,000 --> 00:06:10,360
+So this is the grammar that I defined for my database.
+
+138
+00:06:10,400 --> 00:06:14,360
+So you have DDL, DML, DQL, the keywords that you hear.
+
+139
+00:06:14,360 --> 00:06:16,240
+So they mean data manipulation language,
+
+140
+00:06:16,240 --> 00:06:18,600
+data definition language, and data query language.
+
+141
+00:06:18,600 --> 00:06:22,120
+And you also have wildcards that you can use in your SQL query.
+
+142
+00:06:22,120 --> 00:06:23,800
+So my grammar is very simple.
+
+143
+00:06:23,800 --> 00:06:28,040
+So I can create a table, delete a table, or a database.
+
+144
+00:06:28,040 --> 00:06:29,960
+And I can also perform select and insert.
+
+145
+00:06:29,960 --> 00:06:31,960
+I cannot do altars.
+
+146
+00:06:31,960 --> 00:06:34,320
+I have my wildcard, which is going to be a star.
+
+147
+00:06:34,320 --> 00:06:35,560
+And I have my query languages.
+
+148
+00:06:35,560 --> 00:06:38,160
+So I can use from, where, and limit.
+
+149
+00:06:38,160 --> 00:06:39,680
+For the purposes of this talk, I'm
+
+150
+00:06:39,680 --> 00:06:41,920
+not going to go into the details of the implementation
+
+151
+00:06:41,920 --> 00:06:44,480
+of group buys and joins.
+
+152
+00:06:44,480 --> 00:06:46,680
+But if you want to talk about it, find me later.
+
+153
+00:06:46,680 --> 00:06:49,600
+I would love to discuss that with you.
+
+154
+00:06:49,600 --> 00:06:50,120
+Cool.
+
+155
+00:06:50,120 --> 00:06:53,840
+So this is how the query executor looks like internally.
+
+156
+00:06:53,840 --> 00:06:57,360
+So what it does is, so if you know how programming languages
+
+157
+00:06:57,360 --> 00:07:00,000
+work, this is similar to how they work as well,
+
+158
+00:07:00,000 --> 00:07:03,560
+how they take in your code, which is in English,
+
+159
+00:07:03,560 --> 00:07:06,480
+and interpret what they mean and execute.
+
+160
+00:07:06,480 --> 00:07:08,240
+It's very similar.
+
+161
+00:07:08,320 --> 00:07:10,520
+The query executor takes my query in.
+
+162
+00:07:10,520 --> 00:07:12,400
+It takes a simple SQL query.
+
+163
+00:07:12,400 --> 00:07:14,320
+And SQL queries actually make a lot of sense.
+
+164
+00:07:14,320 --> 00:07:20,120
+When you read them as a person who is not
+
+165
+00:07:20,120 --> 00:07:22,760
+accustomed with the whole database thing,
+
+166
+00:07:22,760 --> 00:07:25,000
+if you just show them a simple SQL query,
+
+167
+00:07:25,000 --> 00:07:27,840
+they know how it works.
+
+168
+00:07:27,840 --> 00:07:29,760
+So you have a SQL parser.
+
+169
+00:07:29,760 --> 00:07:31,000
+You have a SQL planner.
+
+170
+00:07:31,000 --> 00:07:32,320
+And you have your executor.
+
+171
+00:07:32,320 --> 00:07:36,280
+So SQL parser takes a SQL query and splits them into tokens.
+
+172
+00:07:36,280 --> 00:07:39,080
+SQL planner creates a tree out of that query.
+
+173
+00:07:39,080 --> 00:07:40,880
+And then you kind of create a tree.
+
+174
+00:07:40,880 --> 00:07:44,080
+So we're going to discuss what exactly those mean.
+
+175
+00:07:44,080 --> 00:07:44,600
+Cool.
+
+176
+00:07:44,600 --> 00:07:46,120
+So first, I write a query.
+
+177
+00:07:46,120 --> 00:07:48,200
+I write a simple select query.
+
+178
+00:07:48,200 --> 00:07:49,580
+So if you cannot read the query, it's
+
+179
+00:07:49,580 --> 00:07:53,040
+a select star from customer where name is JoJo.
+
+180
+00:07:53,040 --> 00:07:55,840
+So once I write the query, the query gets parsed.
+
+181
+00:07:55,840 --> 00:07:58,400
+And by parsed, I mean the database kind of
+
+182
+00:07:58,400 --> 00:08:02,360
+figures out that my DML is select, my wildcard is star,
+
+183
+00:08:02,360 --> 00:08:05,000
+I have from is my DQL, my customer
+
+184
+00:08:05,000 --> 00:08:06,720
+is the table name or the table reference,
+
+185
+00:08:06,720 --> 00:08:10,880
+I have where clause, which uses an equal operator.
+
+186
+00:08:10,880 --> 00:08:13,040
+And I have these objects that I have to compare.
+
+187
+00:08:13,040 --> 00:08:16,280
+A column reference, which is name, and the object is JoJo.
+
+188
+00:08:16,280 --> 00:08:16,760
+Cool.
+
+189
+00:08:16,760 --> 00:08:18,920
+So using this token, it generates
+
+190
+00:08:18,920 --> 00:08:21,440
+an abstract syntax tree, which kind of looks
+
+191
+00:08:21,440 --> 00:08:23,560
+like this for this query, which is very simple.
+
+192
+00:08:23,560 --> 00:08:25,120
+So if you want to look at query plans,
+
+193
+00:08:25,120 --> 00:08:27,960
+you can also perform explain on your queries
+
+194
+00:08:27,960 --> 00:08:31,120
+in databases like Postgres, where you can actually
+
+195
+00:08:31,120 --> 00:08:34,160
+visualize this tree for yourself for any query that you write.
+
+196
+00:08:34,160 --> 00:08:36,720
+And for this simple query, it's just a select star from.
+
+197
+00:08:36,720 --> 00:08:38,800
+You have customer reference, and you have a where clause,
+
+198
+00:08:38,800 --> 00:08:40,140
+and you have this operation that's
+
+199
+00:08:40,140 --> 00:08:42,360
+running on a column name and a constant.
+
+200
+00:08:42,360 --> 00:08:45,160
+So once I have a plan, I know exactly what to do,
+
+201
+00:08:45,160 --> 00:08:49,440
+because there is an order defined by SQL standard,
+
+202
+00:08:49,440 --> 00:08:51,920
+like how I have to kind of execute a query.
+
+203
+00:08:51,920 --> 00:08:53,600
+So I just go ahead and run it.
+
+204
+00:08:53,600 --> 00:08:55,560
+But you know the query that I wrote is really bad.
+
+205
+00:08:55,560 --> 00:08:57,400
+You cannot just select star all the data,
+
+206
+00:08:57,400 --> 00:08:58,920
+because you don't know the amount of data
+
+207
+00:08:58,920 --> 00:08:59,840
+that you're querying.
+
+208
+00:08:59,840 --> 00:09:01,600
+And when you query a lot of data,
+
+209
+00:09:01,600 --> 00:09:03,960
+you're going to face some problems.
+
+210
+00:09:04,360 --> 00:09:07,000
+So now our base part is kind of sorted.
+
+211
+00:09:07,000 --> 00:09:08,760
+We can talk to a database.
+
+212
+00:09:08,760 --> 00:09:10,920
+Now we get to the fun part, the data part,
+
+213
+00:09:10,920 --> 00:09:14,680
+where we're going to actually build the data out.
+
+214
+00:09:14,680 --> 00:09:17,440
+So first of all, I decided, you know what?
+
+215
+00:09:17,440 --> 00:09:20,560
+I'm going to keep it simple, and I'm going to write all my data
+
+216
+00:09:20,560 --> 00:09:21,800
+into memory.
+
+217
+00:09:21,800 --> 00:09:25,320
+So what I've defined here is a simple database class
+
+218
+00:09:25,320 --> 00:09:28,160
+that kind of creates a new hash map or a dictionary
+
+219
+00:09:28,160 --> 00:09:31,640
+in Python words for every single table.
+
+220
+00:09:31,680 --> 00:09:35,280
+And what I mean by an insert is just inserting a new key
+
+221
+00:09:35,280 --> 00:09:38,480
+and a record for a particular ID for a table.
+
+222
+00:09:38,480 --> 00:09:42,000
+So it's just a dictionary insert, a dictionary get,
+
+223
+00:09:42,000 --> 00:09:44,200
+and a delete is just a dictionary pop.
+
+224
+00:09:44,200 --> 00:09:45,720
+And this kind of worked for me.
+
+225
+00:09:45,720 --> 00:09:49,160
+It's crazy how easy it is, but it works.
+
+226
+00:09:49,160 --> 00:09:51,320
+And I can just define my database.
+
+227
+00:09:51,320 --> 00:09:53,200
+I could define a table, which is test.
+
+228
+00:09:53,200 --> 00:09:55,720
+I can insert name Barry, who is 35.
+
+229
+00:09:55,720 --> 00:09:57,480
+And I can just be like, you know what?
+
+230
+00:09:57,480 --> 00:09:59,880
+Select name and select age from the test table,
+
+231
+00:09:59,880 --> 00:10:01,140
+and it's giving me the results.
+
+232
+00:10:01,140 --> 00:10:02,500
+And I can also delete age.
+
+233
+00:10:02,500 --> 00:10:03,660
+And when I have to select, it's going
+
+234
+00:10:03,660 --> 00:10:06,260
+to give me a key error, which means there's no age,
+
+235
+00:10:06,260 --> 00:10:08,820
+and Barry's immortal.
+
+236
+00:10:08,820 --> 00:10:11,540
+But one thing is missing, which is persistence,
+
+237
+00:10:11,540 --> 00:10:15,780
+because when my database closes or if I close my session,
+
+238
+00:10:15,780 --> 00:10:17,540
+everything's gone.
+
+239
+00:10:17,540 --> 00:10:19,940
+So I need some kind of persistence.
+
+240
+00:10:19,940 --> 00:10:23,380
+So to do that, you always remember to flush,
+
+241
+00:10:23,380 --> 00:10:26,140
+which I do by flushing it to the disk.
+
+242
+00:10:26,140 --> 00:10:29,020
+So for every insert that happens to the dictionary,
+
+243
+00:10:29,020 --> 00:10:31,420
+I just write it to a file.
+
+244
+00:10:31,420 --> 00:10:35,100
+And deletes are kind of a special append operation.
+
+245
+00:10:35,100 --> 00:10:37,980
+I'm going to insert something called tombstones.
+
+246
+00:10:37,980 --> 00:10:39,980
+So for tombstone, I just use the tombstone emoji
+
+247
+00:10:39,980 --> 00:10:42,020
+in my database, which is a bad way because it
+
+248
+00:10:42,020 --> 00:10:42,980
+takes a lot of space.
+
+249
+00:10:42,980 --> 00:10:44,140
+But I want to have fun.
+
+250
+00:10:47,300 --> 00:10:50,740
+So append-only logs are nuts, because it's
+
+251
+00:10:50,740 --> 00:10:52,220
+so simple and sequential.
+
+252
+00:10:52,220 --> 00:10:54,820
+Writes on disk are performant, super fast.
+
+253
+00:10:54,820 --> 00:10:58,220
+It's one of the best operations you can do in the disk to a file.
+
+254
+00:10:58,220 --> 00:10:59,660
+I'm really happy about that.
+
+255
+00:10:59,660 --> 00:11:03,820
+But you have this issue when you move in from in-memory to disk,
+
+256
+00:11:03,820 --> 00:11:05,780
+because when you want to select something,
+
+257
+00:11:05,780 --> 00:11:09,580
+you have to go through every single key in your disk, which
+
+258
+00:11:09,580 --> 00:11:12,420
+gives you an O of n worst-case select complexity, which
+
+259
+00:11:12,420 --> 00:11:14,460
+is bad.
+
+260
+00:11:14,460 --> 00:11:18,620
+And you also have the issue of when you flush to a disk,
+
+261
+00:11:18,620 --> 00:11:19,700
+what if something happens?
+
+262
+00:11:19,700 --> 00:11:22,700
+You just flush partial records, or where did it go?
+
+263
+00:11:22,700 --> 00:11:25,060
+And also, you keep appending to a log file,
+
+264
+00:11:25,060 --> 00:11:27,380
+which can get really big.
+
+265
+00:11:27,380 --> 00:11:29,220
+And you run out of disk space, right?
+
+266
+00:11:29,220 --> 00:11:30,500
+That's also a problem.
+
+267
+00:11:30,500 --> 00:11:33,020
+So we're going to solve these issues one by one.
+
+268
+00:11:33,020 --> 00:11:33,540
+Good.
+
+269
+00:11:33,540 --> 00:11:40,180
+So we're going to bring back the in-memory concept, which
+
+270
+00:11:40,180 --> 00:11:42,420
+is like a cache which we're going to put on a disk.
+
+271
+00:11:42,420 --> 00:11:46,020
+So what it's going to have is contain where exactly
+
+272
+00:11:46,020 --> 00:11:49,140
+the files are present in the disk.
+
+273
+00:11:49,140 --> 00:11:52,340
+And what I call cache and in-memory dictionary
+
+274
+00:11:52,340 --> 00:11:56,900
+is what database calls indexes.
+
+275
+00:11:57,380 --> 00:12:00,300
+It's a really cool concept where databases kind of have
+
+276
+00:12:00,300 --> 00:12:03,020
+a secondary structure on top of your actual data,
+
+277
+00:12:03,020 --> 00:12:05,980
+where it kind of maintains where the exact data is located
+
+278
+00:12:05,980 --> 00:12:09,140
+in the disk or somewhere else, depending on the database.
+
+279
+00:12:09,140 --> 00:12:11,500
+And we can use that to quickly look up where my data is
+
+280
+00:12:11,500 --> 00:12:13,420
+and then directly just go there, rather than just
+
+281
+00:12:13,420 --> 00:12:16,140
+looking at the whole data, which can be really big.
+
+282
+00:12:16,140 --> 00:12:17,680
+So we're going to start really simple
+
+283
+00:12:17,680 --> 00:12:20,380
+and bring back our in-memory dictionary, which
+
+284
+00:12:20,380 --> 00:12:22,420
+is going to be hash indexes.
+
+285
+00:12:22,420 --> 00:12:25,740
+So by hash index, I just implement an in-memory mapping
+
+286
+00:12:25,740 --> 00:12:29,140
+of every key to the byte offset location.
+
+287
+00:12:29,140 --> 00:12:34,860
+So for example, I have written to my file a name called John
+
+288
+00:12:34,860 --> 00:12:36,300
+and a name called Don.
+
+289
+00:12:36,300 --> 00:12:38,860
+And the ID is like 1 and 2.
+
+290
+00:12:38,860 --> 00:12:42,100
+And the offset location is like 0, 9, 18.
+
+291
+00:12:42,100 --> 00:12:43,820
+And it just goes in multiples of 9,
+
+292
+00:12:43,820 --> 00:12:47,900
+because that's the size I'm giving the table to write.
+
+293
+00:12:47,900 --> 00:12:50,060
+This kind of is defined when I create the table.
+
+294
+00:12:50,060 --> 00:12:51,540
+I kind of define what size I'm going
+
+295
+00:12:51,540 --> 00:12:52,860
+to occupy for every record.
+
+296
+00:12:52,860 --> 00:12:55,540
+And if I go more than that, it's going to be like, you know what?
+
+297
+00:12:55,660 --> 00:12:57,900
+So this is bigger.
+
+298
+00:12:57,900 --> 00:13:00,620
+So if I want to look up, for example, the key 2
+
+299
+00:13:00,620 --> 00:13:03,060
+or the name Don, I just go to the offset 9,
+
+300
+00:13:03,060 --> 00:13:05,260
+which I can look up directly from the hash index.
+
+301
+00:13:05,260 --> 00:13:06,820
+So it's like, oh, I want to look it up.
+
+302
+00:13:06,820 --> 00:13:08,620
+And you just go and read it from the disk.
+
+303
+00:13:08,620 --> 00:13:10,620
+I mean, seek it from the file in the disk.
+
+304
+00:13:10,620 --> 00:13:12,100
+So it's super fast, right?
+
+305
+00:13:12,100 --> 00:13:13,660
+And cool.
+
+306
+00:13:13,660 --> 00:13:14,860
+This is the implementation.
+
+307
+00:13:14,860 --> 00:13:16,540
+The code can be really bad.
+
+308
+00:13:16,540 --> 00:13:19,220
+So you can refer to the repo.
+
+309
+00:13:19,220 --> 00:13:23,540
+So what I'm essentially doing here is what I just said.
+
+310
+00:13:23,540 --> 00:13:28,540
+So we kind of define the size for the record that we have,
+
+311
+00:13:28,540 --> 00:13:29,940
+and also the primary key.
+
+312
+00:13:29,940 --> 00:13:34,420
+And we just use the size to kind of exactly know the offset
+
+313
+00:13:34,420 --> 00:13:35,820
+in which the data is located.
+
+314
+00:13:35,820 --> 00:13:37,380
+So we just perform an insert.
+
+315
+00:13:40,060 --> 00:13:42,260
+And when we do an insert, we do actually two inserts.
+
+316
+00:13:42,260 --> 00:13:44,060
+So we actually insert to the disk
+
+317
+00:13:44,060 --> 00:13:47,140
+and also insert to the index.
+
+318
+00:13:47,140 --> 00:13:50,220
+We kind of tell the index where exactly my start
+
+319
+00:13:50,220 --> 00:13:52,740
+and end offsets are and where exactly my data is,
+
+320
+00:13:52,740 --> 00:13:54,740
+so that it can quickly look it up.
+
+321
+00:13:54,740 --> 00:13:57,180
+And when I do a get, I just kind of use those
+
+322
+00:13:57,180 --> 00:13:58,420
+to get the data out.
+
+323
+00:13:58,420 --> 00:14:01,660
+And when I do a delete, I just kind of look for that index.
+
+324
+00:14:01,660 --> 00:14:03,380
+And if it's like a tombstone, I just
+
+325
+00:14:03,380 --> 00:14:04,300
+be like, you know what?
+
+326
+00:14:04,300 --> 00:14:05,580
+The data doesn't exist anymore.
+
+327
+00:14:08,540 --> 00:14:12,620
+So we have actually solved the problem of speed,
+
+328
+00:14:12,620 --> 00:14:15,260
+because now we have indexes and data is super fast.
+
+329
+00:14:15,260 --> 00:14:18,700
+But we still have the problem of running out of disk.
+
+330
+00:14:18,700 --> 00:14:20,380
+So we're going to solve that problem
+
+331
+00:14:20,380 --> 00:14:24,500
+by breaking our logs into segments, which
+
+332
+00:14:24,500 --> 00:14:27,540
+is going to be very easy, because we're
+
+333
+00:14:27,540 --> 00:14:32,140
+going to be defining fixed size for every segment.
+
+334
+00:14:32,140 --> 00:14:39,260
+So if you have two segments where we have these append-only
+
+335
+00:14:39,260 --> 00:14:42,300
+logs, you're going to have repetition of keys that happen.
+
+336
+00:14:42,300 --> 00:14:44,940
+Because for every insert, you're going to perform an append.
+
+337
+00:14:44,940 --> 00:14:47,580
+And a key can have thousands of inserts that happen.
+
+338
+00:14:47,580 --> 00:14:49,580
+And you just want the latest insert
+
+339
+00:14:49,580 --> 00:14:50,660
+that happens for a key.
+
+340
+00:14:50,660 --> 00:14:53,100
+You don't care about what happened like 10 inserts
+
+341
+00:14:53,100 --> 00:14:53,740
+before.
+
+342
+00:14:53,740 --> 00:14:55,980
+So what you do is you perform this operation called
+
+343
+00:14:55,980 --> 00:14:57,700
+compaction that happens in the background
+
+344
+00:14:57,700 --> 00:14:59,260
+that you don't have to care about.
+
+345
+00:14:59,260 --> 00:15:01,620
+So what compaction does is it takes these older
+
+346
+00:15:01,620 --> 00:15:04,420
+blocks of segments that are there for the data
+
+347
+00:15:04,420 --> 00:15:06,820
+and kind of combine them into a newer segment.
+
+348
+00:15:06,820 --> 00:15:08,060
+And it creates a new segment.
+
+349
+00:15:08,060 --> 00:15:09,380
+It doesn't replace anything.
+
+350
+00:15:09,380 --> 00:15:11,140
+It just takes the older segments,
+
+351
+00:15:11,140 --> 00:15:14,100
+creates segments, creates a new segment,
+
+352
+00:15:14,100 --> 00:15:15,620
+and then just updates the mapping.
+
+353
+00:15:15,620 --> 00:15:18,180
+So when a lookup happens, the database
+
+354
+00:15:18,180 --> 00:15:20,740
+just looks up the newer segments.
+
+355
+00:15:20,740 --> 00:15:22,260
+And this is actually quite optimal
+
+356
+00:15:22,260 --> 00:15:24,140
+because this is happening in the background.
+
+357
+00:15:24,140 --> 00:15:27,020
+And merge operations are quite efficient
+
+358
+00:15:27,020 --> 00:15:29,300
+when you perform them on files and disk.
+
+359
+00:15:29,300 --> 00:15:31,540
+And then you have now smaller segments
+
+360
+00:15:31,540 --> 00:15:33,700
+that keep incrementally getting smaller
+
+361
+00:15:33,700 --> 00:15:35,900
+as you keep writing data.
+
+362
+00:15:35,900 --> 00:15:39,620
+So you don't have to worry about ever running out of disk size
+
+363
+00:15:39,620 --> 00:15:41,540
+if you have these operations running.
+
+364
+00:15:41,540 --> 00:15:44,420
+And when I say the segments get deleted,
+
+365
+00:15:44,420 --> 00:15:45,980
+we don't actually delete them.
+
+366
+00:15:45,980 --> 00:15:48,660
+We just say mark them for deletes.
+
+367
+00:15:48,660 --> 00:15:50,460
+And what happens is there is an operation
+
+368
+00:15:50,460 --> 00:15:52,780
+that happens in our database in the background, which
+
+369
+00:15:52,780 --> 00:15:55,020
+I like to call vacuum, which is a really cool name
+
+370
+00:15:55,020 --> 00:15:58,380
+for a process, which does exactly what it says.
+
+371
+00:15:58,380 --> 00:16:00,620
+It kind of cleans up all these segments
+
+372
+00:16:00,620 --> 00:16:03,220
+that are marked for deletes.
+
+373
+00:16:03,220 --> 00:16:03,740
+Cool.
+
+374
+00:16:03,740 --> 00:16:06,180
+So we solved both the problems.
+
+375
+00:16:06,180 --> 00:16:08,580
+We have speed, and we are not going to run out of disk space.
+
+376
+00:16:08,580 --> 00:16:12,060
+So we have super fast lookups that happen through indexes.
+
+377
+00:16:12,060 --> 00:16:14,260
+We have app-and-only writes that happen through logs.
+
+378
+00:16:14,260 --> 00:16:15,340
+Both of them are awesome.
+
+379
+00:16:15,380 --> 00:16:17,100
+Compaction happening in the background.
+
+380
+00:16:17,100 --> 00:16:18,660
+We are not running out of disk space.
+
+381
+00:16:18,660 --> 00:16:21,820
+And because of the presence of both these structures,
+
+382
+00:16:21,820 --> 00:16:22,860
+we have crash recovery.
+
+383
+00:16:22,860 --> 00:16:24,940
+Because whenever a database crashes,
+
+384
+00:16:24,940 --> 00:16:28,300
+we can generate the state of our index directly from our data.
+
+385
+00:16:28,300 --> 00:16:30,140
+And we also have concurrency, because you just
+
+386
+00:16:30,140 --> 00:16:32,780
+have one writer in your app-and-only logs.
+
+387
+00:16:32,780 --> 00:16:35,740
+And the tree can have multiple writer threads that
+
+388
+00:16:35,740 --> 00:16:38,500
+can run simultaneously.
+
+389
+00:16:38,500 --> 00:16:39,980
+So we have concurrency too.
+
+390
+00:16:39,980 --> 00:16:44,620
+But there is an issue with our hash indexes,
+
+391
+00:16:44,620 --> 00:16:48,160
+which is if you have a lot of keys in your hash index,
+
+392
+00:16:48,160 --> 00:16:50,220
+you can no longer have it in memory.
+
+393
+00:16:50,220 --> 00:16:52,660
+So it kind of fits well when you have less number of keys.
+
+394
+00:16:52,660 --> 00:16:56,460
+But more keys means more memory, and you're going to fail.
+
+395
+00:16:56,460 --> 00:16:59,700
+And you also have really bad performance for range queries.
+
+396
+00:16:59,700 --> 00:17:04,940
+If you want to look up data from index ID1 to ID100,
+
+397
+00:17:04,940 --> 00:17:06,740
+you have to look them up individually,
+
+398
+00:17:06,740 --> 00:17:08,260
+which is like, I don't want to do that.
+
+399
+00:17:08,260 --> 00:17:09,900
+That's slow.
+
+400
+00:17:09,900 --> 00:17:10,380
+Cool.
+
+401
+00:17:10,380 --> 00:17:12,180
+So we're going to solve this by introducing
+
+402
+00:17:12,180 --> 00:17:14,460
+a very simple concept, which is sorting.
+
+403
+00:17:14,460 --> 00:17:19,420
+And interviews will be happy that we're using sorting here.
+
+404
+00:17:19,420 --> 00:17:22,140
+So what we're going to do is rather than just storing it
+
+405
+00:17:22,140 --> 00:17:24,660
+in an app-and-only format sequentially,
+
+406
+00:17:24,660 --> 00:17:26,980
+we're going to make sure that what we write to the disk
+
+407
+00:17:26,980 --> 00:17:29,460
+is sorted so that we're not going to look up a range key.
+
+408
+00:17:29,460 --> 00:17:32,020
+We just know what range it is in.
+
+409
+00:17:32,020 --> 00:17:34,660
+And we don't also have to store an in-memory mapping
+
+410
+00:17:34,660 --> 00:17:35,620
+of every key.
+
+411
+00:17:35,620 --> 00:17:42,500
+We can just have a key that's kind of like we can just
+
+412
+00:17:42,580 --> 00:17:46,060
+have a sparse representation of the key
+
+413
+00:17:46,060 --> 00:17:48,740
+so that if there is any key between the two keys,
+
+414
+00:17:48,740 --> 00:17:50,980
+we know exactly where it is because it's sorted right.
+
+415
+00:17:50,980 --> 00:17:52,440
+So we can just quickly look it up.
+
+416
+00:17:52,440 --> 00:17:54,700
+So we don't also have a huge index file
+
+417
+00:17:54,700 --> 00:17:57,300
+that's crunching our disk.
+
+418
+00:17:57,300 --> 00:17:59,500
+So an example of an in-memory balance tree
+
+419
+00:17:59,500 --> 00:18:01,740
+that we can use to replace our hash index
+
+420
+00:18:01,740 --> 00:18:03,980
+is going to be a red-black tree.
+
+421
+00:18:03,980 --> 00:18:07,440
+We also have a lot of other sorted balance trees
+
+422
+00:18:07,440 --> 00:18:10,580
+that you can use, but I just picked this.
+
+423
+00:18:10,580 --> 00:18:12,820
+So red-black tree can, like I'm not
+
+424
+00:18:12,820 --> 00:18:15,300
+going to explain how the data structure works
+
+425
+00:18:15,300 --> 00:18:20,020
+because there are other Indians on the internet that do that.
+
+426
+00:18:20,020 --> 00:18:22,580
+So red-black trees essentially just
+
+427
+00:18:22,580 --> 00:18:25,060
+have really simple rules that it follows.
+
+428
+00:18:25,060 --> 00:18:30,140
+So you can just have a black node in the root or the leaf.
+
+429
+00:18:30,140 --> 00:18:33,660
+And red cannot have red children or parents.
+
+430
+00:18:33,660 --> 00:18:35,620
+So these are these two rules that it follows.
+
+431
+00:18:35,620 --> 00:18:37,780
+And then when you make an insert or a delete,
+
+432
+00:18:38,700 --> 00:18:42,140
+we just make sure to update your node
+
+433
+00:18:42,140 --> 00:18:43,620
+so that the rules still apply.
+
+434
+00:18:43,620 --> 00:18:45,020
+And when you do that, your tree is
+
+435
+00:18:45,020 --> 00:18:46,500
+going to be as balanced as it can,
+
+436
+00:18:46,500 --> 00:18:49,080
+and it's going to have a log-in complexity, which
+
+437
+00:18:49,080 --> 00:18:51,380
+is really cool.
+
+438
+00:18:51,380 --> 00:18:53,860
+So now, again, there is no persistence
+
+439
+00:18:53,860 --> 00:18:57,900
+because we're having this red-black tree in memory.
+
+440
+00:18:57,900 --> 00:19:00,620
+So we're going to have to write our tree to a disk.
+
+441
+00:19:00,620 --> 00:19:02,460
+So to do that, we're going to introduce what's
+
+442
+00:19:02,460 --> 00:19:06,300
+being the standard in the industry since the 1970s,
+
+443
+00:19:06,300 --> 00:19:10,500
+which is like a crazy time for an algorithm or a software
+
+444
+00:19:10,500 --> 00:19:11,940
+to live on.
+
+445
+00:19:11,940 --> 00:19:14,100
+And that is B-trees.
+
+446
+00:19:14,100 --> 00:19:17,100
+So in B-trees, we just take out these nodes
+
+447
+00:19:17,100 --> 00:19:19,300
+that we had in red-black trees, and we just
+
+448
+00:19:19,300 --> 00:19:20,700
+make them into pages.
+
+449
+00:19:20,700 --> 00:19:23,260
+And pages kind of work well with our OS
+
+450
+00:19:23,260 --> 00:19:26,100
+because the data in the disk is also
+
+451
+00:19:26,100 --> 00:19:27,780
+arranged in the form of pages.
+
+452
+00:19:27,780 --> 00:19:29,660
+So it kind of works.
+
+453
+00:19:29,660 --> 00:19:32,460
+So what we do is if we have this is also from DDI, by the way.
+
+454
+00:19:32,460 --> 00:19:36,260
+So we just have a page which has the keys
+
+455
+00:19:36,260 --> 00:19:38,340
+that we want in a sorted order, and it
+
+456
+00:19:38,340 --> 00:19:41,620
+has a reference to the keys that kind of move around
+
+457
+00:19:41,620 --> 00:19:42,380
+like a tree.
+
+458
+00:19:42,380 --> 00:19:44,380
+So for example, we have 100 to 500,
+
+459
+00:19:44,380 --> 00:19:46,180
+and there is a reference for keys
+
+460
+00:19:46,180 --> 00:19:49,060
+that lie between 100 and 200, which goes down.
+
+461
+00:19:49,060 --> 00:19:50,420
+And the key is less than 100.
+
+462
+00:19:50,420 --> 00:19:51,820
+There's another reference that goes down.
+
+463
+00:19:51,820 --> 00:19:54,460
+So if you want to look up, for example, key 251,
+
+464
+00:19:54,460 --> 00:19:56,980
+we just go by the third reference,
+
+465
+00:19:56,980 --> 00:19:58,940
+and then we know 250 is there.
+
+466
+00:19:58,940 --> 00:20:00,780
+It's between 250 and 270.
+
+467
+00:20:00,780 --> 00:20:03,660
+We just go down, and we find it.
+
+468
+00:20:03,660 --> 00:20:06,740
+So we have a fixed size for these segments,
+
+469
+00:20:06,740 --> 00:20:08,820
+and in certain update operations kind of
+
+470
+00:20:08,820 --> 00:20:12,740
+happen depending on the file size.
+
+471
+00:20:12,740 --> 00:20:16,500
+And yeah, this kind of just works.
+
+472
+00:20:16,500 --> 00:20:19,700
+So how do you perform operations on this B-Tree?
+
+473
+00:20:22,700 --> 00:20:24,780
+Again, I'm not going to completely go
+
+474
+00:20:24,780 --> 00:20:27,620
+into the details of insertion and deletion on a tree.
+
+475
+00:20:27,620 --> 00:20:30,420
+Again, there are a lot of videos for you to check it out,
+
+476
+00:20:30,420 --> 00:20:32,540
+or on the internet, it's all there.
+
+477
+00:20:32,540 --> 00:20:34,420
+So in general, if you just need a key,
+
+478
+00:20:34,420 --> 00:20:36,300
+you just check if there is a space in the segment,
+
+479
+00:20:36,300 --> 00:20:37,940
+because segments are fixed size, right?
+
+480
+00:20:37,940 --> 00:20:39,620
+So you must have space to insert.
+
+481
+00:20:39,620 --> 00:20:41,460
+If you have space, you insert.
+
+482
+00:20:41,460 --> 00:20:43,460
+If you don't have space, you split the key.
+
+483
+00:20:43,460 --> 00:20:45,140
+That's it.
+
+484
+00:20:45,140 --> 00:20:47,140
+And with deletions, it's a bit more complex.
+
+485
+00:20:47,140 --> 00:20:49,900
+It depends on if you want to delete what's in the leaf
+
+486
+00:20:49,900 --> 00:20:51,220
+or what's internal.
+
+487
+00:20:51,220 --> 00:20:53,260
+And if it's leaf, it depends on the number of keys.
+
+488
+00:20:53,260 --> 00:20:54,620
+If it's internal, it depends on the keys,
+
+489
+00:20:54,620 --> 00:20:55,700
+it depends on the children.
+
+490
+00:20:55,700 --> 00:20:59,300
+So essentially, it's like you either do the operation,
+
+491
+00:20:59,300 --> 00:21:02,180
+or you split the tree, change it around,
+
+492
+00:21:02,180 --> 00:21:04,700
+and then do the operation.
+
+493
+00:21:04,700 --> 00:21:07,620
+And again, B-trees have existed for a long time,
+
+494
+00:21:07,620 --> 00:21:09,500
+and it's a standard implementation
+
+495
+00:21:09,500 --> 00:21:11,740
+in almost every relational database.
+
+496
+00:21:11,740 --> 00:21:16,620
+And even non-relational databases use it as an index.
+
+497
+00:21:16,620 --> 00:21:20,220
+And it has, again, overlogging complexity
+
+498
+00:21:20,220 --> 00:21:22,100
+for performing these operations and maintains
+
+499
+00:21:22,100 --> 00:21:25,060
+the tree in a balanced way.
+
+500
+00:21:25,060 --> 00:21:27,420
+So B-trees are old, right?
+
+501
+00:21:27,420 --> 00:21:30,740
+But we're going to have a lot of improvements that
+
+502
+00:21:30,740 --> 00:21:32,460
+can happen on top of B-trees.
+
+503
+00:21:32,460 --> 00:21:35,700
+So one thing that we can do is copy and write,
+
+504
+00:21:35,700 --> 00:21:38,340
+which is rather than updating a page in a tree,
+
+505
+00:21:38,340 --> 00:21:40,260
+we're just going to create a new page
+
+506
+00:21:40,260 --> 00:21:43,180
+and then reference the new page rather than updating
+
+507
+00:21:43,180 --> 00:21:44,820
+the existing page.
+
+508
+00:21:44,820 --> 00:21:47,900
+And what we get out of this is something super cool,
+
+509
+00:21:47,900 --> 00:21:50,380
+which is really good concurrency.
+
+510
+00:21:50,380 --> 00:21:53,580
+Because for example, if someone is running a query at 8 AM,
+
+511
+00:21:53,580 --> 00:21:56,460
+and they look at the tree state at 8 AM,
+
+512
+00:21:56,460 --> 00:21:59,100
+they look at page at 8 AM, and after 8 AM,
+
+513
+00:21:59,100 --> 00:22:01,340
+there are several updates that happen to that tree, right?
+
+514
+00:22:01,340 --> 00:22:03,460
+So the references keep changing.
+
+515
+00:22:03,460 --> 00:22:05,300
+But since it's copy and write, there
+
+516
+00:22:05,300 --> 00:22:07,900
+are going to be new pages that kind of reference
+
+517
+00:22:07,900 --> 00:22:08,660
+newer queries.
+
+518
+00:22:08,660 --> 00:22:10,780
+So the query that you run at 8 o'clock,
+
+519
+00:22:10,780 --> 00:22:13,780
+it's going to return the result of the database at 8 o'clock.
+
+520
+00:22:13,780 --> 00:22:15,700
+It's not going to change as time moves,
+
+521
+00:22:15,700 --> 00:22:17,540
+even if your query takes a long time to run.
+
+522
+00:22:17,540 --> 00:22:19,260
+And this happens with every query that
+
+523
+00:22:19,260 --> 00:22:20,620
+runs at every point in time.
+
+524
+00:22:20,620 --> 00:22:22,500
+So we call this snapshot isolation.
+
+525
+00:22:22,500 --> 00:22:27,500
+And since we have this, we can actually,
+
+526
+00:22:27,500 --> 00:22:31,500
+so this is what databases call MVCC,
+
+527
+00:22:31,500 --> 00:22:33,500
+or Multi-Version Concurrency Control,
+
+528
+00:22:33,500 --> 00:22:36,500
+where you can have several versions of a single data
+
+529
+00:22:36,500 --> 00:22:39,500
+so that you have snapshot isolation in your database.
+
+530
+00:22:39,500 --> 00:22:41,500
+There is also the concept of wall logs,
+
+531
+00:22:41,500 --> 00:22:45,500
+where you just have app-only logs of B-tree operations
+
+532
+00:22:45,500 --> 00:22:48,500
+so that you can regenerate your B-tree if database crashes.
+
+533
+00:22:48,500 --> 00:22:50,500
+And you also have latches and latches.
+
+534
+00:22:50,500 --> 00:22:53,500
+So if a write happens, you can just lock a tree,
+
+535
+00:22:53,500 --> 00:22:56,500
+saying that there is a write happening so that concurrent
+
+536
+00:22:56,500 --> 00:22:58,500
+reads don't read dirty data.
+
+537
+00:22:58,500 --> 00:22:59,500
+Cool.
+
+538
+00:22:59,500 --> 00:23:00,500
+So just a quick plug.
+
+539
+00:23:00,500 --> 00:23:03,500
+EuroPython is another awesome conference
+
+540
+00:23:03,500 --> 00:23:08,500
+that is happening in 11th and 17th of July in Dublin, Ireland.
+
+541
+00:23:08,500 --> 00:23:10,500
+It's opening also remote.
+
+542
+00:23:10,500 --> 00:23:13,500
+And the program is going to be out in the next week-ish.
+
+543
+00:23:13,500 --> 00:23:16,500
+There is also a really amazing stuff called Maker Summit.
+
+544
+00:23:16,500 --> 00:23:17,500
+We have transcode.
+
+545
+00:23:17,500 --> 00:23:19,500
+Awesome stuff happening, so just check it out.
+
+546
+00:23:19,500 --> 00:23:21,500
+And thank you so much for coming.
+
+547
+00:23:21,500 --> 00:23:22,500
+I'm going to wrap this talk up.
+
+548
+00:23:22,500 --> 00:23:23,500
+Yeah.
+
+549
+00:23:23,500 --> 00:23:24,500
+Thank you so much for coming.
+
+550
+00:23:24,500 --> 00:23:25,500
+I'm going to wrap this talk up.
+
+551
+00:23:25,500 --> 00:23:26,500
+Yeah.
+
+552
+00:23:26,500 --> 00:23:27,500
+Yeah.
+

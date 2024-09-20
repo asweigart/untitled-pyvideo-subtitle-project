@@ -1,0 +1,1220 @@
+1
+00:00:00,000 --> 00:00:07,000
+Hello everybody. Let us give a warm welcome to Mr. Olivier. He's going to talk about how
+
+2
+00:00:12,400 --> 00:00:19,400
+to change Python while it's running.
+
+3
+00:00:30,000 --> 00:00:37,000
+Hi, everyone. Today I am going to show you how to change Python while it is running.
+
+4
+00:00:44,600 --> 00:00:49,200
+In other words, I am going to explain how live coding can be implemented in the Python
+
+5
+00:00:49,200 --> 00:00:56,200
+programming language. First, what is live coding? The definition that I'm going to use
+
+6
+00:00:57,200 --> 00:01:03,200
+is this. Live coding is a development process where a program is edited at the same time
+
+7
+00:01:03,200 --> 00:01:10,200
+as it is run. So the changes to that program may be observed in real time. For example,
+
+8
+00:01:12,200 --> 00:01:17,200
+at the bottom here, I have some code for a toy video game that I shamelessly pulled from
+
+9
+00:01:17,200 --> 00:01:22,200
+a Pygame tutorial. While the game is running, we might do something like change the way
+
+10
+00:01:22,400 --> 00:01:28,400
+the acceleration works. When we do that, the game immediately responds and uses the new
+
+11
+00:01:28,400 --> 00:01:34,120
+rules. Of course, this is very nice for game development because of all the instant feedback
+
+12
+00:01:34,120 --> 00:01:39,740
+that you get. But you could also use it to, say, update the rest backend without restarting
+
+13
+00:01:39,740 --> 00:01:45,180
+the server. Or you could fix a bug in the long-running machine learning program where
+
+14
+00:01:45,180 --> 00:01:52,180
+you don't want to rerun the expensive preprocessing program. So, this is a very useful tool.
+
+15
+00:01:52,200 --> 00:01:58,200
+And I'm going to show you a few examples of live coding for each change that you make.
+
+16
+00:01:58,200 --> 00:02:04,200
+So, if we look a bit at existing live coding platforms, you will see that a lot of them
+
+17
+00:02:04,200 --> 00:02:10,200
+are in the music creation space. For example, Super Collider or Sonic Pi. Because they allow
+
+18
+00:02:10,200 --> 00:02:15,200
+you to instantly hear how the changes that you make to the code and to the parameters
+
+19
+00:02:15,200 --> 00:02:21,200
+are reflected in the output, which is very helpful to get a feel for what is interesting
+
+20
+00:02:21,200 --> 00:02:26,200
+in the game. I must also mention the small tech language, which has been around since
+
+21
+00:02:26,200 --> 00:02:34,200
+the 70s. Its most well-known implementation, Squeak, as well as its fork Pharaoh, are built
+
+22
+00:02:35,200 --> 00:02:41,200
+around the concept of coding in a live environment, making it a pioneer in this field.
+
+23
+00:02:41,200 --> 00:02:48,200
+Regarding Python specifically, I think Jupyter notebooks kind of fit the idea, although it
+
+24
+00:02:48,200 --> 00:02:53,200
+is limited to the cells that you write in the notebook. It does have one nifty feature
+
+25
+00:02:53,200 --> 00:02:59,200
+that you can turn on called person autoreload, also available in IPython, which is probably
+
+26
+00:02:59,200 --> 00:03:05,200
+the closest existing thing to what I'm about to show you. Now, what I am about to show
+
+27
+00:03:05,200 --> 00:03:11,200
+you is my own live coding library, which is called Jurigged. And maybe if I have time,
+
+28
+00:03:11,200 --> 00:03:16,200
+I will also demonstrate a platform that I call Snack Talk, which I am building on top
+
+29
+00:03:16,200 --> 00:03:24,200
+of Jurigged. Before we dive any deeper into the mechanisms and implementations of live
+
+30
+00:03:24,200 --> 00:03:30,200
+coding in Python, I am going to describe precisely what it is that we aim to do, keeping in mind
+
+31
+00:03:30,200 --> 00:03:36,200
+that every decision we make here is going to have some trade-offs. The most basic thing
+
+32
+00:03:36,200 --> 00:03:42,200
+we want to do here is to be able to update functions in the middle of a program's execution.
+
+33
+00:03:42,200 --> 00:03:47,200
+And I really mean in the middle of it. So you start your program. It is executing,
+
+34
+00:03:47,200 --> 00:03:55,200
+as usual, one step at a time. And then at some point, you open one of the source files
+
+35
+00:03:55,200 --> 00:04:01,200
+with your favorite text editor. And you change the code of some function, and then you save.
+
+36
+00:04:02,200 --> 00:04:08,200
+What happens next? What we want to happen is that as soon as you save, we want to patch
+
+37
+00:04:08,200 --> 00:04:15,200
+the running process. We will keep the execution pointer where it is. So, for example, here
+
+38
+00:04:15,200 --> 00:04:22,200
+we were about to execute the y function, and we will keep our position in the execution.
+
+39
+00:04:22,200 --> 00:04:28,200
+And we will also keep the program state. But we will change the function, which means that
+
+40
+00:04:28,200 --> 00:04:35,200
+the next time that we call foo, the new code is run. And in a nutshell, that is essentially
+
+41
+00:04:35,200 --> 00:04:42,200
+all we aim to do here. But there are a lot of details to make a bit more precise.
+
+42
+00:04:44,200 --> 00:04:50,200
+For example, let's say we have this function f, which is in a module called mod.py,
+
+43
+00:04:50,200 --> 00:05:00,200
+and which I am using in this other module, test.py, inside this test function. So I will call f in three different ways.
+
+44
+00:05:00,200 --> 00:05:09,200
+First, I will fetch it from the module, mod.fx. The second way is that I am going to use this reference to f
+
+45
+00:05:09,200 --> 00:05:18,200
+that I have imported directly, or I will simply fetch it from a dictionary in which I have tucked the function.
+
+46
+00:05:18,200 --> 00:05:24,200
+These are all valid ways to call a function that are found in many existing Python programs.
+
+47
+00:05:24,200 --> 00:05:31,200
+And what I want is that if I change the source code for f in mod.py, I want all of these references to be updated.
+
+48
+00:05:31,200 --> 00:05:36,200
+In this case, they should all return the new result, which is 1000.
+
+49
+00:05:36,200 --> 00:05:45,200
+Now, you can see right away that simply rerunning that module mod.py is not enough, because it will just make a new f.
+
+50
+00:05:45,200 --> 00:05:51,200
+It will not change the existing value of f in test.py, nor the one that is tucked in the dictionary.
+
+51
+00:05:51,200 --> 00:05:58,200
+So the first call will be adjusted, but not the others. So this is something that we have to watch for.
+
+52
+00:05:58,200 --> 00:06:07,200
+Next, we also want to update methods. For example, maybe I want to add a talk method to the animal class.
+
+53
+00:06:08,200 --> 00:06:17,200
+Before I add this, if I create some animal, let's name her Bertha, and I ask her to talk, I will get an attribute error.
+
+54
+00:06:17,200 --> 00:06:24,200
+But in that same running program, if I add this talk method, what I want is not only future animals,
+
+55
+00:06:24,200 --> 00:06:29,200
+but also all existing animals should suddenly gain the ability to talk,
+
+56
+00:06:30,200 --> 00:06:37,200
+in which case even our dear Bertha will be suddenly gifted with that ability.
+
+57
+00:06:37,200 --> 00:06:44,200
+And likewise, if I was to change an existing method, I would want existing objects to use the new version.
+
+58
+00:06:44,200 --> 00:06:50,200
+Of course, there are some intrinsic limitations to what kind of changes are acceptable,
+
+59
+00:06:50,200 --> 00:06:57,200
+because while we can update behavior relatively easily, the same cannot be said of object state.
+
+60
+00:06:57,200 --> 00:07:05,200
+So if, for example, you change the way objects are initialized or change the internal structure of the data inside,
+
+61
+00:07:05,200 --> 00:07:09,200
+old objects may become inconsistent with the new behavior.
+
+62
+00:07:09,200 --> 00:07:13,200
+In this case, you might need to simply restart the program.
+
+63
+00:07:13,200 --> 00:07:18,200
+There is nothing that will work in every situation, of course.
+
+64
+00:07:19,200 --> 00:07:22,200
+Then we also want to update closures.
+
+65
+00:07:22,200 --> 00:07:30,200
+For those who might not be familiar with the term, a closure is a function that is nested inside another function.
+
+66
+00:07:30,200 --> 00:07:41,200
+For example, the one that I put in a dashed box is a closure, and it carries some state from the outer function, here, the variable X from adder.
+
+67
+00:07:41,200 --> 00:07:43,200
+This commonly happens in Python.
+
+68
+00:07:43,200 --> 00:07:45,200
+You've probably done this before.
+
+69
+00:07:45,200 --> 00:07:50,200
+For example, if you write a decorator that wraps a function to add some new behavior,
+
+70
+00:07:50,200 --> 00:07:55,200
+that proper function that is defined inside the decorator is a closure.
+
+71
+00:07:55,200 --> 00:08:03,200
+And the example that I'm showing here is merely the simplest closure that you could write.
+
+72
+00:08:03,200 --> 00:08:12,200
+The add function in the dashed box inside of adder will add X to whatever number is given as an argument.
+
+73
+00:08:12,200 --> 00:08:21,200
+So every time that we call adder, we create a new add function, which is packaged with the value of X for adder.
+
+74
+00:08:21,200 --> 00:08:27,200
+So add one is the add function packaged with the value one for X.
+
+75
+00:08:27,200 --> 00:08:35,200
+And in the other file, add two is the add function packaged with the value two for X.
+
+76
+00:08:36,200 --> 00:08:45,200
+So when we call this test function with giving 10 to add one and add two, we will get 11 and 12.
+
+77
+00:08:45,200 --> 00:08:54,200
+So if we change that add function, ideally, what we want to happen is that we want to change these closures.
+
+78
+00:08:54,200 --> 00:08:58,200
+We want add one to change, and we want add two to change.
+
+79
+00:08:58,200 --> 00:09:03,200
+So I changed the plus for inexplicably for a multiplication sign.
+
+80
+00:09:03,200 --> 00:09:08,200
+So now tests should return 10 and 20.
+
+81
+00:09:08,200 --> 00:09:13,200
+So one thing I will note is that if you use percent total reload in IPython,
+
+82
+00:09:13,200 --> 00:09:22,200
+it will effectively properly change add one because it is rerunning the module, but it will miss add two.
+
+83
+00:09:22,200 --> 00:09:30,200
+So in this case, you will get instead of 10, 20, you will get 10, 12, which is inconsistent.
+
+84
+00:09:30,200 --> 00:09:32,200
+Again, there are some limitations.
+
+85
+00:09:32,200 --> 00:09:41,200
+For example, you cannot ask for more variables from the outer scope in the inner function than the ones that the original asked for.
+
+86
+00:09:41,200 --> 00:09:48,200
+So if there was another variable Z that you wanted to capture from adder that was not captured previously,
+
+87
+00:09:48,200 --> 00:09:53,200
+you could not capture it because you cannot do that after the fact.
+
+88
+00:09:53,200 --> 00:09:59,200
+It might already be gone and already collected by the garbage collector.
+
+89
+00:09:59,200 --> 00:10:04,200
+And the last requirement that I'm going to mention is precision.
+
+90
+00:10:04,200 --> 00:10:09,200
+By precision, I mean that we should only update what needs to be.
+
+91
+00:10:09,200 --> 00:10:17,200
+For example, here I have a little program that simply loops over user input and calls the user input.
+
+92
+00:10:17,200 --> 00:10:22,200
+And calls F on every number that the user gives.
+
+93
+00:10:22,200 --> 00:10:28,200
+If we update F, we would like to keep running that while loop.
+
+94
+00:10:28,200 --> 00:10:36,200
+But the next iteration we will get we will call the new version of F on the next input.
+
+95
+00:10:36,200 --> 00:10:41,200
+The issue, of course, is that F is in the same file as the while loop.
+
+96
+00:10:41,200 --> 00:10:47,200
+So we want to avoid running it again in the process of updating part of the code.
+
+97
+00:10:47,200 --> 00:10:52,200
+This is something that I haven't really seen an existing solution do in Python.
+
+98
+00:10:52,200 --> 00:11:05,200
+Maybe I missed it, but I feel that it's important because a lot of the functionality that someone might want to change your program is in the main script file.
+
+99
+00:11:05,200 --> 00:11:12,200
+So you want to be able to do these updates without rerunning the script from the beginning.
+
+100
+00:11:12,200 --> 00:11:15,200
+So how are we going to go about this?
+
+101
+00:11:15,200 --> 00:11:20,200
+Well, the method that we're going to use is hot patching.
+
+102
+00:11:20,200 --> 00:11:30,200
+So that's basically just patching functions during a live instance of a program.
+
+103
+00:11:31,200 --> 00:11:33,200
+So.
+
+104
+00:11:39,200 --> 00:11:48,200
+To understand how to patch Python code, we first need to understand how the data structures for functions work.
+
+105
+00:11:48,200 --> 00:11:57,200
+So I've taken the same closure example as before, but with outer and inner as the function names.
+
+106
+00:11:57,200 --> 00:12:02,200
+And the structure of the function behind that is as follows.
+
+107
+00:12:02,200 --> 00:12:09,200
+So the top left box is the function object for outer.
+
+108
+00:12:09,200 --> 00:12:12,200
+And it contains many fields.
+
+109
+00:12:12,200 --> 00:12:17,200
+But the important one that I want to focus on is Dunder code here.
+
+110
+00:12:17,200 --> 00:12:22,200
+When I say Dunder, I mean two underscores before and two underscores after.
+
+111
+00:12:22,200 --> 00:12:25,200
+Just so you know.
+
+112
+00:12:25,200 --> 00:12:34,200
+And that field, Dunder code, points to a different object, a code object, which also contains many fields that pertain to the function.
+
+113
+00:12:34,200 --> 00:12:38,200
+For example, there is argument code and there's many other things.
+
+114
+00:12:38,200 --> 00:12:43,200
+But there's also this field that points to the bytecode for the function.
+
+115
+00:12:43,200 --> 00:12:52,200
+So when we call the outer function, it will read the Dunder code pointer and fetch that code type object.
+
+116
+00:12:52,200 --> 00:12:56,200
+And then it will read the bytecode and execute it.
+
+117
+00:12:56,200 --> 00:13:09,200
+If we have inner functions, then at some point we will need to create a function object for the inner function.
+
+118
+00:13:09,200 --> 00:13:18,200
+In its Dunder closure field, we will put a couple of cells that contain the variables that we're capturing, in this case X.
+
+119
+00:13:18,200 --> 00:13:24,200
+And the Dunder code pointer will point to the code object for the inner function.
+
+120
+00:13:24,200 --> 00:13:33,200
+And that object is originally contained in the co-under-store-core-consts field of the outer functions code object.
+
+121
+00:13:33,200 --> 00:13:46,200
+So that's simply a list of all the constants that are needed for execution, like literals, true, false, and certain code objects.
+
+122
+00:13:46,200 --> 00:13:55,200
+So ultimately, as I've explained, we may have multiple function instances that correspond to different captured values,
+
+123
+00:13:55,200 --> 00:14:01,200
+but they all point to the same code object, ultimately.
+
+124
+00:14:01,200 --> 00:14:10,200
+Now, the interesting thing about Python is that these Dunder code pointers can be modified.
+
+125
+00:14:10,200 --> 00:14:20,200
+So you can take any existing function object and change that pointer to point to the code of some other function or an object that you've made yourself.
+
+126
+00:14:20,200 --> 00:14:25,200
+This can be risky. If you do the wrong thing, you can actually cause a segfault.
+
+127
+00:14:25,200 --> 00:14:31,200
+But it basically allows you to change the behavior of a function on the fly.
+
+128
+00:14:31,200 --> 00:14:33,200
+So here's what we want to do.
+
+129
+00:14:33,200 --> 00:14:40,200
+Whenever we have new code, we want to identify all of the functions that point to the old code.
+
+130
+00:14:40,200 --> 00:14:48,200
+And we want to change all the Dunder code pointers from the old code to the new code.
+
+131
+00:14:48,200 --> 00:14:55,200
+All right. With this in mind, here's the plan.
+
+132
+00:14:55,200 --> 00:14:58,200
+First, we need to detect if a source file has changed.
+
+133
+00:14:58,200 --> 00:15:01,200
+There are already libraries that do that very well.
+
+134
+00:15:01,200 --> 00:15:05,200
+For example, watchdog, which is what I have used.
+
+135
+00:15:05,200 --> 00:15:07,200
+So we can simply watch for changes in the background.
+
+136
+00:15:07,200 --> 00:15:14,200
+And when there is a change, we can asynchronously make the patch.
+
+137
+00:15:14,200 --> 00:15:19,200
+Then we need to identify which function or which functions were changed.
+
+138
+00:15:19,200 --> 00:15:29,200
+This involves doing a structural diff between the old source code and the new and stripping away the unchanged parts.
+
+139
+00:15:29,200 --> 00:15:34,200
+So I don't think I really have time to go in deep detail about that one.
+
+140
+00:15:34,200 --> 00:15:36,200
+So I will leave it at that.
+
+141
+00:15:36,200 --> 00:15:42,200
+There are a few ways you could do this, some that are better than some others.
+
+142
+00:15:42,200 --> 00:15:48,200
+Once we have that, we will compile the new code in isolation to get a new code object.
+
+143
+00:15:48,200 --> 00:15:55,200
+And then we need to find the old code object that corresponds to what was changed.
+
+144
+00:15:55,200 --> 00:15:57,200
+That step requires a bit of thinking.
+
+145
+00:15:57,200 --> 00:16:06,200
+Naively, you would think that it would be easy to find because if I change the function f in module m,
+
+146
+00:16:06,200 --> 00:16:10,200
+then in module m, if I get the attribute f, it should basically be there.
+
+147
+00:16:10,200 --> 00:16:14,200
+And 99% of the case, that's kind of true.
+
+148
+00:16:14,200 --> 00:16:20,200
+But the truth is that could be anywhere.
+
+149
+00:16:20,200 --> 00:16:25,200
+For example, maybe it is a function that has a decorator.
+
+150
+00:16:25,200 --> 00:16:35,200
+And that decorator stashed it deep in a dictionary or a different module because maybe it's a handler for root on a web server.
+
+151
+00:16:35,200 --> 00:16:40,200
+There are legitimate cases where that would happen, of course.
+
+152
+00:16:40,200 --> 00:16:46,200
+Maybe also the decorator has executed it and threw it away.
+
+153
+00:16:46,200 --> 00:16:50,200
+So it's not even around anymore. There's nothing to update.
+
+154
+00:16:50,200 --> 00:16:55,200
+But in order to figure that out, you would basically need to explore the entire heap.
+
+155
+00:16:55,200 --> 00:17:02,200
+And ultimately, I don't think there is really any other solution to be thorough.
+
+156
+00:17:02,200 --> 00:17:07,200
+So I've basically done exactly that, but using the garbage collection module.
+
+157
+00:17:07,200 --> 00:17:14,200
+So using the GC module, you can get all the objects and basically find all the functions,
+
+158
+00:17:14,200 --> 00:17:18,200
+cache their code objects, file and line number.
+
+159
+00:17:18,200 --> 00:17:28,200
+A priori that's pretty expensive, but ideally we would do it once at the beginning if the hot patching module is imported early.
+
+160
+00:17:28,200 --> 00:17:31,200
+And in that case, that's not too bad.
+
+161
+00:17:31,200 --> 00:17:37,200
+But of course, it raises the question of what about modules that are loaded afterwards?
+
+162
+00:17:37,200 --> 00:17:45,200
+Right. Thankfully, this is kind of easier because we have the latitude to set things up.
+
+163
+00:17:45,200 --> 00:17:52,200
+One good way I have found to do this is to use the audit hook feature.
+
+164
+00:17:52,200 --> 00:17:55,200
+This is a feature that was added in Python 3.8.
+
+165
+00:17:55,200 --> 00:18:05,200
+Essentially, it is a way to listen for events about the Python runtime when we open a file, when we fork a process and so on.
+
+166
+00:18:05,200 --> 00:18:08,200
+And also whenever we execute code.
+
+167
+00:18:08,200 --> 00:18:13,200
+So whenever a new module is imported or whenever we execute user code,
+
+168
+00:18:13,200 --> 00:18:18,200
+there will be the exec audit event that will be triggered that you can watch for.
+
+169
+00:18:18,200 --> 00:18:22,200
+And it will give you the code objects prior to execution.
+
+170
+00:18:22,200 --> 00:18:27,200
+So you can harvest the objects from there.
+
+171
+00:18:27,200 --> 00:18:34,200
+This is basically the simplest and easiest way to have found to do this.
+
+172
+00:18:34,200 --> 00:18:43,200
+But still, that's not entirely enough because we need to get a handle on every function object that points to that code object.
+
+173
+00:18:43,200 --> 00:18:48,200
+Now, many function objects can have the same code object.
+
+174
+00:18:48,200 --> 00:18:57,200
+And even though we called get object earlier, they may have been created afterwards.
+
+175
+00:18:57,200 --> 00:19:05,200
+But in this case, there is still the get refers function in the GC module that will help us basically find all of them.
+
+176
+00:19:05,200 --> 00:19:13,200
+Again, this operation is proportional to the number of objects in the heap, as I found out.
+
+177
+00:19:13,200 --> 00:19:17,200
+But hot patching is not an operation that happens often.
+
+178
+00:19:17,200 --> 00:19:23,200
+And frankly, it needs to be really big before it is noticeable.
+
+179
+00:19:23,200 --> 00:19:29,200
+Now that we have everything, we can finally swap out the pointers.
+
+180
+00:19:29,200 --> 00:19:32,200
+And then we profit.
+
+181
+00:19:32,200 --> 00:19:34,200
+Now, are we done?
+
+182
+00:19:34,200 --> 00:19:39,200
+Well, there are still a few kinks to iron out, I would say.
+
+183
+00:19:39,200 --> 00:19:48,200
+For example, if you only update code selectively for certain functions and they have a different number of lines than before,
+
+184
+00:19:48,200 --> 00:19:55,200
+then any function that is unchanged but comes afterwards will now have the wrong line numbers in trace packs.
+
+185
+00:19:55,200 --> 00:20:05,200
+So if we want to have the good line numbers, and we certainly do, then we also need to do some work to update these.
+
+186
+00:20:05,200 --> 00:20:13,200
+Another issue is that complex decorators that rely on code inspection or code signature inspection will fail.
+
+187
+00:20:13,200 --> 00:20:20,200
+So what I'm thinking of in this case are just-in-time compilers, for example, Jax.
+
+188
+00:20:20,200 --> 00:20:30,200
+I'm also thinking about single or multiple dispatch libraries that use, for example, type annotations to do the dispatch.
+
+189
+00:20:30,200 --> 00:20:34,200
+And let me give you an example of that.
+
+190
+00:20:34,200 --> 00:20:40,200
+So this is code that uses a multiple dispatch library that I have written called OVLD,
+
+191
+00:20:41,200 --> 00:20:44,200
+which you can install with pip and try out if you want.
+
+192
+00:20:44,200 --> 00:20:47,200
+It's pretty cool.
+
+193
+00:20:47,200 --> 00:20:55,200
+So, yeah, in this simple example, I basically define a function f that has two behaviors.
+
+194
+00:20:55,200 --> 00:21:00,200
+So if the argument is an int, then it will do this multiplication.
+
+195
+00:21:00,200 --> 00:21:06,200
+And then there's a fallback function whenever it doesn't find a match that will just shrug.
+
+196
+00:21:06,200 --> 00:21:12,200
+So what happens if we change these definitions so that instead of an int, we will have a float here,
+
+197
+00:21:12,200 --> 00:21:20,200
+and we will add another dispatch so that we can do something special when the input is a string.
+
+198
+00:21:20,200 --> 00:21:29,200
+So ideally, we want the behavior to be adjusted so that before when we called f with an int, we got 100.
+
+199
+00:21:29,200 --> 00:21:31,200
+But now there is no function for int.
+
+200
+00:21:31,200 --> 00:21:36,200
+So now it shrugs after the change and the same for float.
+
+201
+00:21:36,200 --> 00:21:44,200
+And for strings, it goes from shrugging to being warm and welcoming.
+
+202
+00:21:44,200 --> 00:21:54,200
+The problem is that we cannot simply recreate a new OVLD object because other references may exist and they would become out of sync and erroneous.
+
+203
+00:21:54,200 --> 00:21:59,200
+So we kind of want to update the existing object.
+
+204
+00:21:59,200 --> 00:22:06,200
+At the same time, if we are going to do that, we need to update the internal state of that object.
+
+205
+00:22:06,200 --> 00:22:17,200
+So if it has, for example, a cache of the name of a type to a function to call for that type, we need to update that.
+
+206
+00:22:17,200 --> 00:22:22,200
+And there's really no generic way that it could know how to do that.
+
+207
+00:22:22,200 --> 00:22:25,200
+It has to be a special code.
+
+208
+00:22:25,200 --> 00:22:31,200
+But what if we had a protocol that libraries could opt into?
+
+209
+00:22:31,200 --> 00:22:38,200
+I have made one which may not be perfect, and the implementation might still be a bit buggy.
+
+210
+00:22:38,200 --> 00:22:40,200
+But here it is.
+
+211
+00:22:40,200 --> 00:22:42,200
+The idea is this.
+
+212
+00:22:42,200 --> 00:22:49,200
+When we have a code object and we search for the function that point to it, we could also search for a special kind of object.
+
+213
+00:22:49,200 --> 00:22:54,200
+For example, this kind of conformer object.
+
+214
+00:22:54,200 --> 00:23:00,200
+So when we do get refers, it will find this link between the function and the code.
+
+215
+00:23:00,200 --> 00:23:03,200
+And it will also find this link.
+
+216
+00:23:03,200 --> 00:23:11,200
+And if it sees that, it sees a link with an object that has a Dunder conform method, it would know that, okay, I have to call this with the new code.
+
+217
+00:23:12,200 --> 00:23:21,200
+And then that object would know how to update the internal data structures of the other object, which is neat.
+
+218
+00:23:21,200 --> 00:23:32,200
+I think this is a fairly nice way to do it because it also avoids having a dependency on the hot patching library or any external library.
+
+219
+00:23:32,200 --> 00:23:41,200
+You just need to define that object and connect the things properly and make sure that the reference to it is saved somewhere.
+
+220
+00:23:41,200 --> 00:23:46,200
+And then if we're doing live coding, that will be helpful.
+
+221
+00:23:46,200 --> 00:23:49,200
+Otherwise, it will just sit there and do nothing.
+
+222
+00:23:49,200 --> 00:23:51,200
+Right.
+
+223
+00:23:51,200 --> 00:23:52,200
+Okay.
+
+224
+00:23:52,200 --> 00:23:55,200
+So we're nearing the end.
+
+225
+00:23:55,200 --> 00:24:03,200
+So something that I wanted to do is show you a bit how direct works.
+
+226
+00:24:03,200 --> 00:24:18,200
+So I'm going to...
+
+227
+00:24:18,200 --> 00:24:23,200
+Okay.
+
+228
+00:24:23,200 --> 00:24:24,200
+All right.
+
+229
+00:24:24,200 --> 00:24:32,200
+I assume that's big enough, I hope.
+
+230
+00:24:32,200 --> 00:24:38,200
+Okay. So the way direct worked is that it works exactly the same.
+
+231
+00:24:38,200 --> 00:24:41,200
+Like you can substitute the Python for it.
+
+232
+00:24:41,200 --> 00:24:45,200
+So instead of Python bottle.py, you can use direct bottle.py.
+
+233
+00:24:45,200 --> 00:24:49,200
+I'm going to add the V flag so that it's verbose.
+
+234
+00:24:49,200 --> 00:24:50,200
+And okay.
+
+235
+00:24:50,200 --> 00:24:57,200
+So here I have just the bottles of beer song that is being printed out.
+
+236
+00:24:57,200 --> 00:25:03,200
+But I can, if I want, change the code to be a bit more child-friendly.
+
+237
+00:25:03,200 --> 00:25:11,200
+So now I have pints of milk instead of bottles of beer.
+
+238
+00:25:11,200 --> 00:25:15,200
+I can do silly stuff.
+
+239
+00:25:15,200 --> 00:25:20,200
+And now it's a snake that's talking.
+
+240
+00:25:20,200 --> 00:25:24,200
+One thing I will mention is that if you...
+
+241
+00:25:24,200 --> 00:25:29,200
+You cannot modify functions that are currently running.
+
+242
+00:25:29,200 --> 00:25:35,200
+Well, you can, but the changes would only take effect after the second time you call it.
+
+243
+00:25:35,200 --> 00:25:43,200
+So for example, I have updated this here in the sing method, but it is still going one at a time.
+
+244
+00:25:43,200 --> 00:25:46,200
+Because it is in the middle of executing sing.
+
+245
+00:25:46,200 --> 00:25:51,200
+But the next time I would call sing, it would adjust.
+
+246
+00:25:51,200 --> 00:25:54,200
+I can change this, though.
+
+247
+00:25:54,200 --> 00:25:57,200
+To go a bit faster.
+
+248
+00:25:57,200 --> 00:26:03,200
+So that is one way you can use Jreg on any existing program.
+
+249
+00:26:03,200 --> 00:26:12,200
+I also wanted a way to use it in a development setting where you're not necessarily organized with...
+
+250
+00:26:12,200 --> 00:26:20,200
+Where you didn't necessarily write your own loop and so on.
+
+251
+00:26:20,200 --> 00:26:24,200
+So I have this other example here.
+
+252
+00:26:24,200 --> 00:26:28,200
+So this is just a simple example.
+
+253
+00:26:28,200 --> 00:26:34,200
+So the idea is that when we execute this, we get this little interface.
+
+254
+00:26:34,200 --> 00:26:37,200
+Where everything that's on standard out is printed out.
+
+255
+00:26:37,200 --> 00:26:42,200
+And we also get the result here.
+
+256
+00:26:42,200 --> 00:26:47,200
+So of course I can...
+
+257
+00:26:47,200 --> 00:26:49,200
+I can change this here.
+
+258
+00:26:49,200 --> 00:26:56,200
+And it re-executes from the main function, which I have specified on the command line.
+
+259
+00:26:56,200 --> 00:26:58,200
+So you can specify any function in a module.
+
+260
+00:26:58,200 --> 00:27:03,200
+It will basically stop there and let you develop it restarting if needed.
+
+261
+00:27:03,200 --> 00:27:05,200
+I can modify other functions.
+
+262
+00:27:05,200 --> 00:27:11,200
+Like I can remove the sorting and then it doesn't sort anymore.
+
+263
+00:27:11,200 --> 00:27:13,200
+I can do...
+
+264
+00:27:13,200 --> 00:27:18,200
+If I do something that is an error.
+
+265
+00:27:18,200 --> 00:27:20,200
+Like this.
+
+266
+00:27:20,200 --> 00:27:23,200
+Then it will show me the error.
+
+267
+00:27:23,200 --> 00:27:28,200
+And I can fix it and it will run the thing again.
+
+268
+00:27:28,200 --> 00:27:30,200
+And then finally I can continue.
+
+269
+00:27:30,200 --> 00:27:34,200
+And then it will just continue the normal execution of the program.
+
+270
+00:27:34,200 --> 00:27:38,200
+Right.
+
+271
+00:27:38,200 --> 00:27:40,200
+Okay. I still have a minute.
+
+272
+00:27:40,200 --> 00:27:46,200
+So the other thing I'm going to show you is Snack Talk.
+
+273
+00:27:46,200 --> 00:27:50,200
+So this is something that I have built on top of Chirigged.
+
+274
+00:27:50,200 --> 00:27:56,200
+Right.
+
+275
+00:27:56,200 --> 00:28:06,200
+So this is an interface where you can print out arbitrary objects and they have this graphical representation.
+
+276
+00:28:06,200 --> 00:28:10,200
+So that's the random colors function.
+
+277
+00:28:10,200 --> 00:28:14,200
+I can choose to edit it.
+
+278
+00:28:14,200 --> 00:28:20,200
+Okay. That was actually the edit I wanted to make.
+
+279
+00:28:20,200 --> 00:28:23,200
+But...
+
+280
+00:28:23,200 --> 00:28:26,200
+Yeah. So...
+
+281
+00:28:26,200 --> 00:28:32,200
+So I can basically change it.
+
+282
+00:28:32,200 --> 00:28:39,200
+And it will...
+
+283
+00:28:39,200 --> 00:28:41,200
+And it will change the behavior.
+
+284
+00:28:41,200 --> 00:28:44,200
+But I can also save it.
+
+285
+00:28:44,200 --> 00:28:50,200
+So you can see the code in our general source file here.
+
+286
+00:28:50,200 --> 00:28:55,200
+Once I've changed it here, I can choose to save it.
+
+287
+00:28:55,200 --> 00:29:00,200
+And then it saves it back into the original source file.
+
+288
+00:29:00,200 --> 00:29:07,200
+You can also use it to, I don't know...
+
+289
+00:29:07,200 --> 00:29:11,200
+To edit built-ins and stuff like that.
+
+290
+00:29:11,200 --> 00:29:13,200
+You can even save them back.
+
+291
+00:29:13,200 --> 00:29:18,200
+That's like the worst foot gun I've ever written.
+
+292
+00:29:18,200 --> 00:29:27,200
+But anyway, that's basically it for that.
+
+293
+00:29:27,200 --> 00:29:29,200
+Okay.
+
+294
+00:29:29,200 --> 00:29:31,200
+So, right.
+
+295
+00:29:31,200 --> 00:29:37,200
+So in conclusion, it is possible to add patch functions, methods, closures most of the time,
+
+296
+00:29:37,200 --> 00:29:40,200
+which is what I have implemented in Chirigged.
+
+297
+00:29:40,200 --> 00:29:45,200
+It is also possible to implement multiple dispatch and code transforms via our protocol.
+
+298
+00:29:45,200 --> 00:29:49,200
+Here I have called it the DunderConform protocol.
+
+299
+00:29:49,200 --> 00:29:53,200
+And I've implemented it in a separate library that I called CodeFind.
+
+300
+00:29:53,200 --> 00:29:58,200
+If anyone wants to look at it, I would appreciate it.
+
+301
+00:29:58,200 --> 00:30:02,200
+So, yeah. That's it. Thank you.
+
+302
+00:30:02,200 --> 00:30:06,200
+If you want to have the slides, you can scan the Chirigged code.
+
+303
+00:30:06,200 --> 00:30:11,200
+And also if you want to try out Chirigged, I have also a QR code for that.
+
+304
+00:30:11,200 --> 00:30:14,200
+So that's it. Thank you very much.
+
+305
+00:30:14,200 --> 00:30:17,200
+Thank you very much, Oliver.
+

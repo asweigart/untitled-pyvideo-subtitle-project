@@ -1,0 +1,1296 @@
+1
+00:00:00,000 --> 00:00:10,720
+Hello, everyone. We are ready to start our next session. I'm very happy to announce that
+
+2
+00:00:10,720 --> 00:00:16,280
+we'll have Pradeep and Graham talk about how we can use the Python typing system to actually
+
+3
+00:00:16,280 --> 00:00:23,880
+improve the security of our application. Yeah, give them a big shout out and take it away.
+
+4
+00:00:23,880 --> 00:00:30,040
+Thanks. So today we're going to talk about securing code with the Python type system.
+
+5
+00:00:30,040 --> 00:00:34,480
+Very briefly, my name is Graham Blini. I'm a security engineer at Meta, the artist formerly
+
+6
+00:00:34,480 --> 00:00:39,680
+known as Facebook. And I focus on all things Python security. I do security reviews, framework,
+
+7
+00:00:39,680 --> 00:00:44,760
+stack analysis, and trainings for the Python security world. I'm Pradeep. I do work at Meta.
+
+8
+00:00:44,760 --> 00:00:49,960
+I work on the Pyre type checker and the Pisa security tool, which is run every day in Instagram
+
+9
+00:00:49,960 --> 00:00:55,320
+on millions of lines of code to catch security vulnerabilities. The way this presentation is
+
+10
+00:00:55,320 --> 00:00:57,840
+going to run, we're going to have a quick introduction, and we're going to spend most of our
+
+11
+00:00:57,840 --> 00:01:02,200
+time talking about security solutions that types enable. After that, hopefully you're going to be
+
+12
+00:01:02,200 --> 00:01:05,960
+sold on the concept of types being useful for security, and you're going to want to be adding
+
+13
+00:01:05,960 --> 00:01:09,320
+more or adding types for the first time to your code, and we're going to talk about how you can
+
+14
+00:01:09,320 --> 00:01:13,960
+do that. Then we're going to finish off with some conclusions. So to start off the introduction,
+
+15
+00:01:13,960 --> 00:01:18,240
+we're talking about this concept of security that we focus on at Meta called shifting left.
+
+16
+00:01:19,000 --> 00:01:25,000
+The idea is there's this continuum of bug badness, and the rightmost side of the continuum is the
+
+17
+00:01:25,000 --> 00:01:30,080
+worst place to be. It's when a bug is out there and it's been exploited, and that's awful. Things
+
+18
+00:01:30,080 --> 00:01:34,280
+have happened, user data has been compromised, whatever. We don't want that. So we want to shift
+
+19
+00:01:34,280 --> 00:01:39,160
+left. The next best case scenario that's still pretty bad is the bug is never found. We don't
+
+20
+00:01:39,160 --> 00:01:43,600
+find it, but the bad guys don't find it either. Better than that is when it's found externally
+
+21
+00:01:43,600 --> 00:01:48,880
+by someone who reports it to us, so through our bug bounty program or something like that. Even
+
+22
+00:01:48,880 --> 00:01:52,040
+better after that is we find it ourselves through some kind of manual review. So we've got a team
+
+23
+00:01:52,040 --> 00:01:57,560
+of security engineers, they look at the code, they find the bug, and we get it fixed. Even better
+
+24
+00:01:57,560 --> 00:02:01,520
+than that, and we're getting into good scenarios now, is when it's found automatically. So our
+
+25
+00:02:01,520 --> 00:02:05,240
+tooling finds the bug and tells us about it, and a human doesn't need to be involved to find that
+
+26
+00:02:05,240 --> 00:02:09,720
+bug at all. And then finally, our absolute best case scenario is we prevent the bug. We just make
+
+27
+00:02:09,760 --> 00:02:15,680
+it impossible for that bug to exist. And so these sort of middle pieces here, the human review
+
+28
+00:02:15,680 --> 00:02:19,280
+aspects where it's either done by a security engineer at the company or by like the external
+
+29
+00:02:19,280 --> 00:02:23,720
+bug bounty program, those are necessary, but they don't scale, right? You can't run that on
+
+30
+00:02:23,720 --> 00:02:28,560
+billions of lines of code, and you can't run that on all the changes that happen every day, too. So
+
+31
+00:02:28,560 --> 00:02:32,800
+the ideal state for us is always to have all of our bugs either being prevented or found
+
+32
+00:02:32,800 --> 00:02:38,160
+automatically. And now if we shift over and start thinking about a sort of a small security team,
+
+33
+00:02:38,200 --> 00:02:42,560
+either your open source project or a company that's not tens of thousands of engineers,
+
+34
+00:02:42,560 --> 00:02:47,200
+the only realistic place to be for security is in the prevented and the found automatically
+
+35
+00:02:47,200 --> 00:02:50,880
+space. I don't know how many open source projects really have like a team of security engineers
+
+36
+00:02:50,880 --> 00:02:55,600
+looking at their code or a robust bug bounty program, that kind of thing. So we want to focus
+
+37
+00:02:55,600 --> 00:03:00,440
+the talk on the prevention and the automatic detection side of things. And the thesis that
+
+38
+00:03:00,440 --> 00:03:05,120
+we're going to present in this talk is that typing annotations can help continuously prevent and
+
+39
+00:03:05,120 --> 00:03:09,480
+detect vulnerabilities. So you can be in those sort of left two spots where everyone wants to be
+
+40
+00:03:09,480 --> 00:03:15,560
+using type annotations. And the goal is you're going to end up leaving this talk, leaving the
+
+41
+00:03:15,560 --> 00:03:19,280
+thesis, and you're going to want to adopt types in your project if you don't have them, or
+
+42
+00:03:19,280 --> 00:03:22,720
+critically, you're going to want to improve type annotations in your project if you've already
+
+43
+00:03:22,720 --> 00:03:28,360
+got them. The way this talk is going to go is everything's going to be framed around a sample
+
+44
+00:03:28,360 --> 00:03:33,840
+application. So a simple web server that lets you load photos and look at them, and it's just set
+
+45
+00:03:33,840 --> 00:03:38,280
+up and contrived such that there are some vulnerabilities in it and there are some ways that
+
+46
+00:03:38,280 --> 00:03:42,960
+you can detect those vulnerabilities. The main two endpoints we're going to talk about are pictures
+
+47
+00:03:42,960 --> 00:03:47,480
+by user, and it simply takes a request for a username, you're looking for Susan's photos, and
+
+48
+00:03:47,480 --> 00:03:52,240
+you get back a list of Susan's photos. The other endpoint we're going to talk about is picture by
+
+49
+00:03:52,240 --> 00:03:59,240
+ID. You're going to give it a picture ID for what you want to load, and you get that ID back. So now
+
+50
+00:03:59,240 --> 00:04:02,920
+I'm going to hand it off to Pritip to talk about the first security solution that's enabled by
+
+51
+00:04:02,920 --> 00:04:09,000
+types. Thanks, Graham. So welcome to the first talk of the morning. I hope you all had some
+
+52
+00:04:09,000 --> 00:04:15,680
+caffeine because we're going to see a bunch of Python code on the slides here. So let's look at
+
+53
+00:04:15,680 --> 00:04:20,760
+the first scenario here. Let's say our toy website becomes popular and celebrities start using it.
+
+54
+00:04:20,760 --> 00:04:26,440
+One day we might get a complaint from a celebrity saying that their pictures have vanished. We try
+
+55
+00:04:26,440 --> 00:04:31,480
+to load pictures for that celebrity and get a blank screen. Looks like an attacker somehow
+
+56
+00:04:31,480 --> 00:04:38,800
+deleted all their pictures. How could that have happened? So a legitimate request for pictures
+
+57
+00:04:38,800 --> 00:04:43,960
+looks like this. You pass in the username for the celebrity, and the code for that is basically
+
+58
+00:04:43,960 --> 00:04:50,040
+something that builds a SQL query which selects pictures where the username matches the given
+
+59
+00:04:50,040 --> 00:04:56,880
+username, and you execute that SQL query and return it to the user. Digging into the logs,
+
+60
+00:04:56,920 --> 00:05:03,880
+we see something like this where the attacker passed in a weird username, and if you insert
+
+61
+00:05:03,880 --> 00:05:08,960
+that into our SQL query, we get something like this. In SQL, this is actually two commands. One
+
+62
+00:05:08,960 --> 00:05:15,600
+to select pictures and the other to delete pictures for our celebrity. So this is known as a SQL
+
+63
+00:05:15,600 --> 00:05:22,840
+injection attack where you're injecting the SQL into your existing command and thereby the attacker
+
+64
+00:05:22,840 --> 00:05:28,520
+is running arbitrary SQL commands or deleting or reading data that they're not supposed to.
+
+65
+00:05:28,520 --> 00:05:33,760
+In this talk, I'll use SQL injection as an example because many of you are probably familiar with it,
+
+66
+00:05:33,760 --> 00:05:37,600
+but what we see in this section will apply to things like shell command injection and
+
+67
+00:05:37,600 --> 00:05:42,400
+other kinds of vulnerabilities. So SQL injection has been known for decades now,
+
+68
+00:05:42,400 --> 00:05:47,840
+but it's still widespread. It's so widespread that the docs explicitly warn you never,
+
+69
+00:05:47,840 --> 00:05:54,080
+never, never use Python string concatenation or string interpolation to insert variables into
+
+70
+00:05:54,080 --> 00:06:02,360
+your query, not even at gunpoint. So what they say is don't use F strings like this because it
+
+71
+00:06:02,360 --> 00:06:08,080
+mixes the command with the data and allows the attacker to do mischief. What you're supposed to
+
+72
+00:06:08,080 --> 00:06:13,680
+do is to separate the command and the data. So the way you do that is that libraries usually have
+
+73
+00:06:13,680 --> 00:06:19,200
+some way for you to substitute parameters into your query. So here it might be a question mark,
+
+74
+00:06:19,200 --> 00:06:24,320
+you pass in the data separately. The library guarantees that no matter what data you pass in,
+
+75
+00:06:24,320 --> 00:06:32,800
+the only command that is run is this one. However, it's frankly more convenient to use the unsafe
+
+76
+00:06:32,800 --> 00:06:39,760
+F string approach. New users may not have read the docs, they may not know that a parameter
+
+77
+00:06:39,760 --> 00:06:45,480
+substitution approach exists or that F strings are dangerous here. So the point is it's not much
+
+78
+00:06:45,480 --> 00:06:51,480
+good having a best practice if the path of least effort is to do the unsafe thing. So is there a
+
+79
+00:06:51,480 --> 00:06:57,880
+way library authors can somehow make the unsafe approach inconvenient? So one option that you
+
+80
+00:06:57,880 --> 00:07:02,080
+might have heard about is a security linter. You probably heard of tools such as Bandit. So if
+
+81
+00:07:02,080 --> 00:07:06,920
+you have unsafe code like this and you run the linter, it will warn you saying that you're running
+
+82
+00:07:06,920 --> 00:07:12,880
+potentially unsafe SQL, change your code, which is good. However, in practice, we found that these
+
+83
+00:07:12,880 --> 00:07:18,960
+tools can be inflexible. So for example, if you have harmless SQL code like this, where there's
+
+84
+00:07:18,960 --> 00:07:24,560
+no user input going in, all you've done is just extract the query into a local variable, the linter
+
+85
+00:07:24,560 --> 00:07:30,080
+will warn you about it, which is frustrating for users because this should be fine. Likewise,
+
+86
+00:07:30,080 --> 00:07:36,120
+you might check a flag and then append, say, another part of the query to the existing query.
+
+87
+00:07:36,600 --> 00:07:40,640
+Again, there's no user input going in, but the linter will warn you about it, which is annoying
+
+88
+00:07:40,640 --> 00:07:46,080
+for users. So we wanted something that is user friendly so that people trust our tools and keep
+
+89
+00:07:46,080 --> 00:07:53,280
+using it. So it's not like library authors have no way to restrict how their API is used. For example,
+
+90
+00:07:53,280 --> 00:08:00,400
+if you try to execute a query such as 42 and you run a type checker, so just pyre or mypy or pywrite,
+
+91
+00:08:00,400 --> 00:08:05,360
+it will warn you right away saying that a query must be a string. You can't just pass in an integer.
+
+92
+00:08:05,760 --> 00:08:12,440
+You probably heard in the keynote where a type checker is just like a powerful linter that runs
+
+93
+00:08:12,440 --> 00:08:18,720
+all over your code and checks that inputs are always valid here. How did the type checker know
+
+94
+00:08:18,720 --> 00:08:23,760
+that an integer was invalid? How did it know that the string was expected? Well, the library authors
+
+95
+00:08:23,760 --> 00:08:29,280
+have specified that in the function signature. So they said query must be of type string. So this
+
+96
+00:08:29,280 --> 00:08:35,720
+is valid syntax in Python 3. It essentially has no runtime effect, but tools such as type
+
+97
+00:08:35,720 --> 00:08:42,080
+checkers can use it to prevent misuse of this function. So we wondered if we could use this
+
+98
+00:08:42,080 --> 00:08:49,000
+to prevent SQL injection, for example. So let's try that. If we have the safe parameter substitution
+
+99
+00:08:49,000 --> 00:08:54,160
+approach, the query, as we can see, is of type string. So the type checker is okay with it,
+
+100
+00:08:54,160 --> 00:09:00,880
+which is good. But then if we use the unsafe f string approach, the query is still a string,
+
+101
+00:09:00,880 --> 00:09:06,800
+and the type checker still accepts it, which is not what we want. We want to accept the first
+
+102
+00:09:06,800 --> 00:09:11,520
+approach and reject this unsafe approach. So the problem here is that the string type is too
+
+103
+00:09:11,520 --> 00:09:17,040
+permissive. We want something that is more discriminating. So that end, we introduced
+
+104
+00:09:17,040 --> 00:09:21,760
+a literal string type and recently added it to Python. You can import it from the typing module
+
+105
+00:09:21,760 --> 00:09:26,800
+if you're on 3.11 or from typing extensions if you're in earlier versions. So what that represents
+
+106
+00:09:26,800 --> 00:09:33,120
+is any string that is built purely out of literal strings. So say you have a function called expect
+
+107
+00:09:33,120 --> 00:09:38,640
+literal string, for example. If I call it with a pure literal string, the type checker sees that
+
+108
+00:09:38,640 --> 00:09:45,840
+this is what we expect, so it's okay with it. If I call it with something, say, if I try to add two
+
+109
+00:09:45,840 --> 00:09:50,680
+literal strings together, again, the type checker sees that this is, again, built only out of literal
+
+110
+00:09:50,680 --> 00:09:56,360
+strings. If you try to pass it in, it's okay with that, which is good. However, if you try to use
+
+111
+00:09:56,360 --> 00:10:02,520
+input, the type checker knows that this returns an arbitrary string. And if you try to pass that into
+
+112
+00:10:02,520 --> 00:10:09,560
+the function, it complains. So you can probably already imagine how we might use this for SQL
+
+113
+00:10:09,560 --> 00:10:15,480
+injection prevention. So if you could change execute to expect a query that is a literal string,
+
+114
+00:10:16,120 --> 00:10:20,840
+now if you use the safe parameter approach, we see that the query is a literal string,
+
+115
+00:10:20,840 --> 00:10:27,480
+so the type checker accepts it. If you use an F string, for example, now we're inserting name
+
+116
+00:10:28,040 --> 00:10:32,280
+into this query. Name is an arbitrary string, which means the entire query is an arbitrary string.
+
+117
+00:10:32,280 --> 00:10:36,760
+The type checker knows that, and it complains right away saying that this query was expected
+
+118
+00:10:36,760 --> 00:10:41,560
+to be literal string. So thanks to the literal string type, we can prevent the SQL injection
+
+119
+00:10:41,560 --> 00:10:46,760
+as you're writing the code. This extends to the earlier examples we saw as well. So if you simply
+
+120
+00:10:46,760 --> 00:10:51,240
+extract the query, the safe query in a local variable, the type checker sees that it's of type
+
+121
+00:10:51,240 --> 00:10:56,840
+literal string. It remembers that. And when you finally pass it into you execute, it's okay with
+
+122
+00:10:56,840 --> 00:11:02,040
+it. That's not a problem at all. Likewise, if you check a flag and append another literal string
+
+123
+00:11:02,040 --> 00:11:06,920
+or use string.join where all the inputs are literal strings, the type checker sees that
+
+124
+00:11:07,640 --> 00:11:13,480
+it's a valid input and it's okay with it. So this is user-friendly and people can use it without
+
+125
+00:11:15,000 --> 00:11:20,680
+getting in their way. Overall, the advantage of using type annotations like this is that it
+
+126
+00:11:20,680 --> 00:11:26,600
+shifts the burden of security thinking from the library user to the library author. So we're not
+
+127
+00:11:26,600 --> 00:11:32,200
+depending on the user to have read the docs or have kept up on later security vulnerabilities.
+
+128
+00:11:32,760 --> 00:11:38,520
+And by shifting control to the library author, we could prevent a variety of command injection
+
+129
+00:11:38,520 --> 00:11:42,440
+vulnerabilities across the ecosystem. We're not limited to the ones that the user knows about.
+
+130
+00:11:43,080 --> 00:11:48,440
+So I mentioned SQL injection as an example, but this applies to things like shell command injection
+
+131
+00:11:48,440 --> 00:11:53,160
+where you have a shell command, you're inserting user input into it which allows attackers to run
+
+132
+00:11:53,160 --> 00:11:58,600
+arbitrary shell commands or server-side template injection where you have web application and
+
+133
+00:11:58,600 --> 00:12:04,600
+you're inserting user input and that leads to arbitrary code execution and so on. So using
+
+134
+00:12:04,600 --> 00:12:09,640
+this single feature, you could prevent this vulnerability across a variety of libraries.
+
+135
+00:12:10,680 --> 00:12:15,160
+Finally, if you want to detect this continuously, you need to use a type checker just like you use
+
+136
+00:12:15,160 --> 00:12:20,200
+other linter such as Flake. So people usually set it up in their GitHub CI so that no one can
+
+137
+00:12:20,200 --> 00:12:26,840
+check in bad code. You can also run it in your terminal and IDE so that you get this direction
+
+138
+00:12:26,840 --> 00:12:31,560
+as you're writing code. And finally, a constraint is that type checking is only as useful as the
+
+139
+00:12:31,560 --> 00:12:35,720
+type annotations you add. If you don't use type annotations, you won't be able to get the benefit
+
+140
+00:12:35,720 --> 00:12:41,640
+of this. So overall, we hope that more library authors use literal string type in their sensitive
+
+141
+00:12:41,640 --> 00:12:45,560
+APIs so that programmers like you and me don't have to worry as much about command injection.
+
+142
+00:12:47,800 --> 00:12:52,440
+So we saw one security solution enabled by types. Let's look at another scenario here.
+
+143
+00:12:53,240 --> 00:12:59,960
+So Graham mentioned another API called picture by ID where we expect a picture ID and then return
+
+144
+00:13:00,760 --> 00:13:07,880
+the picture corresponding to that ID. So the code for that is essentially you do JSON loads on the
+
+145
+00:13:07,880 --> 00:13:14,040
+request that you get. You look up the picture ID field and then you go to the pictures directory
+
+146
+00:13:14,040 --> 00:13:19,320
+and look at the file corresponding to that ID. So here in this case, it might be picture slash one.
+
+147
+00:13:19,320 --> 00:13:25,240
+You read the file and return it to the user. One day, though, again, we might find our server
+
+148
+00:13:25,240 --> 00:13:33,640
+passwords being spread all over the internet. So looking at the logs again, we see a request like
+
+149
+00:13:33,640 --> 00:13:39,560
+this. And apparently, if you just run this, all our server passwords could be returned to the user.
+
+150
+00:13:39,560 --> 00:13:45,240
+They could see any other file on our server essentially. So how could this work? Once again,
+
+151
+00:13:45,240 --> 00:13:50,600
+we do JSON loads on our request body. We look up the picture ID field. Here it's not an integer.
+
+152
+00:13:50,600 --> 00:13:56,600
+It's a string like this. And now when you try to look up this ID under the pictures directory,
+
+153
+00:13:56,600 --> 00:14:01,480
+we essentially return our HC password file. So the attacker could traverse our file system
+
+154
+00:14:01,480 --> 00:14:07,480
+and look up arbitrary files. So this kind of vulnerability occurs when we trust that user
+
+155
+00:14:07,480 --> 00:14:14,520
+input matches our expectations, which means that they could do unsafe things. So the body is just
+
+156
+00:14:14,520 --> 00:14:20,040
+a string. We assumed that it would be a JSON object. It would have a picture ID field. It
+
+157
+00:14:20,040 --> 00:14:25,640
+would have a value as an integer. The user passed in a string and then made our code do unsafe things.
+
+158
+00:14:25,640 --> 00:14:30,360
+So we want to validate that our expectations are being met. You've probably seen code that does
+
+159
+00:14:30,360 --> 00:14:34,840
+manual JSON validation. So very briefly, it looks something like you write a function called get
+
+160
+00:14:34,840 --> 00:14:40,440
+picture ID. You could take a string, use JSON loads, check that it's a dictionary. If it's not
+
+161
+00:14:40,440 --> 00:14:44,760
+a dictionary, then you raise an error. You get the field that you care about. You check that it's an
+
+162
+00:14:44,760 --> 00:14:49,320
+end. If it's not an end, you raise an error. And then you finally return it to the user. So yes,
+
+163
+00:14:49,320 --> 00:14:56,040
+if you write all of this boilerplate, you will be able to prevent such an error and raise an error
+
+164
+00:14:56,040 --> 00:15:01,480
+when somebody tries to pass in a string. But as you can imagine, this gets really hairy for real
+
+165
+00:15:01,480 --> 00:15:07,000
+world JSON. It's inconvenient to have to write all of this boilerplate. It's error prone. You might
+
+166
+00:15:07,000 --> 00:15:13,400
+miss some cases. Once again, we see the pattern where the unsafe approach of just using JSON loads
+
+167
+00:15:13,400 --> 00:15:18,760
+seem to be much more convenient than the safe approach. So can type annotations help us prevent
+
+168
+00:15:18,760 --> 00:15:23,480
+vulnerabilities without this inconvenient boilerplate? Not surprisingly, the answer is yes.
+
+169
+00:15:24,920 --> 00:15:30,760
+Use runtime type validation. So there are a few libraries that do this. I'll use data class JSON
+
+170
+00:15:30,760 --> 00:15:35,800
+as an example. So you pip install it, import from that library. So we want a picture request that
+
+171
+00:15:35,800 --> 00:15:40,680
+is guaranteed to have a picture ID field that is an integer. So we say so in just as many words.
+
+172
+00:15:40,680 --> 00:15:46,120
+We say picture request, picture ID colon int. Once you write this, instead of using JSON loads,
+
+173
+00:15:46,120 --> 00:15:51,000
+you just use picture request schema loads. Now, if someone passes in a legitimate request,
+
+174
+00:15:51,000 --> 00:15:56,680
+we get back an object that is guaranteed to have picture ID of type int. But if someone tries the
+
+175
+00:15:56,680 --> 00:16:01,880
+etc password string hack, for example, you will get a validation error saying picture ID must be
+
+176
+00:16:01,960 --> 00:16:07,160
+an integer. So with just a couple of lines of code, we're able to prevent this vulnerability
+
+177
+00:16:07,160 --> 00:16:14,040
+and keep things convenient. This scales to arbitrary JSON. This was just like a small example.
+
+178
+00:16:14,040 --> 00:16:17,880
+Imagine you had JSON like this, which you don't need to go into. It's just something that has
+
+179
+00:16:17,880 --> 00:16:23,880
+nested objects, lists, optional fields, all kinds of crazy things. The code to validate that is,
+
+180
+00:16:23,880 --> 00:16:29,240
+again, just a few lines of declarative code that states our intention and validates that
+
+181
+00:16:29,240 --> 00:16:35,800
+JSON matches our expectations. So the benefit of using type annotations here is that we could
+
+182
+00:16:35,800 --> 00:16:42,120
+prevent vulnerabilities like external, unvalidated external data without much boilerplate. So type
+
+183
+00:16:42,120 --> 00:16:46,280
+annotation means safe code doesn't have to be inconvenient, doesn't have to be laborious.
+
+184
+00:16:47,880 --> 00:16:53,800
+And as we saw, it scales gracefully to complex JSON. It also serves as documentation for future
+
+185
+00:16:53,800 --> 00:16:59,640
+users and developers, which means it's good practice. And in the real world, Instagram
+
+186
+00:17:00,200 --> 00:17:05,480
+extensively validates the inputs to its Django, HTTP APIs at runtime. So there are thousands of
+
+187
+00:17:05,480 --> 00:17:11,720
+them. It validates them and which doesn't just help with correctness, but also helps prevent
+
+188
+00:17:11,720 --> 00:17:16,600
+security vulnerabilities like the ones we saw. So these are two examples of how
+
+189
+00:17:17,400 --> 00:17:22,120
+types can help prevent security vulnerabilities. Of course, there are many more. You can type
+
+190
+00:17:22,120 --> 00:17:30,840
+somehow help there or to grant. Thanks. So let's talk about a third solution called
+
+191
+00:17:30,840 --> 00:17:34,600
+data flow analysis. Or for some who are more familiar with this from a security perspective,
+
+192
+00:17:34,600 --> 00:17:41,400
+also taint flow analysis. We're going back to the idea of the photo. This is Susan's photo that we
+
+193
+00:17:41,400 --> 00:17:48,040
+talked about at the beginning. And the way that the APIs to load this work, Susan's friend is
+
+194
+00:17:48,040 --> 00:17:52,680
+going to be sitting there and her phone is going to send a request to this API. It's going to,
+
+195
+00:17:52,680 --> 00:17:55,800
+we've left this out before, but it's going to include like a user ID or something that identifies
+
+196
+00:17:55,800 --> 00:18:02,200
+her. And she's going to get back a list of Susan's photos. But from everything we've described so far,
+
+197
+00:18:02,200 --> 00:18:08,120
+when some stranger on a train that Susan doesn't know, not her friend, goes to load data from this
+
+198
+00:18:08,120 --> 00:18:12,360
+API, they'll send a different user ID, but everything else will be the same. And they're
+
+199
+00:18:12,360 --> 00:18:17,400
+also going to get the photos back. And there's kind of something missing from this, right? Like
+
+200
+00:18:17,400 --> 00:18:22,040
+a modern application has to have some concept of privacy built in. Like not everyone wants
+
+201
+00:18:22,040 --> 00:18:28,120
+everyone else to be able to see their photos. So this is the, you know, the simple loading code.
+
+202
+00:18:28,120 --> 00:18:32,920
+And you can see that there's no privacy check right now. Like you have this query that you've
+
+203
+00:18:32,920 --> 00:18:39,240
+seen before, SQL injection is still there. And it loads data from the database and it returns it
+
+204
+00:18:39,240 --> 00:18:45,160
+back to the user. What we really want is we want some sort of like checking function, right? This
+
+205
+00:18:45,160 --> 00:18:49,560
+is a really contrived one, but we just want something that has this can view operation that
+
+206
+00:18:49,560 --> 00:18:55,400
+says like, hey, can the current user ID view the photos that belong to this user Susan? So that's
+
+207
+00:18:55,400 --> 00:19:00,520
+what we want our application to have. And so this is talking about typing. Let's think about types
+
+208
+00:19:00,520 --> 00:19:06,360
+for a second. Like the stranger sends this request. Susan's friend also sends this request. They look
+
+209
+00:19:06,360 --> 00:19:10,920
+pretty similar. Only difference there is the user IDs. But when we talk about typing, like all the
+
+210
+00:19:10,920 --> 00:19:14,840
+types are correct, right? They're both integer IDs at a type system level. There's no difference
+
+211
+00:19:14,840 --> 00:19:20,120
+between these. So everything we've talked about so far can't help us solve this problem. And the
+
+212
+00:19:20,120 --> 00:19:24,280
+problem we're really trying to solve is like answering this question. Are we returning data
+
+213
+00:19:24,280 --> 00:19:29,720
+to the user without it passing through some kind of privacy check? One way we could try and solve
+
+214
+00:19:29,720 --> 00:19:33,400
+this is through security reviews. And as we talked about earlier, when we're talking about shifting
+
+215
+00:19:33,400 --> 00:19:37,400
+left, security reviews are good defense in depth. And it's possible that, you know, a security review
+
+216
+00:19:37,400 --> 00:19:41,400
+might be the thing that surfaced this issue in our application initially and told us like, hey,
+
+217
+00:19:41,720 --> 00:19:46,040
+you need to add some concept of privacy or whatever. But it doesn't scale, right? When we're
+
+218
+00:19:46,040 --> 00:19:49,080
+constantly making changes, when we're wanting to look at the whole app, security reviews just
+
+219
+00:19:49,080 --> 00:19:53,960
+aren't going to scale up here. So we want to go back to this concept of like continuous prevention
+
+220
+00:19:53,960 --> 00:19:58,280
+and detection. So to answer this question, we want a tool that can basically detect a data flow,
+
+221
+00:19:58,280 --> 00:20:03,880
+right? We want a tool that can say like data went from database all the way back to user and know
+
+222
+00:20:03,880 --> 00:20:09,480
+that like what a privacy check is and know that it didn't go through a privacy check. The way that we
+
+223
+00:20:09,480 --> 00:20:14,120
+do data flow analysis at Meta is using a tool called Pisa. So this is free and open source.
+
+224
+00:20:14,120 --> 00:20:19,160
+It's built on top of the Pyre type checker. And it tracks data as it goes throughout the program.
+
+225
+00:20:19,160 --> 00:20:23,560
+So you start off and you have some kind of data that you know you care about, right? So some source
+
+226
+00:20:23,560 --> 00:20:28,520
+of data. And it tracks it when it's assigned to a variable. It tracks it as you perform an operation
+
+227
+00:20:28,520 --> 00:20:32,920
+to add something to it. It tracks it as you convert it to a string, as it runs through different
+
+228
+00:20:32,920 --> 00:20:37,480
+function calls and gets returned by that function, as it goes through an F string. Pretty much any
+
+229
+00:20:37,480 --> 00:20:41,720
+transformation, any flow of data through the program, we want to track that data as it goes.
+
+230
+00:20:41,720 --> 00:20:48,600
+And we want to see where it ends up. Taking this and applying it to our concept of this application
+
+231
+00:20:48,600 --> 00:20:53,400
+where there's no privacy check right now, we want the source of data that we track to be the data
+
+232
+00:20:53,400 --> 00:20:58,120
+from the database. And the place where we care about it ending up is where the data is returned
+
+233
+00:20:58,120 --> 00:21:03,240
+to the user. And so we apply the data flow analysis tool. We run Pisa or there are other tools as well
+
+234
+00:21:03,240 --> 00:21:07,160
+that can do this. And we kind of want to track that and see it goes through this list comprehension,
+
+235
+00:21:07,160 --> 00:21:12,520
+gets returned. And eventually we say, oh, it went where we cared about. There's a data flow detected
+
+236
+00:21:12,520 --> 00:21:18,520
+and this is an issue. There's no privacy check in between here. And also with this tool then,
+
+237
+00:21:18,520 --> 00:21:23,480
+when we introduced that privacy checking code we were just talking about, we want to, we can tell
+
+238
+00:21:23,480 --> 00:21:29,240
+the tool basically this is what a privacy check looks like. And also we've updated the code here
+
+239
+00:21:29,240 --> 00:21:34,040
+just to call the privacy check version. And now when we do the data flow analysis, similar things
+
+240
+00:21:34,040 --> 00:21:37,960
+happening, right? We're seeing the taint flow or the data flow going through that list comprehension
+
+241
+00:21:37,960 --> 00:21:43,080
+and being returned here. But because we've taught the tool that this function is doing a privacy
+
+242
+00:21:43,080 --> 00:21:48,200
+check, it's going to stop propagating the data at that point and it's not going to detect it.
+
+243
+00:21:48,200 --> 00:21:52,840
+I've glossed over a bunch of details in depth here because this is not a long enough talk, but
+
+244
+00:21:53,880 --> 00:21:59,640
+you can teach a tool to do this. And now we have a way to differentiate between a data flow that's
+
+245
+00:21:59,640 --> 00:22:07,640
+problematic and one that's okay. Now, why do type annotations matter here? Like we've talked about
+
+246
+00:22:07,640 --> 00:22:10,920
+this data flow analysis tool, maybe you think that's cool, it's awesome, but like nothing I've told
+
+247
+00:22:10,920 --> 00:22:14,760
+you so far is how to do types. So to kind of demonstrate this, we have this little piece of
+
+248
+00:22:14,760 --> 00:22:20,680
+code, right? We're creating our SQL connection and then we're executing a query. Now, if we import
+
+249
+00:22:20,680 --> 00:22:24,440
+this create SQL connection function, it's unambiguous. Like, you know, I know the type
+
+250
+00:22:24,440 --> 00:22:28,280
+checker knows that we're calling the SQL, the create SQL connection function that we imported.
+
+251
+00:22:28,920 --> 00:22:33,640
+But what about this execute method? So you and I probably know there's going to be some SQL
+
+252
+00:22:33,640 --> 00:22:37,720
+connection class and it's got an execute method. But, you know, in our application, there might
+
+253
+00:22:37,720 --> 00:22:43,080
+also be this task class that also has an execute method. And the type checker, you know, from what
+
+254
+00:22:43,080 --> 00:22:46,680
+we've seen so far or what we're looking at right now, doesn't know which of those two execute
+
+255
+00:22:46,680 --> 00:22:50,920
+methods would be called on this connection object. What we really need is we need to know the type
+
+256
+00:22:50,920 --> 00:22:55,560
+of the connection object in order to be able to figure out which method is being called. And so
+
+257
+00:22:55,560 --> 00:22:59,800
+we need to update the signature of create SQL connection. And then the type checker is able
+
+258
+00:22:59,800 --> 00:23:03,800
+to infer, okay, the connection type is a SQL connection. And then unambiguously, we're able
+
+259
+00:23:03,800 --> 00:23:07,960
+to say it's the execute method that's being called. So at a really granular level, this is the kind of
+
+260
+00:23:07,960 --> 00:23:12,600
+thing that makes a type checker and types in Python really important to enable data flow analysis,
+
+261
+00:23:12,600 --> 00:23:17,240
+because then we can actually figure out which method calls are going where. That's at sort of
+
+262
+00:23:17,240 --> 00:23:21,560
+a very granular level, but at a sort of a macro level, like running on a whole application,
+
+263
+00:23:21,560 --> 00:23:27,560
+how important are type annotations? So we took a web server and it was like fully type annotated,
+
+264
+00:23:27,560 --> 00:23:32,440
+and sort of started stripping out type annotations and measured how many data flows that we were,
+
+265
+00:23:32,440 --> 00:23:38,280
+that we cared about that we could detect. And the effect was pretty dramatic. So on the right side
+
+266
+00:23:38,280 --> 00:23:42,280
+there, you've got like 100% of the data flows we could find when it was fully annotated. And
+
+267
+00:23:42,280 --> 00:23:47,000
+just removing like 20% of annotations sort of randomly across the application made us able to
+
+268
+00:23:47,000 --> 00:23:53,240
+detect more than 40% fewer data flows. So at the scale of a whole web application,
+
+269
+00:23:53,240 --> 00:23:57,480
+like type annotations and having really good type annotations enables complex analysis like
+
+270
+00:23:57,480 --> 00:24:03,880
+data flow analysis. So doing something like this, having a data flow analysis tool, gives us this
+
+271
+00:24:03,880 --> 00:24:07,960
+continuous detection that we talked about for any kind of vulnerability that can be modeled as a
+
+272
+00:24:07,960 --> 00:24:13,720
+data flow. Now I talked about a sort of privacy issue here, but so many security vulnerabilities
+
+273
+00:24:14,680 --> 00:24:18,840
+can be modeled as data flows. You've got service-side request forgery, XML external entities,
+
+274
+00:24:18,840 --> 00:24:24,040
+leaking secrets, format string attacks, the list goes on and on and on. And in fact, it can find
+
+275
+00:24:24,040 --> 00:24:27,320
+some of the same vulnerabilities that we also talked about preventing earlier in this talk.
+
+276
+00:24:28,680 --> 00:24:33,720
+As I mentioned, we do this at Meta using Pisa, a free and open source tool. It comes configured
+
+277
+00:24:33,720 --> 00:24:39,480
+for all your kind of standard web servers like Flask and Django, as well as a bunch of common
+
+278
+00:24:39,480 --> 00:24:45,000
+libraries that do SQL, shell commands, that kind of thing. So it's able to kind of detect all your
+
+279
+00:24:45,000 --> 00:24:49,640
+common vulnerabilities on your common web servers. It's also available to run in your CI through a
+
+280
+00:24:49,640 --> 00:24:55,000
+GitHub action. Now I don't want to oversell this tool to you without talking about limitations as
+
+281
+00:24:55,000 --> 00:24:59,800
+well. The first limitation is that data flow analysis tends to be too slow for interactive
+
+282
+00:24:59,800 --> 00:25:05,080
+use cases. So Pradeep was talking about type checking with Pyre and that can run right in
+
+283
+00:25:05,080 --> 00:25:08,920
+your IDE. You type an error and almost instantly you're going to see a little red underline that
+
+284
+00:25:08,920 --> 00:25:13,400
+says this is bad. With something like Pisa, you're going to have to run it in your CI and
+
+285
+00:25:13,400 --> 00:25:18,200
+wait a couple minutes to get the results. Next thing is false positives and false negatives do
+
+286
+00:25:18,200 --> 00:25:23,560
+happen. We're essentially trying to simulate an entire program and it's hard to do that very
+
+287
+00:25:23,560 --> 00:25:26,440
+accurately. And so sometimes you're going to miss things and sometimes you might find something
+
+288
+00:25:26,440 --> 00:25:31,400
+that's not actually a flow that you care about. So you'll get results from a tool like Pisa right
+
+289
+00:25:31,400 --> 00:25:34,760
+off the bat, but to get really good results and get really tuned the way you want it, you need to
+
+290
+00:25:34,760 --> 00:25:38,680
+invest a little bit of effort. And finally, as the graph on the previous slide showed,
+
+291
+00:25:38,680 --> 00:25:43,000
+type coverage is really important. So adding more type coverage is needed to get really good results.
+
+292
+00:25:44,440 --> 00:25:47,800
+But to sort of, you know, hopefully convince you that this kind of thing can give you really good
+
+293
+00:25:47,800 --> 00:25:53,880
+results, at Meta, more than 50% of the vulnerabilities that our products Qt team finds comes from tools
+
+294
+00:25:53,880 --> 00:25:59,080
+like Pisa. So we don't just do it in Python, we do it in Hack and Java and a bunch of other languages,
+
+295
+00:25:59,080 --> 00:26:03,000
+but this kind of data flow analysis tool finds more than 50% of the vulnerabilities that we find
+
+296
+00:26:03,000 --> 00:26:09,080
+at Meta. Now, hopefully you're sold on the idea that there's a lot of different ways that types
+
+297
+00:26:09,080 --> 00:26:13,080
+can add value and make your code more secure. So let's quickly touch on how you can add types
+
+298
+00:26:13,080 --> 00:26:17,960
+easily. Instagram provides a really good case study. Instagram went from no type annotations
+
+299
+00:26:17,960 --> 00:26:22,120
+to having millions of lines of code type annotated. And there's sort of three different ways that they
+
+300
+00:26:22,120 --> 00:26:28,120
+did it. One was using monkey type. Monkey type is a open source tool that grabs runtime type
+
+301
+00:26:28,120 --> 00:26:32,200
+information and saves that so that you can add it as static type information after the fact.
+
+302
+00:26:33,240 --> 00:26:37,640
+Two is Pyre and Fur. So once you've already got some types in your code, Pyre and Fur is able to
+
+303
+00:26:37,640 --> 00:26:40,600
+basically propagate that information through your code and use this knowledge of what types are
+
+304
+00:26:40,600 --> 00:26:45,400
+already there to figure out what types aren't annotated but can be known to be a certain type.
+
+305
+00:26:46,440 --> 00:26:50,360
+And finally, manual effort is still required. You know, Instagram didn't get to all that type
+
+306
+00:26:50,360 --> 00:26:53,800
+coverage just by running tooling. Sometimes people had to get in there and write some type
+
+307
+00:26:53,800 --> 00:26:59,480
+annotations as well. With that, we're going to finish off with some conclusions. As a reminder,
+
+308
+00:26:59,480 --> 00:27:03,880
+the thesis of the talk was the type annotations can help continuously detect and prevent security
+
+309
+00:27:03,880 --> 00:27:08,760
+vulnerabilities. If you had to summarize this whole talk in one slide and give you your
+
+310
+00:27:08,760 --> 00:27:13,560
+roadmap for what you should do when you leave this room, this is it. The first and easiest thing you
+
+311
+00:27:13,560 --> 00:27:18,440
+can do is enforce types at your API layer. So enforce the data coming into your system is what
+
+312
+00:27:18,440 --> 00:27:24,520
+you expect it to be. Next, you want to start making sure you have a type checker running locally and
+
+313
+00:27:24,520 --> 00:27:27,800
+in CI. So something like Pyre, but there's also lots of other type checkers you can use.
+
+314
+00:27:28,360 --> 00:27:32,360
+When you've got that going, you want to make sure that either you or your libraries are using
+
+315
+00:27:32,360 --> 00:27:38,760
+literal strain, which helps enforce and prevent injection and vulnerabilities. Then you've got
+
+316
+00:27:38,760 --> 00:27:43,880
+your type coverage started. You've got your type checker running. You want to start expanding
+
+317
+00:27:43,880 --> 00:27:47,560
+types as much as you can in your code base using Pyre and Fur, MonkeyType, manual work,
+
+318
+00:27:47,560 --> 00:27:50,840
+whatever you've got to do to get as good type coverage as you can. And finally, when you've
+
+319
+00:27:50,840 --> 00:27:54,040
+got to the point, you've got some good type coverage. Start running Pisa and start detecting
+
+320
+00:27:54,920 --> 00:28:00,360
+more complex data flow-based vulnerabilities. And all of these add up to great layers of defense
+
+321
+00:28:00,360 --> 00:28:05,560
+and depth that will help make your application a lot more secure. Thank you to so many people
+
+322
+00:28:05,560 --> 00:28:12,120
+who helped make this talk possible and who helped get PEP 675 landed as well. Here are some resources
+
+323
+00:28:12,120 --> 00:28:15,320
+and that's the end of our talk. We'll be hanging out in the hallway afterwards for anyone who wants
+
+324
+00:28:15,320 --> 00:28:24,600
+to ask any questions.
+

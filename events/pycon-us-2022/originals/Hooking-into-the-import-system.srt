@@ -1,0 +1,1108 @@
+1
+00:00:00,000 --> 00:00:09,280
+Hello, everyone.
+
+2
+00:00:09,280 --> 00:00:15,400
+Let's welcome Fred Phillips to deliver a talk on hooking into the import system.
+
+3
+00:00:15,400 --> 00:00:16,400
+Hi, everyone.
+
+4
+00:00:16,400 --> 00:00:17,400
+Thanks for coming.
+
+5
+00:00:17,400 --> 00:00:18,400
+My name is Fred.
+
+6
+00:00:18,400 --> 00:00:19,400
+My pronouns are he and him.
+
+7
+00:00:19,400 --> 00:00:20,400
+And I'm engineering team lead at Bloomberg.
+
+8
+00:00:20,400 --> 00:00:29,400
+So the team that I lead is part of the news automation group.
+
+9
+00:00:30,160 --> 00:00:36,440
+Where we basically write software which writes news stories automatically.
+
+10
+00:00:36,440 --> 00:00:40,200
+So the news automation group is split into two teams.
+
+11
+00:00:40,200 --> 00:00:42,400
+Those that are writing code that generates the content.
+
+12
+00:00:42,400 --> 00:00:44,220
+So writing news stories.
+
+13
+00:00:44,220 --> 00:00:47,400
+And then those building the platform that runs that code.
+
+14
+00:00:47,400 --> 00:00:49,400
+So my team fits into that second half.
+
+15
+00:00:49,400 --> 00:00:55,020
+Our main responsibilities include providing a development platform for the content team
+
+16
+00:00:56,020 --> 00:01:00,020
+And a runtime platform which runs their code in a fast and reliable way.
+
+17
+00:01:00,020 --> 00:01:05,020
+Whilst abstracting as much of the infrastructure as possible.
+
+18
+00:01:05,020 --> 00:01:10,020
+So one part of this is then providing a lightning fast deployment mechanism for the content.
+
+19
+00:01:10,020 --> 00:01:16,020
+So shipping artifacts to real machines or building dock containers is too slow for our use case.
+
+20
+00:01:16,020 --> 00:01:19,020
+So we had to find a new mechanism to do that.
+
+21
+00:01:19,020 --> 00:01:22,020
+So that's where we use import hooks in our system.
+
+22
+00:01:22,020 --> 00:01:24,020
+I'm going to tell you a little bit about that.
+
+23
+00:01:24,020 --> 00:01:29,020
+So in this talk I will guide you through the Python import system.
+
+24
+00:01:29,020 --> 00:01:33,020
+Introduce you to ways of using it to solve real problems.
+
+25
+00:01:33,020 --> 00:01:39,020
+Import hooks in my opinion are kind of a seldom used and undocumented feature of Python.
+
+26
+00:01:39,020 --> 00:01:44,020
+But the import system is very powerful and can open the door to many useful features.
+
+27
+00:01:44,020 --> 00:01:51,020
+So in this talk I'll show you how a standard import works in Python that loads files from the disk.
+
+28
+00:01:51,020 --> 00:01:55,020
+And then how Python lets us customize and influence imports.
+
+29
+00:01:55,020 --> 00:01:59,020
+And most importantly why we would want to do this.
+
+30
+00:01:59,020 --> 00:02:03,020
+So start off with what does import actually do?
+
+31
+00:02:03,020 --> 00:02:07,020
+So importing a module in Python comprises two main steps.
+
+32
+00:02:07,020 --> 00:02:10,020
+The first is finding and the second is loading.
+
+33
+00:02:10,020 --> 00:02:14,020
+So finding finds the code usually from files on disk.
+
+34
+00:02:14,020 --> 00:02:19,020
+And the loading executes that code and loads it into the interpreter for you to use.
+
+35
+00:02:19,020 --> 00:02:22,020
+So by default there are three finds available.
+
+36
+00:02:22,020 --> 00:02:26,020
+The built-in importer, the frozen importer and the path finder.
+
+37
+00:02:26,020 --> 00:02:32,020
+So the built-in importer is what's used for finding built-in modules such as OS or Sys.
+
+38
+00:02:32,020 --> 00:02:36,020
+So in CPython these are mostly written in C.
+
+39
+00:02:36,020 --> 00:02:42,020
+And as such they do not exist as Python files on disk like the modules that most people are familiar with.
+
+40
+00:02:42,020 --> 00:02:45,020
+The frozen importer is a special importer.
+
+41
+00:02:45,020 --> 00:02:52,020
+It's most important use case is to bootstrap the import mechanism or machinery into the importer itself.
+
+42
+00:02:52,020 --> 00:02:54,020
+Into the interpreter itself.
+
+43
+00:02:54,020 --> 00:02:59,020
+Because obviously it's difficult to import, import until import has been imported.
+
+44
+00:02:59,020 --> 00:03:05,020
+So then the path finder is the one which is used by everyone every day.
+
+45
+00:03:05,020 --> 00:03:10,020
+So this is what finds Python files on disk and loads them for you to use.
+
+46
+00:03:11,020 --> 00:03:18,020
+So all you need to do to implement your own finder is to define a class with a single method called findspec.
+
+47
+00:03:18,020 --> 00:03:24,020
+So this method takes the name of the module, the first argument, the path to the parent module if there is one.
+
+48
+00:03:24,020 --> 00:03:32,020
+And then the target which is used to make a more educated guess about what spec to return.
+
+49
+00:03:32,020 --> 00:03:38,020
+We're not going to cover the use of targets in this talk and I've yet to find a use case for it myself.
+
+50
+00:03:39,020 --> 00:03:44,020
+So then your finders are stored in this variable called the sys.metapath.
+
+51
+00:03:44,020 --> 00:03:53,020
+So this is a list of finders which will then have their findspec method called in order that they are in the list.
+
+52
+00:03:53,020 --> 00:04:00,020
+So if the module you want to provide with your finder are uniquely named, it doesn't matter where you put your finder in this list.
+
+53
+00:04:00,020 --> 00:04:06,020
+But if you want to affect all imports across the system, you need to make sure you're putting your finder as the first position.
+
+54
+00:04:06,020 --> 00:04:11,020
+So that's why we're doing this dot insert into the zero position in the list here.
+
+55
+00:04:11,020 --> 00:04:14,020
+That would mean our finder is always going to be called first.
+
+56
+00:04:14,020 --> 00:04:20,020
+So when your code imports the module, when you type import in your module, Python iterates through this list,
+
+57
+00:04:20,020 --> 00:04:25,020
+calls all the finders until one of them returns a module spec.
+
+58
+00:04:25,020 --> 00:04:27,020
+So that's the specification for a module.
+
+59
+00:04:27,020 --> 00:04:32,020
+Or if they all return none, a module not found error is raised.
+
+60
+00:04:32,020 --> 00:04:36,020
+So if you try and import a module which doesn't exist, it will try every single finder.
+
+61
+00:04:36,020 --> 00:04:39,020
+None of them can find it, so it will just raise you an error.
+
+62
+00:04:39,020 --> 00:04:43,020
+So once the module has been found, it then needs to be loaded.
+
+63
+00:04:43,020 --> 00:04:45,020
+So this is a two-step process.
+
+64
+00:04:45,020 --> 00:04:48,020
+One, the first part creates the module.
+
+65
+00:04:48,020 --> 00:04:54,020
+So it takes in the module spec found by the finder and then returns a module object.
+
+66
+00:04:54,020 --> 00:04:57,020
+And then the next one executes it.
+
+67
+00:04:57,020 --> 00:05:03,020
+So for loading files from disk, this first creates an empty instance of module
+
+68
+00:05:03,020 --> 00:05:09,020
+and then just uses the exec built in to load code into it.
+
+69
+00:05:09,020 --> 00:05:13,020
+The module is then assigned a name, so you can reference it in your code.
+
+70
+00:05:13,020 --> 00:05:17,020
+A copy is then stored in the sys.modules dictionary.
+
+71
+00:05:17,020 --> 00:05:22,020
+This also means that if you import a module again, it won't be loaded again.
+
+72
+00:05:22,020 --> 00:05:25,020
+It will just grab whatever's been put in that dictionary already.
+
+73
+00:05:25,020 --> 00:05:28,020
+So if you try and re-import a module, you probably notice this.
+
+74
+00:05:28,020 --> 00:05:31,020
+You're not getting the latest code.
+
+75
+00:05:31,020 --> 00:05:37,020
+So the Python import system allows us to hook into this process at nearly every step
+
+76
+00:05:37,020 --> 00:05:40,020
+and inject your own special behavior.
+
+77
+00:05:40,020 --> 00:05:45,020
+So to start with, we'll go over a toy example of our own finder.
+
+78
+00:05:45,020 --> 00:05:49,020
+So this is my implementation of what I call a tracing finder.
+
+79
+00:05:49,020 --> 00:05:52,020
+Where we implement a class called tracing finder,
+
+80
+00:05:52,020 --> 00:05:58,020
+it inherits from this base class which is provided by the import system called metapath finder.
+
+81
+00:05:58,020 --> 00:06:02,020
+And then we define this one method that we talked about before, findSpec.
+
+82
+00:06:02,020 --> 00:06:05,020
+So it takes the name, the path, and the target.
+
+83
+00:06:05,020 --> 00:06:09,020
+So what we want to do is just print out when we're importing things
+
+84
+00:06:09,020 --> 00:06:13,020
+so that the user can just see it on their terminal.
+
+85
+00:06:13,020 --> 00:06:19,020
+So all we do is we print out looking for name and path,
+
+86
+00:06:19,020 --> 00:06:24,020
+and then we return none to indicate that we haven't found this module in this finder
+
+87
+00:06:24,020 --> 00:06:27,020
+and to fall back to the other finders.
+
+88
+00:06:27,020 --> 00:06:32,020
+So we insert this in the first position, which means that every time import is called,
+
+89
+00:06:32,020 --> 00:06:37,020
+our finder will be called, and then it will fall back to the old finders.
+
+90
+00:06:37,020 --> 00:06:43,020
+So then we do an import of datetime, and then we call datetime.datetime.now.
+
+91
+00:06:43,020 --> 00:06:46,020
+So if we do this, our output will look something like this.
+
+92
+00:06:47,020 --> 00:06:52,020
+So we do the import, and during that import we can see that the code we wrote for our finder
+
+93
+00:06:52,020 --> 00:06:58,020
+is printing out this stuff, and because datetime doesn't have any parents, our path is always none.
+
+94
+00:06:58,020 --> 00:07:03,020
+But then we can see that we're printing out the current datetime,
+
+95
+00:07:03,020 --> 00:07:08,020
+and it's completely unaffected by our own import.
+
+96
+00:07:08,020 --> 00:07:12,020
+So we can see that we're trying to import datetime here,
+
+97
+00:07:12,020 --> 00:07:16,020
+and then datetime indirectly imports math and then underscore datetime.
+
+98
+00:07:16,020 --> 00:07:19,020
+So you can see it's affecting every single import that's happening,
+
+99
+00:07:19,020 --> 00:07:23,020
+not just the imports that we're making ourselves in our code.
+
+100
+00:07:25,020 --> 00:07:27,020
+So why do you want to do this?
+
+101
+00:07:27,020 --> 00:07:31,020
+So this is kind of a trivial example, not really much practical application.
+
+102
+00:07:31,020 --> 00:07:37,020
+So I'm going to go over two import hooks that I've used in my work at Bloomberg.
+
+103
+00:07:37,020 --> 00:07:43,020
+The first one is going to be implementing a block list of modules that are not allowed to be imported.
+
+104
+00:07:43,020 --> 00:07:46,020
+And then we're going to implement a finder and a loader,
+
+105
+00:07:46,020 --> 00:07:51,020
+which are going to load Python code from a database rather than from files.
+
+106
+00:07:51,020 --> 00:07:54,020
+So I'm going to put snippets of code on the slides.
+
+107
+00:07:54,020 --> 00:07:58,020
+I hope it's big enough to be legible, but also all of this code is going to be on GitHub,
+
+108
+00:07:58,020 --> 00:08:00,020
+or it already is on GitHub.
+
+109
+00:08:00,020 --> 00:08:05,020
+So at the end there'll be a link where you can go and find the full example code of all of this,
+
+110
+00:08:05,020 --> 00:08:11,020
+and it all should work fine in the latest Python 3 interpreter if you want to have a play around with it.
+
+111
+00:08:12,020 --> 00:08:14,020
+So we'll start with the block list.
+
+112
+00:08:14,020 --> 00:08:22,020
+So one of the requirements of the system that my team and I develop is running code in a sort of sandbox environment.
+
+113
+00:08:22,020 --> 00:08:29,020
+So this environment is intended to prevent mistakes rather than being a secure against malicious use.
+
+114
+00:08:29,020 --> 00:08:35,020
+So this means all the ideas and the code that's being presented here is not intended to be secure
+
+115
+00:08:35,020 --> 00:08:40,020
+or to be used to lock down your interpreter or environment against attack.
+
+116
+00:08:40,020 --> 00:08:44,020
+It's more there to prevent mistakes from non-expert users.
+
+117
+00:08:46,020 --> 00:08:56,020
+So one feature that we provide to the users of the system is an allow slash block list of Python packages and modules that should be used.
+
+118
+00:08:56,020 --> 00:09:01,020
+So some of the blocked modules could be installed on the system where this is running,
+
+119
+00:09:01,020 --> 00:09:05,020
+so we can't rely on the libraries just not being there.
+
+120
+00:09:05,020 --> 00:09:10,020
+So instead we have an import hook that blocks the importing of these modules.
+
+121
+00:09:10,020 --> 00:09:14,020
+So this is really easy to implement using a custom finder.
+
+122
+00:09:14,020 --> 00:09:17,020
+So we start by defining the class as before.
+
+123
+00:09:17,020 --> 00:09:24,020
+We make this new class block list finder inheriting from this abstract base class meta path finder.
+
+124
+00:09:24,020 --> 00:09:28,020
+In this case, we're also going to find the dunder init function.
+
+125
+00:09:28,020 --> 00:09:36,020
+So this is going to take a list of strings which represent the packages we want to block for our users.
+
+126
+00:09:36,020 --> 00:09:41,020
+We've put that in a member variable so we can access it later.
+
+127
+00:09:41,020 --> 00:09:45,020
+And then we start by defining find spec again.
+
+128
+00:09:45,020 --> 00:09:47,020
+So it's the same as before.
+
+129
+00:09:47,020 --> 00:09:52,020
+We take the full name of the module being imported, the path to the parent, and then the target.
+
+130
+00:09:52,020 --> 00:09:58,020
+So the first thing it's going to do is if the full name is in the list of blocked packages,
+
+131
+00:09:58,020 --> 00:10:04,020
+if it is, we raise an import error saying we cannot import this as it is blocked.
+
+132
+00:10:04,020 --> 00:10:08,020
+If it's not in the list of blocked packages, all we need to do is return none,
+
+133
+00:10:08,020 --> 00:10:11,020
+indicating that this finder does not handle this package.
+
+134
+00:10:11,020 --> 00:10:15,020
+And then it will then just fall back to the other finders again.
+
+135
+00:10:15,020 --> 00:10:17,020
+So we do exactly the same thing as before.
+
+136
+00:10:18,020 --> 00:10:22,020
+In the sys.meta path, we insert our new block list finder.
+
+137
+00:10:22,020 --> 00:10:27,020
+So for this example, we're saying, okay, let's stop people from importing socket
+
+138
+00:10:27,020 --> 00:10:32,020
+because for our use case, there is no use case for importing socket.
+
+139
+00:10:32,020 --> 00:10:37,020
+And then our user then says import HTTP.server.
+
+140
+00:10:37,020 --> 00:10:43,020
+So you see this is not on the list of blocked modules, but HTTP.server tries to import socket.
+
+141
+00:10:43,020 --> 00:10:46,020
+So then when we do that, we get this error, import error.
+
+142
+00:10:46,020 --> 00:10:49,020
+Socket cannot be imported because it is blocked.
+
+143
+00:10:49,020 --> 00:10:55,020
+So we found this to be really useful, a very useful application of import hooks in our system
+
+144
+00:10:55,020 --> 00:10:59,020
+to help these sort of non-expert Python users.
+
+145
+00:10:59,020 --> 00:11:09,020
+So another example of an import hook is for loading modules from locations other than files on disk.
+
+146
+00:11:09,020 --> 00:11:12,020
+So for example, a database.
+
+147
+00:11:12,020 --> 00:11:17,020
+So this requires us to implement both a finder and a loader.
+
+148
+00:11:17,020 --> 00:11:24,020
+So the finder will be called by the import system to determine what modules it can provide from the database.
+
+149
+00:11:24,020 --> 00:11:29,020
+And then the loader will run the necessary queries to pull the data from the database
+
+150
+00:11:29,020 --> 00:11:36,020
+and execute the code and load it into a module to be returned to whoever called import.
+
+151
+00:11:36,020 --> 00:11:40,020
+So we'll start with the loader and then we'll move on to the finder.
+
+152
+00:11:41,020 --> 00:11:46,020
+So for a loader, we again create another class that's based on one of these base classes
+
+153
+00:11:46,020 --> 00:11:50,020
+that's provided by the import library in the standard library.
+
+154
+00:11:52,020 --> 00:11:56,020
+So for this, we want to say, OK, we're going to pass in package name.
+
+155
+00:11:56,020 --> 00:12:01,020
+So we want to say every package, which every module is in this specific package, we want to say, OK,
+
+156
+00:12:01,020 --> 00:12:05,020
+we're going to load that from a database rather than from files.
+
+157
+00:12:05,020 --> 00:12:08,020
+And then we're also passing in this database handle.
+
+158
+00:12:08,020 --> 00:12:14,020
+So for this example, I used SQLite 3 DbApi2 connection,
+
+159
+00:12:14,020 --> 00:12:20,020
+but it kind of applies to any other kind of database connection that you might want to use.
+
+160
+00:12:21,020 --> 00:12:26,020
+And then we again set these as just member variables so we can come back to them later.
+
+161
+00:12:29,020 --> 00:12:36,020
+So we then need to go and implement these two functions that we talked about before, the create and the exec.
+
+162
+00:12:37,020 --> 00:12:39,020
+So we'll start with the create module.
+
+163
+00:12:39,020 --> 00:12:47,020
+So this takes this spec variable, which is what a finder returns.
+
+164
+00:12:48,020 --> 00:12:52,020
+And then what we do is we first create a new module.
+
+165
+00:12:53,020 --> 00:12:59,020
+And to make this example as simple as possible, we're only going to consider what the name is.
+
+166
+00:12:59,020 --> 00:13:05,020
+So this creates a brand new empty module based on this name.
+
+167
+00:13:05,020 --> 00:13:10,020
+And then the second bit here is dealing with packages.
+
+168
+00:13:10,020 --> 00:13:15,020
+So package is basically a module which may have sub modules.
+
+169
+00:13:15,020 --> 00:13:22,020
+So if you want to do, I say, dateUtil is a good example.
+
+170
+00:13:22,020 --> 00:13:24,020
+So you have dateUtil.tz.
+
+171
+00:13:24,020 --> 00:13:25,020
+DateUtil is your package.
+
+172
+00:13:25,020 --> 00:13:28,020
+It also is a module because it has things on it.
+
+173
+00:13:28,020 --> 00:13:30,020
+But you have these sub modules as well.
+
+174
+00:13:31,020 --> 00:13:36,020
+So what we're saying for this example is we're going to provide one package which we can name up front.
+
+175
+00:13:36,020 --> 00:13:39,020
+We call it my database code or something.
+
+176
+00:13:39,020 --> 00:13:45,020
+And we're saying if the module that we're currently importing is exactly the same name as this package,
+
+177
+00:13:45,020 --> 00:13:52,020
+as in we're not trying to import a sub module at this time, we set this thing called module.pack to an empty list.
+
+178
+00:13:52,020 --> 00:13:56,020
+So this is a special variable attached on modules.
+
+179
+00:13:56,020 --> 00:14:05,020
+And if it is a list or an empty list like this, it is basically informing the interpreter that this is a package and may have sub packages as well.
+
+180
+00:14:05,020 --> 00:14:09,020
+And then all we need to do is then return the module.
+
+181
+00:14:09,020 --> 00:14:15,020
+So for any of these sub modules of this package, it will just create a new module with the name and return it.
+
+182
+00:14:15,020 --> 00:14:19,020
+For the packages, it will do this extra special step here.
+
+183
+00:14:19,020 --> 00:14:23,020
+And we just return it.
+
+184
+00:14:23,020 --> 00:14:26,020
+So then we want to execute this code.
+
+185
+00:14:26,020 --> 00:14:33,020
+So normally, if you're reading from a file, we do a file open, get the code out, run exec, load it into the module.
+
+186
+00:14:33,020 --> 00:14:36,020
+But because we're doing a database, we're doing it differently.
+
+187
+00:14:36,020 --> 00:14:43,020
+So the first thing we're doing is just importing the package here.
+
+188
+00:14:43,020 --> 00:14:50,020
+So for this use case, we're going to say that the packages are not going to have any code or any functions that we want to be able to call in there.
+
+189
+00:14:50,020 --> 00:15:00,020
+So if the module name is exactly the package name, we're just going to return nothing, which means that I can import it, but it will have no members on it.
+
+190
+00:15:00,020 --> 00:15:03,020
+And that's fine for this.
+
+191
+00:15:03,020 --> 00:15:06,020
+And then we want to actually load this code from a database.
+
+192
+00:15:06,020 --> 00:15:18,020
+So rather than doing file open, we're going to get a database cursor and we're going to select the code from a table called code where the name is equal to the name that we passed in.
+
+193
+00:15:18,020 --> 00:15:22,020
+Which is module dot name.
+
+194
+00:15:22,020 --> 00:15:28,020
+Then all we need to do is, okay, we got that cursor, we don't need to fetch the actual row.
+
+195
+00:15:28,020 --> 00:15:31,020
+And then we just exec it. I'm not sure if everyone back can see that.
+
+196
+00:15:31,020 --> 00:15:35,020
+But basically we're saying just calling the exec built in of the code.
+
+197
+00:15:35,020 --> 00:15:39,020
+And we're loading that into this variable called module dot dict.
+
+198
+00:15:39,020 --> 00:15:47,020
+So this is basically represents the global namespace of your module that you're importing.
+
+199
+00:15:47,020 --> 00:15:52,020
+So everything that's defined at the global level in your code gets loaded into this dictionary.
+
+200
+00:15:52,020 --> 00:15:57,020
+And that's how you then access it after you import it.
+
+201
+00:15:57,020 --> 00:16:00,020
+So this modifies the module that was passed in.
+
+202
+00:16:00,020 --> 00:16:03,020
+So you can see we pass in the module and then we do this exec into here.
+
+203
+00:16:03,020 --> 00:16:05,020
+So we don't return anything from exec module.
+
+204
+00:16:05,020 --> 00:16:10,020
+It just modifies the thing that was pushed in.
+
+205
+00:16:10,020 --> 00:16:17,020
+So now we need to combine this with a finder to allow clients to call import as normal.
+
+206
+00:16:17,020 --> 00:16:27,020
+And then create a way for the loader to advertise what packages it can provide by looking at the database.
+
+207
+00:16:27,020 --> 00:16:35,020
+So one way to do this is to add a new method to dbloader, which I've decided to call provides, which takes in the name.
+
+208
+00:16:35,020 --> 00:16:43,020
+And we'll return true or false depending on whether there is some code, if there's a module of this name in the database.
+
+209
+00:16:43,020 --> 00:16:51,020
+So this is not a part of the standard abstract base class that we're basing these classes on.
+
+210
+00:16:51,020 --> 00:16:57,020
+This is just a bit of custom code that we can write to like a helper function for us to use.
+
+211
+00:16:57,020 --> 00:17:01,020
+So for this we do basically a very similar query, but we don't actually have to access the code.
+
+212
+00:17:01,020 --> 00:17:07,020
+So we're just saying select one where code equals where the name equals the name.
+
+213
+00:17:07,020 --> 00:17:10,020
+And this will either return a row or it won't return a row.
+
+214
+00:17:10,020 --> 00:17:12,020
+So I've kind of elided the code around that.
+
+215
+00:17:12,020 --> 00:17:16,020
+But basically all you need to do here is check how many rows are returned.
+
+216
+00:17:16,020 --> 00:17:21,020
+If it's zero, we return false. If it's one, you return true.
+
+217
+00:17:21,020 --> 00:17:26,020
+So now we have a dbloader class which has these three methods on it.
+
+218
+00:17:26,020 --> 00:17:29,020
+Create module, exec module, and provides.
+
+219
+00:17:29,020 --> 00:17:32,020
+So now we need to combine that with the finder.
+
+220
+00:17:32,020 --> 00:17:38,020
+So we create a new finder again, again based on the metapath finder abstract base class.
+
+221
+00:17:38,020 --> 00:17:43,020
+And we pass in an instance of this loader that we've defined.
+
+222
+00:17:43,020 --> 00:17:47,020
+And we set that again to a member variable.
+
+223
+00:17:47,020 --> 00:17:58,020
+So now we can have quite a simple implementation of findspec that first is going to leverage that provides metapath.
+
+224
+00:17:58,020 --> 00:18:02,020
+So we're going to use this method that we implemented before.
+
+225
+00:18:02,020 --> 00:18:12,020
+We're going to take the full name that was passed in and ask the loader, are we providing, do you provide this a module or of this name?
+
+226
+00:18:12,020 --> 00:18:21,020
+If that is true, we then call this useful helper method that's been provided by the import lib,
+
+227
+00:18:21,020 --> 00:18:32,020
+the standard library package that we can use, which basically creates this module spec that we've been passing around.
+
+228
+00:18:32,020 --> 00:18:41,020
+So we never really even need to deal with what this module spec is or how we actually need to build it because this is all taken care of for us.
+
+229
+00:18:41,020 --> 00:18:49,020
+So what we do is we say, OK, make a new spec with a loader assigned to it by of this name.
+
+230
+00:18:49,020 --> 00:18:55,020
+And then here's this loader that we passed in the constructor earlier.
+
+231
+00:18:55,020 --> 00:19:05,020
+And then if this returns false, as in the loader does not provide this, all you need to do is return none to indicate to the import system that we don't provide a module of this name.
+
+232
+00:19:06,020 --> 00:19:15,020
+So this will fall back to the other finders if we have any that are going to provide this or return a module not found error as we saw before.
+
+233
+00:19:15,020 --> 00:19:20,020
+And that's it, basically. So all in all, this is about 30 lines of Python code.
+
+234
+00:19:20,020 --> 00:19:28,020
+And we have a fully working import hook, which is loading code from a database that is totally transparent to the caller.
+
+235
+00:19:28,020 --> 00:19:32,020
+So I've got a little demo of how that works here.
+
+236
+00:19:32,020 --> 00:19:38,020
+So what we're doing is first we're going to import this code from the disk.
+
+237
+00:19:38,020 --> 00:19:41,020
+So we have to start by creating a new SQLite database.
+
+238
+00:19:41,020 --> 00:19:52,020
+So we're going to just import the code we just wrote and we're going to create this new SQLite database and just creating a memory here rather than on disk.
+
+239
+00:19:52,020 --> 00:19:55,020
+And we're going to so then we're going to insert some rows.
+
+240
+00:19:55,020 --> 00:20:03,020
+So I'm just going to set a single row in this database, which is going to be a module called package.mymodule.
+
+241
+00:20:03,020 --> 00:20:10,020
+So first we're just going to create this table called code, which has the name and the code in it and then insert this.
+
+242
+00:20:10,020 --> 00:20:15,020
+So I'm going to call it my package.mymodule.
+
+243
+00:20:15,020 --> 00:20:25,020
+And then just create a global function called fn, which takes an x and multiplies it by two and returns that.
+
+244
+00:20:25,020 --> 00:20:28,020
+So now we have this in our database.
+
+245
+00:20:28,020 --> 00:20:38,020
+So then what we need to do is take these things we imported from our dbload that we wrote before, insert those into the sys.metapath.
+
+246
+00:20:38,020 --> 00:20:43,020
+So we say, OK, the dbloader is going to provide packages from my package.
+
+247
+00:20:43,020 --> 00:20:47,020
+And here's our db handle.
+
+248
+00:20:47,020 --> 00:20:58,020
+You see here that my package.mymodule is matching the thing we wrote in the database and we're importing fn, this function.
+
+249
+00:20:58,020 --> 00:21:01,020
+And then so now we just have this function fn that we can pass.
+
+250
+00:21:01,020 --> 00:21:07,020
+We can call and twice 21 is 42, twice 0.5 is 1.
+
+251
+00:21:07,020 --> 00:21:12,020
+And then if we try and import something that doesn't exist, so my package. does not exist,
+
+252
+00:21:12,020 --> 00:21:18,020
+we get a standard module not found error that says the module does not exist.
+
+253
+00:21:18,020 --> 00:21:22,020
+So we use this as a deployment mechanism.
+
+254
+00:21:22,020 --> 00:21:26,020
+So where files on disk are not suitable.
+
+255
+00:21:26,020 --> 00:21:31,020
+So some examples of why we want to use this is writing to a database is obviously very, very fast.
+
+256
+00:21:31,020 --> 00:21:35,020
+You can write a database in sub second.
+
+257
+00:21:35,020 --> 00:21:37,020
+So in our application, we have to have a save button.
+
+258
+00:21:37,020 --> 00:21:42,020
+You click save it right to the database and immediately your code is available in production.
+
+259
+00:21:42,020 --> 00:21:47,020
+It's also very useful if you want to maintain multiple versions in production.
+
+260
+00:21:47,020 --> 00:21:53,020
+So for this table that we had here, we just had the two columns and name and code.
+
+261
+00:21:53,020 --> 00:21:56,020
+But we could also have a version in there.
+
+262
+00:21:56,020 --> 00:22:03,020
+And then we can come up with a way of making sure that we're really importing the version that we'd want.
+
+263
+00:22:03,020 --> 00:22:08,020
+Whereas if we wanted to do that in a sort of standard file based hierarchy,
+
+264
+00:22:08,020 --> 00:22:12,020
+you'd either need a separate virtual environment for every single application that you have,
+
+265
+00:22:12,020 --> 00:22:15,020
+which doesn't really scale very well.
+
+266
+00:22:15,020 --> 00:22:23,020
+Or you can only if you're just importing files from the system, you only get one version.
+
+267
+00:22:23,020 --> 00:22:26,020
+So that's it. Thank you.
+
+268
+00:22:26,020 --> 00:22:31,020
+I hope that was all very useful and you learned something today.
+
+269
+00:22:31,020 --> 00:22:34,020
+So I'll be available outside the room for any questions that you have.
+
+270
+00:22:34,020 --> 00:22:38,020
+I'll also be on the Bloomberg booth at lunchtime.
+
+271
+00:22:38,020 --> 00:22:42,020
+If you want to come and see me there, you can also send me emails if you want.
+
+272
+00:22:42,020 --> 00:22:47,020
+That's F Phillips with two L seven at Bloomberg.net or F O Phillips on Twitter.
+
+273
+00:22:47,020 --> 00:22:56,020
+And if you want to see any of this code, you can go to GitHub.com slash F O Phillips slash import dash hooks.
+
+274
+00:22:56,020 --> 00:23:04,020
+So on there I have the three examples, the tracing finder, the database and also the block list,
+
+275
+00:23:04,020 --> 00:23:08,020
+all with working examples, the full code in there.
+
+276
+00:23:08,020 --> 00:23:15,020
+So, yeah, thank you very much for coming.
+
+277
+00:23:15,020 --> 00:23:18,020
+Thank you, Fred, for the great talk. Thank you.
+

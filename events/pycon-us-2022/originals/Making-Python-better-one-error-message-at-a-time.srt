@@ -1,0 +1,2012 @@
+1
+00:00:00,000 --> 00:00:10,920
+Welcome, everyone, to our second session, talk here in the session.
+
+2
+00:00:10,920 --> 00:00:17,880
+And today, right now, we really have the privilege of having Pablo here, who works at Bloomberg,
+
+3
+00:00:17,880 --> 00:00:24,480
+but he also is a very active CPython core developer, and he's here to tell us about
+
+4
+00:00:24,480 --> 00:00:27,040
+improvements to error messages in Python.
+
+5
+00:00:27,080 --> 00:00:29,080
+So please join me in welcoming him.
+
+6
+00:00:29,080 --> 00:00:36,080
+Hello, hello.
+
+7
+00:00:36,080 --> 00:00:41,080
+Well, I've been told that I speak very fast, so buckle up, because this is going to be a ride.
+
+8
+00:00:41,080 --> 00:00:42,080
+Awesome.
+
+9
+00:00:42,080 --> 00:00:43,080
+So who I am?
+
+10
+00:00:43,080 --> 00:00:47,080
+Well, thank you for the introduction, so I will keep this brief.
+
+11
+00:00:47,080 --> 00:00:51,080
+So CPython core developer, I'm serving on this year Python stream council member.
+
+12
+00:00:51,080 --> 00:00:55,080
+I'm also the 310 and 311 release manager, and also I work at Bloomberg.
+
+13
+00:00:55,120 --> 00:00:58,120
+But this is kind of boring, so let's talk about error messages, right?
+
+14
+00:00:58,120 --> 00:00:59,120
+Cool.
+
+15
+00:00:59,120 --> 00:01:03,120
+So let me, you know, all good talks start with a story, so let me tell you a story.
+
+16
+00:01:03,120 --> 00:01:07,120
+So before joining, I started doing computer science and engineering.
+
+17
+00:01:07,120 --> 00:01:09,120
+I used to be a physicist, so I was doing my PhD.
+
+18
+00:01:09,120 --> 00:01:15,120
+And although I'm a theoretical physicist, something that you need to do from time to time is that you need to do simulations.
+
+19
+00:01:15,120 --> 00:01:19,120
+So at that time, doing those simulations is when I started using Python.
+
+20
+00:01:19,160 --> 00:01:25,160
+And it was this day when some friend of mine that was also using Python, also doing their PhD in physics,
+
+21
+00:01:25,160 --> 00:01:30,160
+came to us, we were three in the room, with one syntax error that they couldn't figure out.
+
+22
+00:01:30,160 --> 00:01:34,160
+And we spent 15 minutes trying to figure out what was the problem.
+
+23
+00:01:34,160 --> 00:01:35,160
+Think about that, right?
+
+24
+00:01:35,160 --> 00:01:37,160
+Three physicists doing their PhD.
+
+25
+00:01:37,160 --> 00:01:42,160
+We had the tools to solve the most deep mysteries of the universe, but we couldn't solve a syntax error.
+
+26
+00:01:42,160 --> 00:01:44,160
+Quite bad.
+
+27
+00:01:44,160 --> 00:01:46,160
+So, you know, syntax errors are important, right?
+
+28
+00:01:46,160 --> 00:01:48,160
+Because, like, they impact developer time and other things.
+
+29
+00:01:48,200 --> 00:01:56,200
+So let me give you a tour over, like, how the syntax error were before Python 3.10, with, like, a fancy image there.
+
+30
+00:01:56,200 --> 00:01:57,200
+Okay, so some of them.
+
+31
+00:01:57,200 --> 00:02:01,200
+For example, this is a syntax error that I couldn't solve back in the day.
+
+32
+00:02:01,200 --> 00:02:02,200
+What about that?
+
+33
+00:02:02,200 --> 00:02:04,200
+What is wrong with that?
+
+34
+00:02:04,200 --> 00:02:05,200
+Ah, interesting.
+
+35
+00:02:05,200 --> 00:02:07,200
+So let me give you some context.
+
+36
+00:02:07,200 --> 00:02:10,200
+Not the full program, but the program looked like this, right?
+
+37
+00:02:10,200 --> 00:02:11,200
+It was a bunch of things there.
+
+38
+00:02:11,200 --> 00:02:14,200
+And does someone see the error?
+
+39
+00:02:14,200 --> 00:02:16,200
+So the error is equivalent to this, right?
+
+40
+00:02:16,240 --> 00:02:17,240
+Like, you have a dictionary.
+
+41
+00:02:17,240 --> 00:02:20,240
+You don't close the dictionary, and then you have a function definition.
+
+42
+00:02:20,240 --> 00:02:24,240
+So the parser continues after the dictionary that should have ended, but it's not end.
+
+43
+00:02:24,240 --> 00:02:29,240
+And then it tries to find the function and says, well, this function doesn't fit into a dictionary.
+
+44
+00:02:29,240 --> 00:02:32,240
+And then it says, yeah, that is invalid syntax.
+
+45
+00:02:32,240 --> 00:02:35,240
+But if you just see the thing, it's kind of not good, right?
+
+46
+00:02:35,240 --> 00:02:36,240
+Like, it's quite bad.
+
+47
+00:02:36,240 --> 00:02:38,240
+So this is just one example, but there is more.
+
+48
+00:02:38,240 --> 00:02:39,240
+Like, for instance, what about this?
+
+49
+00:02:39,240 --> 00:02:40,240
+What is wrong with that?
+
+50
+00:02:40,240 --> 00:02:42,240
+Who knows what's wrong with that?
+
+51
+00:02:42,240 --> 00:02:44,240
+The error is this one.
+
+52
+00:02:44,280 --> 00:02:45,280
+It's kind of natural, right?
+
+53
+00:02:45,280 --> 00:02:48,280
+Like, you want to write the tuple there and then generate a comprehension.
+
+54
+00:02:48,280 --> 00:02:52,280
+But it turns out that you need to parenthesize the tuple because otherwise the parser doesn't
+
+55
+00:02:52,280 --> 00:02:53,280
+understand what you're writing.
+
+56
+00:02:53,280 --> 00:02:54,280
+Not the best.
+
+57
+00:02:54,280 --> 00:02:55,280
+What about this one?
+
+58
+00:02:55,280 --> 00:02:56,280
+You have a list.
+
+59
+00:02:56,280 --> 00:02:58,280
+You don't close the list, and then you have a bunch of things.
+
+60
+00:02:58,280 --> 00:03:01,280
+Like, for instance, you are assigning here something like that.
+
+61
+00:03:01,280 --> 00:03:04,280
+And the parser says, yeah, that equal, I don't like that equal.
+
+62
+00:03:04,280 --> 00:03:05,280
+It's invalid syntax.
+
+63
+00:03:05,280 --> 00:03:07,280
+Or, like, what about this?
+
+64
+00:03:07,280 --> 00:03:08,280
+You have, like, a nice dictionary.
+
+65
+00:03:08,280 --> 00:03:12,280
+So you map, like, core developers to their GitHub user names.
+
+66
+00:03:12,320 --> 00:03:14,320
+You forget a comma over there.
+
+67
+00:03:14,320 --> 00:03:18,320
+And then the parser says, guke-slanga is an invalid syntax.
+
+68
+00:03:18,320 --> 00:03:20,320
+If you ask me, it's quite rude.
+
+69
+00:03:20,320 --> 00:03:22,320
+But, you know, not good.
+
+70
+00:03:22,320 --> 00:03:24,320
+What about this?
+
+71
+00:03:24,320 --> 00:03:28,320
+You try to do an exception handler, but with multiple exceptions.
+
+72
+00:03:28,320 --> 00:03:32,320
+You forgot the parentheses around, which you have to place there.
+
+73
+00:03:32,320 --> 00:03:35,320
+And it tells you that that is invalid syntax, which is quite confusing.
+
+74
+00:03:35,320 --> 00:03:40,320
+Especially if you're not used to this syntax with multiple exceptions or if you are starting
+
+75
+00:03:40,360 --> 00:03:42,360
+to learn Python.
+
+76
+00:03:42,360 --> 00:03:44,360
+What about this?
+
+77
+00:03:44,360 --> 00:03:48,360
+You are writing a dictionary, and then you, I don't know, you freak out and don't put
+
+78
+00:03:48,360 --> 00:03:50,360
+the value here or something like that.
+
+79
+00:03:50,360 --> 00:03:54,360
+And then you close it, and it tells you that, yeah, that bracket, not good.
+
+80
+00:03:54,360 --> 00:03:56,360
+So invalid syntax.
+
+81
+00:03:56,360 --> 00:03:58,360
+And this is the worst one of all.
+
+82
+00:03:58,360 --> 00:04:01,360
+Like, raise your hand if you have found this thing a single time.
+
+83
+00:04:01,360 --> 00:04:03,360
+Yeah, yeah, I thought about that.
+
+84
+00:04:03,360 --> 00:04:06,360
+So this is, like, especially, like, you know, like, EOF.
+
+85
+00:04:06,400 --> 00:04:10,400
+Like, you know, how many times you have explained to someone what EOF means?
+
+86
+00:04:10,400 --> 00:04:12,400
+Yeah.
+
+87
+00:04:12,400 --> 00:04:16,400
+So the idea here is that, you know, in the previous version, we look at these things,
+
+88
+00:04:16,400 --> 00:04:20,400
+and then we say, look, the reason this works here is not because we are, like, lazy or
+
+89
+00:04:20,400 --> 00:04:22,400
+something like that.
+
+90
+00:04:22,400 --> 00:04:25,400
+It's because writing these things and integrating these things on the machinery of a big
+
+91
+00:04:25,400 --> 00:04:27,400
+language like Python, it turns out it's quite hard.
+
+92
+00:04:27,400 --> 00:04:33,400
+But it turns out that now, after Python 3.9, we have a new parser.
+
+93
+00:04:33,400 --> 00:04:35,400
+So I will talk about that in a second.
+
+94
+00:04:35,440 --> 00:04:39,440
+And this parser has allowed us to start thinking about, like, can we solve these things?
+
+95
+00:04:39,440 --> 00:04:45,440
+Like, can we improve the experience of people writing Python that make error messages?
+
+96
+00:04:45,440 --> 00:04:50,440
+Like, they make syntax errors, and they don't know what they mean when they get their own
+
+97
+00:04:50,440 --> 00:04:52,440
+message.
+
+98
+00:04:52,440 --> 00:04:54,440
+And this is quite important because many people think that this is crucial for people
+
+99
+00:04:54,440 --> 00:04:56,440
+learning the language.
+
+100
+00:04:56,440 --> 00:05:00,440
+But it turns out that I have plenty of experience using this, and I have been extremely happy
+
+101
+00:05:00,440 --> 00:05:03,440
+that I have fixed many of these error messages since I did.
+
+102
+00:05:03,480 --> 00:05:05,480
+So, you know, it's also important for people that are experienced.
+
+103
+00:05:05,480 --> 00:05:11,480
+So let's cover, like, how we fix these errors using the new PEC parsers.
+
+104
+00:05:11,480 --> 00:05:15,480
+Many of you may not know about these things, so let me introduce you about the PEC parser.
+
+105
+00:05:15,480 --> 00:05:21,480
+So the PEC parser is something that we did together with Lisandro and Angido on PEP 617.
+
+106
+00:05:21,480 --> 00:05:27,480
+And basically what we did is replace the parser in CPython, which originally was introduced
+
+107
+00:05:27,520 --> 00:05:33,520
+in 1990, one of the first comings of Python from Gido.
+
+108
+00:05:33,520 --> 00:05:35,520
+This is the old one, the old parser.
+
+109
+00:05:35,520 --> 00:05:39,520
+And the new PEC parser was made 30 years after.
+
+110
+00:05:39,520 --> 00:05:43,520
+So, you know, like, the old parser was a very resilient piece of technology, but, you know,
+
+111
+00:05:43,520 --> 00:05:48,520
+we thought that we needed a new parser because there was a bunch of things that we couldn't
+
+112
+00:05:48,520 --> 00:05:53,520
+do with the old one apart from maintenance-related topics and other things.
+
+113
+00:05:53,560 --> 00:05:58,560
+So things that we can now do with the new parser are things like parenthesized context
+
+114
+00:05:58,560 --> 00:06:02,560
+managers, which for technical reasons that I'm not going to go into detail, we couldn't
+
+115
+00:06:02,560 --> 00:06:03,560
+do.
+
+116
+00:06:03,560 --> 00:06:06,560
+These are much better because now you can put this kind of, like, you know, open parenthesis
+
+117
+00:06:06,560 --> 00:06:08,560
+on the subface over there.
+
+118
+00:06:08,560 --> 00:06:10,560
+And also, like, for instance, match statements.
+
+119
+00:06:10,560 --> 00:06:12,560
+Who likes match statements?
+
+120
+00:06:12,560 --> 00:06:14,560
+Yeah, I thought, yeah, they're cool.
+
+121
+00:06:14,560 --> 00:06:16,560
+You can match a lot of things.
+
+122
+00:06:16,560 --> 00:06:18,560
+So this is only possible with the new parser, which is great.
+
+123
+00:06:18,560 --> 00:06:20,560
+But there is a problem.
+
+124
+00:06:20,600 --> 00:06:23,600
+And I think that people see these things and they are quite angry because they think that
+
+125
+00:06:23,600 --> 00:06:25,600
+the new PEC parser is like the devil, right?
+
+126
+00:06:25,600 --> 00:06:30,600
+Because now we have a lot of war of darkness and horrible conclusions because now the PEC
+
+127
+00:06:30,600 --> 00:06:33,600
+parser allows us to do super funky syntax and whatnot.
+
+128
+00:06:33,600 --> 00:06:36,600
+But I want to convince you that the new PEC parser is actually quite helpful because,
+
+129
+00:06:36,600 --> 00:06:41,600
+you know, yes, allow us to do things that you may like or not may like, but those were
+
+130
+00:06:41,600 --> 00:06:46,600
+possible anyway, and we have a process to improve Python syntax, and that's not the
+
+131
+00:06:46,600 --> 00:06:47,600
+PEC parser's fault, right?
+
+132
+00:06:47,640 --> 00:06:50,640
+Like, you know, if you have a knife, the knife can serve multiple purposes.
+
+133
+00:06:50,640 --> 00:06:52,640
+I will leave it to your imagination what you can do with a knife.
+
+134
+00:06:52,640 --> 00:06:58,640
+But like the idea here is that the PEC parser now finally allows us to do these new error
+
+135
+00:06:58,640 --> 00:07:00,640
+messages, which is quite cool.
+
+136
+00:07:00,640 --> 00:07:04,640
+So let me, to convince you in case you have not seen them before, let me show you some
+
+137
+00:07:04,640 --> 00:07:06,640
+of the new error messages that we have in 3.10.
+
+138
+00:07:06,640 --> 00:07:11,640
+We have quite a lot of them, so I'm not going to cover all of them, but some of them.
+
+139
+00:07:11,640 --> 00:07:13,640
+So for instance, new error message in Python 3.10.
+
+140
+00:07:13,680 --> 00:07:18,680
+So in mind that you have this conditional, right, and then you forget the colon over
+
+141
+00:07:18,680 --> 00:07:21,680
+there, which is a common mistake, especially for people learning the language.
+
+142
+00:07:21,680 --> 00:07:23,680
+So now we told you, yeah, expect the colon.
+
+143
+00:07:23,680 --> 00:07:25,680
+That's cool, right?
+
+144
+00:07:25,680 --> 00:07:26,680
+More things.
+
+145
+00:07:26,680 --> 00:07:28,680
+So for instance, now similar things that we have before.
+
+146
+00:07:28,680 --> 00:07:29,680
+You're writing a dictionary.
+
+147
+00:07:29,680 --> 00:07:32,680
+You, for whatever reason, forget to write the value over there.
+
+148
+00:07:32,680 --> 00:07:37,680
+And now when you do this thing, the parser says, oh, I actually expected an expression
+
+149
+00:07:37,680 --> 00:07:40,680
+after the dictionary key on the colon, which is also quite cool.
+
+150
+00:07:40,680 --> 00:07:42,680
+And this is quite common, apparently.
+
+151
+00:07:42,720 --> 00:07:46,720
+Many, many people were super happy when we showed them this one.
+
+152
+00:07:46,720 --> 00:07:50,720
+You are comparing something, and then you forgot here that you should put a double equal.
+
+153
+00:07:50,720 --> 00:07:54,720
+If you're writing C, this seems to be quite bad, because you're assigning to whatever
+
+154
+00:07:54,720 --> 00:07:55,720
+you put on the left.
+
+155
+00:07:55,720 --> 00:07:57,720
+In Python, it's a syntax error.
+
+156
+00:07:57,720 --> 00:07:59,720
+But now we make you a suggestion.
+
+157
+00:07:59,720 --> 00:08:05,720
+Maybe you actually meant two equals instead of the single equals.
+
+158
+00:08:05,720 --> 00:08:10,720
+More things, for instance, if you forget a comma in a dictionary, here it's quite obvious.
+
+159
+00:08:10,760 --> 00:08:14,760
+But like in Maya, you have those big configuration dictionaries instead of .py files or elsewhere.
+
+160
+00:08:14,760 --> 00:08:17,760
+And you forget a comma, which is quite common.
+
+161
+00:08:17,760 --> 00:08:22,760
+So instead of getting Gukas, langais, invalid syntax, you get this error that tells you
+
+162
+00:08:22,760 --> 00:08:25,760
+maybe you are forgetting a comma there.
+
+163
+00:08:25,760 --> 00:08:28,760
+This has saved me at least 10 times already.
+
+164
+00:08:28,760 --> 00:08:33,760
+So for example, this one as well, if you are writing a conditional or many other blocks,
+
+165
+00:08:33,760 --> 00:08:39,760
+and then you don't indent them correctly, now it tells you, oh, we actually expected
+
+166
+00:08:39,800 --> 00:08:40,800
+an indent block.
+
+167
+00:08:40,800 --> 00:08:44,800
+And then now we add that the indent block was after the if statement online, whatever.
+
+168
+00:08:44,800 --> 00:08:49,800
+So you have the context, especially if you have the block after the if is quite big.
+
+169
+00:08:49,800 --> 00:08:52,800
+And when you mess the indentation, it's quite far from where you write the if.
+
+170
+00:08:52,800 --> 00:08:57,800
+Now it will tell you exactly what construct was wrong when you unindented the thing.
+
+171
+00:08:57,800 --> 00:09:02,800
+And of course, everyone's favorite, when you don't close a dictionary and you have the
+
+172
+00:09:02,800 --> 00:09:08,800
+function, now it tells you, hey, that bracket was not closed, which is very cool.
+
+173
+00:09:08,840 --> 00:09:12,840
+This is probably one of the ones that people like the most because this is quite common
+
+174
+00:09:12,840 --> 00:09:18,840
+and the error is one of these unexpected file or your function definition is wrong.
+
+175
+00:09:18,840 --> 00:09:19,840
+Cool.
+
+176
+00:09:19,840 --> 00:09:22,840
+So this is a bunch of them, which is nice.
+
+177
+00:09:22,840 --> 00:09:25,840
+But it turns out that adding error messages is quite hard.
+
+178
+00:09:25,840 --> 00:09:31,840
+Let me show you some of the interesting stories that happened while we were developing error messages.
+
+179
+00:09:31,840 --> 00:09:35,840
+So let's say, for instance, that you want to develop the following error message, like
+
+180
+00:09:35,840 --> 00:09:36,840
+the missing comma, right?
+
+181
+00:09:36,880 --> 00:09:39,880
+So for instance, you say, I want this, right?
+
+182
+00:09:39,880 --> 00:09:42,880
+Someone is writing a list and is missing a comma between two elements, so there is no
+
+183
+00:09:42,880 --> 00:09:43,880
+comma there.
+
+184
+00:09:43,880 --> 00:09:44,880
+You want to write this thing.
+
+185
+00:09:44,880 --> 00:09:46,880
+So you are forgetting a comma.
+
+186
+00:09:46,880 --> 00:09:47,880
+How will you do that?
+
+187
+00:09:47,880 --> 00:09:52,880
+So you go to the grammar and then you need to teach the parser how the problem looks like.
+
+188
+00:09:52,880 --> 00:09:56,880
+So here we are, don't forget if you don't understand the syntax, this is the back syntax.
+
+189
+00:09:56,880 --> 00:10:00,880
+But here we were saying that if you see an expression followed by another expression,
+
+190
+00:10:00,880 --> 00:10:02,880
+then you're probably are missing a comma, right?
+
+191
+00:10:02,920 --> 00:10:06,920
+Like things about a variable followed by a variable or one plus one followed by three
+
+192
+00:10:06,920 --> 00:10:08,920
+or x or something like that.
+
+193
+00:10:08,920 --> 00:10:12,920
+In those cases, that's invalid syntax, but that probably means that someone is missing
+
+194
+00:10:12,920 --> 00:10:13,920
+a comma, right?
+
+195
+00:10:13,920 --> 00:10:16,920
+And then you're happy and then you say, OK, in that case, I'm going to raise this invalid
+
+196
+00:10:16,920 --> 00:10:18,920
+syntax for how you're missing a comma.
+
+197
+00:10:18,920 --> 00:10:20,920
+And everything is good, right?
+
+198
+00:10:20,920 --> 00:10:22,920
+No, no, no, no, no.
+
+199
+00:10:22,920 --> 00:10:24,920
+Because what about this?
+
+200
+00:10:24,920 --> 00:10:28,920
+Now someone forgets the in keyword and it tells you that perhaps you're missing a comma,
+
+201
+00:10:28,920 --> 00:10:29,920
+which is wrong.
+
+202
+00:10:29,920 --> 00:10:31,920
+What about this?
+
+203
+00:10:31,960 --> 00:10:36,960
+Someone writes a valid string prefix and now it tells you that you are missing a comma,
+
+204
+00:10:36,960 --> 00:10:37,960
+which is wrong.
+
+205
+00:10:37,960 --> 00:10:39,960
+What about this?
+
+206
+00:10:39,960 --> 00:10:44,960
+You don't close the tuple here and then you put a b after that and it's looking at the
+
+207
+00:10:44,960 --> 00:10:48,960
+variable on the next line and the two on the previous line and it tells you that you're
+
+208
+00:10:48,960 --> 00:10:49,960
+missing a comma.
+
+209
+00:10:49,960 --> 00:10:50,960
+What about this?
+
+210
+00:10:50,960 --> 00:10:51,960
+This is quite bad, right?
+
+211
+00:10:51,960 --> 00:10:52,960
+Like look at this.
+
+212
+00:10:52,960 --> 00:10:56,960
+It turns out that I don't know what is wrong with this, but apparently I'm missing a comma.
+
+213
+00:10:58,960 --> 00:10:59,960
+It's not good, right?
+
+214
+00:10:59,960 --> 00:11:00,960
+What about this?
+
+215
+00:11:01,000 --> 00:11:03,000
+You're writing a bunch of numbers.
+
+216
+00:11:03,000 --> 00:11:06,000
+I mean, that's a bit crazy, but like it's telling you, this is quite weird.
+
+217
+00:11:06,000 --> 00:11:08,000
+It's telling you that you're missing a comma, but not at the beginning.
+
+218
+00:11:08,000 --> 00:11:10,000
+It's the last one.
+
+219
+00:11:10,000 --> 00:11:11,000
+Okay.
+
+220
+00:11:11,000 --> 00:11:13,000
+So what about this?
+
+221
+00:11:13,000 --> 00:11:15,000
+Apparently, match starts to work.
+
+222
+00:11:15,000 --> 00:11:19,000
+It stops working because it's a soft keyword and now when you do match foo, it's actually
+
+223
+00:11:19,000 --> 00:11:23,000
+two names following together, the symbolic syntax, and then it goes and tells you that
+
+224
+00:11:23,000 --> 00:11:24,000
+you're missing a comma.
+
+225
+00:11:24,000 --> 00:11:26,000
+So we broke match statements.
+
+226
+00:11:26,000 --> 00:11:27,000
+Sorry, Brent.
+
+227
+00:11:27,000 --> 00:11:28,000
+Not good, right?
+
+228
+00:11:28,040 --> 00:11:30,040
+It turns out that this is actually real.
+
+229
+00:11:30,040 --> 00:11:34,040
+Here you can see all the PRs that I fixed when I introduced the missing comma thing.
+
+230
+00:11:34,040 --> 00:11:40,040
+Apparently, you know, knowing a lot of our parsers doesn't make you not fail about missing
+
+231
+00:11:40,040 --> 00:11:41,040
+commas.
+
+232
+00:11:41,040 --> 00:11:43,040
+That's a quite hard thing to do.
+
+233
+00:11:43,040 --> 00:11:45,040
+But what about this error?
+
+234
+00:11:45,040 --> 00:11:46,040
+This is quite funny.
+
+235
+00:11:46,040 --> 00:11:49,040
+So it turns out that our parser is a PEC parser.
+
+236
+00:11:49,040 --> 00:11:52,040
+It turns out that by nature, they run in exponential time.
+
+237
+00:11:52,040 --> 00:11:57,040
+This means that when they are parsing your input, they take a time proportion exponential
+
+238
+00:11:57,080 --> 00:12:01,080
+to the number of characters that you input into the parser.
+
+239
+00:12:01,080 --> 00:12:05,080
+To avoid that, we have something called, well, we do something called a pack wrap parser,
+
+240
+00:12:05,080 --> 00:12:07,080
+which is basically introducing memorization.
+
+241
+00:12:07,080 --> 00:12:09,080
+So we use a cache in a fancy way.
+
+242
+00:12:09,080 --> 00:12:13,080
+I'm not going to go into details, but the interesting thing is that once you put the
+
+243
+00:12:13,080 --> 00:12:17,080
+cache into the thing, the parser runs in linear time and it's very fast and everybody's happy.
+
+244
+00:12:17,080 --> 00:12:21,080
+But if you forget to put the cache, bad things can happen.
+
+245
+00:12:21,080 --> 00:12:25,080
+For example, this thing in Python 3.10 takes two seconds to parse.
+
+246
+00:12:25,120 --> 00:12:27,120
+It's a syntax error.
+
+247
+00:12:27,120 --> 00:12:31,120
+So if you put a bunch of open brackets and then you put a column, which is bad, but it
+
+248
+00:12:31,120 --> 00:12:32,120
+takes two seconds.
+
+249
+00:12:32,120 --> 00:12:35,120
+The parser takes two seconds to realize that this is invalid.
+
+250
+00:12:35,120 --> 00:12:38,120
+If you add a bunch of brackets, it takes over an hour.
+
+251
+00:12:38,120 --> 00:12:39,120
+So this is fixed.
+
+252
+00:12:39,120 --> 00:12:40,120
+So don't worry about that.
+
+253
+00:12:40,120 --> 00:12:41,120
+We fixed it here.
+
+254
+00:12:41,120 --> 00:12:45,120
+You know, someone was very happy that we fixed that one.
+
+255
+00:12:45,120 --> 00:12:49,120
+Probably they can, you know, now they don't need to spare one hour after to know that
+
+256
+00:12:49,120 --> 00:12:50,120
+they commit a syntax error.
+
+257
+00:12:50,120 --> 00:12:54,120
+But the reason is because you need to be very careful when you add error messages.
+
+258
+00:12:54,160 --> 00:12:58,160
+The reason is because we have validated the real grammar of the language many, many, many
+
+259
+00:12:58,160 --> 00:12:59,160
+times.
+
+260
+00:12:59,160 --> 00:13:00,160
+We know it's fast.
+
+261
+00:13:00,160 --> 00:13:01,160
+We know it works.
+
+262
+00:13:01,160 --> 00:13:03,160
+We are quite sure about what's going on.
+
+263
+00:13:03,160 --> 00:13:04,160
+And that is great.
+
+264
+00:13:04,160 --> 00:13:07,160
+But it turns out that adding error messages is a whole new world.
+
+265
+00:13:07,160 --> 00:13:12,160
+The reason is because the grammar, like parsers, like to know about what is correct about your
+
+266
+00:13:12,160 --> 00:13:13,160
+language.
+
+267
+00:13:13,160 --> 00:13:14,160
+That's what they are made for.
+
+268
+00:13:14,160 --> 00:13:15,160
+Right?
+
+269
+00:13:15,160 --> 00:13:19,160
+But now you are starting to use a parser into a world which is infinitely big.
+
+270
+00:13:19,160 --> 00:13:20,160
+Right?
+
+271
+00:13:20,160 --> 00:13:22,160
+It's the world of things that are not Python.
+
+272
+00:13:22,200 --> 00:13:27,200
+And that is much, much more tricky, especially if you start using some of these invalid rules
+
+273
+00:13:27,200 --> 00:13:30,200
+from invalid rules and combining them with the real language.
+
+274
+00:13:30,200 --> 00:13:34,200
+And the problem is that validating that those things are correct and they don't raise weird
+
+275
+00:13:34,200 --> 00:13:39,200
+syntax errors in weird constructs like the comma that you saw before or, for instance,
+
+276
+00:13:39,200 --> 00:13:42,200
+these fancy brackets is quite hard.
+
+277
+00:13:42,200 --> 00:13:47,200
+And it requires, what we found, is that it requires much more effort and much more validation.
+
+278
+00:13:47,200 --> 00:13:51,200
+Since then, we have made a lot of improvements to the parser and to the techniques we use
+
+279
+00:13:51,240 --> 00:13:52,240
+to validate these things.
+
+280
+00:13:52,240 --> 00:13:56,240
+But as you can see, sometimes they slip over and people make fun of us in Twitter.
+
+281
+00:13:56,240 --> 00:13:58,240
+So please don't make fun of us in Twitter.
+
+282
+00:13:58,240 --> 00:14:00,240
+We work very hard.
+
+283
+00:14:00,240 --> 00:14:03,240
+If you want, you can use this thing as a timer.
+
+284
+00:14:03,240 --> 00:14:07,240
+So if you made your lunch and it takes an hour, so you can put this thing running and
+
+285
+00:14:07,240 --> 00:14:10,240
+then come back when you finish, which is cool.
+
+286
+00:14:10,240 --> 00:14:11,240
+Okay.
+
+287
+00:14:11,240 --> 00:14:13,240
+So these are the syntax errors, which is great.
+
+288
+00:14:13,240 --> 00:14:14,240
+We solved a bunch of them.
+
+289
+00:14:14,240 --> 00:14:18,240
+And you can see all of the ones that we added in Python 3.10 on the What's New document
+
+290
+00:14:18,240 --> 00:14:20,240
+of Python 3.10.
+
+291
+00:14:20,280 --> 00:14:24,280
+But you can also see the ones that we have added in 3.11, and we will add more in the
+
+292
+00:14:24,280 --> 00:14:25,280
+future.
+
+293
+00:14:25,280 --> 00:14:26,280
+But we have even more things.
+
+294
+00:14:26,280 --> 00:14:28,280
+For instance, we have runtime suggestions.
+
+295
+00:14:28,280 --> 00:14:29,280
+So what are these things?
+
+296
+00:14:29,280 --> 00:14:30,280
+These are not syntax errors.
+
+297
+00:14:30,280 --> 00:14:32,280
+These are errors that happen at runtime.
+
+298
+00:14:32,280 --> 00:14:34,280
+For example, this one.
+
+299
+00:14:34,280 --> 00:14:39,280
+Now in Python 3.10, if you do, sorry, collections is the module collection.
+
+300
+00:14:39,280 --> 00:14:45,280
+So if you type incorrectly some attribute of the module, now we offer suggestions.
+
+301
+00:14:45,280 --> 00:14:49,280
+So for instance, if you say name topple, which is not good.
+
+302
+00:14:49,320 --> 00:14:52,320
+So now we tell you, okay, maybe you mean name topple.
+
+303
+00:14:52,320 --> 00:14:53,320
+And this works with everything.
+
+304
+00:14:53,320 --> 00:14:57,320
+This works with modules, with custom classes, with things in the library, third-party module,
+
+305
+00:14:57,320 --> 00:14:58,320
+everything.
+
+306
+00:14:58,320 --> 00:14:59,320
+And this is great.
+
+307
+00:14:59,320 --> 00:15:03,320
+We not only offer this thing on attribute access, we also offer this thing on name access.
+
+308
+00:15:03,320 --> 00:15:08,320
+So for instance, here I'm assigning one variable to a varsal black hole.
+
+309
+00:15:08,320 --> 00:15:10,320
+I pronounce it correctly, I hope so.
+
+310
+00:15:10,320 --> 00:15:16,320
+And then you mistype this thing because it's very easy to mistype, and then you get a correct
+
+311
+00:15:16,320 --> 00:15:17,320
+suggestion.
+
+312
+00:15:17,320 --> 00:15:18,320
+Believe me, that is the correct version.
+
+313
+00:15:18,360 --> 00:15:20,360
+So which is very cool.
+
+314
+00:15:20,360 --> 00:15:24,360
+You know, it's a small improvement, but it turns out that it saves a lot of time, especially
+
+315
+00:15:24,360 --> 00:15:28,360
+when you mistype a variable in a big, big function, because it immediately will tell
+
+316
+00:15:28,360 --> 00:15:29,360
+you what's going on.
+
+317
+00:15:29,360 --> 00:15:34,360
+And I have, this is one of my favorites because since we added this one, this has helped myself
+
+318
+00:15:34,360 --> 00:15:36,360
+even when we were developing this one.
+
+319
+00:15:36,360 --> 00:15:37,360
+So it's quite cool.
+
+320
+00:15:37,360 --> 00:15:42,360
+But the question is like, okay, so how these errors are done?
+
+321
+00:15:42,360 --> 00:15:46,360
+Because it's a very interesting like category of errors, right?
+
+322
+00:15:46,400 --> 00:15:48,400
+So let me explain to you how we did this one.
+
+323
+00:15:48,400 --> 00:15:49,400
+It's very interesting.
+
+324
+00:15:49,400 --> 00:15:54,400
+So the first thing is that now we have extended some exceptions, in particular attribute error
+
+325
+00:15:54,400 --> 00:15:55,400
+exceptions, with two things.
+
+326
+00:15:55,400 --> 00:15:59,400
+Now these exceptions in three times know the name of the attribute that you were trying
+
+327
+00:15:59,400 --> 00:16:03,400
+to access and the object in which you were trying to access.
+
+328
+00:16:03,400 --> 00:16:06,400
+So this was the collection module, the object will be the collection module, and the name
+
+329
+00:16:06,400 --> 00:16:09,400
+will be named topple, badly written.
+
+330
+00:16:09,400 --> 00:16:12,400
+In this example, it will be X and something.
+
+331
+00:16:12,400 --> 00:16:13,400
+And then, which is written there.
+
+332
+00:16:13,400 --> 00:16:15,400
+I don't know why I don't read my own slides.
+
+333
+00:16:16,400 --> 00:16:19,400
+But then this is an attribute error, it bubbles up.
+
+334
+00:16:19,400 --> 00:16:21,400
+And then we run a word distance function.
+
+335
+00:16:21,400 --> 00:16:24,400
+This is a very simplified version that fits into slide.
+
+336
+00:16:24,400 --> 00:16:27,400
+The one that we use is, I don't know, 200 lines of C code.
+
+337
+00:16:27,400 --> 00:16:29,400
+Not really great for presentations.
+
+338
+00:16:29,400 --> 00:16:31,400
+But the idea is that this is a very simple algorithm.
+
+339
+00:16:31,400 --> 00:16:38,400
+It uses like some version of Levenstein distance to know which are the closest strings to the
+
+340
+00:16:38,400 --> 00:16:39,400
+one that we provide.
+
+341
+00:16:39,400 --> 00:16:43,400
+And then it will tell you, okay, so maybe these are the ones that we think is the best
+
+342
+00:16:43,400 --> 00:16:44,400
+match.
+
+343
+00:16:44,440 --> 00:16:46,440
+And then it will tell you the correct string of the object to distinguish which ones are
+
+344
+00:16:46,440 --> 00:16:47,440
+the great.
+
+345
+00:16:47,440 --> 00:16:51,440
+So basically the algorithm is that once you have this word distance function, you do something
+
+346
+00:16:51,440 --> 00:16:55,440
+like, okay, so I'm going to use the dir function to know in the exception all the possible
+
+347
+00:16:55,440 --> 00:16:58,440
+attributes that are in the object.
+
+348
+00:16:58,440 --> 00:17:01,440
+And then I'm going to one by one check the word distance to that one.
+
+349
+00:17:01,440 --> 00:17:02,440
+I'm going to pick the smaller one.
+
+350
+00:17:02,440 --> 00:17:03,440
+And that's probably the suggestion.
+
+351
+00:17:04,440 --> 00:17:09,440
+We have a ton of extra checks here and there to make sure that we don't do weird things
+
+352
+00:17:09,440 --> 00:17:10,440
+with those.
+
+353
+00:17:10,440 --> 00:17:11,440
+But this is basically the algorithm.
+
+354
+00:17:11,440 --> 00:17:12,440
+But wait, there is something.
+
+355
+00:17:12,480 --> 00:17:13,480
+Think about this, right?
+
+356
+00:17:13,480 --> 00:17:16,480
+Attribute errors are raised all over the place.
+
+357
+00:17:16,480 --> 00:17:19,480
+If we start doing this algorithm to check where are the problems, like exceptions that
+
+358
+00:17:19,480 --> 00:17:22,480
+are closer and the names, this is very, very expensive.
+
+359
+00:17:22,480 --> 00:17:27,480
+So we don't do this thing on attribute errors because it will make Python much slower, right?
+
+360
+00:17:27,480 --> 00:17:31,480
+So what we do here, and basically what I'm saying is that this thing needs to be fast
+
+361
+00:17:31,480 --> 00:17:36,480
+because if you catch the attribute error, nobody will see those suggestions.
+
+362
+00:17:36,480 --> 00:17:39,480
+And we need to make sure that this kind of code is still as fast, right?
+
+363
+00:17:39,520 --> 00:17:44,520
+So what we do here, this is C code, don't freak out, but I will explain.
+
+364
+00:17:44,520 --> 00:17:48,520
+So what we do here in this C code is basically that instead of doing this thing when you
+
+365
+00:17:48,520 --> 00:17:52,520
+raise the exception, we do this thing on this fancy function that is called print exception.
+
+366
+00:17:52,520 --> 00:17:56,520
+So we only do this thing when the exception has bubbled up to the top level and the interpreter
+
+367
+00:17:56,520 --> 00:17:59,520
+is going to crash already because nobody has catch the exception.
+
+368
+00:17:59,520 --> 00:18:03,520
+So when we are printing the trace back and all those messages because the interpreter
+
+369
+00:18:03,520 --> 00:18:08,520
+is going to finish, then at that step, the last thing that we do is this print exception
+
+370
+00:18:08,560 --> 00:18:13,560
+suggestions, which runs the function that I just showed to you, and then it goes and
+
+371
+00:18:13,560 --> 00:18:16,560
+it offers you the suggestions that we just showed.
+
+372
+00:18:16,560 --> 00:18:19,560
+So basically that function over there.
+
+373
+00:18:19,560 --> 00:18:22,560
+Which is very cool, and so that way we keep Python fast.
+
+374
+00:18:22,560 --> 00:18:27,560
+We only do this thing when the interpreter is going to finalize and a code that runs
+
+375
+00:18:27,560 --> 00:18:30,560
+normally and catches exception keeps being faxed.
+
+376
+00:18:30,560 --> 00:18:35,560
+This is just an example to show you that error messages are quite hard because now you can
+
+377
+00:18:35,600 --> 00:18:39,600
+try to be nice to people, but you need to make sure that normal usage of the language
+
+378
+00:18:39,600 --> 00:18:44,600
+is still fast and people don't pay the cost of good error messages in normal code that
+
+379
+00:18:44,600 --> 00:18:46,600
+doesn't raise error messages.
+
+380
+00:18:46,600 --> 00:18:47,600
+So more things that we have added.
+
+381
+00:18:47,600 --> 00:18:49,600
+I'm very excited about this one.
+
+382
+00:18:49,600 --> 00:18:51,600
+So this is better trace back on Python 3.11.
+
+383
+00:18:51,600 --> 00:18:53,600
+So let me show you what this is about.
+
+384
+00:18:53,600 --> 00:18:58,600
+So this is pep 657 that I did with Amaras Kaya and Batu-Hantas Kaya.
+
+385
+00:18:58,600 --> 00:19:02,600
+It has this horrible name, include fine grained errors location in trace back, but I assure
+
+386
+00:19:02,640 --> 00:19:06,640
+you that the thing is actually much more great than the name that we placed there.
+
+387
+00:19:06,640 --> 00:19:08,640
+And it looks like this basically.
+
+388
+00:19:08,640 --> 00:19:14,640
+So if you before have like a bunch of errors, this is a trace back for some code.
+
+389
+00:19:14,640 --> 00:19:19,640
+And here it's telling you that in this long expression, so absolute value of this, this,
+
+390
+00:19:19,640 --> 00:19:23,640
+this, this, this, this, this, the error is none type object has no attribute x.
+
+391
+00:19:23,640 --> 00:19:27,640
+It means that something in this long line is none.
+
+392
+00:19:27,640 --> 00:19:29,640
+But which one it is, you don't know.
+
+393
+00:19:29,680 --> 00:19:33,680
+You probably need to attach a debugger and know what's going on there, which is not cool.
+
+394
+00:19:33,680 --> 00:19:38,680
+But now in Python 3.11, we might, we show you exactly which one of this is none, which
+
+395
+00:19:38,680 --> 00:19:43,680
+was this one, which is much more better, we believe.
+
+396
+00:19:43,680 --> 00:19:48,680
+And we also show you like in the, this fancy underlying credits in all the trace back.
+
+397
+00:19:48,680 --> 00:19:50,680
+This is also very useful when you do dictionary access.
+
+398
+00:19:50,680 --> 00:19:54,680
+So before, for instance, you are actually in a big JSON, some response and a bunch of
+
+399
+00:19:54,680 --> 00:19:55,680
+things here.
+
+400
+00:19:55,680 --> 00:19:58,680
+And the error is none type object is not subscriptable, which means that in this,
+
+401
+00:19:58,720 --> 00:20:02,720
+response, some of these levels is none, but you don't know which one it is.
+
+402
+00:20:02,720 --> 00:20:07,720
+But now in 3.11, we tell you which one is the one that is none, which is great.
+
+403
+00:20:07,720 --> 00:20:11,720
+Much better, and you know, you can see also like in the trace back, which part of the
+
+404
+00:20:11,720 --> 00:20:12,720
+function calls were running.
+
+405
+00:20:12,720 --> 00:20:16,720
+Because for instance, in this particular line here, you could, could be this one over here
+
+406
+00:20:16,720 --> 00:20:18,720
+with user one or this one here with user two.
+
+407
+00:20:18,720 --> 00:20:20,720
+Now you know which one it is.
+
+408
+00:20:20,720 --> 00:20:24,720
+So now you don't need to attach a debugger, which we think is fantastic.
+
+409
+00:20:24,760 --> 00:20:29,760
+Also, if you are doing like some heavy math, super complicated, this division thing is
+
+410
+00:20:29,760 --> 00:20:30,760
+quite, quite hardcore.
+
+411
+00:20:30,760 --> 00:20:33,760
+But now it tells you division by zero.
+
+412
+00:20:33,760 --> 00:20:38,760
+Which of those divisions are zero now in 3.11 will tell you which one, that one.
+
+413
+00:20:38,760 --> 00:20:39,760
+So that's great.
+
+414
+00:20:39,760 --> 00:20:40,760
+So how we do this thing?
+
+415
+00:20:40,760 --> 00:20:45,760
+So we do this thing basically by injecting into every bytecode instruction extra information.
+
+416
+00:20:45,760 --> 00:20:48,760
+Like for instance, if you disassemble that dictionary access, you will see that it's
+
+417
+00:20:48,760 --> 00:20:51,760
+made of Python instructions, which is what we call bytecode.
+
+418
+00:20:51,800 --> 00:20:55,800
+And what we do is that for to every of those instructions, we attach extra information.
+
+419
+00:20:55,800 --> 00:20:58,800
+You can actually check this extra information using the disk module.
+
+420
+00:20:58,800 --> 00:21:03,800
+And it will tell you that for every, for instance, in this binary subscript, one of these dictionary
+
+421
+00:21:03,800 --> 00:21:07,800
+access, now it has the line number when that happens, the end line number, the colon object,
+
+422
+00:21:07,800 --> 00:21:08,800
+and then colon object.
+
+423
+00:21:08,800 --> 00:21:13,800
+And we use this information to know and to show you where that happens.
+
+424
+00:21:13,800 --> 00:21:17,800
+The actual code to print this thing is quite hardcore.
+
+425
+00:21:17,800 --> 00:21:18,800
+It doesn't look great.
+
+426
+00:21:18,840 --> 00:21:23,840
+But it's just that it's quite complicated, but it's very nice because we take into account
+
+427
+00:21:23,840 --> 00:21:28,840
+many things like, for instance, if you have a binary operator, we point you to the exact binary,
+
+428
+00:21:28,840 --> 00:21:32,840
+like the plus or the minus or whatever, and we underline different in both sides.
+
+429
+00:21:32,840 --> 00:21:36,840
+So this is just to show you that we put a lot of effort to make sure that those errors
+
+430
+00:21:36,840 --> 00:21:41,840
+look nice, they are not intrusive, and we can highlight as much information as is possible.
+
+431
+00:21:41,840 --> 00:21:43,840
+So basically how we do these things?
+
+432
+00:21:43,840 --> 00:21:45,840
+So imagine that you have this code.
+
+433
+00:21:45,880 --> 00:21:50,880
+So once we know there is an error with this code, we analyze the bytecode instructions
+
+434
+00:21:50,880 --> 00:21:54,880
+from the bytecode instructions of that code with the line numbers and the colon objects
+
+435
+00:21:54,880 --> 00:21:55,880
+that we have already there.
+
+436
+00:21:55,880 --> 00:22:00,880
+Then we basically reparse that expression because we know that it has to be valid,
+
+437
+00:22:00,880 --> 00:22:01,880
+because it's valid Python code.
+
+438
+00:22:01,880 --> 00:22:06,880
+We get the abstract syntax tree of that expression, and then we combine these two to offer a customized
+
+439
+00:22:06,880 --> 00:22:07,880
+error message.
+
+440
+00:22:07,880 --> 00:22:11,880
+In this case, for instance, we use the abstract syntax tree to know that this is a binary operator,
+
+441
+00:22:11,920 --> 00:22:16,920
+and then we use the error positions to know that we need to point here, and then we use
+
+442
+00:22:16,920 --> 00:22:21,920
+that information to also add this little carrot over here apart from the underscores, which
+
+443
+00:22:21,920 --> 00:22:24,920
+is not easy, but it looks very great.
+
+444
+00:22:24,920 --> 00:22:25,920
+Nice.
+
+445
+00:22:25,920 --> 00:22:31,920
+So this is all great, but now you may be thinking, how can I help this?
+
+446
+00:22:31,920 --> 00:22:36,920
+Because I like error messages, I would like to help developing new error messages and
+
+447
+00:22:36,920 --> 00:22:40,920
+making Python great, and we would love you to help us.
+
+448
+00:22:40,960 --> 00:22:43,960
+So I'm going to teach you how you can help us do error messages.
+
+449
+00:22:43,960 --> 00:22:46,960
+Well, the first thing that you can do is to open issues.
+
+450
+00:22:46,960 --> 00:22:50,960
+Now Python, the issue tracker runs on GitHub, which is quite nice.
+
+451
+00:22:50,960 --> 00:22:52,960
+Finally, we managed to do that.
+
+452
+00:22:52,960 --> 00:22:55,960
+More in the keynote tomorrow with the steam council.
+
+453
+00:22:55,960 --> 00:22:59,960
+But now you can open an issue on the data tracker for CPython telling us suggestions
+
+454
+00:22:59,960 --> 00:23:00,960
+that you think we should care.
+
+455
+00:23:00,960 --> 00:23:04,960
+We will tell you sometimes that that suggestion is actually very difficult or it will mess
+
+456
+00:23:04,960 --> 00:23:06,960
+with other things, so have an open mind.
+
+457
+00:23:06,960 --> 00:23:08,960
+Don't get frustrated if we tell you that it's very difficult.
+
+458
+00:23:09,000 --> 00:23:13,000
+Don't get frustrated if we tell you that it's very difficult or impossible to add your
+
+459
+00:23:13,000 --> 00:23:14,000
+error messages.
+
+460
+00:23:14,000 --> 00:23:16,000
+But many times this has been happening already.
+
+461
+00:23:16,000 --> 00:23:20,000
+People have come to our issue tracker and have suggested, oh, what about this particular
+
+462
+00:23:20,000 --> 00:23:21,000
+error?
+
+463
+00:23:21,000 --> 00:23:22,000
+And we have implemented that.
+
+464
+00:23:22,000 --> 00:23:26,000
+So if you have ideas, especially if you are starting to learn Python, for instance, and
+
+465
+00:23:26,000 --> 00:23:30,000
+you have been frustrated with some of these error messages, it will be super useful if
+
+466
+00:23:30,000 --> 00:23:33,000
+you come to us and tell us, okay, this has been super hard.
+
+467
+00:23:33,000 --> 00:23:34,000
+I struggled 20 minutes.
+
+468
+00:23:34,000 --> 00:23:37,000
+I'm doing a PhD and I was not able to do this.
+
+469
+00:23:37,040 --> 00:23:39,040
+So that's a good candidate, right?
+
+470
+00:23:39,040 --> 00:23:43,040
+Also, if you're an educator, you're teaching Python, and then you see a lot of your students
+
+471
+00:23:43,040 --> 00:23:47,040
+struggling with error messages, we would love to know which ones are the ones that people
+
+472
+00:23:47,040 --> 00:23:48,040
+struggle with the most.
+
+473
+00:23:48,040 --> 00:23:52,040
+If you want to be more hardcore, I want you to call them yourself.
+
+474
+00:23:52,040 --> 00:23:57,040
+The best place to start is to go to this guide that I wrote in the Python Dev Guide.
+
+475
+00:23:57,040 --> 00:23:59,040
+So you will go to the Python Dev Guide parser.
+
+476
+00:23:59,040 --> 00:24:02,040
+Here is this big document called Guide to CPython Parser.
+
+477
+00:24:02,040 --> 00:24:06,040
+It's very technical, but I think it's quite nice.
+
+478
+00:24:06,080 --> 00:24:10,080
+Some other core developers can validate this assertion.
+
+479
+00:24:10,080 --> 00:24:15,080
+But the idea is that here you can understand how the parser works in very good detail,
+
+480
+00:24:15,080 --> 00:24:21,080
+and at the end of this guide, there is a section about how to add newer messages and how to
+
+481
+00:24:21,080 --> 00:24:22,080
+validate your error messages.
+
+482
+00:24:22,080 --> 00:24:25,080
+So you can read that, and then you can try to add some error messages.
+
+483
+00:24:25,080 --> 00:24:29,080
+You add a bunch of test cases, and you can submit a PR to CPython, which will be very cool.
+
+484
+00:24:29,080 --> 00:24:31,080
+Not only that, but a lot of people have already been doing that.
+
+485
+00:24:31,120 --> 00:24:36,120
+This is a bunch of error messages that have been proposed by members of the community,
+
+486
+00:24:36,120 --> 00:24:37,120
+not by myself.
+
+487
+00:24:37,120 --> 00:24:42,120
+And they have improved, and some of them, except this one, which is an issue that is still open.
+
+488
+00:24:42,120 --> 00:24:45,120
+But all of them will ship in 3.11, which is super great.
+
+489
+00:24:45,120 --> 00:24:49,120
+So you can be one of these people, maybe with cooler avatars.
+
+490
+00:24:49,120 --> 00:24:54,120
+But you can propose newer messages, and I would love to review your PRs.
+
+491
+00:24:54,120 --> 00:24:58,120
+It's just that you need to take into account that, can we do this thing with an open mind?
+
+492
+00:24:58,160 --> 00:25:02,160
+Because as you saw, error messages are quite hard, and sometimes people are very excited
+
+493
+00:25:02,160 --> 00:25:06,160
+and they bring their little error message that looks super great on some particular cases.
+
+494
+00:25:06,160 --> 00:25:10,160
+But it turns out that we need to turn it down because it's quite complex.
+
+495
+00:25:10,160 --> 00:25:15,160
+So have an open mind when you propose these error messages.
+
+496
+00:25:15,160 --> 00:25:18,160
+And that's basically it.
+
+497
+00:25:18,160 --> 00:25:21,160
+I hope that you have learned a bit about this thing.
+
+498
+00:25:21,160 --> 00:25:26,160
+I think the moral of the story is that if you are doing your PSD and then you lose your battle
+
+499
+00:25:26,200 --> 00:25:30,200
+against some syntax errors, then you can study it during years about parsers and grammars.
+
+500
+00:25:30,200 --> 00:25:34,200
+You can make a new version of the parser of one of the most popular languages in the world.
+
+501
+00:25:34,200 --> 00:25:37,200
+You can join the Core Dev team, and then you can improve the situation.
+
+502
+00:25:37,200 --> 00:25:40,200
+Or you can alternatively wait until someone else does this, and then you can use it.
+
+503
+00:25:40,200 --> 00:25:43,200
+Thank you very much, and I hope you have enjoyed it.
+

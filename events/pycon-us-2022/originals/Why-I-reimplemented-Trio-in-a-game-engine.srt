@@ -1,0 +1,1288 @@
+1
+00:00:00,000 --> 00:00:11,760
+We have an event loop, so it's going to call update and it's going to call draw at maybe
+
+2
+00:00:11,760 --> 00:00:14,580
+60 times a second.
+
+3
+00:00:14,580 --> 00:00:20,660
+Update has the responsibility of updating all of the game logic and draw has the responsibility
+
+4
+00:00:20,660 --> 00:00:27,080
+of drawing it to the screen.
+
+5
+00:00:27,080 --> 00:00:30,960
+So the first thing that many game engines do, and this includes other games engines
+
+6
+00:00:30,960 --> 00:00:39,640
+in Python like Piglet, Pygame Zero, which is my educational game framework, and Wasabi2D,
+
+7
+00:00:39,640 --> 00:00:43,760
+which is what I'm going to be talking about today, they will absorb the event loop and
+
+8
+00:00:43,760 --> 00:00:46,840
+they'll just give you, you have a hard coded event loop and we just have a function called
+
+9
+00:00:46,840 --> 00:00:55,000
+run that is, you know, there's some way of passing update and draw into it, whatever.
+
+10
+00:00:55,000 --> 00:01:02,040
+And then the next optimization or the next advancement in structure here is to have an
+
+11
+00:01:02,040 --> 00:01:07,920
+object called a scene graph and a scene graph is going to be a data structure that represents
+
+12
+00:01:07,920 --> 00:01:11,720
+what is drawn and the engine can handle drawing that.
+
+13
+00:01:11,720 --> 00:01:17,480
+So it can build in considerations like make it pretty or don't draw what isn't visible
+
+14
+00:01:17,480 --> 00:01:20,720
+in order to go as fast as possible.
+
+15
+00:01:20,720 --> 00:01:25,640
+An update, of course, is still going to run 60 times a second but its responsibility is
+
+16
+00:01:25,640 --> 00:01:32,960
+now to make those changes into the scene graph to be drawn when a draw happens.
+
+17
+00:01:32,960 --> 00:01:36,320
+So from this point forward we're going to talk, we're not going to talk about graphics
+
+18
+00:01:36,320 --> 00:01:41,460
+in a game, we're just going to assume a scene graph exists.
+
+19
+00:01:41,460 --> 00:01:49,700
+So now I want to take a little look at the state of the art for concurrency in games.
+
+20
+00:01:49,700 --> 00:01:54,020
+I've got a bit of video here.
+
+21
+00:01:54,020 --> 00:01:57,160
+So in this game I'm moving lots of objects.
+
+22
+00:01:57,160 --> 00:02:01,140
+They are all moving at the same time.
+
+23
+00:02:01,140 --> 00:02:09,020
+You could easily see how this could be written as one function and maybe vectorized.
+
+24
+00:02:09,020 --> 00:02:10,580
+And that view is always going to be useful.
+
+25
+00:02:10,700 --> 00:02:17,020
+That's going to be possibly a faster way of animating many objects at the same time.
+
+26
+00:02:17,020 --> 00:02:25,780
+But if you look at a different example where you have two actors in the game that are doing
+
+27
+00:02:25,780 --> 00:02:32,460
+completely independent behaviors, this is much more easy to see as two tasks, two sets
+
+28
+00:02:32,540 --> 00:02:45,220
+behaviors that just happen to exist within the same game engine and the same game loop.
+
+29
+00:02:45,220 --> 00:02:53,260
+If we look at the logic for the update function world, there are lots of problems with this.
+
+30
+00:02:53,260 --> 00:02:58,780
+So it's messy, there are lots of state variables.
+
+31
+00:02:58,780 --> 00:03:01,620
+This function even gets called when there's no work to do so there's an early return at
+
+32
+00:03:01,780 --> 00:03:03,580
+the top.
+
+33
+00:03:03,580 --> 00:03:09,220
+And this is, it's hard to refactor because it's all woven together.
+
+34
+00:03:09,220 --> 00:03:14,540
+If we look at a coroutine based version, things get a lot simpler.
+
+35
+00:03:14,540 --> 00:03:23,420
+So the coroutine syntax in Python is if you have an await, you are pausing, suspending
+
+36
+00:03:23,420 --> 00:03:25,580
+the execution and you'll be resumed later.
+
+37
+00:03:25,580 --> 00:03:31,420
+So we're delegating back to the event loop, the game loop.
+
+38
+00:03:32,220 --> 00:03:33,220
+Lots of things drop out of this.
+
+39
+00:03:33,220 --> 00:03:37,540
+So the current state of a task is captured by local variables and the position in the
+
+40
+00:03:37,540 --> 00:03:39,820
+coroutine function.
+
+41
+00:03:39,820 --> 00:03:46,820
+And a coroutine function now has a much bigger slice of an object's behavior.
+
+42
+00:03:46,820 --> 00:03:53,660
+So you can see a behavior end to end within a function.
+
+43
+00:03:53,660 --> 00:03:55,780
+This is a full example from Wasabi 2D.
+
+44
+00:03:55,780 --> 00:03:58,100
+So I'm going to walk you through this briefly.
+
+45
+00:03:58,100 --> 00:04:01,180
+The scene object is the scene graph.
+
+46
+00:04:01,180 --> 00:04:05,420
+Then random position is a function that just returns a random position within the screen.
+
+47
+00:04:05,420 --> 00:04:07,580
+That's obviously a sync function.
+
+48
+00:04:07,580 --> 00:04:11,460
+And then drive ship is an async function.
+
+49
+00:04:11,460 --> 00:04:16,300
+It's going to create a ship sprite at a random position and then forever it will pick a new
+
+50
+00:04:16,300 --> 00:04:23,260
+random position and then over time it will turn the ship to face that and then over time
+
+51
+00:04:23,260 --> 00:04:26,940
+it will move it to the next position.
+
+52
+00:04:26,940 --> 00:04:34,820
+And then we pass that coroutine into the run function in order to run that as our game.
+
+53
+00:04:34,820 --> 00:04:43,740
+That coroutine becomes our game.
+
+54
+00:04:43,740 --> 00:04:50,980
+Taking a look around the world of game engines, Unity has support for coroutines.
+
+55
+00:04:50,980 --> 00:04:53,640
+And this is what it looks like in Unity.
+
+56
+00:04:53,640 --> 00:04:54,640
+But this is quite limited.
+
+57
+00:04:55,640 --> 00:05:00,200
+It has a limited capability and the syntax is quite clumsy.
+
+58
+00:05:00,200 --> 00:05:04,600
+This is apparently C sharp's state of the art for generators.
+
+59
+00:05:04,600 --> 00:05:10,920
+They're still at this phase of using generators as coroutines.
+
+60
+00:05:10,920 --> 00:05:12,800
+Another example from the world of UI.
+
+61
+00:05:12,800 --> 00:05:16,240
+In fact, like JavaScript, you would expect it's doing a lot of UI.
+
+62
+00:05:16,240 --> 00:05:17,560
+So there would be lots of these frameworks.
+
+63
+00:05:17,560 --> 00:05:23,080
+And actually this is the only one that I could find that is using coroutines in order to
+
+64
+00:05:23,080 --> 00:05:27,920
+do animations on screen.
+
+65
+00:05:27,920 --> 00:05:40,440
+So Python has superb coroutine support and let's go use it.
+
+66
+00:05:40,440 --> 00:05:49,640
+Another example, if you have children perhaps or you are a child, this is code from a programming
+
+67
+00:05:49,640 --> 00:05:52,420
+language called Scratch, a graphical programming language.
+
+68
+00:05:52,420 --> 00:05:55,220
+And it has forever loops and it doesn't have a break.
+
+69
+00:05:55,220 --> 00:05:58,100
+So naively, this would run forever.
+
+70
+00:05:58,100 --> 00:05:59,220
+This would just hang.
+
+71
+00:05:59,220 --> 00:06:01,540
+But this is where you do animation in Scratch.
+
+72
+00:06:01,540 --> 00:06:02,540
+You do a forever loop.
+
+73
+00:06:02,540 --> 00:06:04,020
+So there is an implicit yield somewhere in there.
+
+74
+00:06:04,020 --> 00:06:09,140
+In fact, in a few places.
+
+75
+00:06:09,140 --> 00:06:13,700
+So now we come onto the meat of this talk, which is structured concurrency.
+
+76
+00:06:13,700 --> 00:06:14,700
+So we've seen concurrency.
+
+77
+00:06:14,700 --> 00:06:19,280
+We've seen the ability to run tasks that delegate to the event loop.
+
+78
+00:06:19,280 --> 00:06:21,580
+What is structured concurrency?
+
+79
+00:06:21,580 --> 00:06:28,540
+I'm going to steal a quote from Nathaniel Smith, who is the author of Trio.
+
+80
+00:06:28,540 --> 00:06:29,880
+Here's the core idea.
+
+81
+00:06:29,880 --> 00:06:33,820
+Every time our control path splits into multiple concurrent paths, we want to make sure that
+
+82
+00:06:33,820 --> 00:06:36,500
+they join up again.
+
+83
+00:06:36,500 --> 00:06:40,540
+And I'm also going to steal Nathaniel's slide.
+
+84
+00:06:40,540 --> 00:06:44,980
+The green task is, so it's a task that's running.
+
+85
+00:06:44,980 --> 00:06:47,700
+It starts doing something concurrently.
+
+86
+00:06:47,700 --> 00:06:55,060
+And then all of those tasks must finish before the green task can continue running.
+
+87
+00:06:55,060 --> 00:06:56,780
+But we can look at that in code.
+
+88
+00:06:56,780 --> 00:06:58,260
+This is the code from Trio.
+
+89
+00:06:58,260 --> 00:07:03,980
+And so imagine you have a fetch function that's fetching a remote URL or something.
+
+90
+00:07:03,980 --> 00:07:08,220
+We have an async with block that is opening a nursery.
+
+91
+00:07:08,220 --> 00:07:13,820
+And the nursery is the scope in which we can start more tasks.
+
+92
+00:07:14,820 --> 00:07:19,620
+And the exit of the async with block is the point at which we wait for those tasks to complete.
+
+93
+00:07:19,620 --> 00:07:24,140
+So unfortunately, in Python, it's a really important point, a really important await
+
+94
+00:07:24,140 --> 00:07:25,140
+point.
+
+95
+00:07:25,140 --> 00:07:27,420
+And unfortunately, it's just indicated by that dedent.
+
+96
+00:07:27,420 --> 00:07:31,620
+So keep your eyes peeled for that, because it's going to be crucially important.
+
+97
+00:07:31,620 --> 00:07:33,940
+So we await both tasks at the dedent of that block.
+
+98
+00:07:33,940 --> 00:07:39,880
+And then we can compare.
+
+99
+00:07:39,880 --> 00:07:44,760
+You could contrast this to what we can do with async.io today.
+
+100
+00:07:44,760 --> 00:07:47,000
+It looks superficially quite similar.
+
+101
+00:07:47,000 --> 00:07:49,680
+But there are a few differences.
+
+102
+00:07:49,680 --> 00:07:53,840
+So first, with async.io, you can still create tasks outside of a gather.
+
+103
+00:07:53,840 --> 00:07:57,840
+So you could at any point create a disown task that survives a function.
+
+104
+00:07:57,840 --> 00:08:04,240
+And in fact, the way that I've written this, the tasks that are created, if you moved one
+
+105
+00:08:04,240 --> 00:08:08,960
+of those outside of the gather, it would still be a task that is running.
+
+106
+00:08:08,960 --> 00:08:11,680
+You can also pass code between functions into gather.
+
+107
+00:08:11,680 --> 00:08:15,840
+And then the task is you don't have the task object.
+
+108
+00:08:15,840 --> 00:08:20,080
+But you can't pass the gather object around.
+
+109
+00:08:20,080 --> 00:08:23,040
+And you can't add more things to it.
+
+110
+00:08:23,040 --> 00:08:26,000
+But more deeply, there's no concept of ownership here.
+
+111
+00:08:26,000 --> 00:08:33,400
+So if one of the tasks raise an exception, then the exception will be raised here immediately.
+
+112
+00:08:33,400 --> 00:08:36,640
+But the other task will continue running.
+
+113
+00:08:36,640 --> 00:08:40,520
+This isn't bound together.
+
+114
+00:08:40,520 --> 00:08:46,600
+In wasabi 2D, you'll see code that is super similar to trio.
+
+115
+00:08:46,600 --> 00:08:47,800
+Some things are spelled differently.
+
+116
+00:08:47,800 --> 00:08:50,320
+We embrace coroutine objects.
+
+117
+00:08:50,320 --> 00:08:53,760
+But the behavior is exactly the same.
+
+118
+00:08:53,760 --> 00:08:57,960
+And coming in Python 3.11, there's task group.
+
+119
+00:08:57,960 --> 00:09:00,720
+And it looks super similar to wasabi 2D.
+
+120
+00:09:00,720 --> 00:09:09,960
+So in asyncIO and task groups in Python 3.11, if you are only using task groups, then yeah,
+
+121
+00:09:09,960 --> 00:09:15,120
+you're doing structured concurrency.
+
+122
+00:09:15,120 --> 00:09:19,240
+It's not going to enforce that you are only using task groups.
+
+123
+00:09:19,240 --> 00:09:21,720
+And I still think trio has more power.
+
+124
+00:09:21,720 --> 00:09:30,140
+It's further along in its adoption of this model.
+
+125
+00:09:30,140 --> 00:09:35,940
+So the fact that we can only start tasks through a nursery and we have had to enter that nursery
+
+126
+00:09:35,940 --> 00:09:42,500
+before we could do it means that we can construct a tree of the tasks.
+
+127
+00:09:42,500 --> 00:09:48,420
+There is logically a tree by which tasks are connected to one another.
+
+128
+00:09:48,420 --> 00:09:50,660
+And this tree could go deeper than this.
+
+129
+00:09:50,660 --> 00:09:53,100
+So we don't need to know what driveship is doing.
+
+130
+00:09:53,100 --> 00:09:59,180
+But if that was running tasks, then this tree would be deep.
+
+131
+00:09:59,220 --> 00:10:04,260
+So you have to bear in mind that there's a tree structure behind this because that's
+
+132
+00:10:04,260 --> 00:10:10,620
+going to be important later.
+
+133
+00:10:10,620 --> 00:10:17,340
+So let's look at a few examples of why structured concurrency is useful in games.
+
+134
+00:10:17,340 --> 00:10:25,020
+And to do this, I am using a game that I wrote for Pi Week in September last year, Pi Week
+
+135
+00:10:25,020 --> 00:10:26,420
+32.
+
+136
+00:10:26,420 --> 00:10:28,580
+The theme was never ending.
+
+137
+00:10:28,580 --> 00:10:35,100
+So it's going to have a never ending succession of waves of enemy ships approaching.
+
+138
+00:10:35,100 --> 00:10:39,220
+And I'm flying around and shooting at them.
+
+139
+00:10:39,220 --> 00:10:43,900
+And there's a little bit sped up.
+
+140
+00:10:43,900 --> 00:10:47,820
+So how do we do an infinite progression of waves?
+
+141
+00:10:47,820 --> 00:10:53,420
+In this code, it's tools.count will loop forever.
+
+142
+00:10:53,420 --> 00:10:54,780
+And it's just going to count up.
+
+143
+00:10:54,780 --> 00:10:59,660
+And at the start of each wave, let's pause for a moment in order to let the player get
+
+144
+00:10:59,660 --> 00:11:00,660
+into position.
+
+145
+00:11:00,660 --> 00:11:01,660
+I say pause.
+
+146
+00:11:01,660 --> 00:11:02,660
+I mean, like, sleep this coroutine.
+
+147
+00:11:02,660 --> 00:11:06,020
+The player will still be moving.
+
+148
+00:11:06,020 --> 00:11:07,460
+And then we start a nursery.
+
+149
+00:11:07,460 --> 00:11:09,660
+And we can spawn enemy ships into it.
+
+150
+00:11:09,660 --> 00:11:11,420
+The enemy ships were called Threx.
+
+151
+00:11:11,420 --> 00:11:15,620
+So that's why it's the odd naming of that function.
+
+152
+00:11:15,620 --> 00:11:21,980
+And the nursery isn't going to exit until all of those ships are dead, which is why
+
+153
+00:11:22,020 --> 00:11:29,460
+we can write it like this.
+
+154
+00:11:29,460 --> 00:11:35,940
+But something that surprised me as I was adopting this in writing games is that it was really
+
+155
+00:11:35,940 --> 00:11:43,660
+natural to use nurseries to decompose the behaviors of a ship or any game object into
+
+156
+00:11:43,660 --> 00:11:46,160
+a bundle of tasks.
+
+157
+00:11:46,160 --> 00:11:49,700
+So most of them are defined as closures in this function.
+
+158
+00:11:49,700 --> 00:11:52,260
+In Pi Week, you write code quickly.
+
+159
+00:11:52,260 --> 00:11:57,140
+But your style preferences may vary.
+
+160
+00:11:57,140 --> 00:12:02,380
+But there's a benefit here, which is that we can really easily share behaviors between
+
+161
+00:12:02,380 --> 00:12:07,300
+game objects and not by inheritance, but by running their behaviors as part of our nursery
+
+162
+00:12:07,300 --> 00:12:13,180
+on our game object.
+
+163
+00:12:13,180 --> 00:12:17,620
+But the behaviors individually become easy to write.
+
+164
+00:12:17,700 --> 00:12:19,780
+This is a compelling thing.
+
+165
+00:12:19,780 --> 00:12:22,900
+In the top example here, we're waiting for input.
+
+166
+00:12:22,900 --> 00:12:25,180
+Oh, yeah, you can wait for input.
+
+167
+00:12:25,180 --> 00:12:29,300
+So we're waiting for the controller button to be pressed.
+
+168
+00:12:29,300 --> 00:12:34,660
+And at the moment that the button is pressed, we create a bullet object.
+
+169
+00:12:34,660 --> 00:12:38,580
+And then we sleep, which puts a limit on the maximum speed at which the player can press
+
+170
+00:12:38,580 --> 00:12:41,300
+the button to shoot.
+
+171
+00:12:41,300 --> 00:12:45,540
+And something else to note is that we're spawning the bullet into an outer nursery.
+
+172
+00:12:46,340 --> 00:12:50,340
+So lifetime isn't coupled to the lifetime of the ship.
+
+173
+00:12:50,340 --> 00:12:55,860
+In the bottom example, I'm just sort of illustrating how this could be refactored.
+
+174
+00:12:55,860 --> 00:13:01,180
+So this is the kind of model where you can only have one bullet on screen at the same
+
+175
+00:13:01,180 --> 00:13:05,620
+time, which would give the game a retro feel, I think.
+
+176
+00:13:05,620 --> 00:13:08,540
+But it just requires a little bit of pivoting in the code.
+
+177
+00:13:08,540 --> 00:13:11,540
+And the behavior is really obvious in both cases.
+
+178
+00:13:15,660 --> 00:13:20,700
+But the thing that underpins being able to split apart behaviors as different tasks is
+
+179
+00:13:20,700 --> 00:13:22,140
+cancellation.
+
+180
+00:13:22,140 --> 00:13:30,740
+So any nursery, in fact, the primitive that could be canceled is called a cancellation
+
+181
+00:13:30,740 --> 00:13:31,100
+scope.
+
+182
+00:13:31,100 --> 00:13:33,740
+And a nursery contains a cancellation scope.
+
+183
+00:13:33,740 --> 00:13:39,100
+So here, we're creating a ship object with a nursery.
+
+184
+00:13:39,100 --> 00:13:47,140
+And when the code at the bottom is a separate task that is running collision detection,
+
+185
+00:13:47,140 --> 00:13:52,700
+when the enemy ship collides with a bullet, we just cancel that nursery.
+
+186
+00:13:52,700 --> 00:13:57,620
+And cancellation means that an exception is thrown inside every task.
+
+187
+00:13:57,620 --> 00:14:04,340
+And when all of the tasks are finished, the exceptions are propagated such that they've
+
+188
+00:14:04,340 --> 00:14:05,380
+all finished.
+
+189
+00:14:05,380 --> 00:14:08,940
+Then the flow continues outside of the nursery block.
+
+190
+00:14:08,980 --> 00:14:13,100
+And that means that the explosion effects here that we'll play, that's a graphical explosion
+
+191
+00:14:13,100 --> 00:14:16,740
+effect and a sound effect.
+
+192
+00:14:16,740 --> 00:14:19,620
+So the collision causes the death of the ship.
+
+193
+00:14:19,620 --> 00:14:24,220
+And the ship's code can react to its death.
+
+194
+00:14:28,020 --> 00:14:31,060
+But also, outer cancellation implies inner cancellation.
+
+195
+00:14:31,060 --> 00:14:36,260
+If you had a nursery, the nursery that is running your task will imply if that is canceled,
+
+196
+00:14:36,380 --> 00:14:41,060
+it cancels the task within your nursery and your nursery.
+
+197
+00:14:41,060 --> 00:14:46,740
+So going back to the model of tasks as a tree, you can cancel at any point.
+
+198
+00:14:46,740 --> 00:14:48,980
+And flow returns at that point.
+
+199
+00:14:48,980 --> 00:14:52,940
+And all of that tree is collapsed and thrown away.
+
+200
+00:14:52,940 --> 00:14:59,020
+So here, the bottom coroutine is running the entire player's existence.
+
+201
+00:14:59,020 --> 00:15:00,860
+It's giving the player three lives.
+
+202
+00:15:00,860 --> 00:15:04,620
+And then after those three lives are up, it's going to cancel the nursery.
+
+203
+00:15:04,620 --> 00:15:07,700
+And that's going to cancel the level as well.
+
+204
+00:15:07,700 --> 00:15:09,180
+So game over.
+
+205
+00:15:09,180 --> 00:15:12,140
+We go back to wave one.
+
+206
+00:15:16,820 --> 00:15:20,780
+So returning to the ship, then, there are two ways out of this function.
+
+207
+00:15:20,780 --> 00:15:24,820
+Remember we were awaiting at the exit of the nursery.
+
+208
+00:15:24,820 --> 00:15:30,540
+And we either are canceled in this scope, in which case the flow continues afterwards
+
+209
+00:15:30,540 --> 00:15:34,460
+and we'll play the explosion effects, or the entire level is thrown away.
+
+210
+00:15:34,460 --> 00:15:37,580
+At which point an exception is raised at that point.
+
+211
+00:15:37,580 --> 00:15:39,580
+And flow doesn't continue.
+
+212
+00:15:41,580 --> 00:15:48,180
+And that means that we can start using things like context managers.
+
+213
+00:15:48,180 --> 00:15:52,940
+So here, there are a couple of context managers to show the ship's sprite on the screen and
+
+214
+00:15:52,940 --> 00:15:57,940
+delete it afterwards and to turn on collision detection.
+
+215
+00:15:57,940 --> 00:16:04,380
+And both of those are turned off regardless of how this coroutine exits.
+
+216
+00:16:04,380 --> 00:16:20,580
+So this is really important.
+
+217
+00:16:20,580 --> 00:16:23,500
+This became really compelling.
+
+218
+00:16:23,500 --> 00:16:28,420
+In games that I've written without structured concurrency or concurrency as a paradigm,
+
+219
+00:16:28,580 --> 00:16:36,500
+Cleanup was really, really hard and buggy because the state is everywhere.
+
+220
+00:16:36,500 --> 00:16:40,500
+So we can cancel by throwing things away and we can use context managers when we're doing it.
+
+221
+00:16:44,500 --> 00:16:51,300
+So I'm going to talk a little bit about some of the synchronization problems or the parallels
+
+222
+00:16:51,300 --> 00:16:56,300
+between synchronization in games and synchronization in I.O.
+
+223
+00:16:57,180 --> 00:17:00,180
+So there's another example video here from Axiom.
+
+224
+00:17:00,180 --> 00:17:01,180
+Oh, what's that?
+
+225
+00:17:01,180 --> 00:17:04,180
+Can you take that away, please?
+
+226
+00:17:04,180 --> 00:17:10,180
+Who's at the desk?
+
+227
+00:17:10,180 --> 00:17:13,180
+The speaker notes have popped up on there.
+
+228
+00:17:27,180 --> 00:17:41,180
+OK, I'll just talk through it a little bit.
+
+229
+00:17:41,180 --> 00:17:50,260
+What you're going to see is an example of play in which there is a repair drone and
+
+230
+00:17:50,260 --> 00:17:53,180
+there is an iris door which will open to let out the repair drones.
+
+231
+00:17:53,180 --> 00:17:56,180
+And I'm also going to be picking up power-ups.
+
+232
+00:17:57,060 --> 00:18:00,060
+I'll go back from there, backwards.
+
+233
+00:18:00,060 --> 00:18:03,060
+Yeah, can I get back to it?
+
+234
+00:18:08,060 --> 00:18:09,060
+OK, cool.
+
+235
+00:18:09,060 --> 00:18:10,060
+So I'm picking up power-ups.
+
+236
+00:18:10,060 --> 00:18:14,060
+The power-up building factory things are going to start building another power-up.
+
+237
+00:18:14,060 --> 00:18:19,060
+Keep your eye on the iris opening and closing to let drones in and out.
+
+238
+00:18:19,060 --> 00:18:20,060
+Cool.
+
+239
+00:18:20,060 --> 00:18:25,060
+I can move on from there.
+
+240
+00:18:25,940 --> 00:18:31,940
+So this is achieved through event objects which are a thing in Trio as well as Wasabi2D.
+
+241
+00:18:31,940 --> 00:18:34,940
+And they allow tasks to communicate not by cancel.
+
+242
+00:18:34,940 --> 00:18:37,940
+So cancellation just seems to be a concurrency primitive as well.
+
+243
+00:18:37,940 --> 00:18:41,940
+But if you don't have anything that you actually want to cancel, here we want generate power-ups
+
+244
+00:18:41,940 --> 00:18:42,940
+to continue running.
+
+245
+00:18:42,940 --> 00:18:43,940
+And it's an infinite loop.
+
+246
+00:18:43,940 --> 00:18:48,940
+It's going to do the build-up to create a new power-up.
+
+247
+00:18:48,940 --> 00:18:51,940
+It will create one and set an event that it hasn't been collected yet.
+
+248
+00:18:51,940 --> 00:18:53,940
+And then it's going to wait for that event.
+
+249
+00:18:54,820 --> 00:18:56,820
+So wait for that power-up to be collected.
+
+250
+00:18:56,820 --> 00:18:59,820
+Then turn off the lights when it is collected and do it all again.
+
+251
+00:18:59,820 --> 00:19:04,820
+And we use set in the collision handling to initiate that event.
+
+252
+00:19:04,820 --> 00:19:10,820
+And the iris turned out to be really satisfying when I actually implemented this code because
+
+253
+00:19:10,820 --> 00:19:12,820
+I thought this was going to be really hard to write.
+
+254
+00:19:12,820 --> 00:19:14,820
+And it turned out to be really easy.
+
+255
+00:19:14,820 --> 00:19:19,820
+I needed two event objects.
+
+256
+00:19:20,700 --> 00:19:23,700
+And I had to make the iris control its own coroutine.
+
+257
+00:19:23,700 --> 00:19:27,700
+So you can imagine there's a program running on that spaceship.
+
+258
+00:19:27,700 --> 00:19:31,700
+And it is waiting for a request to open the iris.
+
+259
+00:19:31,700 --> 00:19:36,700
+And when the iris is open, it signals everything that's waiting to go through it that it is open.
+
+260
+00:19:36,700 --> 00:19:41,700
+And then it waits for a second and times out and closes the iris again.
+
+261
+00:19:41,700 --> 00:19:49,700
+And the function openiris there requests the iris to open and waits for it to be opened.
+
+262
+00:19:50,580 --> 00:19:52,580
+And that dropped out very nicely.
+
+263
+00:19:54,580 --> 00:19:59,580
+So why would I write Trio in my game engine when Trio is a thing?
+
+264
+00:20:00,580 --> 00:20:07,580
+So, oh, okay, that slide has moved.
+
+265
+00:20:07,580 --> 00:20:10,580
+Maybe come back to that.
+
+266
+00:20:10,580 --> 00:20:13,580
+One reason is that we're waiting at different points.
+
+267
+00:20:13,580 --> 00:20:16,580
+So in Trio, we're waiting on IOs.
+
+268
+00:20:17,460 --> 00:20:19,460
+So we're waiting for a father scripture to be ready.
+
+269
+00:20:19,460 --> 00:20:22,460
+And the call to do that is a select like thing or a selector.
+
+270
+00:20:22,460 --> 00:20:27,460
+And in Pygame, we're waiting for input events or a timeout.
+
+271
+00:20:28,460 --> 00:20:33,460
+So both cases, we maintain a clock, which is the next thing that we need to wake up for anyway.
+
+272
+00:20:33,460 --> 00:20:40,460
+But we're using different functions to drive the point that we block the entire thread.
+
+273
+00:20:42,460 --> 00:20:44,460
+And we could combine those two maybe.
+
+274
+00:20:44,460 --> 00:20:45,460
+We could run two threads.
+
+275
+00:20:46,340 --> 00:20:52,340
+We could pass events between one and the other and it would work, but it would be a little bit clumsy.
+
+276
+00:20:53,340 --> 00:21:01,340
+But there was a deeper issue, which is that when multiple tasks are ready to run,
+
+277
+00:21:01,340 --> 00:21:04,340
+we have to have some opinion on which order they run in.
+
+278
+00:21:04,340 --> 00:21:06,340
+You can't just not have an opinion.
+
+279
+00:21:06,340 --> 00:21:08,340
+You have to pick one and run it.
+
+280
+00:21:08,340 --> 00:21:14,340
+So which we run, the one that's waiting longest or the highest priority task.
+
+281
+00:21:15,220 --> 00:21:19,220
+If you had priorities and there's no right answer, it just depends what you're trying to optimize for.
+
+282
+00:21:19,220 --> 00:21:22,220
+So here Trio and Wasabi2D diverge.
+
+283
+00:21:22,220 --> 00:21:27,220
+Trio currently just picks a task at random, which doesn't necessarily optimize for anything.
+
+284
+00:21:27,220 --> 00:21:35,220
+But Nathaniel justifies that as avoiding users having any expectations of what it's optimizing for so that he can change it later.
+
+285
+00:21:37,220 --> 00:21:41,220
+Wasabi2D always runs the earliest created task first.
+
+286
+00:21:42,100 --> 00:21:49,100
+So it's a deterministic ordering that prioritizes determinism.
+
+287
+00:21:49,100 --> 00:21:56,100
+And that's because if you picked at random, a task could be scheduled at the end of one frame and the start of another frame.
+
+288
+00:21:56,100 --> 00:22:00,100
+And then it's not seen a whole frames worth of changes in the rest of the world.
+
+289
+00:22:00,100 --> 00:22:05,100
+So we want it to see approximately one frames worth of changes every time.
+
+290
+00:22:05,980 --> 00:22:16,980
+The order then might be relevant, but at least we don't have the jitter to deal with.
+
+291
+00:22:16,980 --> 00:22:20,980
+But our ideas of time diverge as well.
+
+292
+00:22:20,980 --> 00:22:23,980
+So in Trio, we have an idea of continuous time.
+
+293
+00:22:23,980 --> 00:22:28,980
+So, or a normal time.
+
+294
+00:22:28,980 --> 00:22:30,980
+I'm calling it continuous here.
+
+295
+00:22:31,860 --> 00:22:34,860
+Every time you ask the clock for what time it is, it will tell you a different time.
+
+296
+00:22:34,860 --> 00:22:36,860
+Time will move on.
+
+297
+00:22:36,860 --> 00:22:41,860
+And we could schedule frames every 60th of a second, but I would be worried about a task being suspended into the next frame.
+
+298
+00:22:41,860 --> 00:22:45,860
+When it absolutely had to happen in the first frame.
+
+299
+00:22:45,860 --> 00:22:52,860
+So we have a model of time where it's a discrete model where time doesn't move forward within a frame.
+
+300
+00:22:52,860 --> 00:22:59,860
+We have a bundle of stuff that has to run and all of it has to be run before we can say, okay, we're done.
+
+301
+00:23:00,740 --> 00:23:05,740
+So we can just draw a frame and the clock will just return the same time within that unit of time.
+
+302
+00:23:08,740 --> 00:23:17,740
+So, summing up, in games programming, structured concurrency lets us split behaviors into multiple coroutines.
+
+303
+00:23:17,740 --> 00:23:23,740
+And cancellation seems to be the important thing for implementing this.
+
+304
+00:23:24,620 --> 00:23:30,620
+And code seems easier to write because, as we saw, behaviors are more simply stated.
+
+305
+00:23:30,620 --> 00:23:35,620
+We can have more of them and they can do independent things, even though they're acting on the same objects.
+
+306
+00:23:37,620 --> 00:23:44,620
+There is a slight shift in focus, which is that exceptions are pretty unimportant for Wasabi 2D.
+
+307
+00:23:45,500 --> 00:23:54,500
+Exceptions cause cancellation, but exceptions in a game are probably less expected than if you're dealing with I.O.
+
+308
+00:23:54,500 --> 00:24:00,500
+It's more likely to indicate a bug in your game logic.
+
+309
+00:24:00,500 --> 00:24:06,500
+So Wasabi 2D doesn't bother with handling multiple exceptions or exception groups.
+
+310
+00:24:07,380 --> 00:24:16,380
+So all of this led to a model that practically eliminated state keeping up bugs in a game.
+
+311
+00:24:16,380 --> 00:24:24,380
+And it was very easy to add more animations, and animations are good in games because they add graphical richness.
+
+312
+00:24:25,260 --> 00:24:38,260
+And every time that the world changes, you want to have the player see that as juicy.
+
+313
+00:24:38,260 --> 00:24:44,260
+There's this model of games programming where you're trying to keep the player engaged.
+
+314
+00:24:46,260 --> 00:24:50,260
+And avoiding a global nursery using structured concurrency helps make code refactorable
+
+315
+00:24:51,140 --> 00:24:55,140
+because you can always call a coroutine function from another or you can pivot your entire program
+
+316
+00:24:55,140 --> 00:25:02,140
+because they're guaranteed to be self-contained tasks.
+
+317
+00:25:04,140 --> 00:25:07,140
+So thank you. This is all on GitHub.
+
+318
+00:25:07,140 --> 00:25:15,140
+The coroutine stuff is on the master branch and it's documented, but I'm still working my way up to a release.
+
+319
+00:25:15,140 --> 00:25:18,140
+I've got kids now, so I have less time to play with this stuff.
+
+320
+00:25:19,020 --> 00:25:24,020
+Axiom is on the PiWeek website and PiWeek is at piweek.org.
+
+321
+00:25:24,020 --> 00:25:29,020
+So maybe you could join us for the next competition, which will be in September.
+
+322
+00:25:29,020 --> 00:25:32,020
+Thanks very much.
+

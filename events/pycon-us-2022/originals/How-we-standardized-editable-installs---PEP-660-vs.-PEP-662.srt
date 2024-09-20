@@ -1,0 +1,1676 @@
+1
+00:00:00,000 --> 00:00:12,760
+Okay, up next we have Bernard Gabor with how we standardize editable installs, PEP660 versus
+
+2
+00:00:12,760 --> 00:00:13,760
+PEP662.
+
+3
+00:00:13,760 --> 00:00:24,000
+Thank you, thank you all.
+
+4
+00:00:24,000 --> 00:00:28,200
+Let me start with saying that I appreciate your presence here.
+
+5
+00:00:28,200 --> 00:00:30,880
+I know that this is not a light topic for anyone.
+
+6
+00:00:30,880 --> 00:00:36,720
+As Peter put it this morning, this is probably the place where everyone gets upset eventually.
+
+7
+00:00:36,720 --> 00:00:39,360
+I'm here today to hopefully help you a bit with that.
+
+8
+00:00:39,360 --> 00:00:44,360
+My goal here is today for you to actually have a better insight on how some of the packaging
+
+9
+00:00:44,360 --> 00:00:48,880
+works and hopefully if you're running some of those annoyances, you understand enough
+
+10
+00:00:48,880 --> 00:00:53,280
+of how the system works that you can figure out what the problem and hopefully fix it
+
+11
+00:00:53,280 --> 00:00:57,820
+with less annoyance at the end of the day.
+
+12
+00:00:57,820 --> 00:00:59,300
+Let me start with introducing myself.
+
+13
+00:00:59,300 --> 00:01:00,300
+Who am I?
+
+14
+00:01:00,300 --> 00:01:02,300
+I'm a software engineer at Bloomberg.
+
+15
+00:01:02,300 --> 00:01:07,940
+I work in a team that primarily focuses on quality control inside data ingestion pipelines.
+
+16
+00:01:07,940 --> 00:01:12,140
+But more importantly for this talk, I'm an open source contributor.
+
+17
+00:01:12,140 --> 00:01:15,980
+Primarily I'm a member of the Python packaging authority and I maintain the virtual and build
+
+18
+00:01:15,980 --> 00:01:21,000
+PEP6 and talks projects which are the more popular ones.
+
+19
+00:01:21,000 --> 00:01:26,420
+And also I'm the parent of two Yorkshire Terriers and I'll employ their presence at least in
+
+20
+00:01:26,420 --> 00:01:33,780
+the site virtually to hopefully give you a bit of relief for the dense subject of packaging.
+
+21
+00:01:33,780 --> 00:01:36,420
+Now let's start with what is editable installation.
+
+22
+00:01:36,420 --> 00:01:42,900
+But before we can actually understand how we standardize editable installations, we
+
+23
+00:01:42,900 --> 00:01:47,900
+have to understand how things worked in the past, then where we ended up today, only then
+
+24
+00:01:47,900 --> 00:01:52,060
+to realize what we propose and where the future is heading.
+
+25
+00:01:52,100 --> 00:01:57,420
+I hope you're all eager to find out more about how editable installs works in the past.
+
+26
+00:01:57,420 --> 00:02:00,900
+And for that we first need a very quick demo project.
+
+27
+00:02:00,900 --> 00:02:03,620
+Here is a quick demo project for your amusement.
+
+28
+00:02:03,620 --> 00:02:05,820
+You can see it's very simple, doesn't do very much.
+
+29
+00:02:05,820 --> 00:02:13,500
+It literally just has a simple say hi method or function and you can call that and call
+
+30
+00:02:13,500 --> 00:02:16,060
+it, you're going to see it, hey, it works or not.
+
+31
+00:02:16,260 --> 00:02:22,860
+Now if you just create this source directory and start up your Python interpreter and pass
+
+32
+00:02:22,860 --> 00:02:27,980
+in your testing code, basically calling the method, you'll see that it's not working.
+
+33
+00:02:27,980 --> 00:02:32,220
+And the reason for that it's not working is to actually test the library you first need
+
+34
+00:02:32,220 --> 00:02:33,940
+to install it.
+
+35
+00:02:33,940 --> 00:02:35,540
+So let's do that quickly.
+
+36
+00:02:35,540 --> 00:02:38,420
+Hopefully you're using virtual environments for this and not installing in your global
+
+37
+00:02:38,420 --> 00:02:43,480
+Python interpreter because that's the surest way to eventually have a bad day.
+
+38
+00:02:43,480 --> 00:02:46,760
+And as we know, packaging is already a bad experience.
+
+39
+00:02:46,760 --> 00:02:51,040
+You want to avoid getting there quicker.
+
+40
+00:02:51,040 --> 00:02:53,520
+So usually what you're going to do it if you have virtual environments, you're going to
+
+41
+00:02:53,520 --> 00:02:56,240
+use pip to actually install your package into it.
+
+42
+00:02:56,240 --> 00:02:59,920
+And I know the slide might not be the, I'm not sure how much they show up, especially
+
+43
+00:02:59,920 --> 00:03:01,040
+in the back.
+
+44
+00:03:01,040 --> 00:03:04,600
+But in the first slide there was a link to it so you can check it out later or whatnot.
+
+45
+00:03:04,600 --> 00:03:07,080
+I'm going to highlight the parts that are more important.
+
+46
+00:03:07,080 --> 00:03:10,680
+Here basically the only thing you really need to know that I installed the project.
+
+47
+00:03:11,680 --> 00:03:16,240
+Now if I run the interpreter again with my test code, you can see that, hey, it's work.
+
+48
+00:03:16,240 --> 00:03:18,880
+Now I can test my code greatly.
+
+49
+00:03:18,880 --> 00:03:23,040
+But you can see I kind of like made a bit of a mistake here because I said hello and
+
+50
+00:03:23,040 --> 00:03:25,180
+I actually didn't put an exclamation mark.
+
+51
+00:03:25,180 --> 00:03:28,600
+And if you're one of these grammar gnats, you're probably screaming at me already.
+
+52
+00:03:28,600 --> 00:03:29,600
+Let me fix that quickly.
+
+53
+00:03:29,600 --> 00:03:32,760
+I'm going to quickly put an exclamation mark in it.
+
+54
+00:03:32,760 --> 00:03:35,760
+I run again my test code and nothing changed.
+
+55
+00:03:35,760 --> 00:03:37,080
+It's the same thing.
+
+56
+00:03:38,040 --> 00:03:42,400
+You might be aware of the reason for this is that whenever you change a code to actually
+
+57
+00:03:42,400 --> 00:03:44,600
+test your library, you have to install it again.
+
+58
+00:03:44,600 --> 00:03:48,280
+And only then you're going to see that, hey, now you have the new change.
+
+59
+00:03:48,280 --> 00:03:53,440
+Obviously, installing your project, reinstalling your project after every change is not a good
+
+60
+00:03:53,440 --> 00:03:54,760
+day for anyone.
+
+61
+00:03:54,760 --> 00:03:58,800
+So there must be a better solution than basically whenever you change the code, install the
+
+62
+00:03:58,800 --> 00:04:00,060
+project again.
+
+63
+00:04:00,060 --> 00:04:04,720
+And the solution that we're looking for is editable installations.
+
+64
+00:04:04,720 --> 00:04:10,680
+Editable installations are basically a way of installation which allow you to test your
+
+65
+00:04:10,680 --> 00:04:14,920
+project without needing to reinstall your project between code changes.
+
+66
+00:04:14,920 --> 00:04:19,560
+Now, you still need to restart your interpreter to pick up code changes.
+
+67
+00:04:19,560 --> 00:04:23,960
+However, importantly, you don't have to reinstall it.
+
+68
+00:04:23,960 --> 00:04:29,000
+Now, the way this historically used to go, it was pip exposed as an editable installation
+
+69
+00:04:29,000 --> 00:04:32,480
+mode and it was exposed during this dash E flag.
+
+70
+00:04:32,480 --> 00:04:36,960
+So if you pass to pip this dash E flag, it's going to do a special type of installation
+
+71
+00:04:36,960 --> 00:04:41,840
+in which once you run it, you don't have to reinstall it after every code change.
+
+72
+00:04:41,840 --> 00:04:46,720
+It automatically picks up the new information that you put into your business.
+
+73
+00:04:46,720 --> 00:04:50,640
+Now, let's dive deeper.
+
+74
+00:04:50,640 --> 00:04:54,880
+Let's check out how actually those editable installations worked in the past, what happened
+
+75
+00:04:54,880 --> 00:05:00,480
+a year ago or potentially even today if you're using setup tools when you actually type dash
+
+76
+00:05:00,480 --> 00:05:02,440
+E to pip.
+
+77
+00:05:02,440 --> 00:05:09,000
+And what happens is basically it inherits a solution that was introduced back in 2003
+
+78
+00:05:09,000 --> 00:05:12,680
+or whatnot by this two tools and then generated by setup tools.
+
+79
+00:05:12,680 --> 00:05:19,320
+And the solution is essentially calling the python setup.py develop comment that magically
+
+80
+00:05:19,320 --> 00:05:25,320
+makes your project source directory be present inside the Python interpreters import resolution
+
+81
+00:05:25,320 --> 00:05:27,440
+system.
+
+82
+00:05:27,440 --> 00:05:30,280
+Let's check out what it means to install your project.
+
+83
+00:05:30,360 --> 00:05:34,520
+Let's find out how a normal installation works so we can kind of identify what are the differences
+
+84
+00:05:34,520 --> 00:05:36,880
+from an editable installation point of view.
+
+85
+00:05:36,880 --> 00:05:42,640
+And the way a normal installation works is that pip will take a look at your source directory,
+
+86
+00:05:42,640 --> 00:05:48,040
+will build a will from it and then it will install that will into your site packages
+
+87
+00:05:48,040 --> 00:05:49,880
+in your Python interpreter.
+
+88
+00:05:49,880 --> 00:05:54,320
+Now when it builds this will, this will have two kind of information in it.
+
+89
+00:05:54,320 --> 00:05:56,320
+It will have your actual business logic.
+
+90
+00:05:56,320 --> 00:06:00,200
+For example, here you can see like the demo.py is your business logic.
+
+91
+00:06:00,200 --> 00:06:04,520
+And then it's going to also generate some kind of package metadata.
+
+92
+00:06:04,520 --> 00:06:09,080
+And this is basically information that before building your will was stored inside your
+
+93
+00:06:09,080 --> 00:06:13,760
+project or something like that.
+
+94
+00:06:13,760 --> 00:06:17,440
+Now if you look further, the next step, as I said, after it creates a will, it will actually
+
+95
+00:06:17,440 --> 00:06:20,160
+extract that will into your Python interpreter.
+
+96
+00:06:20,160 --> 00:06:24,040
+And that extraction basically means that it's going to take your will and extract the content
+
+97
+00:06:24,040 --> 00:06:30,240
+of the will first inside the Python site packages folder and also generates the binary
+
+98
+00:06:30,240 --> 00:06:34,600
+compilations for those files that it extracted for the Python files.
+
+99
+00:06:34,600 --> 00:06:38,760
+But also enrich a bit the metadata that was available in the will.
+
+100
+00:06:38,760 --> 00:06:42,360
+Basically just provide additional information that's useful for the installer, in this case
+
+101
+00:06:42,360 --> 00:06:46,680
+pip, to find out how it can uninstall the project and all that kind of stuff.
+
+102
+00:06:46,680 --> 00:06:52,240
+Or even just for example, the installer is there just to point out that if you have another
+
+103
+00:06:52,560 --> 00:06:56,160
+installer than pip, pip can kind of get to know, hey, I shouldn't touch this because
+
+104
+00:06:56,160 --> 00:06:57,480
+it's not my package.
+
+105
+00:06:57,480 --> 00:07:00,680
+I don't know how to handle it.
+
+106
+00:07:00,680 --> 00:07:05,200
+Now the difference whenever we're talking about editable installation is that what actually
+
+107
+00:07:05,200 --> 00:07:09,320
+happened in the past, as you can see here basically on the highlighted on the output
+
+108
+00:07:09,320 --> 00:07:13,200
+of the pip install, it doesn't do any of this will building magic what not.
+
+109
+00:07:13,200 --> 00:07:18,240
+It just runs setup.py develop onto your project source directory.
+
+110
+00:07:18,240 --> 00:07:21,880
+And then that invocation somehow makes the magic happen.
+
+111
+00:07:21,880 --> 00:07:27,080
+And when I say it makes the magic happen, so what the magic is actually, it generates
+
+112
+00:07:27,080 --> 00:07:30,320
+your project metadata in line inside your source directory.
+
+113
+00:07:30,320 --> 00:07:34,520
+So that's why if you install a project in editable install or you used to install it,
+
+114
+00:07:34,520 --> 00:07:37,520
+there was this magical egg info folder in your folder.
+
+115
+00:07:37,520 --> 00:07:41,320
+Because it still needs the project metadata and this project metadata now is stored within
+
+116
+00:07:41,320 --> 00:07:44,160
+the your project source directory.
+
+117
+00:07:44,160 --> 00:07:50,520
+And then it uses a system called pth files and it adds this pth file, your site packages.
+
+118
+00:07:50,520 --> 00:07:54,520
+And what you need to do know about the pth files that whenever you add a pth file to
+
+119
+00:07:54,520 --> 00:07:59,600
+your site packages folder, that basically just gets picked up at the interpreter startup
+
+120
+00:07:59,600 --> 00:08:01,600
+and gets added to the sys.path.
+
+121
+00:08:01,600 --> 00:08:05,600
+If it's a path, if it's Python code in it, it will actually run the Python code.
+
+122
+00:08:05,600 --> 00:08:09,520
+So for example, in this case, you can see once I run setup.py develop, it generates
+
+123
+00:08:09,520 --> 00:08:17,560
+that egg info folder but also takes the source, my project source directory and injects it
+
+124
+00:08:17,720 --> 00:08:20,560
+via the pth file onto the sys.path.
+
+125
+00:08:20,560 --> 00:08:27,160
+From there, the Python import system takes it away and makes things work.
+
+126
+00:08:27,160 --> 00:08:31,560
+So you can see this was the old solution and you might ask why isn't this enough?
+
+127
+00:08:31,560 --> 00:08:32,560
+Isn't this all we need?
+
+128
+00:08:32,560 --> 00:08:35,160
+Do we need anything more complicated?
+
+129
+00:08:35,160 --> 00:08:36,720
+Maybe you already solved this problem.
+
+130
+00:08:36,720 --> 00:08:39,800
+And I'm here to tell you that no, this is actually not the full solution.
+
+131
+00:08:39,800 --> 00:08:43,800
+This is a partial solution to the editable installation problem.
+
+132
+00:08:43,800 --> 00:08:47,920
+One of the problems is that it still requires the setup.py file and the setup.py file
+
+133
+00:08:47,920 --> 00:08:49,920
+is basically some setup.
+
+134
+00:08:49,920 --> 00:08:52,440
+It's a slash distutious arch thing.
+
+135
+00:08:52,440 --> 00:08:59,160
+And for example, we have a lot of fancy new backends like fleet, poetry, or hatchling.
+
+136
+00:08:59,160 --> 00:09:03,120
+And all of these still need to generate the setup.py if they want to develop an editable
+
+137
+00:09:03,120 --> 00:09:05,860
+installation mode, which is not a good.
+
+138
+00:09:05,860 --> 00:09:08,160
+So we should have a better solution.
+
+139
+00:09:08,160 --> 00:09:12,500
+Also another problem is that, and this kind of like iterates back what actually we want
+
+140
+00:09:12,500 --> 00:09:16,980
+to solve here, we as a community never really got together and agreed what is an editable
+
+141
+00:09:16,980 --> 00:09:21,820
+installation other than the broad definition I gave it earlier on.
+
+142
+00:09:21,820 --> 00:09:25,860
+Or like where are the boundaries for what an instance should be able to do and shouldn't
+
+143
+00:09:25,860 --> 00:09:28,020
+be able to do?
+
+144
+00:09:28,020 --> 00:09:32,780
+And also furthermore, as I said, this thing that I presented until now is basically an
+
+145
+00:09:32,780 --> 00:09:36,980
+implementation detail of setup tools from the earlier ages.
+
+146
+00:09:36,980 --> 00:09:40,620
+You might ask, hey, Burnout, it's 2022.
+
+147
+00:09:40,620 --> 00:09:41,620
+Why is it still a problem?
+
+148
+00:09:41,660 --> 00:09:43,180
+I mean, Python's around for 30 years.
+
+149
+00:09:43,180 --> 00:09:46,020
+I thought we should have solved this 15 years ago.
+
+150
+00:09:46,020 --> 00:09:50,460
+And I'm here to tell you that it's not that because we did not try.
+
+151
+00:09:50,460 --> 00:09:53,500
+Oh, boy, no, we did try more than once.
+
+152
+00:09:53,500 --> 00:09:58,580
+We first initially came back then when we started to standardize the normal installations in
+
+153
+00:09:58,580 --> 00:09:59,940
+2015.
+
+154
+00:09:59,940 --> 00:10:04,900
+And it was so controversial back then at that point that the writers of the PEPFY and so on
+
+155
+00:10:04,900 --> 00:10:09,220
+explicitly stated that someone else, someone later going to solve it, we don't want to deal
+
+156
+00:10:09,220 --> 00:10:11,380
+with this because otherwise we'll never get anything accepted.
+
+157
+00:10:12,460 --> 00:10:13,820
+Then it came 2019.
+
+158
+00:10:13,820 --> 00:10:18,220
+We tried again part of the packaging summit at the previous in-person conference.
+
+159
+00:10:18,220 --> 00:10:22,020
+We even agreed on a solution and we all walked away that, hey, just we need to implement it,
+
+160
+00:10:22,020 --> 00:10:23,060
+ship it.
+
+161
+00:10:23,060 --> 00:10:26,420
+Then after the conference, there was more follow up discussion.
+
+162
+00:10:26,420 --> 00:10:32,380
+Not many concerns were raised until 2020 April when someone opened on again a topic that,
+
+163
+00:10:32,380 --> 00:10:35,300
+hey, we agreed that we're going to do it, but we didn't do actually anything.
+
+164
+00:10:35,300 --> 00:10:37,100
+Can we like start the work on it?
+
+165
+00:10:37,140 --> 00:10:41,500
+So that generated a whole new work only to prove that actually whatever we agreed at
+
+166
+00:10:41,500 --> 00:10:43,700
+the packaging summit, we didn't agree.
+
+167
+00:10:43,700 --> 00:10:45,980
+Like many people had concerns to it.
+
+168
+00:10:45,980 --> 00:10:50,980
+So fast forward another year, so this is like the fifth try when we go at it.
+
+169
+00:10:50,980 --> 00:10:53,460
+Someone again picked up like, okay, can we actually solve this?
+
+170
+00:10:53,460 --> 00:10:56,940
+And we then again it and then we even had two main threats.
+
+171
+00:10:56,940 --> 00:11:01,500
+Each of these threats I warn you are probably like 500 comments each thread.
+
+172
+00:11:01,500 --> 00:11:05,540
+Basically discussing various back and forth on the subject.
+
+173
+00:11:05,700 --> 00:11:12,660
+I'm happy to say that after that 2021 April, May edition, we actually did agree mostly,
+
+174
+00:11:12,660 --> 00:11:13,900
+but not really.
+
+175
+00:11:13,900 --> 00:11:15,580
+I'll let you know later on that.
+
+176
+00:11:17,420 --> 00:11:21,020
+But first in order to actually understand why we had so many back and forth,
+
+177
+00:11:21,020 --> 00:11:23,740
+I need to tell you about what were the drawbacks of the prior art.
+
+178
+00:11:23,740 --> 00:11:27,420
+Basically what were the problems that the previous solution did not actually handle
+
+179
+00:11:27,420 --> 00:11:30,540
+and many people felt that we should handle as a language.
+
+180
+00:11:31,540 --> 00:11:36,820
+One of the problem that the previous solution didn't handle is that imagine you have a project
+
+181
+00:11:36,820 --> 00:11:39,460
+and you want to basically include some files in your project.
+
+182
+00:11:39,460 --> 00:11:43,900
+And for example, Setup Tools has these packages thing where you can specify one by one what
+
+183
+00:11:43,900 --> 00:11:45,860
+package you want to include.
+
+184
+00:11:45,860 --> 00:11:52,300
+Now in case of an editable install, once you did this, this only exposed every package.
+
+185
+00:11:52,300 --> 00:11:56,500
+Even if you choose some of the packages to not include, the editable install still installed
+
+186
+00:11:56,540 --> 00:12:00,820
+all your packages or made it available all your packages in your editable installation,
+
+187
+00:12:00,820 --> 00:12:05,140
+basically driving the divide how an editable installation and normal installation was working.
+
+188
+00:12:06,140 --> 00:12:07,580
+Also, the reverse is true.
+
+189
+00:12:07,580 --> 00:12:11,620
+If you wanted, for example, to include your test files in an editable installation,
+
+190
+00:12:11,620 --> 00:12:12,460
+it wasn't possible.
+
+191
+00:12:12,460 --> 00:12:17,020
+If you put it within your project source directory, it automatically picked up
+
+192
+00:12:17,020 --> 00:12:21,100
+because the previous solution basically relied on the fact that we put your source directory
+
+193
+00:12:21,100 --> 00:12:24,820
+and put it as it is as a whole onto the site packages folder.
+
+194
+00:12:24,820 --> 00:12:31,620
+So there's no, let me add this or let me not add this type of logic possible to happen there.
+
+195
+00:12:32,620 --> 00:12:37,180
+Another problem that we don't have a solution is like, for example, generated code.
+
+196
+00:12:37,180 --> 00:12:44,660
+Imagine you have some kind of schema file in which your server API is defined and you
+
+197
+00:12:44,660 --> 00:12:48,980
+want to generate some Python classes, for example, using Python classes by using this
+
+198
+00:12:48,980 --> 00:12:51,700
+data model code generator.
+
+199
+00:12:51,700 --> 00:12:56,460
+You can set up a build where you generate this file during the build of your package,
+
+200
+00:12:56,460 --> 00:13:00,380
+but this will not be running during your editable installation and it's not clearly defined
+
+201
+00:13:00,380 --> 00:13:10,180
+how it should be even for an editable installation, basically including generated code as part
+
+202
+00:13:10,180 --> 00:13:13,980
+of editable installation, not just static code that lives on your disk.
+
+203
+00:13:13,980 --> 00:13:18,940
+And also another problem is editable installation work as previously were defined mostly for
+
+204
+00:13:19,020 --> 00:13:23,660
+Python file, pure Python file, but for example, in an ideal world, it should be possible to
+
+205
+00:13:23,660 --> 00:13:25,460
+also work for like C extension.
+
+206
+00:13:25,460 --> 00:13:30,420
+For example, if you have a sitem package, it should be possible to whenever you update
+
+207
+00:13:30,420 --> 00:13:36,380
+your sitem code, you don't have to rerun again the entire installation just to pick up that
+
+208
+00:13:36,380 --> 00:13:38,780
+sitem code change.
+
+209
+00:13:38,780 --> 00:13:42,020
+Ideally it should also translate automatically.
+
+210
+00:13:42,020 --> 00:13:45,740
+Again, for this we don't have any support.
+
+211
+00:13:45,780 --> 00:13:51,740
+The way historically it worked that during the installation, this extension were injected
+
+212
+00:13:51,740 --> 00:13:55,580
+into your project source directory and it was up to your responsibility whenever you
+
+213
+00:13:55,580 --> 00:14:01,820
+do change the C extension, just reinstall the package to pick up the changes.
+
+214
+00:14:01,820 --> 00:14:05,820
+But then we brainstormed throughout all those back and forth sessions that can we even solve
+
+215
+00:14:05,820 --> 00:14:09,580
+some of this problem or are they even worth solving and we did come up with a few new
+
+216
+00:14:09,580 --> 00:14:13,300
+solutions or also how some of the systems try to solve it.
+
+217
+00:14:13,340 --> 00:14:16,940
+Basically, how can we have a life without the PTH files that we had, something that's
+
+218
+00:14:16,940 --> 00:14:21,140
+more powerful.
+
+219
+00:14:21,140 --> 00:14:26,580
+One obvious solution or someone came up, why won't we instead of just using PTH file to
+
+220
+00:14:26,580 --> 00:14:30,340
+kind of like inject the source directory inside the site packages, why don't we just seem
+
+221
+00:14:30,340 --> 00:14:35,140
+links to basically take the source directory and seem link it into site packages and this
+
+222
+00:14:35,140 --> 00:14:39,420
+also has the advantages that now from the port of interpreter that files actually physically
+
+223
+00:14:39,420 --> 00:14:44,700
+live inside your site packages rather than kind of like living inside your source directory
+
+224
+00:14:44,700 --> 00:14:50,380
+and you can have like pad differences between the installation and the other installation.
+
+225
+00:14:50,380 --> 00:14:56,220
+Now this also has some benefits like there are no startup performance impact, you can
+
+226
+00:14:56,220 --> 00:15:01,820
+also basically install the mirror to normal installation mode.
+
+227
+00:15:01,820 --> 00:15:06,580
+There is one downside, if you seem link your entire folder, remember from the previous
+
+228
+00:15:06,660 --> 00:15:12,420
+bullet list where I say that we wanted to support addition, exclusion, code generation
+
+229
+00:15:12,420 --> 00:15:18,100
+and let's say C extensions, this solves you the addition problem but doesn't solve you
+
+230
+00:15:18,100 --> 00:15:21,620
+the extension because once you seem link a folder, everything in that folder is available.
+
+231
+00:15:21,620 --> 00:15:26,020
+So it's not the full solution but potentially can be better than the PTH file.
+
+232
+00:15:26,020 --> 00:15:29,380
+You can also choose to seem link the file individually, this has the advantage that
+
+233
+00:15:29,380 --> 00:15:33,420
+now you can support exclusion but that's not mean that whenever you add new files to your
+
+234
+00:15:33,420 --> 00:15:37,660
+project you need to read on the installation to update the seem links basically to your
+
+235
+00:15:37,660 --> 00:15:38,660
+site packages.
+
+236
+00:15:38,660 --> 00:15:42,420
+This is also not necessarily a perfect solution but sometimes can be better than the normal
+
+237
+00:15:42,420 --> 00:15:44,680
+PTH file.
+
+238
+00:15:44,680 --> 00:15:48,780
+Another great solution or great improvement that has been added through the last 15 years
+
+239
+00:15:48,780 --> 00:15:51,300
+the language are import hooks.
+
+240
+00:15:51,300 --> 00:15:55,020
+The import hooks that we were working at the end of the day if you think about it in Python
+
+241
+00:15:55,020 --> 00:15:58,300
+we import modules not files, let's use that.
+
+242
+00:15:58,300 --> 00:16:01,900
+Like why do we even try to solve the file problem if we had the day what we want to
+
+243
+00:16:01,900 --> 00:16:06,740
+solve is the fact that an installation load the correct module rather than we don't really
+
+244
+00:16:06,740 --> 00:16:08,540
+care where that file lives.
+
+245
+00:16:08,540 --> 00:16:12,620
+And we could for example with this thought we can extend the import system to manifest
+
+246
+00:16:12,620 --> 00:16:16,140
+the module at import time and manifest it from the correct location wherever it lives.
+
+247
+00:16:16,140 --> 00:16:21,380
+If it lives inside the site packages cool, if it lives in your code cool or if it lives
+
+248
+00:16:21,380 --> 00:16:25,060
+maybe in memory because it's generated cool it can manifest it from there and doesn't
+
+249
+00:16:25,060 --> 00:16:27,820
+have to actually exist under this.
+
+250
+00:16:27,820 --> 00:16:31,000
+It basically offers you full dynamic thing.
+
+251
+00:16:31,000 --> 00:16:35,520
+We brainstormed, I myself did the Paul Moore brainstorm run this in 2020 and he even made
+
+252
+00:16:35,520 --> 00:16:41,920
+a library that basically allows any backend to kind of like provide this kind of functionality.
+
+253
+00:16:41,920 --> 00:16:47,840
+Okay and the way it works it still uses some import hooks because it still needs to have
+
+254
+00:16:47,840 --> 00:16:52,280
+some kind of system to register the import hook at the start of the importer.
+
+255
+00:16:52,280 --> 00:16:56,160
+So some code needs to run at the interpreter startup time but that does a lot less because
+
+256
+00:16:56,160 --> 00:17:00,560
+now just register the import hook and then dynamically at import time it kind of like
+
+257
+00:17:00,560 --> 00:17:05,120
+can support both exclusion code generation or for example here you can see what we actually
+
+258
+00:17:05,120 --> 00:17:06,120
+do.
+
+259
+00:17:06,120 --> 00:17:11,280
+We map our demo module to a given in it dot file and then the import system will take
+
+260
+00:17:11,280 --> 00:17:14,520
+care of to load it from the correct location.
+
+261
+00:17:14,520 --> 00:17:19,240
+Yeah, so this is mostly a great solution.
+
+262
+00:17:19,240 --> 00:17:20,680
+Solves all our problems.
+
+263
+00:17:20,680 --> 00:17:23,840
+I hope I didn't put you to sleep though.
+
+264
+00:17:23,840 --> 00:17:27,320
+And let's have a look first now the Python build system.
+
+265
+00:17:27,320 --> 00:17:31,280
+So in order to understand the solution we propose there's one more thing that you have
+
+266
+00:17:31,280 --> 00:17:34,200
+to think about and that's the Python build system.
+
+267
+00:17:34,200 --> 00:17:37,320
+In order to build the wheel what actually happens to build the wheel?
+
+268
+00:17:37,320 --> 00:17:40,000
+And two distinct components need to work together.
+
+269
+00:17:40,000 --> 00:17:41,000
+First the build backend.
+
+270
+00:17:41,000 --> 00:17:45,000
+This is like setup tools, hatchling, fleet, whatever else you have which basically actually
+
+271
+00:17:45,000 --> 00:17:49,880
+builds the wheel and there is the build frontend which creates an isolated build environment
+
+272
+00:17:49,880 --> 00:17:54,400
+for your build backend in which it can run basically something that makes sure that you
+
+273
+00:17:54,480 --> 00:17:57,640
+have the correct version of the setup tools, all that kind of stuff.
+
+274
+00:17:57,640 --> 00:18:02,880
+And this also installs additional dependencies needed.
+
+275
+00:18:02,880 --> 00:18:06,760
+That is really smart, the text there.
+
+276
+00:18:06,760 --> 00:18:09,800
+But yeah, and then we can call the build backend.
+
+277
+00:18:09,800 --> 00:18:14,480
+The build frontend is the one that actually communicates with the backend to the API defined
+
+278
+00:18:14,480 --> 00:18:22,760
+in PEP 517 and the two main important methods kind of like the Python API are the get project
+
+279
+00:18:22,920 --> 00:18:26,680
+for build wheel which basically gives me what additional dependencies you need to actually
+
+280
+00:18:26,680 --> 00:18:30,240
+build the wheel and the other one actually build the wheel.
+
+281
+00:18:30,240 --> 00:18:37,640
+So these are the two main Python interfaces that need to exist in order to build the wheel.
+
+282
+00:18:37,640 --> 00:18:42,760
+You can actually see this if you use the canonical project, prior project.build to build your
+
+283
+00:18:42,760 --> 00:18:43,760
+project.
+
+284
+00:18:43,760 --> 00:18:45,440
+For example here I demonstrated the virtual app.
+
+285
+00:18:45,440 --> 00:18:50,120
+You can see when I say hey, build me a wheel of this, the first thing that happens is create
+
+286
+00:18:50,200 --> 00:18:51,920
+a virtual environment.
+
+287
+00:18:51,920 --> 00:18:57,440
+Then it's going to actually install in that environment your project's build backend,
+
+288
+00:18:57,440 --> 00:19:00,360
+in this case like setup tools and setup tools SCM.
+
+289
+00:19:00,360 --> 00:19:03,560
+And then it asks the backend hey, what other dependencies do you need?
+
+290
+00:19:03,560 --> 00:19:05,720
+And the backend comes back, I need the wheel.
+
+291
+00:19:05,720 --> 00:19:11,380
+So the frontend will now install that dependency inside your isolated build environment.
+
+292
+00:19:11,380 --> 00:19:15,040
+And then it just calls that build wheel method which actually builds the wheel.
+
+293
+00:19:15,040 --> 00:19:17,640
+And you can see at the end of it, you end up with a wheel.
+
+294
+00:19:17,800 --> 00:19:22,240
+Okay, so these are kind of like the main steps how a wheel gets built.
+
+295
+00:19:22,240 --> 00:19:27,120
+And with that now we know enough to actually solve the problem, yeah?
+
+296
+00:19:27,120 --> 00:19:35,160
+And this is the point where I have to say that after 12 years of arguing back and forth
+
+297
+00:19:35,160 --> 00:19:39,960
+on how we should solve the problem, we actually managed to not agree on how to solve the problem.
+
+298
+00:19:39,960 --> 00:19:42,120
+So we had two solutions.
+
+299
+00:19:42,120 --> 00:19:45,800
+So we decided to propose both solutions and pick the winner basically at the end of the
+
+300
+00:19:45,800 --> 00:19:46,800
+day.
+
+301
+00:19:46,840 --> 00:19:52,000
+Now the reason for this one that we kind of like as a community fail to agree who should
+
+302
+00:19:52,000 --> 00:19:54,400
+actually do the most of the heavy groundwork.
+
+303
+00:19:54,400 --> 00:19:56,920
+Should it be the build backend or the build frontend?
+
+304
+00:19:56,920 --> 00:20:03,240
+Who should actually be responsible of making the editable effect happen or work?
+
+305
+00:20:03,240 --> 00:20:04,520
+And we have a path for each of them.
+
+306
+00:20:04,520 --> 00:20:09,680
+We have the traditional wheelbase and we have for the virtual wheelbase which is one of
+
+307
+00:20:09,680 --> 00:20:13,280
+them puts them in the build frontend and one of them is the build backend.
+
+308
+00:20:13,280 --> 00:20:17,800
+Now at this point I should probably address that generally the way the Python enhancement
+
+309
+00:20:17,800 --> 00:20:23,200
+works is that people propose a solution and that the solution gets debated and the solution
+
+310
+00:20:23,200 --> 00:20:25,640
+should be something that the community agreed on.
+
+311
+00:20:25,640 --> 00:20:30,400
+Now obviously it doesn't, we're not always going to agree on and that's fine.
+
+312
+00:20:30,400 --> 00:20:33,120
+Sometimes we can agree to disagree.
+
+313
+00:20:33,120 --> 00:20:37,120
+And also it's not actually a bad thing that we as a community could not agree on a single
+
+314
+00:20:37,120 --> 00:20:42,200
+solution because if we have two solutions we can kind of like compare them against each
+
+315
+00:20:42,240 --> 00:20:47,040
+other and make the least solution because it's not always possible to find a solution
+
+316
+00:20:47,040 --> 00:20:51,040
+that fixes all your problems at least everyone's problem.
+
+317
+00:20:51,040 --> 00:20:56,800
+And often time it's even more important to pick a solution rather than instead of being
+
+318
+00:20:56,800 --> 00:21:01,040
+afraid of picking the wrong solution do not pick either solution just because as a community
+
+319
+00:21:01,040 --> 00:21:03,240
+we could not agree.
+
+320
+00:21:03,240 --> 00:21:07,520
+But with that being said let me tell you a bit about the first installation.
+
+321
+00:21:07,560 --> 00:21:13,560
+So the first installation mode that we came up with the PEP6060 and for those of you
+
+322
+00:21:13,560 --> 00:21:17,160
+wondering yeah this is the one that actually got accepted.
+
+323
+00:21:17,160 --> 00:21:22,800
+So the way this works this puts most of the heavy lifting onto the build backend and
+
+324
+00:21:22,800 --> 00:21:29,160
+it adds two methods to the communication channel between the build backend and the frontend.
+
+325
+00:21:29,160 --> 00:21:35,200
+It defines this that now the editable installations also have their own isolated build environments
+
+326
+00:21:35,280 --> 00:21:39,360
+and this editor build environment can have additional dependencies for example if you
+
+327
+00:21:39,360 --> 00:21:43,200
+want to build an editable wheel or a normal wheel you may be able to specify different
+
+328
+00:21:43,200 --> 00:21:46,600
+dependencies in order to actually build those wheels.
+
+329
+00:21:46,600 --> 00:21:51,720
+So that's why we have another endpoint that basically provides hey backend get me the
+
+330
+00:21:51,720 --> 00:21:57,640
+requirement for your building an editable wheel and then we have a build editable method
+
+331
+00:21:57,640 --> 00:22:01,040
+that actually hey backend provide that wheel that you build.
+
+332
+00:22:01,040 --> 00:22:07,240
+And the editable installation this is basically all this actual PEP actually contains because
+
+333
+00:22:07,240 --> 00:22:12,080
+now from this on it defines the editable installation works by first the build frontend will create
+
+334
+00:22:12,080 --> 00:22:14,640
+a custom isolated build environment.
+
+335
+00:22:14,640 --> 00:22:18,880
+It will install into that isolated build environment your project's build backend.
+
+336
+00:22:18,880 --> 00:22:23,360
+After the build backend it asks the or the frontend asks the backend hey what are additional
+
+337
+00:22:23,360 --> 00:22:29,200
+dependencies needed to build an editable installation and after the editable installation it installs
+
+338
+00:22:29,200 --> 00:22:33,600
+that it basically just has the backend build me the editable install and the entire installation
+
+339
+00:22:33,600 --> 00:22:38,160
+from this on and on installation works the same way it works for the normal wheels.
+
+340
+00:22:38,160 --> 00:22:41,600
+So there's no change needed on the installer side or anything of that.
+
+341
+00:22:41,600 --> 00:22:46,060
+It basically delegates all the responsibility on the backend and the backend should generate
+
+342
+00:22:46,060 --> 00:22:52,480
+appropriate files inside your wheel that makes the editable effect happen.
+
+343
+00:22:52,480 --> 00:23:00,680
+Now this has some benefits like for example the backend can choose to put an import hook
+
+344
+00:23:00,680 --> 00:23:03,520
+there instead of actually putting your source files.
+
+345
+00:23:03,520 --> 00:23:08,800
+It can put a PTH file so basically whatever was working until now can continue working
+
+346
+00:23:08,800 --> 00:23:14,520
+and also the backend the whenever about making which one should you actually use the PEP
+
+347
+00:23:14,520 --> 00:23:18,320
+kind of like say that well the backend should probably allow the user to choose whichever
+
+348
+00:23:18,320 --> 00:23:20,720
+they want.
+
+349
+00:23:20,720 --> 00:23:26,280
+And yeah now there's one solution out of the previous kind of like semi-solutions I presented
+
+350
+00:23:26,280 --> 00:23:27,580
+that this doesn't support.
+
+351
+00:23:27,580 --> 00:23:31,160
+You can see that we proposed that you could use SimLinks to achieve the editable effect.
+
+352
+00:23:31,160 --> 00:23:36,160
+SimLinks is not achievable today because the wheel standard doesn't support SimLinks.
+
+353
+00:23:36,160 --> 00:23:43,480
+There's no point to define it and the yeah and the kind of like the conclusion was that
+
+354
+00:23:43,480 --> 00:23:48,080
+if anyone wants SimLinks in the editable installations they should propose an additional PEP that
+
+355
+00:23:48,480 --> 00:23:53,760
+extends the current PEP standard to support SimLinks.
+
+356
+00:23:53,760 --> 00:23:56,880
+And the big benefit of this as I said before and for the installers or uninstaller there's
+
+357
+00:23:56,880 --> 00:23:59,460
+no change they use the existing mechanism.
+
+358
+00:23:59,460 --> 00:24:04,560
+Now here's SIG62 and this is the PEP that actually I wrote and proposed so this was
+
+359
+00:24:04,560 --> 00:24:07,140
+like my solution even if it wasn't accepted.
+
+360
+00:24:07,140 --> 00:24:11,760
+The idea with this one is that instead of making all this work be handled by the backend
+
+361
+00:24:11,760 --> 00:24:16,200
+why doesn't the backend just provide some kind of metadata file like a JSON file which
+
+362
+00:24:16,200 --> 00:24:21,880
+is basically list what modules need to be pulled from what files and then the front
+
+363
+00:24:21,880 --> 00:24:26,160
+end is the one that actually needs to make it happen somehow.
+
+364
+00:24:26,160 --> 00:24:30,760
+And the front end can from there on decide to use SimLinks, PTH files, sidecustoms, import
+
+365
+00:24:30,760 --> 00:24:32,600
+hooks all that kind of stuff.
+
+366
+00:24:32,600 --> 00:24:38,760
+This has potentially the benefit that it doesn't require extending existing standards because
+
+367
+00:24:38,760 --> 00:24:43,360
+the front end is not bound by the existing front end so it can choose for example to
+
+368
+00:24:43,520 --> 00:24:49,280
+use SimLinks or it can choose to use side customized files any of that.
+
+369
+00:24:49,280 --> 00:24:54,280
+Now ultimately choosing a winner the decision was primarily made by Paul Moore who's kind
+
+370
+00:24:54,280 --> 00:25:00,320
+of like our BDFL for packaging and after a week when none of the proposals received any
+
+371
+00:25:00,320 --> 00:25:05,180
+significant feedback he made the decision that he picked the PEP 6060 as the winner
+
+372
+00:25:05,180 --> 00:25:10,080
+and this happened the last year in June and his primary reason why he preferred the SIG60
+
+373
+00:25:10,800 --> 00:25:16,960
+to is that he felt that the PEP 6060 by just basically imposing on the backend to list
+
+374
+00:25:16,960 --> 00:25:22,640
+what type of files needs to be or modules need to be exposed and from which locations
+
+375
+00:25:22,640 --> 00:25:26,480
+it's a bit too vague and it doesn't really specify for the front end what it needs to
+
+376
+00:25:26,480 --> 00:25:31,280
+do and it does not really like that kind of like full control on the front end side.
+
+377
+00:25:31,280 --> 00:25:35,960
+While if you consider the PEP 6060 that is much more constrained because both the backend
+
+378
+00:25:35,960 --> 00:25:41,160
+and the front end knows exactly what files they need to produce even though the backend
+
+379
+00:25:41,160 --> 00:25:45,640
+still needs to solve all the problems how actually makes that installation effect happen.
+
+380
+00:25:45,640 --> 00:25:50,240
+Okay, so some lessons we learned.
+
+381
+00:25:50,240 --> 00:25:55,000
+After adopting the new standard a lot of the backend happily jumped on so from that time
+
+382
+00:25:55,000 --> 00:25:58,160
+it was a resounding success I suppose.
+
+383
+00:25:58,160 --> 00:26:02,600
+For example Hatchlink, PDM, ISKCONS, Fleet, Poetry within a few months implemented the
+
+384
+00:26:02,640 --> 00:26:08,200
+standard and now you can use that to install without setup.py for this project.
+
+385
+00:26:08,200 --> 00:26:13,400
+You may notice one significant omission from here and that's setup tools so basically the
+
+386
+00:26:13,400 --> 00:26:20,600
+one that 90% of us use doesn't actually and the problem here is a bit difficult like one
+
+387
+00:26:20,600 --> 00:26:25,120
+setup tools doesn't necessarily want to take PTH file and just add support for a PTH file
+
+388
+00:26:25,120 --> 00:26:29,800
+basically a direct migration they would like to improve the existing system but improving
+
+389
+00:26:29,800 --> 00:26:36,800
+the existing system and kind of like adding support for more smart editable installation
+
+390
+00:26:37,720 --> 00:26:42,200
+it's hard because setup tools is very much pulled down a lot of technical depth a code
+
+391
+00:26:42,200 --> 00:26:46,920
+base that basically goes back 25 years and adding changes like collecting all the files
+
+392
+00:26:46,920 --> 00:26:50,440
+that are actually going to be installed or modules that are going to be installed it's
+
+393
+00:26:50,440 --> 00:26:55,680
+a hard problem within the system of that project because of its architecture.
+
+394
+00:26:55,680 --> 00:27:02,320
+So not all great and what's not there's one more black swan we did not see coming and
+
+395
+00:27:02,320 --> 00:27:08,000
+this was kind of like well when I some of these projects I started using it and this
+
+396
+00:27:08,000 --> 00:27:12,720
+also proves that even with 10 years of disagreement we still can miss things.
+
+397
+00:27:12,720 --> 00:27:17,840
+We turned out that we missed with the import took solution that imports are great because
+
+398
+00:27:17,840 --> 00:27:22,500
+they allow you to solve all the problems and they allow you to dynamically make any kind
+
+399
+00:27:22,500 --> 00:27:27,900
+of logic happen the problem is they're really bad for any idea or static checkers because
+
+400
+00:27:27,900 --> 00:27:33,220
+any idea or static checker doesn't know doesn't execute any Python code so if they don't take
+
+401
+00:27:33,220 --> 00:27:37,420
+the Python code they don't know what type of import to do what kind of modules they
+
+402
+00:27:37,420 --> 00:27:41,940
+make happen and I'm not even sure that this is an easy problem to solve because if you
+
+403
+00:27:41,940 --> 00:27:47,020
+think about it if you go from a concern that you never can execute any Python code anything
+
+404
+00:27:47,020 --> 00:27:51,980
+other than explicitly stating what file additional files you want to expose inside the Python
+
+405
+00:27:51,980 --> 00:27:57,700
+interpreter will not work and this can like suggest that the proposal that the pep6662
+
+406
+00:27:57,700 --> 00:28:03,260
+was that basically proposed exactly this to provide a file to the front end that can basically
+
+407
+00:28:03,260 --> 00:28:07,700
+list hey these are additional files that I want you to make available.
+
+408
+00:28:07,700 --> 00:28:14,620
+Now this kind of like point that maybe we will not have pep6662 but if you want users
+
+409
+00:28:14,620 --> 00:28:18,900
+to actually use our edipro installations because not having auto complete on your ID is going
+
+410
+00:28:18,900 --> 00:28:24,740
+to be a major pain point we will actually need to extend pep6662 to still require the
+
+411
+00:28:24,740 --> 00:28:30,500
+backend to generate these additional files so that the static checkers and IDs can actually
+
+412
+00:28:30,500 --> 00:28:34,460
+know about them and index them as they did beforehand.
+
+413
+00:28:34,460 --> 00:28:38,660
+In the meantime we can still using the pth file but that's kind of like we did not really
+
+414
+00:28:38,660 --> 00:28:44,780
+so much but made maybe available some of the things to the people to the newer backends
+
+415
+00:28:44,780 --> 00:28:50,980
+made them work without needing to generate this custom setup.py file.
+
+416
+00:28:50,980 --> 00:28:55,460
+Yeah that's mostly it.
+
+417
+00:28:55,460 --> 00:28:59,520
+I'm not going to take questions right here but if you have any questions find me after
+
+418
+00:28:59,520 --> 00:29:04,580
+the conference or right here and right now and I'm happy to answer any of your questions
+
+419
+00:29:04,580 --> 00:29:06,900
+and with that I would like to thank you very much.
+

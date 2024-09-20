@@ -1,0 +1,1224 @@
+1
+00:00:00,000 --> 00:00:14,200
+Good morning, everyone. I welcome all of you to the second day of PyCon US 2022. Let's
+
+2
+00:00:14,200 --> 00:00:21,840
+welcome Chris to deliver a talk on employing NumPy's NPOF format for faster than per-quit
+
+3
+00:00:21,840 --> 00:00:25,240
+data frame serialization. Over to you, Chris.
+
+4
+00:00:25,240 --> 00:00:33,320
+Thank you. Good morning and thank you all for coming. So a little bit about me to begin.
+
+5
+00:00:33,320 --> 00:00:39,920
+I am CTO at Research Affiliates. This is a finance firm located in Newport Beach, California.
+
+6
+00:00:39,920 --> 00:00:45,360
+I've been a Python programmer since the year 2000. And my earliest work was in music. I
+
+7
+00:00:45,360 --> 00:00:50,880
+have a PhD in music and I was a former professor of music technology. And I found lots of ways
+
+8
+00:00:50,880 --> 00:00:54,920
+to use Python in all sorts of different things like algorithmic composition and computational
+
+9
+00:00:54,920 --> 00:00:59,760
+musicology. In the last ten years I've been working on financial systems in Python and
+
+10
+00:00:59,760 --> 00:01:03,520
+that's led me to create an alternative data frame library called Static Frame. Static
+
+11
+00:01:03,520 --> 00:01:09,280
+Frame is based on an immutable data model, a more consistent interface than pandas and
+
+12
+00:01:09,280 --> 00:01:15,760
+support for all NumPy D types including Unicode strings, Daytime64 units as well.
+
+13
+00:01:15,760 --> 00:01:20,840
+All right. So as over those ten years building financial systems, many of you might be able
+
+14
+00:01:20,840 --> 00:01:25,960
+to relate to a sort of quest to find a complete data frame serialization format. And we've
+
+15
+00:01:25,960 --> 00:01:31,840
+tried many things from CSV, XLS, X, HDF5. Most recently Parquet has offered the best
+
+16
+00:01:31,840 --> 00:01:37,600
+performance and type retention. But it's not perfect. And no format supports all components
+
+17
+00:01:37,600 --> 00:01:43,400
+of a data frame and none support all NumPy D types. So if a data frame in Python can
+
+18
+00:01:43,400 --> 00:01:48,520
+be thought of as a collection of NumPy arrays, what is the best way to serialize a NumPy
+
+19
+00:01:48,520 --> 00:01:54,120
+array? Well for that we can go way back to 2007 to NumPy Enhancement Proposal Number
+
+20
+00:01:54,120 --> 00:02:00,080
+One. Now similar to PEPs, NEPs are proposals to enhance NumPy. And this one was proposed
+
+21
+00:02:00,080 --> 00:02:06,040
+by Robert Kern in 2007. It defines two things. It defines the NPY file which is a binary
+
+22
+00:02:06,040 --> 00:02:12,240
+file format that can encode all NumPy arrays and the NPZ which is simply a zip bundle of
+
+23
+00:02:12,800 --> 00:02:17,880
+NPY files. Now this format is still supported in NumPy. You can use it right now with NP.save,
+
+24
+00:02:17,880 --> 00:02:24,280
+NP.load. What's really interesting about these NPY files is we can memory map array data
+
+25
+00:02:24,280 --> 00:02:30,640
+with them. And that's something we're going to explore with data frames later on. So can
+
+26
+00:02:30,640 --> 00:02:36,640
+a data frame then be serialized as a collection of NPY files? That was sort of my first question.
+
+27
+00:02:36,640 --> 00:02:40,960
+And so I set off to do this. The way I first approached it was simply taking all the arrays
+
+28
+00:02:40,960 --> 00:02:45,160
+that are included within the data frame, package them up with an NPZ. And my first
+
+29
+00:02:45,160 --> 00:02:50,880
+implementation was using NPSave and NP.load. In addition, I created a special metadata
+
+30
+00:02:50,880 --> 00:02:56,520
+file in JSON that I packed into that NPZ to help me fully reconstruct the data frame.
+
+31
+00:02:56,520 --> 00:03:00,300
+And this worked, but it was slower than Parquet which was a little disappointing. Looking
+
+32
+00:03:00,300 --> 00:03:06,480
+into the performance of the NumPy routines, I found that if I re-implemented the NPY and
+
+33
+00:03:07,480 --> 00:03:13,040
+I was able to get massive performance improvements and end up with something faster than Parquet.
+
+34
+00:03:13,040 --> 00:03:17,060
+So I'll give you a little taste of that performance. If we use Pandas here to create a very simple
+
+35
+00:03:17,060 --> 00:03:22,680
+frame of 10,000 square floats and we create a data frame with that, we're going to write
+
+36
+00:03:22,680 --> 00:03:28,180
+this out as Parquet. But because Parquet requires that all column labels be strings, we're going
+
+37
+00:03:28,180 --> 00:03:33,280
+to have to convert those column labels to strings. And then we can go ahead and use
+
+38
+00:03:33,280 --> 00:03:37,440
+Pandas to write this data frame out as a Parquet file. And that takes about 10 and
+
+39
+00:03:37,440 --> 00:03:44,440
+a half seconds. Now, if we do build a corresponding frame in static frame and we export it, we
+
+40
+00:03:44,680 --> 00:03:50,800
+write it out as an NPZ, that takes 1.42 seconds, nearly an order of magnitude better performance
+
+41
+00:03:50,800 --> 00:03:56,720
+for writing out this very, very simple frame. What about reading? Well, we can read in that
+
+42
+00:03:56,720 --> 00:04:00,840
+same Parquet again using Pandas, reading in that Parquet file. We can read it into a Pandas
+
+43
+00:04:00,840 --> 00:04:05,760
+data frame in about five seconds. If we do the same thing from an NPZ using static frame,
+
+44
+00:04:05,760 --> 00:04:10,080
+we can do it in about one second. Not an order of magnitude, but a very significant improvement.
+
+45
+00:04:10,080 --> 00:04:13,840
+All right. So what we're going to do today is we're going to look at the components of
+
+46
+00:04:13,840 --> 00:04:18,620
+a data frame in detail. We're going to look at the NPY and NPZ format to get a sense of
+
+47
+00:04:18,620 --> 00:04:23,400
+how we can use these. We're going to talk about how we encode a data frame in an NPZ.
+
+48
+00:04:23,400 --> 00:04:27,080
+We'll talk about a few of the things I did to improve NPY performance. We'll look at
+
+49
+00:04:27,080 --> 00:04:31,040
+some very thorough performance comparisons. And finally, we'll close by talking about
+
+50
+00:04:31,040 --> 00:04:36,880
+how we can use the NPY now to actually memory map a complete data frame. After this presentation,
+
+51
+00:04:36,880 --> 00:04:40,760
+I hope you gain a clear understanding of data frames and how they're built. You'll also
+
+52
+00:04:40,760 --> 00:04:46,200
+understand NPY encoding, and you'll leave here with more options for serializing and
+
+53
+00:04:46,200 --> 00:04:50,600
+memory mapping data frames. So let's look at the components of a data frame in depth.
+
+54
+00:04:50,600 --> 00:04:55,080
+Now the first data frame was introduced back in 1991 as part of the S language. They've
+
+55
+00:04:55,080 --> 00:04:59,860
+been around for a long time, and many libraries and many languages have implemented data frames.
+
+56
+00:04:59,860 --> 00:05:04,080
+There is really no standard for a data frame, but what I'm going to provide for you is how
+
+57
+00:05:04,080 --> 00:05:08,320
+static frame defines a frame. And you can think of this as a slight superset over the
+
+58
+00:05:08,320 --> 00:05:12,680
+pandas data frame. So many of you probably worked with data frames, but it's important
+
+59
+00:05:12,680 --> 00:05:16,800
+to remember what they are. And they are not a two-dimensional array. A two-dimensional
+
+60
+00:05:16,800 --> 00:05:23,240
+array has uniform type and access to rows and columns only by integer. With a data frame,
+
+61
+00:05:23,240 --> 00:05:28,040
+we get the opportunity to have a table of columnar data where columns have heterogeneous
+
+62
+00:05:28,040 --> 00:05:33,320
+types. And we can label our rows and columns and access them with things other than integers.
+
+63
+00:05:33,320 --> 00:05:37,240
+Our labels can be any type. Our labels can be hierarchical. And those hierarchical depths
+
+64
+00:05:37,240 --> 00:05:42,400
+themselves can have different types. In addition, data frames have name attributes attached
+
+65
+00:05:42,400 --> 00:05:47,940
+to the rows, the columns, and the frame itself. And these name attributes give us a really
+
+66
+00:05:48,940 --> 00:05:54,700
+to either have an additional label or rich metadata attached to those components. Now,
+
+67
+00:05:54,700 --> 00:05:59,260
+I created this schematic diagram of a data frame to help us talk through how we are going
+
+68
+00:05:59,260 --> 00:06:04,060
+to encode this entire data frame. And what I'm showing here are the array components
+
+69
+00:06:04,060 --> 00:06:08,780
+in gray rectangles, the array types in the gray diamonds, the black diamonds are the
+
+70
+00:06:08,780 --> 00:06:14,020
+component types for the index and the columns, and the black circles are the component names
+
+71
+00:06:14,020 --> 00:06:17,660
+for columns, index, and the frame itself. Now, we're going to see this a lot, so I'll
+
+72
+00:06:17,700 --> 00:06:21,980
+help you understand it as we go. But before we do that, I want to compare that representation
+
+73
+00:06:21,980 --> 00:06:27,900
+to the representation of static frames, standard repr of a data frame. You'll notice this is
+
+74
+00:06:27,900 --> 00:06:32,480
+a richer representation than Panda's representation of a data frame, because in static frame,
+
+75
+00:06:32,480 --> 00:06:36,740
+we're very concerned about our types. We want to always show our users what types we have
+
+76
+00:06:36,740 --> 00:06:41,300
+at hand. And I'm going to relate this representation to what we were looking at previously. So
+
+77
+00:06:41,300 --> 00:06:46,080
+here I've highlighted in orange and yellow the values of the data frame. So we can think
+
+78
+00:06:46,080 --> 00:06:52,760
+of this as four or actually two arrays of first integers and then booleans. This is
+
+79
+00:06:52,760 --> 00:06:58,760
+the data in our data frame, and we can see it in both representations here. In blue gray
+
+80
+00:06:58,760 --> 00:07:03,840
+here, I'm showing the arrays of the columns, and we can see that we have two arrays that
+
+81
+00:07:03,840 --> 00:07:09,160
+represent the columns in this case, the hierarchical columns. I have two arrays also representing
+
+82
+00:07:09,160 --> 00:07:14,800
+the index here. And then finally in purple, I have the additional stuff, the types of
+
+83
+00:07:14,800 --> 00:07:18,960
+the index and the columns and the name attributes. And if we bring that all together, you can
+
+84
+00:07:18,960 --> 00:07:23,800
+see the correspondence between these two representations. We're going to see this frame diagram come
+
+85
+00:07:23,800 --> 00:07:30,560
+back, so you'll get used to it as we go forward. Now, an important part of how data frames
+
+86
+00:07:30,560 --> 00:07:37,200
+work is that they manage internal array stores called blocks. Block structure might deviate
+
+87
+00:07:37,200 --> 00:07:41,120
+from the actual column presentation. So what you see when you're working with the data
+
+88
+00:07:42,120 --> 00:07:45,760
+is not how the data is actually stored. And that's important because in consolidating
+
+89
+00:07:45,760 --> 00:07:51,440
+same type data into fewer blocks, we get better performance. In essence, we can do more in
+
+90
+00:07:51,440 --> 00:07:57,240
+NumPy and that will give us better performance. So there's maybe three block consolidation
+
+91
+00:07:57,240 --> 00:08:03,200
+strategies. We could have unconsolidated blocks where each column is a one-dimensional array.
+
+92
+00:08:03,200 --> 00:08:09,920
+Or we could have order-dependent block consolidation where adjacent same-typed columns can be consolidated
+
+93
+00:08:09,920 --> 00:08:14,920
+into two-dimensional blocks. Finally, we could have order-independent blocks where
+
+94
+00:08:14,920 --> 00:08:21,440
+all columns are consolidated into a 2D block per type. So I know that's a lot. So this
+
+95
+00:08:21,440 --> 00:08:26,320
+diagram here should help you understand what we're talking about. So on the left-hand side,
+
+96
+00:08:26,320 --> 00:08:30,080
+we have the represented values. Here you see a data frame that has a couple of columns
+
+97
+00:08:30,080 --> 00:08:35,320
+of integers, booleans and floats. You just see one type per column. But the blocks might
+
+98
+00:08:35,320 --> 00:08:38,760
+be constructed differently. On the right-hand side, we see these three options where we
+
+99
+00:08:38,760 --> 00:08:45,240
+have unconsolidated blocks, maybe one-dimensional array for each column. Order-dependent block
+
+100
+00:08:45,240 --> 00:08:52,680
+consolidation combines adjacent columns into larger two-dimensional arrays. Order-independent
+
+101
+00:08:52,680 --> 00:09:01,880
+blocks disregards order and simply consolidates column data by type. So this block consolidation
+
+102
+00:09:01,880 --> 00:09:06,840
+has trade-offs in terms of performance and complexity. So order-independent consolidation
+
+103
+00:09:06,920 --> 00:09:12,560
+as used by Pandas gives the opportunity for optimal type consolidation but requires more
+
+104
+00:09:12,560 --> 00:09:17,560
+complexity because we have to translate from those blocks to the representation that the
+
+105
+00:09:17,560 --> 00:09:23,520
+user sees. Order-dependent consolidation as used by StaticFrame is suboptimal in some
+
+106
+00:09:23,520 --> 00:09:29,240
+cases. We can't consolidate everything. But this gives us less complexity and, as we'll
+
+107
+00:09:29,240 --> 00:09:35,000
+see later on, improves our serialization performance because we don't have to do that translation
+
+108
+00:09:35,000 --> 00:09:41,880
+from the consolidated blocks. All right. I'm talking about complete data frame serialization.
+
+109
+00:09:41,880 --> 00:09:47,120
+So we'll talk a little bit about what that is. Now, no legacy format except Pickle supports
+
+110
+00:09:47,120 --> 00:09:51,520
+all data frame characteristics. And I really mean all characteristics. So generally, there's
+
+111
+00:09:51,520 --> 00:09:55,800
+some sort of limits on the array data types. There may not be a perfect mapping of your
+
+112
+00:09:55,800 --> 00:09:59,960
+array types into your serialization format. There's often limits, as we've already seen
+
+113
+00:09:59,960 --> 00:10:05,960
+in Parquet, on what the types of the columns and index can be. And there's often very limited
+
+114
+00:10:05,960 --> 00:10:10,240
+support for those name attributes, which, while not that important, can be really annoying
+
+115
+00:10:10,240 --> 00:10:15,880
+to not have come back and forth from your serialization. Now, Pickle, in many cases,
+
+116
+00:10:15,880 --> 00:10:19,700
+is the fastest at reading and writing data frames. We can always Pickle a data frame
+
+117
+00:10:19,700 --> 00:10:25,140
+in Pandas or StaticFrame. But Pickle is not really safe as a long-term store. As I hope
+
+118
+00:10:25,140 --> 00:10:30,220
+all of you know, untrusted code can be executed in a Pickle. And Pickle is not suitable for
+
+119
+00:10:30,220 --> 00:10:35,220
+long-term storage. A Pickle can hold on to references of objects that are no longer available,
+
+120
+00:10:35,220 --> 00:10:40,260
+and you can end up pretty easily with broken Pickles. So complete data frame serialization
+
+121
+00:10:40,260 --> 00:10:50,780
+needs to encode all the values and types. And encode all index and columns labels. We
+
+122
+00:10:50,780 --> 00:10:56,660
+need to support hierarchical labels. We need to support heterogeneous types per label depth.
+
+123
+00:10:56,660 --> 00:11:01,780
+And we need to get those name attributes. So I want to make clear that Parquet is not
+
+124
+00:11:01,780 --> 00:11:08,980
+a data frame. Parquet came out of the Apache Hadoop system and was designed for cross-platform
+
+125
+00:11:08,980 --> 00:11:15,620
+cross-language support. It is really a table implemented as unconsolidated columnar data.
+
+126
+00:11:15,620 --> 00:11:20,080
+And it's great for that purpose. It has very sophisticated mechanisms for handling large
+
+127
+00:11:20,080 --> 00:11:25,120
+data sets and rich metadata. But importantly, it's not a data frame. So we shouldn't be surprised
+
+128
+00:11:25,120 --> 00:11:31,920
+that we lose information in translating back and forth to Parquet. So let's take a deep dive into
+
+129
+00:11:31,920 --> 00:11:39,040
+NPY and the NPZ format. So the NPY format is a binary file format. What we have here is a header
+
+130
+00:11:39,040 --> 00:11:46,000
+followed by a payload of contiguous bytes. Now in order to translate contiguous bytes into an
+
+131
+00:11:46,000 --> 00:11:50,520
+array, we need three things for Numpy. We need the D type, which is going to tell us the bytes per
+
+132
+00:11:50,520 --> 00:11:57,160
+element. We need the order. Is it Fortran, column major, or C, row major style, two-dimensional or
+
+133
+00:11:57,160 --> 00:12:02,960
+larger array. And we need some specification of the shape of that data frame. So here's a little
+
+134
+00:12:02,960 --> 00:12:07,320
+example. You can do this on your own of going back and forth between bytes. Here I have a simple
+
+135
+00:12:07,320 --> 00:12:12,440
+three-element array of Booleans. And I can call the two-bytes method, which from any Numpy array
+
+136
+00:12:12,440 --> 00:12:17,800
+will give me the contiguous byte representation behind that array. And I can translate that back
+
+137
+00:12:17,800 --> 00:12:24,440
+into array by using here the from buffer constructor. I need to specify the D type. We need to tell
+
+138
+00:12:24,440 --> 00:12:29,520
+Numpy how to interpret those bytes. But as you can see, we get back the array that we started with.
+
+139
+00:12:29,520 --> 00:12:36,840
+So back to NPY. So an NPY file consists of a header and a series of contiguous bytes. In the
+
+140
+00:12:36,840 --> 00:12:41,520
+header, we have a number of things. We have what's called the magic prefix, which is a binary string
+
+141
+00:12:41,520 --> 00:12:46,360
+that has a special binary character and Numpy right there. So you know what you're looking at.
+
+142
+00:12:46,360 --> 00:12:52,000
+It has two bytes to provide the version number. And then it has the byte count of the remaining
+
+143
+00:12:52,000 --> 00:12:57,440
+header so that a consumer of this file knows how many bytes to read before we get to the contiguous
+
+144
+00:12:57,440 --> 00:13:03,280
+byte data. The remaining header has a binary encoding of a three-element Python dictionary.
+
+145
+00:13:03,280 --> 00:13:08,480
+And that dictionary is going to tell us the D type description string, whether it's Fortran order or
+
+146
+00:13:08,480 --> 00:13:13,560
+C order, and the shape of the array. We're going to have a little bit of padding there so we can
+
+147
+00:13:13,560 --> 00:13:20,120
+align at 64 byte divisions. So this diagram makes clear the structure of the NPY. We have the magic
+
+148
+00:13:20,120 --> 00:13:25,000
+prefix in purple. We have the version number in green. And we have the padded header length,
+
+149
+00:13:25,000 --> 00:13:31,160
+again telling us how far we need to read to get the rest of the header. The header here of the
+
+150
+00:13:31,160 --> 00:13:36,480
+array is given in orange. And we see that's an encoding of a Python dictionary to tell us how
+
+151
+00:13:36,480 --> 00:13:40,560
+to interpret that contiguous byte data. We have a little bit of padding. And then we have the
+
+152
+00:13:40,560 --> 00:13:45,120
+contiguous byte data, which you should recognize now as that same Boolean array we started with
+
+153
+00:13:45,120 --> 00:13:51,880
+consisting of false, true, and true. Now, the original NPY implementation supports object
+
+154
+00:13:51,880 --> 00:13:57,960
+arrays through pickling. But for our purposes, we're going to reject supporting object arrays
+
+155
+00:13:57,960 --> 00:14:03,260
+and pickles in our data frames. Even if we just have only one array that's an object, any pickle
+
+156
+00:14:03,260 --> 00:14:07,700
+compromises the safety and long-term storage of this format. So we're just not going to use it.
+
+157
+00:14:07,700 --> 00:14:13,980
+And if you need to encode object arrays, you're better off just using pickle, just pickle your
+
+158
+00:14:13,980 --> 00:14:20,100
+data frame and you'll be fine. Now, I mentioned that NPY supports many versions. These versions
+
+159
+00:14:20,100 --> 00:14:25,340
+aren't deprecated. They're a different kind of versioning system. So all versions are currently
+
+160
+00:14:25,340 --> 00:14:31,500
+supported. And if you use NP.save right now, it writes at the minimum version necessary. So very
+
+161
+00:14:31,500 --> 00:14:36,820
+likely you'll get a version one NPY if you use this. These versions are differentiated by the
+
+162
+00:14:36,820 --> 00:14:41,820
+available header size and the encoding. And versions two and three are really only there for structured
+
+163
+00:14:41,820 --> 00:14:45,540
+arrays. We don't need structured arrays for what we're doing. So we can just stick with version one.
+
+164
+00:14:45,540 --> 00:14:53,060
+Now, I mentioned that this nep one defined NPY and NPZ. So what is the NPZ? Well, the NPZ is very
+
+165
+00:14:53,060 --> 00:14:58,880
+simple. It's just a zip bundle of the NPY files. The original specification provides no standard
+
+166
+00:14:58,880 --> 00:15:04,600
+naming or no metadata file. In my work here, that is what we have added. You can write these with
+
+167
+00:15:04,600 --> 00:15:11,560
+NP.savez and we can read them with NP.load. And if you do this, you get back a dict-like interface
+
+168
+00:15:11,560 --> 00:15:19,840
+that allows you to get at your NPY files. Okay, so how do we encode a data frame as an NPZ? So what
+
+169
+00:15:19,840 --> 00:15:24,160
+we're going to do is we're going to create an uncompressed zip. We're going to store all of our
+
+170
+00:15:24,160 --> 00:15:28,400
+arrays as NPY files. We're going to store our values blocks as NPY files. We're going to store
+
+171
+00:15:28,400 --> 00:15:33,560
+our index and columns labels as NPY files per depth. And we're going to use a common naming
+
+172
+00:15:33,560 --> 00:15:38,760
+convention so we can find those NPY files. And we're going to define a custom JSON metadata file
+
+173
+00:15:38,760 --> 00:15:43,720
+to give us all the additional information we need. So returning to the schematic that we started with,
+
+174
+00:15:43,720 --> 00:15:49,080
+we can see how the components of the data frame are translated into the NPZ. We'll start with the
+
+175
+00:15:49,080 --> 00:15:55,040
+orange and yellow values arrays. We see each of those becomes one NPY file to represent those
+
+176
+00:15:55,040 --> 00:16:01,960
+arrays by type. We have two blue NPY files to represent the column data, two green NPYs to
+
+177
+00:16:01,960 --> 00:16:06,960
+represent the index data. And finally, all the other stuff, the purple, is wrapped up in our JSON.
+
+178
+00:16:06,960 --> 00:16:13,040
+If we were to look into some of those NPY files, this is what we would see. And hopefully this is
+
+179
+00:16:13,040 --> 00:16:18,160
+familiar by now. We see a block zero and blocks one represented, and we see that same header
+
+180
+00:16:18,160 --> 00:16:25,280
+followed by a bunch of contiguous bytes. Now the JSON metadata file is there so that we can define
+
+181
+00:16:25,280 --> 00:16:31,560
+the component types and additional metadata we need to recreate our data frame. We're going to
+
+182
+00:16:31,560 --> 00:16:36,800
+define the component types of strings. We're going to define the depths as integers, which will allow
+
+183
+00:16:36,800 --> 00:16:42,200
+us to discover our NPY files. And we're going to store the name attributes as a simple JSON array.
+
+184
+00:16:42,200 --> 00:16:48,320
+So now we have the same diagram, but I'm showing you where we pull information into the metadata
+
+185
+00:16:48,320 --> 00:16:55,520
+file. So in purple, you see that we have the name information gathered into a JSON array. We have
+
+186
+00:16:55,520 --> 00:17:01,480
+type information stored in the green, yellow, and orange components of this little JSON object. And
+
+187
+00:17:01,480 --> 00:17:06,640
+then finally, we have a depth JSON array that stores the depths of each of these components so
+
+188
+00:17:06,640 --> 00:17:12,520
+we can unpack them later. So if you want to use this in Static Frame, all you need to do is use
+
+189
+00:17:12,520 --> 00:17:17,720
+our simple constructor and exporter. If you're bringing in an NPZ file, you can just say from
+
+190
+00:17:17,720 --> 00:17:23,880
+NPZ, and if you're writing it out, you can just say to NPZ. As I mentioned, we spent a decent
+
+191
+00:17:23,880 --> 00:17:30,600
+amount of time improving NPY performance. And the reason is because NP.save and NP.load are not
+
+192
+00:17:30,600 --> 00:17:34,840
+designed for writing thousands or hundreds of thousands of NPY files, which is what we end up
+
+193
+00:17:34,840 --> 00:17:39,720
+doing when we serialize a data frame this way. And NumPy's implementation priority is on
+
+194
+00:17:39,720 --> 00:17:44,160
+compatibility, and what we found is a more narrow implementation can offer massive performance gains.
+
+195
+00:17:44,160 --> 00:17:49,880
+So a couple things that we did to improve performance. We removed support for structured
+
+196
+00:17:49,880 --> 00:17:56,560
+arrays. We don't need them, and this allows us to write version one NPY files in a very
+
+197
+00:17:56,560 --> 00:18:02,040
+straightforward way. We also omit support for object arrays. A really important performance
+
+198
+00:18:02,040 --> 00:18:09,160
+gain was achieved by removing backwards compatibility for NPYs authored in Python 2. NumPy does some
+
+199
+00:18:09,160 --> 00:18:13,560
+tricky stuff in order to handle that situation, and we're just not going to support that. We also
+
+200
+00:18:13,560 --> 00:18:20,360
+employ some header caching to improve the speed of translating that header into Python objects. In
+
+201
+00:18:20,360 --> 00:18:26,040
+the context of encoding NPYs in a data frame, you're going to have a lot of headers that are
+
+202
+00:18:26,040 --> 00:18:31,360
+the same, and so this cache header decoding really helps us improve our performance. Okay,
+
+203
+00:18:31,520 --> 00:18:35,120
+I've claimed that this format is faster than Parquet. We've seen a little bit of example,
+
+204
+00:18:35,120 --> 00:18:40,120
+but let's dive into some greater details of this. So we're going to look at a number of benchmarks,
+
+205
+00:18:40,120 --> 00:18:45,040
+reading and writing data frames, and we're going to use Pandas to read and write a data frame to
+
+206
+00:18:45,040 --> 00:18:49,520
+Parquet. We're going to do it both with the snappy compression, which is the default in Pandas,
+
+207
+00:18:49,520 --> 00:18:54,840
+as well as no compression. And then we're going to use static frame to read and write both NPZ and
+
+208
+00:18:54,840 --> 00:18:59,360
+pickle files. Pickle gives us another benchmark on the other end there. Now, of course, OS and
+
+209
+00:18:59,360 --> 00:19:04,240
+hardware affect performance of file systems operations like these, but I've tried this on a
+
+210
+00:19:04,240 --> 00:19:10,400
+few OSs and it seems to be pretty robust. Most importantly, shape and D-type heterogeneity
+
+211
+00:19:10,400 --> 00:19:15,200
+matter. Too often I see performance benchmarks of data frames where they just have done something
+
+212
+00:19:15,200 --> 00:19:19,920
+with one data frame, but the shape of the data frame and the underlying D-type heterogeneity
+
+213
+00:19:19,920 --> 00:19:24,640
+really matter. So we're going to look at performance across a million elements and a hundred million
+
+214
+00:19:24,720 --> 00:19:30,240
+elements in various shapes and D-type configurations. And I generated those values using a package
+
+215
+00:19:30,240 --> 00:19:35,360
+called frame fixtures, which allows me to easily generate a variety of frames. So we're going to
+
+216
+00:19:35,360 --> 00:19:40,080
+explore three shape ratios. So the shape matters in how a data frame can perform. We're going to
+
+217
+00:19:40,080 --> 00:19:45,200
+look at tall shapes, square shapes, and wide shapes. And we're going to look at three types
+
+218
+00:19:45,200 --> 00:19:49,760
+of D-type heterogeneity. We're going to look at columnar, where we have one D-type per column
+
+219
+00:19:49,760 --> 00:19:55,760
+with no block consolidation, mixed D-type heterogeneity. We have two pairs out of five
+
+220
+00:19:55,760 --> 00:20:01,040
+that are consolidated and uniform D-type heterogeneity, where we have one block that
+
+221
+00:20:01,040 --> 00:20:07,280
+can represent all of the data. So when I present these nine benchmarks, we're going to see them
+
+222
+00:20:07,280 --> 00:20:11,280
+in this presentation. So I just want you to get a sense of it before you see all these graphs.
+
+223
+00:20:11,280 --> 00:20:15,440
+We're going to have the shape variations across the columns, tall, square, and wide,
+
+224
+00:20:15,440 --> 00:20:20,320
+and we're going to have the D-type heterogeneity along the rows, columnar, mixed, and uniform.
+
+225
+00:20:21,680 --> 00:20:24,880
+Okay, so let's look at read performance. I know there's a lot of information here,
+
+226
+00:20:24,880 --> 00:20:29,920
+so I'll try to help you out with it. In dark blue, we have parquet with compression. In purple,
+
+227
+00:20:29,920 --> 00:20:35,280
+we have parquet without compression. In magenta, we have NPZ. And in orange, we have pickle. So
+
+228
+00:20:35,280 --> 00:20:40,560
+we see right away that pickle's very fast. Okay, that's our first observation. Notice that NPZ
+
+229
+00:20:40,560 --> 00:20:46,480
+in magenta is faster than parquet with and without compression in all cases here. And as the data
+
+230
+00:20:46,480 --> 00:20:54,160
+gets more uniform, as we go down, we see that NPZ performance increases. Notice also that with
+
+231
+00:20:54,160 --> 00:20:58,880
+the compression sometimes reduces parquet performance. That's going to be relevant when
+
+232
+00:20:58,880 --> 00:21:05,200
+we look at the trade-off in sizes, in file size on disk. Now, if I scale this to 100 million elements,
+
+233
+00:21:05,280 --> 00:21:12,000
+and we do the same examination, we see the outperformance of NPZ continues. And we see now
+
+234
+00:21:12,000 --> 00:21:18,480
+that the compressed parquet always underperforms the uncompressed parquet. And I want you to keep
+
+235
+00:21:18,480 --> 00:21:21,600
+that in mind when we look at file sizes. There's one case where that's not true.
+
+236
+00:21:22,480 --> 00:21:27,760
+But notice again here, lower is better in all these graphs, that NPZ in magenta is significantly
+
+237
+00:21:27,760 --> 00:21:33,840
+outperforming reading parquet. Now, what about writing? Well, here, NPZ does really well.
+
+238
+00:21:34,800 --> 00:21:41,600
+We see again in magenta NPZ, that bar is always lower than parquet. And again, lower is better
+
+239
+00:21:41,600 --> 00:21:48,640
+here. And we see NPZ writing in a few cases even outperform pickle, those tiny little lines there
+
+240
+00:21:48,640 --> 00:21:54,720
+at the bottom. So this is a really exciting observation. And this similarly scales to 100
+
+241
+00:21:54,720 --> 00:22:01,040
+million elements, where again, NPZ again in magenta, lower is better, continuously outperforms
+
+242
+00:22:01,040 --> 00:22:09,440
+parquet in writing out complete data frames. So what about file size? Well, we have to consider
+
+243
+00:22:09,440 --> 00:22:13,760
+compression when we consider file size. Parquet supports many types of compressions. And that's a
+
+244
+00:22:13,760 --> 00:22:19,440
+really fantastic feature of parquet. At this point, we're not doing any compression on our NPYs.
+
+245
+00:22:19,440 --> 00:22:24,560
+And we're not even using compressed zips, because that degrades our performance. Even without any
+
+246
+00:22:24,560 --> 00:22:30,800
+compression, NPZ size compares favorably, which is very interesting. NPZ is always smaller than
+
+247
+00:22:30,800 --> 00:22:37,360
+parquet without compression. But when NPZ is larger, it's generally not more than 25% larger than parquet
+
+248
+00:22:37,360 --> 00:22:44,800
+with compression. Okay, so here's a similar chart of the resultant file size on disk of NPZ,
+
+249
+00:22:44,800 --> 00:22:51,200
+parquet, and pickle. Again, parquet is in dark blue with compression, purple without compression. And
+
+250
+00:22:51,200 --> 00:22:56,640
+right away, we see that the compression works. Compression is always smaller. Notice also the NPZ
+
+251
+00:22:56,640 --> 00:23:02,560
+in magenta is sometimes always smaller than uncompressed, sometimes even smaller than the
+
+252
+00:23:02,560 --> 00:23:09,200
+compressed parquet. And that's a really interesting observation. Now, as we scale this to 100 million
+
+253
+00:23:09,200 --> 00:23:15,600
+elements, we see the benefit of parquet compression. Now, compressed parquet files are always smaller
+
+254
+00:23:15,600 --> 00:23:21,440
+than the corresponding NPZ file. But the NPZ file is still always smaller than the uncompressed parquet.
+
+255
+00:23:22,080 --> 00:23:26,000
+Now, we do get a smaller file size with parquet, but if you remember our performance numbers,
+
+256
+00:23:26,000 --> 00:23:32,320
+the compressed parquet read-write performance performed very poorly at this scale. So there's
+
+257
+00:23:32,320 --> 00:23:37,680
+trade-offs in compression, as I'm sure you're aware. Now, what about memory mapping these data
+
+258
+00:23:37,680 --> 00:23:43,840
+frames? So a memory map is a segment of virtual memory assigned a byte-for-byte correlation to
+
+259
+00:23:43,840 --> 00:23:50,080
+the bytes in a file. And for large files, this can increase read performance significantly and
+
+260
+00:23:50,080 --> 00:23:55,760
+can permit an incremental lazy loading of data into RAM. So how do we memory map an array? Just
+
+261
+00:23:55,760 --> 00:24:01,040
+so we have an array, what can we do? Well, we can use the standard library's M map to create an
+
+262
+00:24:01,040 --> 00:24:08,240
+instance from the bytes in the body of the NPY file. And then we can simply hand that M map to
+
+263
+00:24:08,240 --> 00:24:13,520
+an ND array constructor as the data buffer for the array. So let's do that. We're going to create
+
+264
+00:24:13,520 --> 00:24:18,160
+a simple binary file, and we're going to put the three bytes that hopefully you know by now
+
+265
+00:24:18,160 --> 00:24:23,120
+into that file. We're going to open that file back up as binary. We're going to give it to
+
+266
+00:24:23,120 --> 00:24:28,320
+our memory map, and that's all we need to do. We can create an ND array with that memory map
+
+267
+00:24:28,320 --> 00:24:35,600
+as the buffer, and we have a memory mapped array. So we can do that with our NPYs, but we can't use
+
+268
+00:24:35,600 --> 00:24:40,960
+a zip anymore. What we need to do is write all of our NPYs to the file system, and Static Frame
+
+269
+00:24:40,960 --> 00:24:45,520
+offers an exporter to do that. You simply say to NPY. We're going to give it a directory, and we're
+
+270
+00:24:45,520 --> 00:24:51,120
+going to fill that directory with NPY files. To get the memory map file back into memory,
+
+271
+00:24:51,120 --> 00:24:54,400
+we're going to use a specialized constructor that's going to give us back two things. It's
+
+272
+00:24:54,400 --> 00:24:59,440
+going to give us back a frame and a special function we need to close the memory maps after
+
+273
+00:24:59,440 --> 00:25:03,600
+we're done with them. So this gives us some overhead in working with memory map data frames.
+
+274
+00:25:03,600 --> 00:25:09,440
+We have to lay out everything on the file system, and we must remember to close those memory maps.
+
+275
+00:25:09,440 --> 00:25:17,600
+But even so, we can get even better performance. So NPY at the scale of 100 million elements
+
+276
+00:25:17,600 --> 00:25:23,200
+always outperforms NPZ, and we see, well, it just drops off the chart here, outperforming
+
+277
+00:25:23,200 --> 00:25:30,960
+Pickle itself in reading in a data frame, which is a very exciting result. So memory mapping a
+
+278
+00:25:30,960 --> 00:25:36,320
+data frame provides significant benefits in read performance, often being faster than NPZ, maybe
+
+279
+00:25:36,320 --> 00:25:41,840
+always, and offering better memory performance. And this is really enabled by Static Frame,
+
+280
+00:25:41,840 --> 00:25:47,280
+in part because the NPY structure is identical to the blocks, and those blocks are
+
+281
+00:25:47,840 --> 00:25:53,680
+adjacently consolidated, meaning we don't have to do any translation to get at that underlying data.
+
+282
+00:25:53,680 --> 00:25:58,240
+Furthermore, unlike Pandas, Static Frame has an immutable data model, and because it's a
+
+283
+00:25:58,240 --> 00:26:04,240
+mutable data model, we can memory map all of that array data into our frame, and we can take
+
+284
+00:26:04,240 --> 00:26:09,440
+views of that memory map data without forcing premature copies, which means we can keep our
+
+285
+00:26:09,440 --> 00:26:13,840
+memory map data and use it for quite a long time before having to make any copies.
+
+286
+00:26:15,440 --> 00:26:22,960
+All right, current state and future work. These NPY, NPZ, read, write routines are fully implemented
+
+287
+00:26:22,960 --> 00:26:27,920
+in Static Frame. We're already widely using them in production and have observed very significant
+
+288
+00:26:27,920 --> 00:26:34,400
+performance benefits converting from using Parquet to using NPY and NPZ. As mentioned,
+
+289
+00:26:34,400 --> 00:26:39,600
+you can export and import these NPZs with constructors and exporters with names that
+
+290
+00:26:39,600 --> 00:26:44,640
+should be familiar to you. If you want to go to an NPY, a directory of all of this data,
+
+291
+00:26:44,640 --> 00:26:50,880
+there's similar exporters and constructors. And finally, we saw the special NPY M-Map constructor
+
+292
+00:26:50,880 --> 00:26:57,840
+that allows you to memory map a complete NPY from NPYs on your file system. If you're using Pandas,
+
+293
+00:26:57,920 --> 00:27:02,720
+you can use this right away. You can simply convert from Pandas to Static Frame, write out
+
+294
+00:27:02,720 --> 00:27:08,640
+your NPZ, or do the same in reverse. Use Static Frame to read your NPZ and then convert it to
+
+295
+00:27:08,640 --> 00:27:14,800
+Pandas. Now, Pandas has drifted away from NumPy a little bit, so if you're using Pandas data frame
+
+296
+00:27:14,800 --> 00:27:20,640
+features that aren't part of NumPy, you're not going to be able to do this. But for very common
+
+297
+00:27:21,360 --> 00:27:26,960
+NumPy D types, this will work perfectly well. In the future, there's a few more optimizations
+
+298
+00:27:26,960 --> 00:27:30,320
+we have to explore to further increase the performance of reading and writing these
+
+299
+00:27:31,120 --> 00:27:38,480
+NPY and NPZ files. And we might explore NPY compression as we saw the benefits of compression
+
+300
+00:27:38,480 --> 00:27:46,880
+for very large data frames is potentially valuable. All right, so I hope you've gained a good
+
+301
+00:27:46,880 --> 00:27:51,360
+understanding of data frames and how they are built. I hope now you have a clear understanding of how
+
+302
+00:27:52,080 --> 00:27:59,440
+this 14-year-old encoding mechanism works and how we can redeploy it now to produce something
+
+303
+00:27:59,440 --> 00:28:04,720
+that's actually materially faster than the so-called gold standard of data encoding.
+
+304
+00:28:04,720 --> 00:28:09,120
+And I hope you leave here with more options for serializing and, in fact,
+
+305
+00:28:09,120 --> 00:28:14,560
+memory mapping data frames than you had when you started. Thank you very much. If you'd like to
+
+306
+00:28:14,560 --> 00:28:23,120
+learn more about Static Frame, you can visit us here. Thank you.
+

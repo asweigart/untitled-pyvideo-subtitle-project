@@ -1,0 +1,1516 @@
+1
+00:00:00,000 --> 00:00:12,520
+So I want to cover what are the steps I'm going to go through in this talk.
+
+2
+00:00:12,520 --> 00:00:19,000
+I'll start by diving into what are the functional bits that make up a continuous integration
+
+3
+00:00:19,000 --> 00:00:26,600
+system, because those are the functional bits that we want to apply the best practices to.
+
+4
+00:00:26,600 --> 00:00:32,160
+Then before we talk about how to apply those best practices to, we'll talk about why we're
+
+5
+00:00:32,160 --> 00:00:34,120
+going to apply the best practices to.
+
+6
+00:00:34,120 --> 00:00:39,880
+So what actually makes one continuous integration set up good and another bad?
+
+7
+00:00:39,880 --> 00:00:43,120
+So what are the criteria we're going to evaluate?
+
+8
+00:00:43,120 --> 00:00:49,120
+And finally, after we've all agreed about what bits we can control and what are the
+
+9
+00:00:49,120 --> 00:00:55,760
+targets, we'll actually come to what I promised I'm going to talk about and explain how to
+
+10
+00:00:55,760 --> 00:00:59,920
+make your continuous integration actually good.
+
+11
+00:00:59,920 --> 00:01:06,360
+So before you even talk about having a continuous integration for a project, you usually are
+
+12
+00:01:06,360 --> 00:01:10,760
+going to have some sort of local way of building your project.
+
+13
+00:01:10,760 --> 00:01:13,960
+Python is an interpreted language.
+
+14
+00:01:13,960 --> 00:01:16,200
+We don't have a traditional build step.
+
+15
+00:01:16,200 --> 00:01:20,760
+We don't need to compile anything, you know, usually.
+
+16
+00:01:20,760 --> 00:01:26,480
+But we do have steps that are pretty traditional to run, and I kind of think of them as the
+
+17
+00:01:26,480 --> 00:01:29,160
+build.
+
+18
+00:01:29,160 --> 00:01:32,360
+We usually want some kind of linting process.
+
+19
+00:01:32,360 --> 00:01:37,480
+PyLint, Flakate, sometimes MyPy.
+
+20
+00:01:37,480 --> 00:01:42,480
+Under linting, I cover anything that will look at your code but will not run it, so
+
+21
+00:01:42,480 --> 00:01:45,960
+anything that analyzes your code statically.
+
+22
+00:01:46,520 --> 00:01:51,960
+Obviously, the other thing that you can do is run your code, and the other thing you
+
+23
+00:01:51,960 --> 00:01:53,840
+can do is test your code.
+
+24
+00:01:53,840 --> 00:01:59,600
+Test is anything that runs your code or pieces of your code and looks at the output and sees
+
+25
+00:01:59,600 --> 00:02:02,080
+if the output is okay.
+
+26
+00:02:02,080 --> 00:02:08,780
+So we usually do that when we run CI, and before we have a CI, you usually want to already
+
+27
+00:02:08,780 --> 00:02:13,960
+have some way of running your tests locally.
+
+28
+00:02:14,640 --> 00:02:16,880
+We usually have some sort of packaging.
+
+29
+00:02:16,880 --> 00:02:22,800
+Now, sometimes you'll package it into a wheel or an S-disk, but this does not have to be
+
+30
+00:02:22,800 --> 00:02:23,800
+the case.
+
+31
+00:02:23,800 --> 00:02:30,120
+Sometimes you'll want to package it into a PEX or maybe a Debian package or an RPM package
+
+32
+00:02:30,120 --> 00:02:34,560
+or very commonly a Docker container image.
+
+33
+00:02:34,560 --> 00:02:41,520
+But these three things, they're not always present, but very frequently you'll find that
+
+34
+00:02:41,560 --> 00:02:45,240
+most projects will have all of these three.
+
+35
+00:02:45,240 --> 00:02:51,560
+And before we even run CI, we want to make sure that the project knows how to lint itself,
+
+36
+00:02:51,560 --> 00:02:54,600
+to test itself, and to package itself.
+
+37
+00:02:54,600 --> 00:02:57,720
+So let's assume we already have a project that does that.
+
+38
+00:02:57,720 --> 00:03:01,800
+Well, we can start doing CI.
+
+39
+00:03:01,800 --> 00:03:05,680
+And so I kind of gave the thing away, right?
+
+40
+00:03:05,680 --> 00:03:07,480
+I said, well, you run it locally.
+
+41
+00:03:07,480 --> 00:03:13,320
+It's not a CI, so clearly CI should be something that you run remotely on a server.
+
+42
+00:03:13,320 --> 00:03:18,240
+Well, when you run it locally, the answer to when you run it was either very simple
+
+43
+00:03:18,240 --> 00:03:20,000
+or very complicated.
+
+44
+00:03:20,000 --> 00:03:24,560
+The simple answer is when you wanted, and the complicated answer is human psychology
+
+45
+00:03:24,560 --> 00:03:27,600
+is really complicated, so I don't know when you wanted to do it.
+
+46
+00:03:27,600 --> 00:03:30,880
+But at the end of the day, it's at least obvious.
+
+47
+00:03:30,880 --> 00:03:34,760
+When you wanted to do it, you just did it.
+
+48
+00:03:34,760 --> 00:03:41,600
+When you run it on a server, the server has to have some sort of well-defined algorithm.
+
+49
+00:03:41,600 --> 00:03:45,520
+When do you run that build?
+
+50
+00:03:45,520 --> 00:03:53,360
+And that will have to be defined by a code, so that has to be very clear.
+
+51
+00:03:53,360 --> 00:04:01,760
+In the old, old days, like let's say circa 2006, having a nightly build was considered
+
+52
+00:04:02,000 --> 00:04:05,200
+This is where the term continuous integration came from.
+
+53
+00:04:05,200 --> 00:04:11,120
+You continuously, every night, every night, you run the build.
+
+54
+00:04:11,120 --> 00:04:14,000
+And teams that did that were sophisticated.
+
+55
+00:04:14,000 --> 00:04:18,120
+They have an automated build process that runs every night on a server.
+
+56
+00:04:18,120 --> 00:04:21,960
+That was the height of sophistication in 2006.
+
+57
+00:04:21,960 --> 00:04:23,600
+And then it was good, right?
+
+58
+00:04:23,600 --> 00:04:29,220
+Because then in the morning, you can come in and say, okay, oh, something broke.
+
+59
+00:04:29,220 --> 00:04:33,180
+It was one of the things that were done during the day.
+
+60
+00:04:33,180 --> 00:04:38,900
+You should remember that 2006 is a long time ago, and most teams were very local, and there
+
+61
+00:04:38,900 --> 00:04:42,020
+was a specific definition of time, right?
+
+62
+00:04:42,020 --> 00:04:48,300
+The time zone of the local team, so the night is whenever the team is asleep.
+
+63
+00:04:48,300 --> 00:04:51,580
+And so they would come in the morning, see that something broke.
+
+64
+00:04:51,580 --> 00:04:55,140
+One of the things that happened during the day, it might be difficult to figure out which
+
+65
+00:04:55,140 --> 00:04:56,740
+of the things during the day.
+
+66
+00:04:56,740 --> 00:04:59,780
+So someone said, I have an idea.
+
+67
+00:04:59,780 --> 00:05:06,380
+What if instead of waiting until it's nighttime, as soon as the merge to the main branch will
+
+68
+00:05:06,380 --> 00:05:16,500
+run it, then if it's broken, we'll know that that's probably whatever that merge is.
+
+69
+00:05:16,500 --> 00:05:26,380
+This is like, let's say in 2008, if you had that, you were like in the top 95th percentile
+
+70
+00:05:26,500 --> 00:05:30,020
+of development sophistication.
+
+71
+00:05:30,020 --> 00:05:32,100
+People are like, whoa, that's the team I want to join.
+
+72
+00:05:32,100 --> 00:05:35,140
+Clearly they take their code seriously, right?
+
+73
+00:05:35,140 --> 00:05:44,740
+But we keep updating our standards, and nowadays we usually think of what we want to run the
+
+74
+00:05:44,740 --> 00:05:51,700
+continuous integration on or something I want to think of as suggested patch.
+
+75
+00:05:51,700 --> 00:05:53,940
+Different systems will have different names for that.
+
+76
+00:05:54,460 --> 00:05:56,860
+In GitHub it will be called the pull request.
+
+77
+00:05:56,860 --> 00:05:59,420
+In GitLab it will be called the merge request.
+
+78
+00:05:59,420 --> 00:06:02,580
+If you use review board, it's a review request.
+
+79
+00:06:02,580 --> 00:06:09,260
+But whatever it is, it's the thing that you ask your colleagues to review as people will
+
+80
+00:06:09,260 --> 00:06:16,580
+also be the thing that you're going to run the CI before you merge so that if it's broken,
+
+81
+00:06:16,580 --> 00:06:22,780
+you don't know that fact after you have merged and now you have to fix something that's broken
+
+82
+00:06:22,820 --> 00:06:25,820
+for everybody, but ahead of time.
+
+83
+00:06:25,820 --> 00:06:35,500
+This is, let's say, started being like kind of standard practice sometime between 2013
+
+84
+00:06:35,500 --> 00:06:42,060
+to 2015, and by now every reasonable system that you use will have that as a built-in
+
+85
+00:06:42,060 --> 00:06:43,060
+feature.
+
+86
+00:06:43,060 --> 00:06:47,540
+The situation hasn't stopped.
+
+87
+00:06:47,540 --> 00:06:50,700
+This is already kind of 10 to 7 years ago.
+
+88
+00:06:50,860 --> 00:06:54,020
+There's more things that can be done now.
+
+89
+00:06:54,020 --> 00:07:00,100
+People talk about stuff like merge trains, something called not rocket science, which
+
+90
+00:07:00,100 --> 00:07:04,140
+is a really weird name for something.
+
+91
+00:07:04,140 --> 00:07:05,940
+All kinds of stuff.
+
+92
+00:07:05,940 --> 00:07:08,500
+I'm not going to dive too much into that.
+
+93
+00:07:08,500 --> 00:07:13,340
+Another thing I'm not going to dive too much into that is continuous delivery and deployment.
+
+94
+00:07:13,340 --> 00:07:19,820
+That's not because these things are not important, but this talk is limited in time.
+
+95
+00:07:19,940 --> 00:07:24,580
+If I try to cover everything, it will take way too long.
+
+96
+00:07:24,580 --> 00:07:31,460
+So in this talk, I'm going to focus on these suggested patch builds.
+
+97
+00:07:31,460 --> 00:07:36,260
+And the reason I'm going to focus on these suggested patch builds is that in a typical
+
+98
+00:07:36,260 --> 00:07:44,100
+project, your continuous integration system, CPU cycle for CPU cycle, will be spending
+
+99
+00:07:44,100 --> 00:07:47,500
+most of its time in that flow.
+
+100
+00:07:47,500 --> 00:07:48,500
+Right?
+
+101
+00:07:48,620 --> 00:07:54,100
+Sure, there will be eventually a merge domain, and it will run CI on that merge domain.
+
+102
+00:07:54,100 --> 00:07:58,300
+But usually a patch takes a few iterations.
+
+103
+00:07:58,300 --> 00:08:05,620
+So on average, most of the flows that go through your CI are going to be on that suggested
+
+104
+00:08:05,620 --> 00:08:12,980
+patch build, which means that the main thing you're going to want to optimize is that flow.
+
+105
+00:08:13,460 --> 00:08:18,940
+I'm going to focus the entire talk on just how to optimize that specific patch build.
+
+106
+00:08:22,700 --> 00:08:29,220
+To come back to why are we doing that, we usually run it as an automated gate.
+
+107
+00:08:29,220 --> 00:08:31,060
+We have a human gate.
+
+108
+00:08:31,060 --> 00:08:37,740
+The human approval process that will usually mark off as approved.
+
+109
+00:08:37,740 --> 00:08:39,940
+Say this code looks good to me.
+
+110
+00:08:39,940 --> 00:08:44,620
+The goal of the CI is usually to look for regressions.
+
+111
+00:08:44,620 --> 00:08:50,100
+It can't really say if the patch is accomplishing its goal in the abstract.
+
+112
+00:08:50,100 --> 00:08:55,620
+That's not something you can really implement in a computerized manner.
+
+113
+00:08:55,620 --> 00:09:02,640
+What a CI system, the goal of it in running on suggested patch build is, is this making
+
+114
+00:09:02,640 --> 00:09:07,540
+any of our things worse than they were before?
+
+115
+00:09:07,940 --> 00:09:14,940
+This is useful because this means that anything that has passed this gate will at least not
+
+116
+00:09:14,940 --> 00:09:17,980
+make things worse off.
+
+117
+00:09:17,980 --> 00:09:20,580
+This is a goal of this suggested system.
+
+118
+00:09:20,580 --> 00:09:23,340
+Now we know what it's supposed to do.
+
+119
+00:09:23,340 --> 00:09:25,700
+We know what we're talking about.
+
+120
+00:09:25,700 --> 00:09:27,180
+This is what we're going to focus about.
+
+121
+00:09:27,180 --> 00:09:36,700
+How do you make your CI system be a better automated gate for patch being not regressions?
+
+122
+00:09:36,700 --> 00:09:38,100
+How does it do that?
+
+123
+00:09:38,100 --> 00:09:45,460
+Well, your CI system is usually made of a coordinator that looks at suggested patches
+
+124
+00:09:45,460 --> 00:09:52,340
+and decides, okay, that suggested patch has now, I should really do these runs on it.
+
+125
+00:09:52,340 --> 00:09:59,580
+Then the CI runners will actually go through the flow, run your tests, run your linters,
+
+126
+00:09:59,580 --> 00:10:04,340
+and send the output.
+
+127
+00:10:04,340 --> 00:10:10,940
+In most modern frameworks, again, regardless of which ones you use, that output will be
+
+128
+00:10:10,940 --> 00:10:13,100
+consumable via two ways.
+
+129
+00:10:13,100 --> 00:10:19,500
+Both of these are important and it's going to be really relevant in the rest of the talk.
+
+130
+00:10:19,500 --> 00:10:23,300
+One is that they're going to be collected live from the runners.
+
+131
+00:10:23,300 --> 00:10:30,220
+As the build is running, you can see the output, which means if there's a test failure, you
+
+132
+00:10:30,220 --> 00:10:32,300
+can see it immediately.
+
+133
+00:10:32,300 --> 00:10:33,940
+But it's not just live.
+
+134
+00:10:33,940 --> 00:10:35,860
+It's also documented.
+
+135
+00:10:35,860 --> 00:10:37,860
+It's also retained forever.
+
+136
+00:10:37,860 --> 00:10:45,620
+Now, forever is obviously somewhat of an ebulous concept, exactly when it's backed up, what's
+
+137
+00:10:45,620 --> 00:10:46,660
+going to rip it.
+
+138
+00:10:46,660 --> 00:10:53,540
+But it's usually considered in most systems a reasonably long-term place.
+
+139
+00:10:53,540 --> 00:10:58,980
+You can have a permalink in it that you can link in a discussion and say, this build shows
+
+140
+00:10:58,980 --> 00:11:03,660
+you that this test did something.
+
+141
+00:11:04,380 --> 00:11:07,900
+This is an important thing to remember about the build logs in the continuous integration
+
+142
+00:11:07,900 --> 00:11:08,900
+system.
+
+143
+00:11:08,900 --> 00:11:13,460
+Now that we understand what the continuous integration system is made of and what it's
+
+144
+00:11:13,460 --> 00:11:22,500
+supposed to do, let's figure out what kind of continuous integration systems are better
+
+145
+00:11:22,500 --> 00:11:23,500
+than others.
+
+146
+00:11:23,500 --> 00:11:26,500
+What will make it good?
+
+147
+00:11:26,500 --> 00:11:30,660
+Even if we don't know how to make it good, what will make people say, this is a good
+
+148
+00:11:30,660 --> 00:11:31,660
+system?
+
+149
+00:11:31,660 --> 00:11:34,340
+How do you have improved the situation?
+
+150
+00:11:34,340 --> 00:11:41,020
+Well, there's a few different pretty orthogonal criteria that you can apply.
+
+151
+00:11:41,020 --> 00:11:45,140
+So one criterion that you can apply is accuracy.
+
+152
+00:11:45,140 --> 00:11:51,020
+We said that its goal is to say, does the patch introduce a regression?
+
+153
+00:11:51,020 --> 00:11:54,180
+So accuracy means that the answer is correct.
+
+154
+00:11:54,180 --> 00:11:58,620
+If it says that the patch introduces a regression, it introduces a regression.
+
+155
+00:11:58,620 --> 00:12:01,660
+Even if it says that the patch does not introduce a regression, the patch does not introduce
+
+156
+00:12:01,660 --> 00:12:03,620
+a regression.
+
+157
+00:12:03,620 --> 00:12:06,980
+Any time that it gives the wrong answer, that's an accurate answer.
+
+158
+00:12:06,980 --> 00:12:08,980
+That's an incorrect answer.
+
+159
+00:12:08,980 --> 00:12:15,860
+Clearly, the perfect continuous integration system is 100% accurate.
+
+160
+00:12:15,860 --> 00:12:21,340
+A system that is more accurate is better than a system that is less accurate.
+
+161
+00:12:21,340 --> 00:12:23,700
+So this is a criteria, right?
+
+162
+00:12:23,700 --> 00:12:27,160
+This is something that is good to have.
+
+163
+00:12:27,160 --> 00:12:31,280
+But another orthogonal criterion is actionability.
+
+164
+00:12:31,280 --> 00:12:41,360
+Again, CPU cycle for CPU cycle, most of the time when you run a CI system, it will say
+
+165
+00:12:41,360 --> 00:12:44,360
+that most of the patches are bad.
+
+166
+00:12:44,360 --> 00:12:46,200
+That's reasonable, right?
+
+167
+00:12:46,200 --> 00:12:49,120
+Otherwise, why would you have a CI system?
+
+168
+00:12:49,120 --> 00:12:55,040
+If most of the time it would approve, then you should probably run it less, right?
+
+169
+00:12:55,040 --> 00:12:58,080
+It's probably doing a lot of redundant work.
+
+170
+00:12:58,080 --> 00:13:02,160
+So in general, a lot of times patches are bad.
+
+171
+00:13:02,160 --> 00:13:03,160
+That's okay.
+
+172
+00:13:03,160 --> 00:13:07,240
+This is why we have this automated system, to give us feedback.
+
+173
+00:13:07,240 --> 00:13:14,480
+But this means that when the patch is not good, it's really useful if that system gave
+
+174
+00:13:14,480 --> 00:13:18,440
+you good information about how to fix it.
+
+175
+00:13:18,440 --> 00:13:24,840
+Now the optimum here is something like black, which actually generates a diff for you.
+
+176
+00:13:24,840 --> 00:13:27,160
+But that's probably unattainable.
+
+177
+00:13:27,160 --> 00:13:30,880
+So what kind of an attainable criterion we can have here?
+
+178
+00:13:30,880 --> 00:13:36,360
+Well, the best of all systems tell you exactly how to reproduce it locally.
+
+179
+00:13:36,360 --> 00:13:41,080
+Once you can reproduce it locally, the CI system is not in the picture anymore.
+
+180
+00:13:41,080 --> 00:13:45,800
+Right now, how actionable it is, is kind of up to your local development environment,
+
+181
+00:13:45,800 --> 00:13:46,800
+right?
+
+182
+00:13:46,800 --> 00:13:49,600
+You can use local debuggers, you can put in print statements.
+
+183
+00:13:49,600 --> 00:13:53,800
+Whatever you use to debug your local code is up to you, right?
+
+184
+00:13:53,840 --> 00:13:59,760
+So that's already like a language stack issue or a development stack issue, not a CI issue.
+
+185
+00:13:59,760 --> 00:14:06,520
+So best of all, if a CI system tells you how to reproduce it locally, if for some reason
+
+186
+00:14:06,520 --> 00:14:11,680
+it's very hard to reproduce locally, it should probably give you a lot of useful information.
+
+187
+00:14:11,680 --> 00:14:17,640
+Another, again, orthogonal criterion is how long does it take to answer?
+
+188
+00:14:17,640 --> 00:14:18,640
+Promptness, right?
+
+189
+00:14:19,120 --> 00:14:24,520
+Imagine that you had a system that is perfectly accurate and perfectly actionable, meaning
+
+190
+00:14:24,520 --> 00:14:27,200
+that it always gives you the correct answer.
+
+191
+00:14:27,200 --> 00:14:33,920
+And when the answer tells you this is a bad patch, you can either reproduce it locally,
+
+192
+00:14:33,920 --> 00:14:36,480
+but it takes a whole day to run.
+
+193
+00:14:36,480 --> 00:14:38,360
+That's not a good system, right?
+
+194
+00:14:38,360 --> 00:14:45,080
+Even though it's perfect on the first two criteria, that's not a good system, because
+
+195
+00:14:45,080 --> 00:14:47,640
+you wouldn't be able to develop effectively with it.
+
+196
+00:14:47,640 --> 00:14:50,240
+So promptness is an orthogonal criterion here.
+
+197
+00:14:51,560 --> 00:14:54,920
+And the final criterion I'm going to talk about is cost, right?
+
+198
+00:14:54,920 --> 00:14:59,720
+Again, imagine that you had a system that is perfect on all the other three, but costs
+
+199
+00:14:59,720 --> 00:15:00,720
+a lot of money.
+
+200
+00:15:00,720 --> 00:15:04,000
+Well, we live in a capitalist society, right?
+
+201
+00:15:04,000 --> 00:15:07,040
+We have to pay money for these things.
+
+202
+00:15:07,040 --> 00:15:13,920
+Usually, the most money you spend in kind of a modern, kind of flexible, cloud-ish environment
+
+203
+00:15:13,920 --> 00:15:16,760
+is the runner's compute cost.
+
+204
+00:15:16,760 --> 00:15:24,080
+If you are spending more money than your product brings in, then this becomes an affordable
+
+205
+00:15:24,080 --> 00:15:25,080
+system, right?
+
+206
+00:15:25,080 --> 00:15:27,680
+That's kind of like the limit case.
+
+207
+00:15:27,680 --> 00:15:33,040
+Clearly, in an ideal case, you want to minimize the cost, because this is your profit margin
+
+208
+00:15:33,040 --> 00:15:38,360
+on whatever product this system supports.
+
+209
+00:15:38,360 --> 00:15:43,160
+So now that we know what our goals are, finally, we can talk about how to actually improve
+
+210
+00:15:43,160 --> 00:15:45,960
+them.
+
+211
+00:15:45,960 --> 00:15:50,960
+So well, you can improve the accuracy, you can improve the actionability, you can improve
+
+212
+00:15:50,960 --> 00:15:54,000
+the promptness, and you can improve the cost.
+
+213
+00:15:54,000 --> 00:16:00,040
+So one of the biggest things you can do to improve the accuracy is to use containers.
+
+214
+00:16:00,040 --> 00:16:09,040
+And the reason is because remember that we said that CI, the goal here in the gate function
+
+215
+00:16:09,040 --> 00:16:11,760
+is to tell you there's a regression.
+
+216
+00:16:11,760 --> 00:16:21,000
+Now if you update to a new Python version, even if it exposes a hidden problem with your
+
+217
+00:16:21,000 --> 00:16:28,080
+code, even if it's a new Python build that uses wider characters and it exposes some
+
+218
+00:16:28,080 --> 00:16:31,960
+problematic stuff with your code, it's not a regression in your patch.
+
+219
+00:16:31,960 --> 00:16:35,240
+That patch should not be allowed to come in.
+
+220
+00:16:35,240 --> 00:16:40,400
+So you want to use container image that has a specific version of Python and a specific
+
+221
+00:16:40,400 --> 00:16:49,400
+build of Python and any other non-Python dependencies.
+
+222
+00:16:49,400 --> 00:16:51,360
+And then you want to pin the image tag, right?
+
+223
+00:16:51,360 --> 00:16:57,640
+If you do all of that and then pin to latest, you've undone all the hard work you've done,
+
+224
+00:16:57,640 --> 00:17:03,340
+because as soon as a new image is released, you've upgraded to the new image and again,
+
+225
+00:17:03,340 --> 00:17:07,880
+you might fail perfectly valid patches.
+
+226
+00:17:07,880 --> 00:17:12,880
+Now a typical Python program has dependencies.
+
+227
+00:17:12,880 --> 00:17:18,520
+Even pretty small things can have like 10 in like the recursively closed dependencies.
+
+228
+00:17:18,520 --> 00:17:20,040
+Medium ones can have hundreds.
+
+229
+00:17:20,040 --> 00:17:23,440
+I've seen definitely ones with like thousands.
+
+230
+00:17:23,440 --> 00:17:29,680
+If any of those versions update and that somehow causes a problem, again, it doesn't matter
+
+231
+00:17:29,680 --> 00:17:33,320
+if the problem is in the library or in your code.
+
+232
+00:17:33,320 --> 00:17:35,880
+This is not a problem with the patch.
+
+233
+00:17:35,880 --> 00:17:40,240
+You should test against the pin dependencies, because otherwise you will be giving the wrong
+
+234
+00:17:40,240 --> 00:17:41,240
+answer.
+
+235
+00:17:41,240 --> 00:17:44,880
+You will be saying that the patch is wrong, but the patch is absolutely fine.
+
+236
+00:17:44,880 --> 00:17:50,600
+So you should always test in your CI flow with patch versions against pin dependencies.
+
+237
+00:17:50,600 --> 00:17:56,400
+Now you do want to upgrade the pins and you want to upgrade them in a dedicated patch.
+
+238
+00:17:56,400 --> 00:18:01,240
+And if that patch fails, the CI system has done its job.
+
+239
+00:18:01,240 --> 00:18:03,820
+That patch will not be allowed to merge.
+
+240
+00:18:03,820 --> 00:18:08,100
+That patch does indeed introduce a regression and until you fix it, you should not merge
+
+241
+00:18:08,100 --> 00:18:09,100
+it.
+
+242
+00:18:09,100 --> 00:18:13,660
+You should probably fix that at some point, but you should follow the usual flow about
+
+243
+00:18:13,660 --> 00:18:17,020
+how to fix problematic patches.
+
+244
+00:18:17,020 --> 00:18:20,040
+There are services that will help you.
+
+245
+00:18:20,040 --> 00:18:23,020
+The only thing they will help you is produce your PRs.
+
+246
+00:18:23,020 --> 00:18:28,820
+That's not nothing, but you're still responsible for looking at the failures, deciding when
+
+247
+00:18:28,820 --> 00:18:30,180
+to merge and so on.
+
+248
+00:18:30,180 --> 00:18:39,660
+So whether you use a service or not, you should still go with this flow.
+
+249
+00:18:39,660 --> 00:18:41,900
+Test quality matters a lot for the CI accuracy.
+
+250
+00:18:41,900 --> 00:18:47,380
+If you have bad tests, they're going to reduce your CI quality.
+
+251
+00:18:47,380 --> 00:18:54,300
+But test quality is its own, not half-hour talk, but at least 10-hour tutorial.
+
+252
+00:18:54,300 --> 00:18:58,380
+From the CI perspective, what you want to do is make sure that you monitor and improve
+
+253
+00:18:58,380 --> 00:18:59,380
+the test quality.
+
+254
+00:19:00,020 --> 00:19:04,940
+The CI is in a unique position to look at the test and see the historical data and see
+
+255
+00:19:04,940 --> 00:19:09,180
+which tests are good and which aren't.
+
+256
+00:19:09,180 --> 00:19:11,500
+You want to make sure that you do that.
+
+257
+00:19:11,500 --> 00:19:18,700
+Again, I'm not going to cover exactly how to optimize that.
+
+258
+00:19:18,700 --> 00:19:25,460
+For improving actionability, the biggest thing you can do is set the verbosity to the highest
+
+259
+00:19:25,460 --> 00:19:28,340
+level it will go.
+
+260
+00:19:28,340 --> 00:19:37,100
+Any test runner, lint runner, that has verbosity options, set them to the maximum it can go.
+
+261
+00:19:37,100 --> 00:19:42,140
+Because you can filter out stuff, but you cannot filter in stuff, which means if you
+
+262
+00:19:42,140 --> 00:19:50,460
+had a failure, especially if it's hard to reproduce failure, you really want to know
+
+263
+00:19:50,460 --> 00:19:52,820
+what was the problem.
+
+264
+00:19:52,820 --> 00:19:56,540
+So the higher the verbosity, the better.
+
+265
+00:19:56,540 --> 00:19:59,020
+You can filter the logs if you really need to.
+
+266
+00:19:59,020 --> 00:20:05,460
+A lot of the time, failures will be in tests.
+
+267
+00:20:05,460 --> 00:20:11,260
+Now frameworks like PyTest or Hamcrest will help you to make sure that the assertions
+
+268
+00:20:11,260 --> 00:20:13,220
+are more verbose.
+
+269
+00:20:13,220 --> 00:20:15,180
+But they're there to help you.
+
+270
+00:20:15,180 --> 00:20:17,380
+They're not there to do your job for you.
+
+271
+00:20:17,380 --> 00:20:22,820
+You can still use PyTest assertions or Hamcrest assertions and not get verbose test outputs
+
+272
+00:20:22,820 --> 00:20:25,260
+if you use them badly.
+
+273
+00:20:25,260 --> 00:20:29,100
+Make sure you cause your test to fail locally.
+
+274
+00:20:29,100 --> 00:20:34,220
+Check that the assertion failure actually has enough verbosity.
+
+275
+00:20:34,220 --> 00:20:36,300
+If not, fix that.
+
+276
+00:20:36,300 --> 00:20:37,740
+That is extremely useful.
+
+277
+00:20:37,740 --> 00:20:42,540
+That is time well spent when you run a test.
+
+278
+00:20:42,540 --> 00:20:45,980
+When you write a test.
+
+279
+00:20:45,980 --> 00:20:51,740
+One thing that PyTest or any of these frameworks will not help you with is when tests fail
+
+280
+00:20:51,980 --> 00:20:56,940
+not because of an assertion failure, but because of an exception.
+
+281
+00:20:56,940 --> 00:21:03,140
+Which means make sure in your code when you raise an exception, add a lot of details.
+
+282
+00:21:03,140 --> 00:21:06,460
+Because those details, those frameworks will show you.
+
+283
+00:21:06,460 --> 00:21:11,340
+But if you don't put those details in, they will not be able to show you those details.
+
+284
+00:21:11,340 --> 00:21:16,340
+So this is really important.
+
+285
+00:21:16,580 --> 00:21:23,260
+We talked about how a lot of actionability comes to local reproducibility.
+
+286
+00:21:23,260 --> 00:21:26,980
+Spew as many details of the environment to the logs.
+
+287
+00:21:26,980 --> 00:21:30,940
+Usually you can do that in the beginning of the test run, so they'll scroll off the live
+
+288
+00:21:30,940 --> 00:21:33,700
+run and won't bother anyone.
+
+289
+00:21:33,700 --> 00:21:39,340
+But when you have a failure and whoever is trying to reproduce it locally is having problems,
+
+290
+00:21:39,340 --> 00:21:44,320
+they'll scroll to the beginning and read carefully about what's different between their environment
+
+291
+00:21:44,320 --> 00:21:46,880
+and the CI environment.
+
+292
+00:21:46,880 --> 00:21:50,920
+And you don't know which line is going to save them.
+
+293
+00:21:50,920 --> 00:21:55,360
+So of course environment variables are really crucial because you don't know which environment
+
+294
+00:21:55,360 --> 00:22:01,800
+variable is going to make some library deep, deep, deep in your code behave slightly differently.
+
+295
+00:22:01,800 --> 00:22:08,400
+Any details about the platform, version of libc, version of operating system and so on.
+
+296
+00:22:08,400 --> 00:22:12,520
+And anything else you can think of, just spew your heart out.
+
+297
+00:22:13,520 --> 00:22:17,680
+As a corollary, you're spewing all these environment variables.
+
+298
+00:22:17,680 --> 00:22:21,640
+If you put secrets in them, you're going to have a bad time with your secret leaking.
+
+299
+00:22:21,640 --> 00:22:25,240
+The solution is not to do all kinds of fancy masking.
+
+300
+00:22:25,240 --> 00:22:28,720
+The solution is don't put your secrets in environment variables.
+
+301
+00:22:28,720 --> 00:22:30,640
+They're a better place to put your secrets.
+
+302
+00:22:30,640 --> 00:22:35,560
+Every reasonable CI system will give you a better place to put those secrets in.
+
+303
+00:22:35,560 --> 00:22:39,040
+Environment variables are really scary because there are other things that will
+
+304
+00:22:39,040 --> 00:22:41,000
+give you a lot of pure environment variables.
+
+305
+00:22:41,000 --> 00:22:43,560
+So you're not actually helping yourself.
+
+306
+00:22:43,560 --> 00:22:45,720
+You're just delaying the inevitable secret leak.
+
+307
+00:22:48,880 --> 00:22:52,320
+One way to improve promptness is to cache aggressively.
+
+308
+00:22:54,320 --> 00:22:59,360
+A lot of CI systems will have primitives to cache all kinds of downloads in
+
+309
+00:22:59,360 --> 00:23:05,080
+local file systems that will help you figure those out and start using those.
+
+310
+00:23:05,080 --> 00:23:11,680
+So if you build containers, it's kind of annoying to set container layer caching
+
+311
+00:23:11,680 --> 00:23:16,080
+against the registry, but if you go through that flow,
+
+312
+00:23:17,760 --> 00:23:21,080
+it's gonna save you a lot of time.
+
+313
+00:23:21,080 --> 00:23:25,800
+Because unlike when you build it locally, those CI runners are often very ephemeral.
+
+314
+00:23:25,800 --> 00:23:28,560
+So they will not have those layers cached in.
+
+315
+00:23:28,560 --> 00:23:33,000
+But very commonly, people order their container build file
+
+316
+00:23:33,000 --> 00:23:39,880
+to have the least changing and most time consuming layers at the top.
+
+317
+00:23:39,880 --> 00:23:44,440
+So if you do go through this flow, you can improve your container build speed a lot.
+
+318
+00:23:46,440 --> 00:23:51,400
+And have local PIPI container caching proxies that are network wise,
+
+319
+00:23:51,400 --> 00:23:53,760
+close to the CI system.
+
+320
+00:23:56,480 --> 00:23:59,000
+Another thing you can improve promptness is pooling.
+
+321
+00:23:59,960 --> 00:24:04,120
+Aggressively, we use connections, downloads, etc.
+
+322
+00:24:04,120 --> 00:24:07,640
+Think carefully about how to break up tests that actually improve things.
+
+323
+00:24:09,040 --> 00:24:09,960
+You can fail fast.
+
+324
+00:24:13,560 --> 00:24:18,080
+If you use all kinds of libraries to order tests based on likelihood to fail,
+
+325
+00:24:18,080 --> 00:24:23,960
+a couple of operational solutions, I will mention them in my talk notes.
+
+326
+00:24:25,840 --> 00:24:27,640
+You can also parallelize runs aggressively.
+
+327
+00:24:29,000 --> 00:24:34,000
+You can use CI primitives for that, or you can use tester primitives for that.
+
+328
+00:24:34,000 --> 00:24:36,840
+Again, some configuration may be needed, it's often worthwhile.
+
+329
+00:24:38,080 --> 00:24:42,160
+You can mock out slow things, especially databases.
+
+330
+00:24:42,160 --> 00:24:47,520
+You can get something that mocks out the database and doesn't run to a file system.
+
+331
+00:24:47,520 --> 00:24:50,440
+You can mock out a file system by mounting something like TemporFest,
+
+332
+00:24:50,440 --> 00:24:53,240
+which won't write to disk, all kinds of tricks like that.
+
+333
+00:24:53,240 --> 00:24:59,160
+You can also kill useless runs to improve the cost.
+
+334
+00:24:59,160 --> 00:25:03,480
+If a commit is added to a patch, nobody's gonna care about any ones that are in
+
+335
+00:25:03,480 --> 00:25:05,040
+the previous patch.
+
+336
+00:25:05,040 --> 00:25:07,440
+It's really annoying to find those ones and kill them, but
+
+337
+00:25:07,440 --> 00:25:09,040
+that can improve your cost a lot.
+
+338
+00:25:10,360 --> 00:25:12,200
+You can stop runs early.
+
+339
+00:25:12,200 --> 00:25:15,920
+That's a bit of a trade off, because sometimes you don't get all the failures,
+
+340
+00:25:15,920 --> 00:25:20,160
+and you'll get to a flow where people do more patches.
+
+341
+00:25:20,240 --> 00:25:24,080
+So you should kind of monitor that and see if it actually improves things.
+
+342
+00:25:26,200 --> 00:25:29,600
+Often, if you do better stubbing and mocking,
+
+343
+00:25:29,600 --> 00:25:33,560
+that will take less resources from the environment.
+
+344
+00:25:36,400 --> 00:25:40,280
+But you'll notice that a lot of these things come with trade offs, right?
+
+345
+00:25:40,280 --> 00:25:43,240
+You can have better accuracy by writing more tests or
+
+346
+00:25:43,240 --> 00:25:44,480
+making sure that they're really good.
+
+347
+00:25:45,800 --> 00:25:48,560
+You can focus a lot of action ability.
+
+348
+00:25:48,560 --> 00:25:52,080
+But you might lose on promptness.
+
+349
+00:25:52,080 --> 00:25:55,880
+You can focus a lot on promptness, but you might lose out on cost.
+
+350
+00:25:55,880 --> 00:25:59,160
+You can focus on all of them, but you're gonna put a lot of effort.
+
+351
+00:25:59,160 --> 00:26:01,600
+You have to make a decision what you value.
+
+352
+00:26:02,760 --> 00:26:07,760
+And if you don't make a decision, you're still making a decision by your actions,
+
+353
+00:26:07,760 --> 00:26:09,840
+but it's gonna be relitigated every sprint.
+
+354
+00:26:09,840 --> 00:26:14,400
+You're much better off actually deciding what are your values.
+
+355
+00:26:14,400 --> 00:26:18,160
+Once you have your values in hand, once you know what you care about,
+
+356
+00:26:18,200 --> 00:26:20,840
+you can measure what you have.
+
+357
+00:26:20,840 --> 00:26:22,320
+And now that you know what you value,
+
+358
+00:26:22,320 --> 00:26:25,400
+you can see whether your measurement aligns with your values.
+
+359
+00:26:25,400 --> 00:26:27,840
+And if they don't, now you know what to improve.
+
+360
+00:26:27,840 --> 00:26:29,840
+The thing that least aligns with your values,
+
+361
+00:26:29,840 --> 00:26:32,040
+you know exactly how much effort to put in.
+
+362
+00:26:32,040 --> 00:26:35,120
+So put in that amount of effort until it improves by how much you want it.
+
+363
+00:26:36,360 --> 00:26:38,080
+But you also want to repeat that process.
+
+364
+00:26:38,080 --> 00:26:41,640
+You want to keep thinking about whether your values should change.
+
+365
+00:26:41,640 --> 00:26:44,440
+And you want to see whether the situation changes.
+
+366
+00:26:44,440 --> 00:26:47,200
+Both of these things are likely to change, that's okay.
+
+367
+00:26:49,120 --> 00:26:51,640
+This is talk about best practices.
+
+368
+00:26:51,640 --> 00:26:54,320
+The only way to do that is to practice them.
+
+369
+00:26:54,320 --> 00:26:57,160
+So I hope that you'll apply it to your favorite CI flow.
+
+370
+00:26:58,880 --> 00:27:00,360
+I love talking about this.
+
+371
+00:27:00,360 --> 00:27:05,000
+I just stood out here and talked to you about this for 30 minutes.
+
+372
+00:27:05,000 --> 00:27:08,200
+If you want to continue the conversation, again, my website is
+
+373
+00:27:08,200 --> 00:27:12,520
+co-bredeason.com, email, LinkedIn, and like two dozen other ways of
+
+374
+00:27:12,520 --> 00:27:13,680
+reaching out to me are there.
+
+375
+00:27:14,640 --> 00:27:19,840
+And we also have an open space tomorrow at 11 AM.
+
+376
+00:27:19,840 --> 00:27:21,920
+Check the board for what room it is.
+
+377
+00:27:21,920 --> 00:27:25,440
+And I would love to talk to you all about more about that.
+
+378
+00:27:26,800 --> 00:27:27,600
+Thank you all.
+
+379
+00:27:27,600 --> 00:27:31,000
+And I hope this was a good talk and I hope you enjoy the rest of your conference.
+

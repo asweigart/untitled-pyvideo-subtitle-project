@@ -1,0 +1,920 @@
+1
+00:00:00,000 --> 00:00:11,900
+Hello, everyone. Let's give a warm welcome to Mr. Jeremiah, who is going to speak on
+
+2
+00:00:11,900 --> 00:00:13,900
+Introduction to Introspection.
+
+3
+00:00:13,900 --> 00:00:23,520
+Good afternoon. Thank you, everyone, for coming out to this final talk of a very long PyCon
+
+4
+00:00:23,520 --> 00:00:29,720
+day. I am Jeremiah Page, and today we're going to get a little intro to introspection. So
+
+5
+00:00:29,720 --> 00:00:33,280
+quickly, if you don't know introspection, it's basically the ability for code to look
+
+6
+00:00:33,280 --> 00:00:40,000
+at itself. So we're going to take a little journey today to see how we can maybe figure
+
+7
+00:00:40,000 --> 00:00:45,320
+out what the interpreter sees when it's running our code ourselves and have access to that
+
+8
+00:00:45,320 --> 00:00:48,400
+same information.
+
+9
+00:00:48,400 --> 00:00:53,400
+Python's not new to introspection. It's always had strong capabilities for this. Currently
+
+10
+00:00:53,400 --> 00:00:58,160
+there's about 70 built-in functions, and today we're going to use 15 of them just to look
+
+11
+00:00:58,160 --> 00:01:06,440
+at code and decide, pull out information from it. Some of this information is hidden,
+
+12
+00:01:06,440 --> 00:01:10,640
+some of it's magic, but none of it's meant to be secret. Python's not trying to keep
+
+13
+00:01:10,640 --> 00:01:16,480
+it away from you. It's just trying to keep it out of your way as you code. So where do
+
+14
+00:01:16,480 --> 00:01:21,320
+we start if we want to know something more about one of our objects? Well, we could start,
+
+15
+00:01:21,320 --> 00:01:26,040
+especially from the interactive shell, with a simple call to help. We can just say help,
+
+16
+00:01:26,040 --> 00:01:30,420
+and it'll tell us help's a function, so we can call it for more help, and we can even
+
+17
+00:01:30,420 --> 00:01:34,880
+call for help about help, and we'll learn more about help than we'd ever want to know.
+
+18
+00:01:34,880 --> 00:01:39,200
+But if we wanted to learn about something maybe a little more interesting, we could
+
+19
+00:01:39,200 --> 00:01:46,400
+maybe just hit that tab key on our interactive shell and find this weird name, Pickle. What's
+
+20
+00:01:46,400 --> 00:01:52,880
+up with Pickle? If we ask for help, help will tell us a lot, pages and pages. It'll fill
+
+21
+00:01:52,880 --> 00:01:58,040
+our terminal and scroll off more than I can fit on several slides. Everything we could
+
+22
+00:01:58,040 --> 00:02:05,040
+ever want to know how to use the Pickle module as we're running Python. But if we break it
+
+23
+00:02:05,080 --> 00:02:09,780
+down, it's pretty straightforward. It starts by telling us about the object we actually
+
+24
+00:02:09,780 --> 00:02:15,520
+passed to help. What is Pickle? It's a module. Its name is Pickle, which seems pretty obvious,
+
+25
+00:02:15,520 --> 00:02:21,600
+but it gets this right even if you use an alias. And it has a doc string, which should
+
+26
+00:02:21,760 --> 00:02:28,760
+help us in implementing, making use of this module. Once we get past the opening, help
+
+27
+00:02:29,160 --> 00:02:32,600
+is going to detail all the classes defined in the module. It's going to give a quick
+
+28
+00:02:32,600 --> 00:02:39,600
+hierarchy of how they relate to each other in inheritance and to other objects in Python.
+
+29
+00:02:40,200 --> 00:02:45,560
+And then for each one of these classes, help is going to list them with their full definition.
+
+30
+00:02:45,560 --> 00:02:49,000
+Every method that's attached to them, whether directly or through inheritance, it's going
+
+31
+00:02:49,000 --> 00:02:52,920
+to tell us which ones are static, which ones are class methods, which ones are instance
+
+32
+00:02:52,920 --> 00:02:59,240
+methods. It knows all of this. And once it's done going through all the classes, help is
+
+33
+00:02:59,240 --> 00:03:04,640
+then going to show us all the top level functions in the module. Again, it's going to show us
+
+34
+00:03:04,640 --> 00:03:08,760
+the name of the functions and the signature so we know how to call them. And it's going
+
+35
+00:03:08,760 --> 00:03:14,720
+to give us the doc string. Once it gets through the functions, there's a few more bits of,
+
+36
+00:03:15,040 --> 00:03:20,080
+there's a few other names at the top of the pickle module that aren't either classes or
+
+37
+00:03:20,080 --> 00:03:23,960
+functions. So for each of these, it's going to show us their names and their values. So
+
+38
+00:03:23,960 --> 00:03:30,160
+these are in pickle a series of constants that it uses for the serialization. And at
+
+39
+00:03:30,160 --> 00:03:35,160
+the very end is the file, which tells you where did this code actually come out of.
+
+40
+00:03:35,160 --> 00:03:41,520
+So that's all very helpful information. When we quit help, it returns us to the interactive
+
+41
+00:03:41,520 --> 00:03:48,120
+shell and we're back where we were with our code. So we'll try and capture that information
+
+42
+00:03:48,120 --> 00:03:53,160
+and use it to make some intelligent decisions in our program. Except help doesn't return
+
+43
+00:03:53,160 --> 00:03:56,820
+anything. It doesn't leave anything on the screen. When you're done with help, there's
+
+44
+00:03:56,820 --> 00:04:02,060
+nothing left that your program can find and make any sort of decisions about. All that
+
+45
+00:04:02,060 --> 00:04:07,280
+very valuable information went into our eyeballs, but unless we're going to copy it or memorize
+
+46
+00:04:07,280 --> 00:04:12,800
+it, it's of no use to the program. So we're going to need to go and find this information
+
+47
+00:04:12,800 --> 00:04:18,920
+somewhere else. We're going to go exploring the object model in Python a little bit and
+
+48
+00:04:18,920 --> 00:04:25,920
+find some of the magic that's in there. Before we go and find the magic, a little definition
+
+49
+00:04:26,720 --> 00:04:33,720
+of what magic is. Magic in Python is a common way to refer to special methods, which are
+
+50
+00:04:33,720 --> 00:04:38,200
+also called Dundas, which is any name in the language that both starts and ends with a
+
+51
+00:04:38,200 --> 00:04:44,200
+double underscore. If any name both starts and ends with a double underscore, it's reserved
+
+52
+00:04:44,200 --> 00:04:48,640
+by the interpreter, even if it's not being used right now. It's where the interpreter
+
+53
+00:04:48,640 --> 00:04:52,800
+puts all the data it needs to run your program and keep it out of your way as you're doing
+
+54
+00:04:52,800 --> 00:04:58,360
+your normal job. But because it's the only place the interpreter has to put its own information,
+
+55
+00:04:58,360 --> 00:05:04,280
+it's a great place to look for more information about running code. So if we're not going
+
+56
+00:05:04,280 --> 00:05:09,080
+to use the built-in help, is there something else we could use? Well, there's another built-in
+
+57
+00:05:09,080 --> 00:05:13,080
+function that we probably all use to debug a program, which is you can just print the
+
+58
+00:05:13,080 --> 00:05:20,080
+thing. Print can take any random object and throw you a representation of it. And this
+
+59
+00:05:20,320 --> 00:05:26,040
+works because string actually calls a built-in stir function on all its arguments, which
+
+60
+00:05:26,120 --> 00:05:31,320
+in turn calls our first magic method, Dunder stir. So for any objects you want to print,
+
+61
+00:05:31,320 --> 00:05:36,160
+that object is actually asked to execute its Dunder stir method to give back a string,
+
+62
+00:05:36,160 --> 00:05:41,400
+and that's what's displayed to the screen. So we can print a module, pickle, and it'll
+
+63
+00:05:41,400 --> 00:05:48,400
+tell us its type, its name, and its file location, just like help is able to do. But since we're
+
+64
+00:05:49,120 --> 00:05:55,400
+on the interactive shell, we could just print the name, type the name instead. Same data
+
+65
+00:05:55,400 --> 00:06:02,400
+comes out. This is not because the REPL or the interactive shell prints this object.
+
+66
+00:06:02,900 --> 00:06:08,480
+It actually uses a different built-in function called repr. repr looks the same on the surface.
+
+67
+00:06:08,480 --> 00:06:15,480
+It takes a random object and returns a string to display for it, but it has a different
+
+68
+00:06:15,560 --> 00:06:22,360
+mirroring magic method Dunder repr. In many cases, it defaults to the same string, but
+
+69
+00:06:22,440 --> 00:06:28,680
+it can be different than what print, than what stir puts out. And so if you're typing
+
+70
+00:06:28,680 --> 00:06:33,680
+a program on the interactive shell, and you're typing names, and then you go and make a program
+
+71
+00:06:33,680 --> 00:06:40,680
+that just prints the same names, you can get very different output on your terminal. And
+
+72
+00:06:40,680 --> 00:06:46,000
+since both repr and stir can be overwritten by magic methods, this information that we
+
+73
+00:06:46,000 --> 00:06:51,400
+want, this type and name, aren't completely dependable. So we're going to have to go even
+
+74
+00:06:51,400 --> 00:06:57,280
+deeper into the object model and go to the source of where did help know where these
+
+75
+00:06:57,280 --> 00:07:03,600
+things were and where did string know where they were when it used them. So if we go back
+
+76
+00:07:03,600 --> 00:07:09,480
+to the help output, all this information that help told us about Piggle exists in the object.
+
+77
+00:07:09,480 --> 00:07:14,680
+We just have to go find it. So we're going to look at some Dunder attributes and recreate
+
+78
+00:07:14,680 --> 00:07:20,140
+this entire text output. So the type, it knew, help knew that this was a module without us
+
+79
+00:07:20,140 --> 00:07:26,020
+telling it. It's stored in the object's Dunder class. The name, the canonical name, is defined
+
+80
+00:07:26,020 --> 00:07:33,020
+with is in Dunder name. Its doc string is stored in Dunder doc, and the file it was
+
+81
+00:07:33,340 --> 00:07:40,340
+created by lives in Dunder file. This is part of the object model. After help was done with
+
+82
+00:07:42,140 --> 00:07:48,020
+the actual object we passed it, it then showed us all the classes. So for any class we want
+
+83
+00:07:48,020 --> 00:07:53,640
+help on, we can find the same information inside the class object. Its type is in Dunder
+
+84
+00:07:53,640 --> 00:08:00,640
+class. Its name is in Dunder name. Its doc string is in Dunder doc. Now classes don't
+
+85
+00:08:00,940 --> 00:08:05,280
+have files because they belong to modules. So there's no Dunder file, but there's a Dunder
+
+86
+00:08:05,280 --> 00:08:12,280
+module. If we were to go look up that module, it would have a Dunder file and so on. And
+
+87
+00:08:12,520 --> 00:08:16,980
+then the unique thing to classes is that they have inheritance, which modules don't. So
+
+88
+00:08:16,980 --> 00:08:22,780
+we can find the direct parentage of this class through Dunder bases. And the method
+
+89
+00:08:22,780 --> 00:08:27,740
+resolution order is also in the MRO. It's not shown by help because it thinks for a
+
+90
+00:08:27,740 --> 00:08:34,740
+class this simple it's not very interesting. After it was done with all the classes, it
+
+91
+00:08:34,940 --> 00:08:39,820
+then showed us all the functions. There's some repetition here. The type is in Dunder
+
+92
+00:08:39,820 --> 00:08:45,480
+class. The name is in Dunder name. The doc string is in Dunder doc. And again, functions
+
+93
+00:08:45,480 --> 00:08:50,800
+belong to modules. At this point, there's only one thing that's unique to a function,
+
+94
+00:08:50,800 --> 00:08:56,440
+which is its signature. How do we actually know how to call this thing at runtime? At
+
+95
+00:08:56,440 --> 00:09:00,360
+this point, you might think there's a Dunder signature and we're done. We finished recreating
+
+96
+00:09:00,360 --> 00:09:07,360
+help. But in this case, it's much more complex. Python needs to dispatch calls to your function
+
+97
+00:09:07,620 --> 00:09:12,580
+many, many times during execution. Maybe millions of times. It wants to be very efficient about
+
+98
+00:09:12,620 --> 00:09:16,980
+this. And the way we write this code is not very parsable on a machine. So we're going
+
+99
+00:09:16,980 --> 00:09:23,980
+to have to dig a little extra deep to recreate this. A function, if it's not function call,
+
+100
+00:09:24,980 --> 00:09:30,580
+if it's not empty, has parameters. And those parameters have names. So that is found in
+
+101
+00:09:30,580 --> 00:09:37,100
+the Dunder code attribute, which is the object representing your code compiled for the interpreter.
+
+102
+00:09:37,100 --> 00:09:44,020
+And inside there is a lot of stuff, but there's one very attribute called covar names. This
+
+103
+00:09:44,020 --> 00:09:51,020
+stores all the names of the attributes for your function call. It's actually pretty complex.
+
+104
+00:09:52,540 --> 00:09:57,460
+It tells you which ones are positional only, which ones can be passed by position or keyword
+
+105
+00:09:57,460 --> 00:10:03,140
+argument, which ones can only be passed by keyword argument. But essentially, it's all
+
+106
+00:10:03,140 --> 00:10:10,060
+there if we go and look for it. After we know how many variables the function accepts, we
+
+107
+00:10:10,060 --> 00:10:14,940
+want to know which, if any of them, have defaults and what those default values are. So with
+
+108
+00:10:14,940 --> 00:10:21,140
+that, we'll go back to the loads object and look at Dunder defaults. Except for this function,
+
+109
+00:10:21,140 --> 00:10:24,860
+we're going to look at Dunder keywords defaults. There's two locations and you're going to
+
+110
+00:10:24,860 --> 00:10:30,420
+have to look at both. And finally, some of you might have noticed we're no longer looking
+
+111
+00:10:30,420 --> 00:10:35,300
+at help for the pickle module. We're looking at help for Tomolib. Because this function
+
+112
+00:10:35,300 --> 00:10:41,020
+has something nothing in the pickle library does, which are annotations. This function
+
+113
+00:10:41,020 --> 00:10:45,940
+has a return annotation and type annotations. We can pull those out of the objects Dunder
+
+114
+00:10:45,940 --> 00:10:52,620
+annotations. So with this, we're able to get back all the information help had, but in
+
+115
+00:10:52,620 --> 00:10:59,100
+a way we can actually store in variables. But that was kind of a lot of rummaging through
+
+116
+00:10:59,100 --> 00:11:04,980
+the object model and having to go pretty deep. And maybe it looks kind of ugly. Maybe
+
+117
+00:11:04,980 --> 00:11:08,940
+you're hoping there is a better way. Well, because this is Python, there's not only a
+
+118
+00:11:08,940 --> 00:11:16,460
+better way, but it exists in the standard library. The inspect module is a module designed
+
+119
+00:11:16,460 --> 00:11:22,540
+to inspect running code. Rather than trying to access any of these magic attributes on
+
+120
+00:11:23,540 --> 00:11:29,180
+objects you're holding, you can just pass the object to a corresponding inspect function.
+
+121
+00:11:29,180 --> 00:11:34,060
+And they're much safer. They work on more types. You don't have to do any kind of special
+
+122
+00:11:34,060 --> 00:11:41,060
+casing. And they cover many more cases. Each one of these functions that can take an object
+
+123
+00:11:43,740 --> 00:11:49,380
+is really a question we're asking of something we're holding onto. We want to ask an object,
+
+124
+00:11:49,380 --> 00:11:55,740
+what is your doc string to maybe find more documentation about it? Or what file were
+
+125
+00:11:55,740 --> 00:11:59,300
+you defined in? Which if you ask it through inspect, we'll be able to tell us for any
+
+126
+00:11:59,300 --> 00:12:06,300
+kind of object, not just modules. But some questions are a little nonsense. We can't
+
+127
+00:12:06,300 --> 00:12:09,820
+ask the number one what its signature is. It doesn't have a signature and it's never
+
+128
+00:12:09,820 --> 00:12:14,020
+going to have a signature. So some of these questions are a little unsafe and they'll
+
+129
+00:12:14,020 --> 00:12:21,020
+raise exceptions even using the inspect module. So we know how to ask the questions. But maybe
+
+130
+00:12:22,580 --> 00:12:27,660
+rather than just wrapping all these questions in some very broad try accepts, we could be
+
+131
+00:12:27,660 --> 00:12:33,060
+a little more specific of when we ask them. We could do that if we knew what the heck
+
+132
+00:12:33,060 --> 00:12:40,060
+the object was before we started asking questions. So only functions are going to have signatures,
+
+133
+00:12:40,980 --> 00:12:46,460
+but integers aren't. And maybe you want to know where a file or a module came from, but
+
+134
+00:12:46,460 --> 00:12:53,380
+maybe we don't care for some string. So there's some built-in functions to help with this.
+
+135
+00:12:53,380 --> 00:12:58,660
+There's the type, very basic. You pass an object and it tells you the type. But unlike
+
+136
+00:12:58,660 --> 00:13:03,660
+all the other questions we've been asking of our objects so far, type is a question
+
+137
+00:13:03,660 --> 00:13:08,780
+you will always get an answer to in Python. Not something you can save many objects in
+
+138
+00:13:08,780 --> 00:13:13,740
+a dynamic language, but because Python is an object-oriented language and everything's
+
+139
+00:13:13,740 --> 00:13:20,740
+an object, everything has a type. So if you ask what the type of pickle is, it says it's
+
+140
+00:13:20,900 --> 00:13:26,860
+the class module. Because everything is an object under the covers in Python, even modules
+
+141
+00:13:26,860 --> 00:13:33,860
+are just classes, a little dressed up. There's only one other question that's always safe
+
+142
+00:13:34,860 --> 00:13:40,860
+to ask of anything in Python and expect an answer, and that's what is your ID. Not nearly
+
+143
+00:13:40,860 --> 00:13:45,860
+as interesting as what is your type, but you will always get a unique answer per object.
+
+144
+00:13:45,860 --> 00:13:52,860
+Everything else is kind of up for grabs if it actually exists on the object. Another
+
+145
+00:13:52,860 --> 00:13:59,860
+great built-in function is callable. So things that are callable have a signature, and we
+
+146
+00:14:00,460 --> 00:14:04,540
+probably want to call them before investigating them further. If they're not callable, then
+
+147
+00:14:04,540 --> 00:14:10,780
+they're probably a value that we should start poking at right now. But what things are callable?
+
+148
+00:14:10,780 --> 00:14:15,240
+Type could tell us this if we really wanted to go through the trouble of it, but there's
+
+149
+00:14:15,240 --> 00:14:21,720
+more than one thing that's callable. Not just functions, but classes and instances of classes
+
+150
+00:14:21,720 --> 00:14:27,100
+under certain circumstances. And generators are callable, but not everything is. So this
+
+151
+00:14:27,100 --> 00:14:33,140
+is just a quick answer to know whether you should go looking for a signature or not.
+
+152
+00:14:33,140 --> 00:14:39,380
+And there's also the is instance and is subclass built-ins to know if something you're holding
+
+153
+00:14:39,380 --> 00:14:46,380
+has a class in its inheritance tree. These are overrides by magic methods in much the
+
+154
+00:14:46,820 --> 00:14:53,820
+same way that print and repr were. Now, you might wonder why Python allows classes to
+
+155
+00:14:53,820 --> 00:15:00,220
+override their definition of inheritance at runtime, why Python just doesn't reach into
+
+156
+00:15:00,220 --> 00:15:04,980
+the definition of the class. There's a very useful implementation of this in the standard
+
+157
+00:15:04,980 --> 00:15:11,980
+library. The abstract-based classes module, or the ABC, is a collection of classes that
+
+158
+00:15:12,060 --> 00:15:18,900
+represent interfaces expected across different parts of Python. So there's the iterable protocol
+
+159
+00:15:18,900 --> 00:15:23,180
+for things that can be looped over, the sequence protocol for things that can be walked and
+
+160
+00:15:23,180 --> 00:15:27,680
+indexed by a number. There's a mapping protocol, which are things that can give you values
+
+161
+00:15:27,680 --> 00:15:33,340
+based on keys rather than attributes. And Python has concrete implementations of each
+
+162
+00:15:33,340 --> 00:15:38,200
+of these types. There's lists and ranges and DICs, but you can make your own, and they
+
+163
+00:15:38,200 --> 00:15:43,220
+work perfectly well in just about any Python code without having to inherit from a list
+
+164
+00:15:43,220 --> 00:15:48,980
+or a DIC. You just have to have the right shape of a class. So if you ask is instance
+
+165
+00:15:48,980 --> 00:15:53,140
+list, you'll know whether it's subclasses list or not, but you won't necessarily know
+
+166
+00:15:53,140 --> 00:16:00,140
+if it's indexable. But if you ask the abstract-based class sequence, is this thing like a sequence?
+
+167
+00:16:01,960 --> 00:16:06,720
+It will say, yeah, that thing quacks like a list, even if it doesn't inherit from list
+
+168
+00:16:06,720 --> 00:16:12,700
+or the ABC sequence. So it will give you the right answer. You know that this thing can
+
+169
+00:16:12,700 --> 00:16:19,700
+be used for looping or for key access. So with that, we know when to ask our questions,
+
+170
+00:16:21,500 --> 00:16:26,860
+and we know how to ask our questions. We've pretty much recreated all that help could
+
+171
+00:16:26,860 --> 00:16:33,860
+do for us, except for one thing, which is that when we ask help about the pickle module,
+
+172
+00:16:34,960 --> 00:16:39,980
+help told us about pickle, what its docstring was, what file it came out of, but also went
+
+173
+00:16:39,980 --> 00:16:44,500
+through and told us every class that was defined under pickle. And for every class,
+
+174
+00:16:44,500 --> 00:16:48,300
+it told us every method that was defined on that class, even though we had no idea what
+
+175
+00:16:48,300 --> 00:16:55,300
+any of those names were. So how did help even know what the heck it was calling for help?
+
+176
+00:17:01,460 --> 00:17:05,540
+In our original example, we just typed out help, and we hit tab because we were in the
+
+177
+00:17:05,540 --> 00:17:11,300
+active shell, and we got this weird name, pickle, so we tried it. But in a running program,
+
+178
+00:17:11,300 --> 00:17:17,660
+you can't just hit tab to get some new variable names. So there's going to be some more built-in
+
+179
+00:17:17,660 --> 00:17:24,660
+functions to help with this. First up, vars is going to return a mapping of names to values
+
+180
+00:17:25,800 --> 00:17:30,540
+for the object you passed it. So you pass it an object that tells you the names that
+
+181
+00:17:30,540 --> 00:17:35,500
+are attributes and what their values are currently. If you pass no arguments, you get the same
+
+182
+00:17:35,780 --> 00:17:42,780
+for the local scope. Vars actually provides access to the magic attribute dict, which
+
+183
+00:17:43,380 --> 00:17:50,380
+is a private dictionary that actually is what supports attribute access on objects in Python.
+
+184
+00:17:50,700 --> 00:17:54,820
+So vars is very literal. You ask it what are the variables for this object, and it tells
+
+185
+00:17:54,820 --> 00:18:01,820
+you, but it doesn't try to tell you anything that would resolve for a .name lookup. So
+
+186
+00:18:01,820 --> 00:18:05,740
+Python won't just stop at looking in the dict of an object when you're trying to attribute
+
+187
+00:18:05,740 --> 00:18:11,180
+access. If it doesn't find it there, it might go looking elsewhere. If it's not in locals,
+
+188
+00:18:11,180 --> 00:18:15,020
+maybe it'll try the outer scope. If it's not there, maybe it'll try globals. If it's not
+
+189
+00:18:15,020 --> 00:18:20,260
+in this class, maybe it'll try the parents, and that could work. Vars won't do that. It's
+
+190
+00:18:20,260 --> 00:18:27,260
+very literal, and it just tells you the objects that the names that would definitely resolve
+
+191
+00:18:27,660 --> 00:18:34,660
+for a certain object. Some helpers for vars, there's also locals and globals, which provide
+
+192
+00:18:34,900 --> 00:18:41,900
+the same thing, dictionary mapping for the local scope or the global scope. But if these
+
+193
+00:18:42,720 --> 00:18:49,720
+aren't enough, there's dir. Dir tries to be very helpful. Instead of returning a mapping,
+
+194
+00:18:49,900 --> 00:18:55,040
+it's returning just a list of names, but it does its very best to walk the inheritance
+
+195
+00:18:55,040 --> 00:19:00,240
+tree of a class to look in the class of an instance for you and find all the names that
+
+196
+00:19:00,240 --> 00:19:07,240
+would resolve if you actually tried to go and find them. And it's supported by a magic
+
+197
+00:19:07,920 --> 00:19:14,920
+method dunder dir. So it doesn't get everything. It's really hard to get everything in a dynamic
+
+198
+00:19:15,080 --> 00:19:21,800
+language, but it tries really hard, and it gets there most of the time. And our favorite
+
+199
+00:19:21,800 --> 00:19:27,280
+new standard library module inspect also has a solution to this problem. If you pass
+
+200
+00:19:27,280 --> 00:19:31,040
+an object to get members, it will kind of do the best of both worlds. It will return
+
+201
+00:19:31,040 --> 00:19:37,440
+you names and their current values, both for the current object and for other names that
+
+202
+00:19:37,440 --> 00:19:42,400
+would resolve, for instance, their inheritance. But it's not a built-in, and also it doesn't
+
+203
+00:19:42,400 --> 00:19:49,400
+work with no arguments, so it doesn't work on locals or global scope. Two more built-in
+
+204
+00:19:50,080 --> 00:19:56,440
+functions, hasAdder, getAdder. These are no use if you don't know what you're asking about,
+
+205
+00:19:56,440 --> 00:20:01,160
+because you have to pass the name you're checking. But they're the most precise, because they
+
+206
+00:20:01,160 --> 00:20:06,240
+go through all the same steps that a .attribute access goes through. If you ask the question,
+
+207
+00:20:06,240 --> 00:20:13,240
+does this exist on this object, you will get the real definitive answer.
+
+208
+00:20:20,400 --> 00:20:26,400
+So I hope that you realize that Python's not really trying to keep anything secret from
+
+209
+00:20:26,400 --> 00:20:31,160
+you. The only reason these magic methods are hidden is to stay out of your way, and so
+
+210
+00:20:31,160 --> 00:20:36,440
+that you don't accidentally use them in your day-to-day programming. There's no real risk
+
+211
+00:20:36,440 --> 00:20:42,120
+in looking at them. If you're really afraid, just when you're in the interactive interpreter,
+
+212
+00:20:42,120 --> 00:20:46,960
+non-emission-critical application, just look at it. There's no harm. You can even change
+
+213
+00:20:46,960 --> 00:20:53,960
+it. You're not going to bring down your computer. You're not going to kill Python. And I hope
+
+214
+00:20:54,240 --> 00:21:01,240
+you go out of here and are not afraid to ask questions of your objects. Thanks, you all,
+
+215
+00:21:01,560 --> 00:21:02,560
+for coming.
+
+216
+00:21:02,560 --> 00:21:09,560
+Thanks a lot for the great presentation. Any questions?
+
+217
+00:21:09,560 --> 00:21:16,560
+The is instance and is subclass. So the question was, why would you want to override is subclass
+
+218
+00:21:16,560 --> 00:21:23,560
+and is instance? And I was trying to answer that with the ABC module. So in the ABC module,
+
+219
+00:21:23,560 --> 00:21:30,560
+there is several classes, but one of them is, for instance, sequence. And sequence is
+
+220
+00:21:33,880 --> 00:21:40,880
+the instance that is the subclass. So the question is, why would you want to override
+
+221
+00:21:41,640 --> 00:21:48,640
+is subclass and is instance? And I was trying to answer that with the ABC module. So in
+
+222
+00:21:48,640 --> 00:21:55,640
+the ABC module, there is several classes, but one of them is, for instance, sequence.
+
+223
+00:21:55,640 --> 00:22:02,640
+And sequence, when it is asked if it is a superclass or a super instance of an object,
+
+224
+00:22:03,200 --> 00:22:09,280
+doesn't look in the inheritance tree. It looks for certain methods that would be used by
+
+225
+00:22:09,280 --> 00:22:16,040
+protocols in Python on the specific object. So for sequence, it doesn't look if list is
+
+226
+00:22:16,040 --> 00:22:19,600
+done to index, which is the special magic method that is called when you use square
+
+227
+00:22:19,600 --> 00:22:25,240
+brackets is implemented for that class, because that's all that's required for indexing and
+
+228
+00:22:25,240 --> 00:22:32,240
+a few others. So it looks for inheritance through ways other than the bases, which we
+
+229
+00:22:32,560 --> 00:22:39,560
+saw at the very beginning. Any other questions?
+
+230
+00:22:46,040 --> 00:22:53,040
+Okay. Well, thank you all for coming out and enjoy your night.
+

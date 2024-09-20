@@ -1,0 +1,896 @@
+1
+00:00:00,000 --> 00:00:18,080
+Hello, everyone. Welcome. The next talk will be starting soon. Let's prepare ourselves
+
+2
+00:00:18,080 --> 00:00:26,720
+to hear Jesse and why should Async get all the love? Advanced control flow with threats.
+
+3
+00:00:26,720 --> 00:00:32,480
+I couldn't agree more. Jesse, please welcome with a warm applause.
+
+4
+00:00:38,480 --> 00:00:53,760
+Thanks a lot. Async IOs really hip. And not just Async IOs. Twisted, Tornado, those are the older
+
+5
+00:00:53,760 --> 00:01:01,360
+Async frameworks. Curio and Trio, the new Async frameworks, they're all super cool. They're hyped.
+
+6
+00:01:01,360 --> 00:01:09,120
+And deservedly so. They are amazing. I'm a big fan. I spent a lot of time in the early days
+
+7
+00:01:09,120 --> 00:01:19,120
+contributing to Tornado and to Async IO. My very first PyCon talk eight years ago in Montreal was
+
+8
+00:01:19,840 --> 00:01:26,480
+what is Async, how does it work, and when should you use it? I was one of the early boosters of Async.
+
+9
+00:01:28,000 --> 00:01:35,040
+Async IO introduced a lot of Pythonistas to some advanced control flow techniques like tasks and
+
+10
+00:01:35,040 --> 00:01:43,040
+futures, chaining, Async IO gather. All of this was really awesome. And it was very exciting. But
+
+11
+00:01:43,040 --> 00:01:51,120
+in the excitement, there was a message that was lost, which is that all this was already possible
+
+12
+00:01:51,120 --> 00:02:01,680
+with threads too. Compared to Async IO, threads seem hopelessly outdated. The cool kids will laugh
+
+13
+00:02:01,680 --> 00:02:10,960
+at you if you use threads. Now, when should you use either threads or Async IO? Threads and Async IO,
+
+14
+00:02:10,960 --> 00:02:21,520
+they are two ways to do concurrency. Now, concurrency is not parallelism. Parallelism is when your app
+
+15
+00:02:21,520 --> 00:02:28,320
+is actually doing multiple things on multiple CPUs at once. And Python mostly can't do parallelism
+
+16
+00:02:28,320 --> 00:02:35,040
+because of the global interpreter lock. You can understand the gill with this phrase, which is
+
+17
+00:02:35,040 --> 00:02:42,160
+short enough to write on your hand. One thread runs Python while others sleep or await IO.
+
+18
+00:02:42,880 --> 00:02:48,560
+And if you want to learn more about the gill, I gave a PyCon talk a few years ago at this link.
+
+19
+00:02:49,280 --> 00:02:55,760
+So threads and Async IO, they're kind of even here. Neither threads nor Async IO tasks can use
+
+20
+00:02:55,760 --> 00:03:05,280
+multiple CPUs. And just so you know that I know what you're all thinking, let's do a quick aside
+
+21
+00:03:05,280 --> 00:03:10,880
+about multiprocessing, which is that if you really need parallelism, you should use multiprocessing.
+
+22
+00:03:12,080 --> 00:03:20,720
+But it's not the panacea that it's made out to be. It is the only way for standard Python to use
+
+23
+00:03:20,720 --> 00:03:27,440
+multiple cores. But coordinating and exchanging data among processes has a lot of hidden complexity.
+
+24
+00:03:27,440 --> 00:03:36,000
+So beware. So what this talk is actually about is concurrency. And concurrency is dealing with
+
+25
+00:03:36,000 --> 00:03:43,040
+events in partial order. That means you're waiting for several things to happen, but you don't know
+
+26
+00:03:43,040 --> 00:03:50,560
+what order they'll happen in. The main example by far of concurrency is waiting for data on many
+
+27
+00:03:50,560 --> 00:03:58,880
+network connections at once. Some networks need concurrency. Basically all network servers need
+
+28
+00:03:58,880 --> 00:04:06,240
+concurrency, sometimes extremely high levels of concurrency. And we can use threads or kind of
+
+29
+00:04:06,240 --> 00:04:14,000
+Async framework like Async IO as our method of supporting concurrency. So which one should you
+
+30
+00:04:14,000 --> 00:04:22,480
+use? Let's start with Async IO's advantage. Very, very high concurrency. Programs are more efficient
+
+31
+00:04:22,480 --> 00:04:32,640
+with Async IO when it comes to memory. Here's a chart of two programs. The one in blue is making
+
+32
+00:04:32,640 --> 00:04:38,480
+lots of threads. The one in red, lots of Async IO tasks. The red program starts using more memory
+
+33
+00:04:38,480 --> 00:04:45,520
+just because it imported Async IO. But that doesn't really matter. What matters is that as you add more
+
+34
+00:04:45,520 --> 00:04:53,520
+concurrent things, threads or tasks, the memory usage for the Async IO program grows more slowly.
+
+35
+00:04:54,720 --> 00:04:58,080
+And I'll share links to details about this benchmark at the end of the talk.
+
+36
+00:04:58,080 --> 00:05:08,080
+From the previous chart, we saw that threads take about 10K each. Python threads just don't take that
+
+37
+00:05:08,080 --> 00:05:16,960
+much memory. More than a few hundred threads is impractical. But below that, they really work quite
+
+38
+00:05:16,960 --> 00:05:23,440
+nicely. If you recall the problems with large numbers of threads that David Beasley pointed out
+
+39
+00:05:23,760 --> 00:05:31,760
+many years ago, those were in Python 2. Those have been fixed. In comparison, in Async IO, each task
+
+40
+00:05:31,760 --> 00:05:37,760
+takes about 2K of RAM. So it is more efficient. Async IO is more efficient for huge numbers of mostly
+
+41
+00:05:37,760 --> 00:05:45,760
+idle connections where it's not actually using the processor all that much for each one. Is Async IO
+
+42
+00:05:46,480 --> 00:05:52,480
+faster than threads? No. As Cal Peterson wrote, sadly, Async is not go faster stripes for the Python
+
+43
+00:05:52,480 --> 00:05:58,480
+interpreter. Under realistic conditions, Asynchronous web frameworks are slightly worse
+
+44
+00:05:58,480 --> 00:06:06,480
+throughput and much worse latency variance. Standard library Async IO is definitely slower than a lot of
+
+45
+00:06:06,480 --> 00:06:13,280
+multi-threaded frameworks. And that's just because it's a much more efficient and more efficient
+
+46
+00:06:13,760 --> 00:06:19,680
+frameworks. And that's just because Async IO executes lots of Python to process each event.
+
+47
+00:06:19,680 --> 00:06:27,440
+And generally, frameworks are faster the more that they are implemented in C. Some of the newer Async
+
+48
+00:06:27,440 --> 00:06:34,880
+frameworks that have lots of C and particularly those based on UV loop are quite fast. But they're
+
+49
+00:06:34,880 --> 00:06:39,760
+not faster than multi-threading. And generally, tail latency still seems to be a problem with them.
+
+50
+00:06:39,760 --> 00:06:46,240
+So I'm not going to say necessarily that all Async frameworks are slower than all multi-threaded
+
+51
+00:06:46,240 --> 00:06:54,640
+frameworks. I think what I can say without getting into trouble is Async IO isn't faster. It's
+
+52
+00:06:55,920 --> 00:07:01,280
+efficient, again, only for huge numbers of mostly idle connections and only for the
+
+53
+00:07:01,280 --> 00:07:08,320
+most popular frameworks. What about compatibility? Does Async IO work with the tools that you're
+
+54
+00:07:08,320 --> 00:07:16,560
+already using? Well, what web frameworks do you use? Here are the most popular web frameworks last
+
+55
+00:07:16,560 --> 00:07:26,320
+year. The total is more than 100% because people could choose multiple. The Flask and Django, the
+
+56
+00:07:26,400 --> 00:07:31,840
+popular ones, are multi-threaded frameworks. They don't, for the most part, work with Async IO.
+
+57
+00:07:31,840 --> 00:07:39,360
+Only three of these are Async IO compatible. So if you want to use Async IO, that probably means
+
+58
+00:07:39,360 --> 00:07:43,840
+that you're going to have to rewrite large portions of your app. Async IO is incompatible
+
+59
+00:07:43,840 --> 00:07:55,040
+with the most popular frameworks. How tricky is it to write correct concurrent code with threads
+
+60
+00:07:55,040 --> 00:08:03,520
+versus Async IO? Let's make a function. It will increment a global counter.
+
+61
+00:08:05,520 --> 00:08:15,120
+We can run it on two threads at once. Will counter always eventually equal two? No, unfortunately,
+
+62
+00:08:15,120 --> 00:08:22,800
+it won't because plus equals is not atomic. It's got several sub steps. It has to load the value
+
+63
+00:08:22,800 --> 00:08:28,720
+from the global, add one to it, and save it back. If two threads interleave during this process,
+
+64
+00:08:29,280 --> 00:08:34,160
+one of the updates could be lost and the final value might only be one, not two.
+
+65
+00:08:37,200 --> 00:08:45,200
+We need to protect plus equals with a lock. I think that doing this correctly,
+
+66
+00:08:45,200 --> 00:08:50,720
+it's kind of tricky. This is a lot of code and a subtle gotcha for a very simple task.
+
+67
+00:08:52,960 --> 00:08:59,040
+This blog post from 2014 talks about this trickiness problem. It's by Glyph, the author of the twisted
+
+68
+00:08:59,040 --> 00:09:06,080
+Async framework. It's pretty old, but it's still my favorite argument about this topic. Glyph writes,
+
+69
+00:09:06,080 --> 00:09:13,440
+as we know, threads are a bad idea for most purposes. I disagree with Glyph. This is my point.
+
+70
+00:09:13,440 --> 00:09:19,200
+He says threads make local reasoning difficult and local reasoning is perhaps the most important
+
+71
+00:09:19,280 --> 00:09:25,440
+thing in software development. Glyph's point is that we should use Async not because it's faster
+
+72
+00:09:25,440 --> 00:09:31,440
+than threads and not even because it's more efficient in memory, but rather because it's less tricky.
+
+73
+00:09:34,640 --> 00:09:41,360
+Let's see this in action. Here's our counter value incrementer, but now it's a coroutine. It's Async
+
+74
+00:09:41,360 --> 00:09:48,720
+def. We'll run it on two tasks at once. You can tell just by looking at the code where it might
+
+75
+00:09:48,720 --> 00:09:54,720
+interleave with another coroutine. Anywhere that there's an await expression, it could interleave,
+
+76
+00:09:54,720 --> 00:10:01,040
+and that means anywhere that there isn't, it can't. That means that plus equals, it's atomic because
+
+77
+00:10:01,040 --> 00:10:08,400
+there's no await in plus equals, so we don't need a lock. We don't need a lock. We don't need a lock
+
+78
+00:10:08,400 --> 00:10:17,680
+to have an await in plus equals, so we don't need a lock. This means Async IO is better because it's
+
+79
+00:10:17,680 --> 00:10:27,520
+less tricky than multithreading. Right? So in summary, speed. Threads are at least as fast.
+
+80
+00:10:28,240 --> 00:10:33,440
+Compatibility. Threads work with Flask, Django, without rewriting your app for Async IO.
+
+81
+00:10:33,440 --> 00:10:38,480
+Memory. Async IO efficiently waits on huge numbers of mostly idle network connections,
+
+82
+00:10:38,480 --> 00:10:46,800
+and trickiness. Async IO is less error-prone than threads, but my point is that it doesn't need to
+
+83
+00:10:46,800 --> 00:10:55,600
+be this way. I think it's time to take another look at threads. All along, it's been possible to write
+
+84
+00:10:55,600 --> 00:11:00,800
+elegant, correct, concurrent code with threads. It doesn't have to be tricky and complicated.
+
+85
+00:11:00,800 --> 00:11:07,360
+Threads are actually cool. So now we're getting into the heart of this talk, how to write less
+
+86
+00:11:07,360 --> 00:11:17,360
+tricky code with threads. To begin, let's see how to use threads with futures. Threads had futures
+
+87
+00:11:17,360 --> 00:11:24,160
+first, before Async IO. Futures let us express control flows that you'd struggle to write with
+
+88
+00:11:24,720 --> 00:11:32,640
+the old locks and condition variables. Confusingly, Async IO has a different future
+
+89
+00:11:32,640 --> 00:11:39,040
+class from threads, but I've never had to use both in the same program at once, so it's fine.
+
+90
+00:11:41,040 --> 00:11:45,280
+Here's our previous code example with the lock that protects the counter.
+
+91
+00:11:46,240 --> 00:11:53,520
+We can use futures to make it better. First, let's add this. We want to know what the counter value
+
+92
+00:11:53,520 --> 00:12:01,360
+is at the very end. Then let's rewrite this with the first thing we do is import from concurrent
+
+93
+00:12:01,360 --> 00:12:08,080
+futures. This is where all the cool thread stuff lives. It's been here since Python 3.2, so a while
+
+94
+00:12:08,080 --> 00:12:16,400
+now. Now our do something function, it takes the future as an argument and it sets the result to
+
+95
+00:12:16,400 --> 00:12:22,080
+one. This is called resolving the future. One here is just how much to add to the counter.
+
+96
+00:12:23,760 --> 00:12:29,280
+We'll run do something on two threads and we'll pass in the two futures as arguments.
+
+97
+00:12:30,640 --> 00:12:36,160
+And then we will wait for the futures to be resolved. Calling future.result
+
+98
+00:12:36,800 --> 00:12:43,120
+waits for some other thread to call setResult. Once both of these futures are resolved, we sum
+
+99
+00:12:43,120 --> 00:12:48,480
+the results and that's our counter. This code isn't really much of an improvement yet, but I'm
+
+100
+00:12:49,280 --> 00:12:53,600
+just showing you how futures work. We're going to get there. Here's a better example.
+
+101
+00:12:54,800 --> 00:13:01,280
+Let's use a thread pool executor. This is a thread pool that runs things on threads and reuses
+
+102
+00:13:01,280 --> 00:13:09,360
+threads efficiently. Now our do something function, it doesn't take a future and resolve it. It just
+
+103
+00:13:09,360 --> 00:13:17,760
+returns one. And we'll call it using executor.submit that starts the function running very soon on a
+
+104
+00:13:17,760 --> 00:13:22,480
+background thread and it returns a future which is resolved when that function returns.
+
+105
+00:13:24,400 --> 00:13:29,360
+The rest of our code here is the same as before. We wait for the results of the two futures and
+
+106
+00:13:29,360 --> 00:13:36,000
+sum them. This is looking much better than old-fashioned code using a lock, but there's
+
+107
+00:13:36,000 --> 00:13:47,440
+more room for improvement. Executor.map. It's like the built-in map, but
+
+108
+00:13:47,520 --> 00:13:53,120
+it's concurrent. It runs the function on each of the arguments all at the same time.
+
+109
+00:13:54,800 --> 00:13:59,520
+So we'll give it range of two to undo something twice concurrently. We don't actually need the
+
+110
+00:13:59,520 --> 00:14:05,440
+input argument, so we'll just use a dummy argument here. There's no more explicit futures here,
+
+111
+00:14:05,440 --> 00:14:12,480
+no explicit threads. It's all hidden inside the map implementation. I think this looks really nice
+
+112
+00:14:13,120 --> 00:14:14,720
+and it's not error-prone at all.
+
+113
+00:14:19,360 --> 00:14:24,320
+What about more complex workflows? Say you want to make some French press coffee,
+
+114
+00:14:25,280 --> 00:14:32,400
+like I did this morning. I brought a hand grinder with me to Salt Lake City, so grinding the coffee
+
+115
+00:14:32,400 --> 00:14:39,600
+takes a little bit of time. And then I heated the water, I put them both in the press to brew,
+
+116
+00:14:39,600 --> 00:14:45,520
+and four minutes later I drank it. Obviously, this is not very efficient. I should be
+
+117
+00:14:46,160 --> 00:14:52,240
+heating the water and grinding the coffee concurrently, so it should really look like this.
+
+118
+00:14:54,240 --> 00:15:02,480
+How do we code this kind of workflow with threads? Let's make a thread pool executor.
+
+119
+00:15:02,480 --> 00:15:09,920
+Then there's functions to heat the water and grind the coffee. And then this brew function,
+
+120
+00:15:09,920 --> 00:15:16,960
+it takes two futures and waits until both have been completed. And then it waits four minutes
+
+121
+00:15:16,960 --> 00:15:24,640
+for the coffee to brew. So we can use the executor to heat the water and grind the coffee concurrently,
+
+122
+00:15:25,600 --> 00:15:30,800
+and then call brew with those two futures. And once it's done, we can drink the coffee.
+
+123
+00:15:33,440 --> 00:15:38,560
+So far, so good. Let's add some more steps to this workflow and see how
+
+124
+00:15:38,560 --> 00:15:41,920
+modern thread programming handles the extra complexity.
+
+125
+00:15:45,920 --> 00:15:50,320
+So there's a quick step after heating the water. You have to pour it into the press,
+
+126
+00:15:50,320 --> 00:15:53,680
+and there's a step after grinding the coffee. You have to pour that into the press.
+
+127
+00:15:53,680 --> 00:16:00,960
+So these can be finished in either order, but we want to do the red step as soon as it's
+
+128
+00:16:01,520 --> 00:16:06,640
+blue step is completed. So we want to do two things as their prerequisites are done.
+
+129
+00:16:10,160 --> 00:16:15,440
+Here's how to code this. So now heat water and grind coffee, they've got return values. They
+
+130
+00:16:15,440 --> 00:16:22,800
+produce some sort of product. And our brew function now, we're going to use as completed.
+
+131
+00:16:22,800 --> 00:16:28,720
+This is also in concurrent futures in the standard library. And it returns the futures in the order
+
+132
+00:16:28,720 --> 00:16:33,600
+that they are completed. So if the water is heated first, we handle that first, or if the
+
+133
+00:16:33,600 --> 00:16:38,000
+coffee is ground first, we handle that first. Once both are done, then we wait four minutes.
+
+134
+00:16:38,560 --> 00:16:48,080
+And the rest of the code is as before. Imagine if you had to write this using locks and condition
+
+135
+00:16:48,080 --> 00:16:54,000
+variables to signal when each of these steps was done and to trigger the next step. This would be
+
+136
+00:16:54,000 --> 00:16:59,760
+a nightmare. But using concurrent futures, this is actually really slick.
+
+137
+00:17:02,880 --> 00:17:07,040
+Of course, it's not really modern code yet because we don't have any type annotations.
+
+138
+00:17:10,160 --> 00:17:17,680
+Here I've annotated the return types of heat water and grind coffee. And if you have a future
+
+139
+00:17:17,680 --> 00:17:22,640
+that resolves to a certain type, you just subscript it like this. So this will be a future string.
+
+140
+00:17:23,520 --> 00:17:27,680
+And then the type system knows that when you call future.result, that will be a string,
+
+141
+00:17:27,680 --> 00:17:35,920
+or it will throw an exception. Let's take another look at this workflow. What if things get even
+
+142
+00:17:35,920 --> 00:17:42,320
+more complex? What if this workflow is one component of like a whole afternoon that I'm
+
+143
+00:17:42,320 --> 00:17:52,960
+spending? So this is just the coffee workflow. I've also got my chores workflow. So first I'm
+
+144
+00:17:52,960 --> 00:17:57,680
+going to make and drink coffee, and then that gives me the motivation to do my chores. And
+
+145
+00:17:57,680 --> 00:18:01,920
+of course, I'm listening to a podcast concurrently the entire time that I'm doing this.
+
+146
+00:18:02,480 --> 00:18:07,840
+How would we handle a complex set of workflows like this with modern threading?
+
+147
+00:18:13,040 --> 00:18:21,520
+A nice way to structure this is with a with statement. So I start a block like
+
+148
+00:18:21,520 --> 00:18:26,880
+with thread pull executor and run a function on that executor. And you can start an
+
+149
+00:18:26,880 --> 00:18:34,160
+inner executor using another with statement. When you leave the block, either normally or
+
+150
+00:18:34,160 --> 00:18:39,200
+with an exception, it joins and shuts down the executor automatically. So all threads
+
+151
+00:18:39,200 --> 00:18:43,120
+begun within that block must finish one way or another before you can leave the block.
+
+152
+00:18:45,120 --> 00:18:51,120
+And you can have multiple inner blocks within that outer block. This style is called structured
+
+153
+00:18:51,120 --> 00:18:57,280
+concurrency, and it's been popularized in a few languages and frameworks. Python people have
+
+154
+00:18:57,280 --> 00:19:05,920
+mostly learned about it from Nathaniel Smith's trio async framework, and task groups are going
+
+155
+00:19:05,920 --> 00:19:13,040
+to be useful for this with async I own the standard library in Python 3.11. Unfortunately,
+
+156
+00:19:14,240 --> 00:19:21,440
+you can't really do this with threads fully. The kind of definition of structured concurrency is
+
+157
+00:19:21,440 --> 00:19:29,920
+that if one of the tasks in a block fails, then all of the other threads that that block started
+
+158
+00:19:29,920 --> 00:19:35,760
+or will start should be canceled very soon. And unfortunately, we can't really do that with
+
+159
+00:19:35,760 --> 00:19:44,560
+threads because threads are not as good at cancellation as async I own. I'm going to show
+
+160
+00:19:44,560 --> 00:19:50,240
+you a handwritten solution. You'd have to do something like this with your app. First, you
+
+161
+00:19:50,240 --> 00:19:56,480
+want to make a custom exception type, thread canceled error, I'm going to call it, inherit from
+
+162
+00:19:56,480 --> 00:20:05,120
+base exception, so it's kind of hard to catch. And then you create a token, which is initially
+
+163
+00:20:05,120 --> 00:20:13,360
+not canceled, and it's got a method for checking if it's canceled. Now in our do something function,
+
+164
+00:20:13,360 --> 00:20:18,240
+we have to very frequently check if the token is canceled or not, and you can't forget to check,
+
+165
+00:20:19,360 --> 00:20:26,000
+otherwise the whole thing won't work. The rest of the code creates a token, and a thread pull
+
+166
+00:20:26,000 --> 00:20:32,880
+executor starts the function on a thread passing in the token. A second later, it marks the token
+
+167
+00:20:32,880 --> 00:20:40,400
+canceled, and then sometime soon after that, the thread should kill itself. We can wait for that by
+
+168
+00:20:40,400 --> 00:20:47,520
+waiting on future.result, which will then throw the canceled error. Python doesn't control the
+
+169
+00:20:47,520 --> 00:20:54,240
+thread scheduler the way that it controls the async I O event loop, so cancellation with threads,
+
+170
+00:20:54,240 --> 00:21:00,400
+it can't ever be as good as with async I O. There are some better ideas out there, like this one
+
+171
+00:21:00,400 --> 00:21:09,760
+from Nathaniel Smith. I'm curious if anybody's got a pep in progress to improve thread. But enough
+
+172
+00:21:09,760 --> 00:21:14,800
+with the bad news about threads, let's get back to the good news. Here's a real life example that I
+
+173
+00:21:14,800 --> 00:21:24,720
+coded a few months ago. So I made a toy Paxos implementation. Paxos is a protocol for servers
+
+174
+00:21:24,720 --> 00:21:32,000
+to work together for fault tolerance. So we've got a group of servers here, host 0, 1, and 2,
+
+175
+00:21:32,000 --> 00:21:37,200
+and they all talk to each other, but how does each server know who all of the members of the group are?
+
+176
+00:21:38,000 --> 00:21:41,040
+Let's give them a config file with the list of servers.
+
+177
+00:21:41,040 --> 00:21:48,960
+So here it is. But now, how does each server know which one in the list it is?
+
+178
+00:21:50,960 --> 00:21:56,240
+This is actually surprisingly hard. In cloud deployments or even in a data center,
+
+179
+00:21:56,240 --> 00:22:02,400
+every server usually has a couple of IP addresses, a couple of DNS names. It's not actually that easy
+
+180
+00:22:02,960 --> 00:22:12,480
+to know if you've got a DNS name, is this my name or not. Just calling get host name won't give you
+
+181
+00:22:12,480 --> 00:22:21,760
+the information you need. So the solution to this, it's kind of amazing. First of all,
+
+182
+00:22:22,320 --> 00:22:28,400
+every server when it starts up, it generates a unique ID for itself. Next, each server sends
+
+183
+00:22:28,400 --> 00:22:35,120
+a request to all the servers in the list, asking them for IDs. That includes asking itself for its
+
+184
+00:22:35,120 --> 00:22:39,920
+own ID, but it doesn't know that because it doesn't know which one it is. So here's host 0
+
+185
+00:22:40,720 --> 00:22:49,440
+requesting all of the server's IDs. The other servers are doing this too. Host 0 and host 1,
+
+186
+00:22:49,440 --> 00:22:55,040
+they respond with different IDs. And host 0 also responds to itself with its own ID.
+
+187
+00:22:55,840 --> 00:22:59,840
+It sees that they're equal, so it knows, aha, that's me, I'm host 0.
+
+188
+00:23:01,760 --> 00:23:07,760
+This is actually how MongoDB replica sets and lots of other distributed systems solve this problem.
+
+189
+00:23:09,920 --> 00:23:14,880
+But it's complicated because a server can't process any other requests until it knows
+
+190
+00:23:16,480 --> 00:23:22,400
+list entry corresponds to itself. Also, servers can start in any order. So this is a complex
+
+191
+00:23:22,400 --> 00:23:27,280
+workflow. How are we going to make this clean and nice with threads?
+
+192
+00:23:30,480 --> 00:23:38,560
+Here's the server code. First thing, we create a unique ID. I'm going to use Flask for the server
+
+193
+00:23:38,560 --> 00:23:45,040
+because I love Flask, it's the most popular. And create this self future which will be resolved
+
+194
+00:23:45,040 --> 00:23:56,000
+once I've found myself. Here's a Flask root to return the server ID to anybody who requests it.
+
+195
+00:23:57,840 --> 00:24:04,080
+And here's some client request handler. We can't handle any client requests until we know who we
+
+196
+00:24:04,080 --> 00:24:09,760
+are, so we have to call self future dot result. That will wait for self future to be resolved.
+
+197
+00:24:10,240 --> 00:24:16,720
+And then once it's resolved, this handler, this dot result call will return right away.
+
+198
+00:24:18,800 --> 00:24:26,800
+When the server starts up, it loads up its config, creates an executer, and it runs Flask
+
+199
+00:24:26,800 --> 00:24:34,560
+in the background on a thread. And that means that the main thread is able to keep doing stuff.
+
+200
+00:24:34,640 --> 00:24:41,680
+And what is it doing? It's launching the search for itself. So here's the search loop.
+
+201
+00:24:43,840 --> 00:24:53,520
+First, we note the time. And then while it's been less than 60 seconds, and we haven't found self,
+
+202
+00:24:53,520 --> 00:24:59,680
+we will continue. We will search every server name in the list. And for each one of those,
+
+203
+00:25:00,320 --> 00:25:05,280
+we'll use the requests client library to request that server's unique ID.
+
+204
+00:25:06,800 --> 00:25:11,520
+That means that we'll hit this request handler either on this server or another server,
+
+205
+00:25:11,520 --> 00:25:18,160
+but we don't know yet. If the server IDs match, then we've found ourselves.
+
+206
+00:25:19,760 --> 00:25:26,640
+So that means that we can resolve the future, and that will unblock any threads that are waiting
+
+207
+00:25:26,640 --> 00:25:33,760
+to process client requests. Or we might throw an exception. We could throw an exception because
+
+208
+00:25:33,760 --> 00:25:38,720
+we're trying to contact another server and it's not started yet. Servers can start in any order.
+
+209
+00:25:39,680 --> 00:25:47,680
+We might even get an exception trying to contact ourselves because we're starting Flask on a thread
+
+210
+00:25:47,680 --> 00:25:52,560
+in the background, and it can take any amount of time to get started. So we have to be prepared
+
+211
+00:25:52,560 --> 00:25:58,560
+for that also to fail if we don't wait long enough. So if there's any failure, if we haven't found
+
+212
+00:25:58,560 --> 00:26:05,120
+ourselves, then we sleep for a second and then keep trying. If we do find ourselves, then we reach
+
+213
+00:26:05,120 --> 00:26:13,360
+the end and we wait for the app done future to be resolved. We got that from executor submit up above.
+
+214
+00:26:14,080 --> 00:26:21,920
+So this means that we're letting Flask run in the background until it gets a control C signal
+
+215
+00:26:22,400 --> 00:26:23,440
+and decides to quit.
+
+216
+00:26:27,200 --> 00:26:32,720
+This is pretty clean and clear, right? We had a complex problem statement and we used executors
+
+217
+00:26:32,720 --> 00:26:38,800
+and futures to come up with a very straightforward and legible way of expressing this with threads.
+
+218
+00:26:39,600 --> 00:26:46,160
+We didn't have to use async IO and that means that we could use Flask and we could use requests.
+
+219
+00:26:46,160 --> 00:26:51,680
+If we'd used async IO, we would not have been able to use Flask and requests. We would have had to use
+
+220
+00:26:52,880 --> 00:26:56,080
+excellent alternatives but not the ones that we were used to.
+
+221
+00:27:00,000 --> 00:27:06,160
+So threads are cool. Don't let the async IO kids make you feel like a nerd.
+
+222
+00:27:07,920 --> 00:27:13,920
+Threads are a better choice than async IO for most concurrent programs. They're at least as fast as
+
+223
+00:27:13,920 --> 00:27:19,920
+async IO. They're compatible with all the popular frameworks and with the techniques that we just
+
+224
+00:27:19,920 --> 00:27:35,200
+look at. Using executors and futures, it's possible to write clean, elegant concurrent code. Thanks.
+

@@ -1,0 +1,1076 @@
+1
+00:00:00,000 --> 00:00:10,500
+Welcome to this afternoon's sessions here.
+
+2
+00:00:10,500 --> 00:00:19,700
+Right now we have Joe Lucas making his PyCon debut here talking about serialization more
+
+3
+00:00:19,700 --> 00:00:20,700
+than pickling.
+
+4
+00:00:20,700 --> 00:00:23,700
+Let's give him a nice hand.
+
+5
+00:00:23,700 --> 00:00:27,580
+Thanks, everybody.
+
+6
+00:00:27,580 --> 00:00:30,060
+This is serialization.
+
+7
+00:00:30,060 --> 00:00:33,820
+The alternative title could have been serialization and unopinionated introduction.
+
+8
+00:00:33,820 --> 00:00:39,380
+We'll talk about pickle and some other formats and kind of compare some of the pros and cons.
+
+9
+00:00:39,380 --> 00:00:40,740
+I won't be using slides.
+
+10
+00:00:40,740 --> 00:00:42,860
+I'll be doing this out of Jupyter Notebooks.
+
+11
+00:00:42,860 --> 00:00:48,860
+For anyone who is not familiar with the format, we kind of have these editable sections where
+
+12
+00:00:48,860 --> 00:00:52,740
+we're going to run some code and see the outputs.
+
+13
+00:00:52,740 --> 00:00:56,420
+The notebooks are available at this repository.
+
+14
+00:00:56,420 --> 00:01:01,780
+During the presentation, I'll be using the eBird API as an example.
+
+15
+00:01:01,780 --> 00:01:05,820
+I think during everyone's PyCon journey, there comes a time when it would be useful to have
+
+16
+00:01:05,820 --> 00:01:09,460
+a publicly available API that you could test some stuff with.
+
+17
+00:01:09,460 --> 00:01:12,540
+Here, they'll give you an API key.
+
+18
+00:01:12,540 --> 00:01:14,580
+They have a bunch of different APIs you can hit.
+
+19
+00:01:14,580 --> 00:01:18,540
+I think that's a cool service they provide.
+
+20
+00:01:18,540 --> 00:01:20,580
+I'd encourage everyone to check that out.
+
+21
+00:01:20,780 --> 00:01:26,460
+I'd also like to plug Operation Code, which is a nonprofit that gets veterans and their
+
+22
+00:01:26,460 --> 00:01:29,220
+families started in careers in software development.
+
+23
+00:01:29,220 --> 00:01:34,460
+If you're someone who could benefit from some mentorship or interested in mentoring folks
+
+24
+00:01:34,460 --> 00:01:37,820
+like that, check it out.
+
+25
+00:01:37,820 --> 00:01:40,580
+Starting with some definitions, serialization.
+
+26
+00:01:40,580 --> 00:01:46,620
+It's converting data into something that can be stored, transmitted, or reconstructed later.
+
+27
+00:01:46,620 --> 00:01:49,740
+It's not the act of transmitting or storing those.
+
+28
+00:01:49,740 --> 00:01:54,700
+It's just converting that data into that format, often like a byte stream.
+
+29
+00:01:54,700 --> 00:02:01,100
+What order do we put all these bytes in so that we can reconstruct it on the other side?
+
+30
+00:02:01,100 --> 00:02:05,420
+It's worth saying that deserialization is sometimes hard.
+
+31
+00:02:05,420 --> 00:02:07,420
+We have to establish these standards.
+
+32
+00:02:07,420 --> 00:02:12,860
+You'll often see deserialization bugs causing security vulnerabilities.
+
+33
+00:02:12,860 --> 00:02:17,860
+The two main categories of serialization are plain text.
+
+34
+00:02:17,860 --> 00:02:23,220
+You could open the file and read it, or binary, where that's not going to be possible.
+
+35
+00:02:23,220 --> 00:02:28,460
+We'll mainly be talking about binary serialization here, but we may talk about plain text a little bit.
+
+36
+00:02:28,460 --> 00:02:36,220
+Why might you need to serialize your data, or when are you going to do this?
+
+37
+00:02:36,220 --> 00:02:40,140
+One example might be if you've spent hours training a machine learning model.
+
+38
+00:02:40,140 --> 00:02:42,020
+How do you save that and use it later?
+
+39
+00:02:42,020 --> 00:02:44,620
+How do you ship it into production?
+
+40
+00:02:44,620 --> 00:02:47,300
+How do you share it with a colleague?
+
+41
+00:02:47,300 --> 00:02:51,780
+You don't want them to have to go through that retraining process.
+
+42
+00:02:51,780 --> 00:03:00,540
+Or assume you've built some object in memory with costly queries, either expensive monetarily or through time,
+
+43
+00:03:00,540 --> 00:03:02,980
+or time-dependent queries on changing data.
+
+44
+00:03:02,980 --> 00:03:09,580
+Sure, you could save that data as a CSV or in some sort of database.
+
+45
+00:03:09,580 --> 00:03:13,380
+But if you've built an object around that data and done some post-processing already,
+
+46
+00:03:13,380 --> 00:03:16,860
+you may want to save that intermediate representation.
+
+47
+00:03:16,860 --> 00:03:21,740
+So that you can share with colleagues, for example.
+
+48
+00:03:21,740 --> 00:03:28,100
+Or I think the most widely used reason for serialization is transmitting data between two parties.
+
+49
+00:03:28,100 --> 00:03:30,940
+When data goes over a network, it needs to be in a byte stream.
+
+50
+00:03:30,940 --> 00:03:37,660
+How do we put these bytes in order so that they can be read correctly on the other side?
+
+51
+00:03:37,660 --> 00:03:40,020
+We'll take a quick look at the API.
+
+52
+00:03:40,020 --> 00:03:47,580
+We're just going to make a request for recent observations in Utah and look at the first result.
+
+53
+00:03:47,580 --> 00:03:50,940
+And this is just so we kind of understand the scenario later.
+
+54
+00:03:50,940 --> 00:03:53,300
+So the API gives us a bunch of things back.
+
+55
+00:03:53,300 --> 00:03:55,900
+We'll be looking mainly at the common name.
+
+56
+00:03:55,900 --> 00:04:00,500
+So here, the first bird returned to us was a woodhouse's scrub jay.
+
+57
+00:04:00,500 --> 00:04:02,380
+I have no idea what that looks like.
+
+58
+00:04:02,380 --> 00:04:04,580
+But here's the latin long where it was seen.
+
+59
+00:04:04,700 --> 00:04:10,860
+So this is the shape of data we'll be processing in this scenario.
+
+60
+00:04:10,860 --> 00:04:15,180
+So the scenario here is we've built this bird counter class.
+
+61
+00:04:15,180 --> 00:04:18,020
+And we might instantiate some objects.
+
+62
+00:04:18,020 --> 00:04:29,060
+And we want to serialize the class so that our peers don't have to make the same API call or do the same calculations.
+
+63
+00:04:29,100 --> 00:04:37,340
+And so the class has this variety attribute, which is just a list of every variety that the eBird API returned.
+
+64
+00:04:37,340 --> 00:04:42,340
+And then we'll build some tuples of the lat long locations.
+
+65
+00:04:42,340 --> 00:04:51,620
+So here, we'll instantiate that class to an object B and call the getBirds method and then kind of inspect some of those attributes.
+
+66
+00:04:51,620 --> 00:04:58,340
+So in this example, there were 266 birds that you can see here.
+
+67
+00:04:58,340 --> 00:05:10,940
+And we'll use these attributes as our way to kind of prove or check that the deserialization is happening correctly through these various methods that we'll review over the course of the presentation.
+
+68
+00:05:10,940 --> 00:05:17,780
+In this case, the entire process of constructing the object and calling the method only took on the order of milliseconds.
+
+69
+00:05:17,780 --> 00:05:23,580
+But imagine you're making database queries to many databases, fusing that data together, right?
+
+70
+00:05:23,580 --> 00:05:25,140
+That could take hours.
+
+71
+00:05:25,140 --> 00:05:31,940
+And so that might be a case where you need to serialize so that you don't have to do that work again.
+
+72
+00:05:31,940 --> 00:05:37,620
+So in the Python standard library, we have pickle and pickle has a lot of great functionality.
+
+73
+00:05:37,620 --> 00:05:42,500
+It's very user friendly to write an object to a pickle.
+
+74
+00:05:42,500 --> 00:05:50,020
+We just need to open a file that we can write binary data to and dump our pickle.
+
+75
+00:05:50,020 --> 00:05:53,860
+Jupiter has this file explorer functionality here.
+
+76
+00:05:53,860 --> 00:06:00,140
+So we see now we've created this bird.pickle object.
+
+77
+00:06:00,140 --> 00:06:06,460
+Now we'll load that pickle back in to make sure that it is what we thought it was.
+
+78
+00:06:06,460 --> 00:06:10,380
+So it turns out we can take that binary blob, load it back in.
+
+79
+00:06:10,380 --> 00:06:11,780
+And it is the same thing.
+
+80
+00:06:11,780 --> 00:06:13,700
+There are still 266 birds.
+
+81
+00:06:13,700 --> 00:06:18,260
+The first one is still a Woodhouse's scrub J.
+
+82
+00:06:18,260 --> 00:06:20,380
+Now, one of the use cases I mentioned was collaborating with a colleague.
+
+83
+00:06:20,380 --> 00:06:23,780
+So let's share that pickle with a friend.
+
+84
+00:06:23,780 --> 00:06:26,540
+So in this new notebook, it's a whole separate kernel.
+
+85
+00:06:26,540 --> 00:06:30,980
+None of the variables or anything else are shared with the other notebook.
+
+86
+00:06:30,980 --> 00:06:36,460
+So our friend is going to run the exact same code we just ran to load the pickle.
+
+87
+00:06:36,460 --> 00:06:39,500
+And they can't do it. They get this weird attribute error.
+
+88
+00:06:39,500 --> 00:06:43,060
+And getting this error was actually the thing that motivated me to write this talk.
+
+89
+00:06:43,060 --> 00:06:52,860
+So I was building a capture the flag competition and I wanted competitors to be able to submit trained machine learning models that I would then test.
+
+90
+00:06:52,860 --> 00:06:57,860
+But I didn't want to care about what libraries they were using or what structure it was.
+
+91
+00:06:57,860 --> 00:07:03,660
+So I wanted them to be able to use scikit learn or pie torch or tensor flow.
+
+92
+00:07:03,660 --> 00:07:06,540
+And I wanted there to be a really low barrier to entry to them submitting these things.
+
+93
+00:07:06,540 --> 00:07:11,780
+I don't want them to have to submit a whole bunch of extra metadata for me to understand.
+
+94
+00:07:11,780 --> 00:07:20,380
+We'll come back to that. But the bottom line with this error for anyone else who encounters it is that pickle doesn't work kind of like a zip file.
+
+95
+00:07:20,380 --> 00:07:24,580
+It doesn't pack everything that you'll ever need into this blob.
+
+96
+00:07:24,580 --> 00:07:30,140
+Instead, it's this like really fascinating and there are great articles about this that I won't get into.
+
+97
+00:07:30,140 --> 00:07:35,020
+Kind of stack based virtual machine. And it has these reference systems.
+
+98
+00:07:35,020 --> 00:07:41,140
+So over here on our friend notebook, our friend actually needs to know what a bird counter object is.
+
+99
+00:07:41,140 --> 00:07:46,340
+What does that class look like? And so if they define that class over here,
+
+100
+00:07:46,380 --> 00:07:52,740
+now they can they can load that pickle successfully and see that there are two hundred sixty six birds, one of which was a woodhouse's scrub.
+
+101
+00:07:52,740 --> 00:07:59,540
+Jay, it's important to note that our friend didn't actually like run any of that code.
+
+102
+00:07:59,540 --> 00:08:03,740
+They just referenced the object or the class definition.
+
+103
+00:08:03,740 --> 00:08:07,660
+So they didn't have our API key to run that query.
+
+104
+00:08:07,660 --> 00:08:10,460
+This this object was reconstructed from the binary pickle.
+
+105
+00:08:10,460 --> 00:08:13,780
+We never called the constructor or any of the other methods.
+
+106
+00:08:16,660 --> 00:08:20,380
+So some pros to pickle. It's in the standard library.
+
+107
+00:08:20,380 --> 00:08:26,300
+I think everyone should have a slight bias towards importing new libraries if they can.
+
+108
+00:08:26,300 --> 00:08:33,620
+We didn't have to define a schema, which we'll talk about before, but like a system for defining the data and its types.
+
+109
+00:08:33,620 --> 00:08:43,020
+And Pickles really well documented. So it has some sharp edges and has been used kind of nefariously in other examples.
+
+110
+00:08:43,060 --> 00:08:47,900
+And so the documentation is phenomenal. They provide some guidance on using it safely.
+
+111
+00:08:47,900 --> 00:08:51,620
+They compare it with with Jason. They talk about the structure of the format.
+
+112
+00:08:51,620 --> 00:08:57,140
+So there's there's actually different protocols for a pickle that you may want to use at various times.
+
+113
+00:08:57,140 --> 00:09:02,620
+And then they define what can be pickled or unpickled. And we'll talk about that a bit, too.
+
+114
+00:09:02,620 --> 00:09:06,580
+So some cons are this security consideration I keep alluding to.
+
+115
+00:09:06,580 --> 00:09:11,180
+And I'll demonstrate that later. And it's only interoperable with Python.
+
+116
+00:09:11,180 --> 00:09:20,580
+So if you're working in an enterprise and you think, you know, I need to persist or serialize this object and it may need to be read by some Java code later on,
+
+117
+00:09:20,580 --> 00:09:23,980
+you know, pickle might not be the best format for you to do that.
+
+118
+00:09:23,980 --> 00:09:29,860
+And as we saw on the other notebook load still requires access to the class definition.
+
+119
+00:09:29,860 --> 00:09:38,660
+Something I recently learned is that Pandas has a pickle method for arbitrary data, not just data frames.
+
+120
+00:09:38,660 --> 00:09:44,660
+So if you have pandas laying around, you can you can pickle stuff with pandas there.
+
+121
+00:09:44,660 --> 00:09:46,940
+There's some other cool things built on top of pickle.
+
+122
+00:09:46,940 --> 00:09:54,940
+So Shelve is this kind of database construct where you can have a key that's a string and then a value is anything that can be pickled.
+
+123
+00:09:54,940 --> 00:10:01,020
+And so now you can kind of reference your pickled blobs and an organized key value structure.
+
+124
+00:10:01,020 --> 00:10:05,620
+So in this example, you know, if we wanted to create one of these new bird counters every day,
+
+125
+00:10:05,620 --> 00:10:10,940
+we could create some sort of key and then index and find these blobs.
+
+126
+00:10:10,940 --> 00:10:13,420
+Joblib is also kind of a cool library.
+
+127
+00:10:13,420 --> 00:10:17,820
+It uses pickle under the hood, but has some optimization for large NumPy arrays.
+
+128
+00:10:17,820 --> 00:10:22,060
+And so that's the recommended solution for scikit-learn models.
+
+129
+00:10:22,060 --> 00:10:29,580
+And this idea of like, hey, maybe there are optimizations we can do and we know something about the data structure is really important.
+
+130
+00:10:29,580 --> 00:10:32,020
+So we'll see later on when we talk about schema.
+
+131
+00:10:32,020 --> 00:10:41,900
+But the more you know about what you are serializing, the more you can optimize for speed or space.
+
+132
+00:10:41,900 --> 00:10:45,180
+Some other interesting projects here are ice pickle.
+
+133
+00:10:45,180 --> 00:10:49,580
+So it's a safe way to serialize and deserialize linear scikit-learn models.
+
+134
+00:10:49,580 --> 00:10:59,220
+And I think it's worth looking at here.
+
+135
+00:10:59,260 --> 00:11:04,020
+And this this builds on this concept of knowing what you are serializing and deserializing.
+
+136
+00:11:04,020 --> 00:11:07,500
+So, you know, they use this H5 format.
+
+137
+00:11:07,500 --> 00:11:15,140
+But every scikit-learn linear model is just going to have coefficients, intercepts and potentially classes.
+
+138
+00:11:15,140 --> 00:11:25,500
+And so we can use that structure and dump it into a serialized format and know exactly how we want to pull it out.
+
+139
+00:11:25,540 --> 00:11:33,660
+And the whole point of ice pickle is that it avoids some of the other functionality in pickle that makes it potentially unsafe.
+
+140
+00:11:33,660 --> 00:11:38,820
+Trail of Bits also did a ton of research into specifically security research into pickle.
+
+141
+00:11:38,820 --> 00:11:45,540
+And they offer this tool, Fickling, that allows you to do some security analysis of pickle.
+
+142
+00:11:45,540 --> 00:11:49,740
+Now we'll move into some alternatives.
+
+143
+00:11:49,740 --> 00:11:53,460
+So DIL is a drop in replacement for pickle.
+
+144
+00:11:53,460 --> 00:11:56,900
+So you use dump and load the same way.
+
+145
+00:11:56,900 --> 00:12:03,620
+It has an expanded functionality so you can even save an entire interpreter session, not just one object.
+
+146
+00:12:03,620 --> 00:12:09,380
+And the primary usage is to send Python objects across the network as a byte stream.
+
+147
+00:12:09,380 --> 00:12:13,420
+And so DIL is what I ended up using for that capture the flag example.
+
+148
+00:12:13,420 --> 00:12:21,180
+Any competitor could just package their classifier in DIL and I'd be able to use it on the receiving end.
+
+149
+00:12:21,180 --> 00:12:24,060
+In this case, we made a slight modification to the bird counter.
+
+150
+00:12:24,060 --> 00:12:25,140
+We're calling it a dog counter.
+
+151
+00:12:25,140 --> 00:12:30,500
+And the only reason for this is to show that our friend has no knowledge of a dog counter.
+
+152
+00:12:30,500 --> 00:12:33,940
+They don't know how to reconstruct that object.
+
+153
+00:12:33,940 --> 00:12:39,700
+And so we'll initialize one here at D and see how many dogs there are.
+
+154
+00:12:39,700 --> 00:12:41,260
+It turns out a dog is the same thing as a bird.
+
+155
+00:12:41,260 --> 00:12:44,460
+So there's still only 266.
+
+156
+00:12:44,460 --> 00:12:49,420
+And then we'll dump that out to a DIL.
+
+157
+00:12:49,460 --> 00:12:59,940
+And our friend now, with no knowledge of what a dog counter looks like, can read this in and see that there are 266 dogs.
+
+158
+00:12:59,940 --> 00:13:05,260
+So we can see that this drop in functionality gives you a lot more.
+
+159
+00:13:05,260 --> 00:13:10,940
+But it potentially comes at some tradeoffs and we'll address that later.
+
+160
+00:13:10,940 --> 00:13:13,820
+Another alternative is message pack.
+
+161
+00:13:13,860 --> 00:13:15,220
+So this is binary serialization.
+
+162
+00:13:15,220 --> 00:13:20,140
+So everything will be compressed down to binary format.
+
+163
+00:13:20,140 --> 00:13:22,180
+And they advertise it small and efficient.
+
+164
+00:13:22,180 --> 00:13:31,740
+And they actually provide wrappers to dump and load so that you can use those same methods that you're used to.
+
+165
+00:13:31,740 --> 00:13:38,740
+There's kind of an important distinction here, though, when we look at how we would actually implement this in message pack.
+
+166
+00:13:38,860 --> 00:13:44,500
+And all we serialized were the class attributes, not the entire object.
+
+167
+00:13:44,500 --> 00:13:51,940
+And so when it comes time to deserialize, we need to unpack those attributes and reinitialize a new object.
+
+168
+00:13:51,940 --> 00:13:57,260
+And that is effective in this case, but may not be something you want to do in every case.
+
+169
+00:13:57,260 --> 00:14:06,780
+And this has to do with the types of data that message pack knows how to convert into a binary serialization format.
+
+170
+00:14:06,780 --> 00:14:09,620
+So up until this point, we haven't really had to worry about schema.
+
+171
+00:14:09,620 --> 00:14:16,740
+We've just been able to take our objects and dump them into a method and then pull them out on the other side.
+
+172
+00:14:16,740 --> 00:14:23,100
+Everything after this point, we're going to need to think more about defining what those objects are.
+
+173
+00:14:23,100 --> 00:14:32,260
+So the first one I'm going to talk about here is Marshmallow, which has some nice integrations for Flask and Django.
+
+174
+00:14:32,260 --> 00:14:37,740
+And here in Marshmallow, we're using kind of this dictionary construct to define our schema.
+
+175
+00:14:37,740 --> 00:14:46,980
+And if you remember from the class definition, variety is a list of strings and locations is a list of tuples of floats.
+
+176
+00:14:46,980 --> 00:14:51,260
+So we define that here.
+
+177
+00:14:51,260 --> 00:14:55,980
+And we're still referencing that same kind of first object, B.
+
+178
+00:14:55,980 --> 00:15:00,900
+And then we dump that actually to a JSON.
+
+179
+00:15:00,900 --> 00:15:05,300
+And then our friend here can do some interesting things.
+
+180
+00:15:05,300 --> 00:15:12,540
+Here, our friend defined their schema as a class, but those definitions do need to functionally match.
+
+181
+00:15:12,540 --> 00:15:17,300
+And then Marshmallow provides a whole bunch of functionality because it knows the schema can help you out.
+
+182
+00:15:17,300 --> 00:15:20,020
+And so here's like a post load decorator.
+
+183
+00:15:20,020 --> 00:15:22,220
+And it does what we did with message pack.
+
+184
+00:15:22,220 --> 00:15:26,180
+It unpacks the attributes and uses it to reinitialize a new object.
+
+185
+00:15:26,220 --> 00:15:39,620
+By knowing the schema, Marshmallow can also do a lot of other data validation things that you're not going to get with Dill or Pickle because they're schema agnostic.
+
+186
+00:15:39,620 --> 00:15:49,700
+So now that we've defined a schema, here our friend can open this JSON and see again that there are 266 birds.
+
+187
+00:15:49,700 --> 00:15:53,020
+And after this talk, I'm going to have to look up what a Woodhouse's Scrub J looks like.
+
+188
+00:15:53,060 --> 00:15:57,180
+I'll say each time I've done this, like rehearsed this talk, it's been a different bird, right?
+
+189
+00:15:57,180 --> 00:15:58,460
+So I haven't been able to.
+
+190
+00:15:58,460 --> 00:16:00,260
+Yesterday, I was in American Bald Eagle.
+
+191
+00:16:00,260 --> 00:16:01,580
+I thought that was really cool.
+
+192
+00:16:01,580 --> 00:16:02,700
+The day before was a crow.
+
+193
+00:16:02,700 --> 00:16:05,100
+That would have been boring.
+
+194
+00:16:05,100 --> 00:16:16,580
+So notice how for both the message pack and Marshmallow, we still need to have the bird counter class defined because we're going to reinitialize an object through it, which we didn't need to do in Dill.
+
+195
+00:16:16,580 --> 00:16:22,500
+And this makes me think a lot about the kind of Star Trek transporter debate about like, do the transporters kill you?
+
+196
+00:16:22,660 --> 00:16:25,900
+Are you the same person on both sides of the transport?
+
+197
+00:16:25,900 --> 00:16:29,020
+And this is kind of the same idea here.
+
+198
+00:16:29,020 --> 00:16:34,700
+And then also note that for Marshmallow, the thing sent over the wire was JSON.
+
+199
+00:16:34,700 --> 00:16:44,300
+So if you have things that are not easily turned into JSON, you'll have to write some serialization or deserialization functions yourself.
+
+200
+00:16:44,300 --> 00:16:50,060
+So some other things that fall into this category of know the schema in advance are Avro and Protobuf.
+
+201
+00:16:50,060 --> 00:16:56,340
+And they're like very robust solutions that I'm not going to go into here.
+
+202
+00:16:56,340 --> 00:16:57,700
+They deserve talks of their own.
+
+203
+00:16:57,700 --> 00:17:00,380
+And I think there was a great Protobuf talk earlier.
+
+204
+00:17:01,460 --> 00:17:12,020
+But but they are in the same class of know something about your schema, compile it down to a binary format, send it over the wire so that we can be super efficient and then provide some other functionality.
+
+205
+00:17:12,860 --> 00:17:20,940
+It's also worth talking about JSON because we've been using this eBird API and it's communicating JSON back and forth.
+
+206
+00:17:20,940 --> 00:17:24,500
+And I think there are a lot of great things about JSON.
+
+207
+00:17:24,500 --> 00:17:27,620
+So it's human readable. It's very interoperable.
+
+208
+00:17:27,620 --> 00:17:31,460
+You're going to find JSON read libraries and everything you use.
+
+209
+00:17:31,460 --> 00:17:34,580
+Some cons, though, are that it attaches the schema every time.
+
+210
+00:17:34,620 --> 00:17:43,540
+So when we open up a JSON object here, it's going to have the schema in it.
+
+211
+00:17:45,540 --> 00:17:49,540
+Like it's going to have the words, variety and location.
+
+212
+00:17:49,540 --> 00:17:56,180
+And because we used a very wide JSON here where variety is this huge list, we probably won't notice that in terms of size.
+
+213
+00:17:56,180 --> 00:18:01,060
+But imagine you had a very deep schema and it was really just holding like binary values.
+
+214
+00:18:01,060 --> 00:18:03,100
+JSON becomes very inefficient at that point.
+
+215
+00:18:09,860 --> 00:18:12,100
+So we can talk about time and space a little bit.
+
+216
+00:18:12,100 --> 00:18:14,100
+This is going to be very unscientific.
+
+217
+00:18:14,100 --> 00:18:22,820
+We're going to just serialize the same object that we've been dealing with and kind of measure it across all these different libraries.
+
+218
+00:18:22,820 --> 00:18:26,340
+But I'll say you'll get very different behaviors based on the shape of your data.
+
+219
+00:18:26,340 --> 00:18:36,020
+And so understanding your data format and what you're trying to serialize is kind of important to doing this rigorously in a way that's useful for your application.
+
+220
+00:18:37,980 --> 00:18:45,380
+So in JSON here, you know, I think we normally see on the order of milliseconds for this object.
+
+221
+00:18:45,380 --> 00:18:50,740
+Twelve kilobytes. Pickle is going to be faster.
+
+222
+00:18:50,740 --> 00:18:53,180
+Probably. Yep, there we go.
+
+223
+00:18:53,220 --> 00:18:57,260
+You know, so half a millisecond and a little bit more compact.
+
+224
+00:18:57,260 --> 00:19:01,340
+Here's the cost I alluded to with Dill earlier.
+
+225
+00:19:01,340 --> 00:19:04,620
+Dill did a lot for us, but it's slow, right?
+
+226
+00:19:04,620 --> 00:19:09,340
+Like it's slower than JSON and it's basically as big as JSON here in this example.
+
+227
+00:19:09,340 --> 00:19:13,580
+And I can see that becoming worse in other examples.
+
+228
+00:19:13,580 --> 00:19:21,220
+Message pack is nice and fast and pretty small as a binary format.
+
+229
+00:19:21,260 --> 00:19:31,180
+And then Marshmallow, I think, is reasonably quick, but a little big because it's packing some of that schema data into the packet.
+
+230
+00:19:31,180 --> 00:19:37,740
+So far, we've also talked, you know, about pretty standard types like ints and strings and lists.
+
+231
+00:19:37,740 --> 00:19:44,540
+But these don't necessarily hold or are not serializable in every format.
+
+232
+00:19:44,540 --> 00:19:52,380
+So here, like a NumPy array cannot be serialized into JSON, and that's something you have to handle yourself.
+
+233
+00:19:52,380 --> 00:19:57,900
+Or really go to NumPy and NumPy is going to help you with that.
+
+234
+00:19:57,900 --> 00:20:02,020
+We can try and serialize a function. And so JSON can't serialize a function.
+
+235
+00:20:02,020 --> 00:20:05,300
+But if it's a name function, most of the time Pickle can.
+
+236
+00:20:05,300 --> 00:20:12,300
+Some exceptions to that. But Pickle cannot serialize a lambda because every lambda is named lambda.
+
+237
+00:20:12,300 --> 00:20:17,580
+And so it has a lot of trouble with that. And it's worth calling out these are not earth shattering discoveries.
+
+238
+00:20:17,580 --> 00:20:20,900
+I talked about the Pickle documentation and it calls this out really explicitly.
+
+239
+00:20:20,900 --> 00:20:30,540
+And so if you are kind of shopping around for a serializer, I really recommend reading that documentation page.
+
+240
+00:20:30,540 --> 00:20:37,580
+Next, I think we need to talk about why products like Avro and Protobuf are really useful.
+
+241
+00:20:37,580 --> 00:20:43,260
+And at least for me, their main kind of value proposition has been schema versioning and evolution.
+
+242
+00:20:43,260 --> 00:20:48,500
+So we can think about a schema as a point in time snapshot of what we expect something to look like.
+
+243
+00:20:48,500 --> 00:20:54,060
+So here's a fake object. Right. It has these these two attributes.
+
+244
+00:20:54,060 --> 00:20:58,660
+We can create one and we can dump it to a pickle.
+
+245
+00:20:58,660 --> 00:21:03,460
+But let's say a new dev joins the project a year later. Right.
+
+246
+00:21:03,500 --> 00:21:08,900
+And when they go look through the code, this is what a fake object has evolved to at this point. Right.
+
+247
+00:21:08,900 --> 00:21:16,500
+It has this C attribute. When they go to load this old pickle.
+
+248
+00:21:16,500 --> 00:21:28,500
+It doesn't have the C attribute. And so this evolution and the inability of kind of more naive serialization solutions to handle it can cause a lot of edge cases.
+
+249
+00:21:28,500 --> 00:21:32,860
+And your code may behave unexpected ways or not at all.
+
+250
+00:21:32,860 --> 00:21:42,460
+And this may not matter for kind of like hobby learning projects, but it becomes important when you think about the client server architectures.
+
+251
+00:21:42,460 --> 00:21:51,020
+So if you have a lot of clients serializing and sending you data, you might not be able to rely on them all updating when you update your scheme at the same time.
+
+252
+00:21:51,020 --> 00:22:02,820
+And so being able to version or evolve your schema and have your app handle that kind of at the serialization layer can be really nice because then you're not going to have to write all that kind of weird business logic for him.
+
+253
+00:22:02,820 --> 00:22:07,660
+Handling these different cases.
+
+254
+00:22:07,660 --> 00:22:11,100
+I don't think we can have a talk about pickles without highlighting the security thing.
+
+255
+00:22:11,100 --> 00:22:15,660
+I don't want to kind of just blow past that here.
+
+256
+00:22:15,660 --> 00:22:24,660
+So pickle uses this Dunder reduce when do you see your eyes in the pickle in here?
+
+257
+00:22:24,660 --> 00:22:31,940
+It needs to return this tuple. But in this case, instead of returning, hey, here's how we actually construct a bird counter.
+
+258
+00:22:31,940 --> 00:22:40,620
+We're going to return a call to a system command, right, which is obviously not something we want.
+
+259
+00:22:40,620 --> 00:22:45,660
+And so when we dump this pickle and our friend goes to run it.
+
+260
+00:22:45,660 --> 00:22:54,980
+OK, they ran the pickle. But it turns out that that system command ran.
+
+261
+00:22:55,020 --> 00:23:01,500
+So we did echo this is bad. So we just provided code execution.
+
+262
+00:23:01,500 --> 00:23:09,900
+Which obviously is dangerous. So in conclusion, your serialization format is a design decision that impacts many things.
+
+263
+00:23:09,900 --> 00:23:14,900
+Speed, interoperability and security. And you need to choose the right tool for the right job.
+
+264
+00:23:14,900 --> 00:23:21,820
+So I think you'll see some kind of absolute articles on the Internet kind of saying like never use pickle.
+
+265
+00:23:21,860 --> 00:23:29,740
+I wouldn't go that far. I think pickle is like a really nice tool and you just need to understand when to use it, what its limitations are.
+
+266
+00:23:29,740 --> 00:23:34,460
+I wouldn't recommend that everyone goes out and starts implementing proto buff.
+
+267
+00:23:34,460 --> 00:23:38,340
+Right. That is a heavyweight solution that may not be necessary for your needs.
+
+268
+00:23:38,340 --> 00:23:46,900
+So kind of think about your data structure. Think about how your data structure may or may not evolve and then pick a format accordingly.
+
+269
+00:23:46,900 --> 00:23:47,380
+Thank you for your time.
+

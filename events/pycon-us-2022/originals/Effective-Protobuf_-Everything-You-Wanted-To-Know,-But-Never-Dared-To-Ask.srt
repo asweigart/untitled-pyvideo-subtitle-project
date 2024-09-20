@@ -1,0 +1,1884 @@
+1
+00:00:00,000 --> 00:00:08,760
+Hello, everyone.
+
+2
+00:00:08,760 --> 00:00:11,840
+Welcome to our 4.15 talks.
+
+3
+00:00:11,840 --> 00:00:14,760
+Hopefully you've had some awesome talks so far.
+
+4
+00:00:14,760 --> 00:00:18,200
+This next talk is by Lilan Heimovic.
+
+5
+00:00:18,200 --> 00:00:20,600
+Is that pretty good?
+
+6
+00:00:20,600 --> 00:00:25,000
+CTO, co-founder of Rookout, as you can see.
+
+7
+00:00:25,000 --> 00:00:28,480
+Brought experience with cybersecurity.
+
+8
+00:00:28,480 --> 00:00:31,040
+He's here to talk to us about Protobuf.
+
+9
+00:00:31,040 --> 00:00:32,680
+All right, I'll leave it to him.
+
+10
+00:00:32,680 --> 00:00:33,680
+Thank you.
+
+11
+00:00:33,680 --> 00:00:34,680
+Hey, everyone.
+
+12
+00:00:34,680 --> 00:00:35,680
+It's great to be here.
+
+13
+00:00:35,680 --> 00:00:44,800
+It's actually my second time speaking at PyCon.
+
+14
+00:00:44,800 --> 00:00:49,080
+I got to be at Cleveland three years ago just before the pandemic hit.
+
+15
+00:00:49,080 --> 00:00:53,080
+I'm wondering how many of you were at PyCon at Cleveland?
+
+16
+00:00:53,080 --> 00:00:54,080
+Show of hands.
+
+17
+00:00:54,080 --> 00:00:55,080
+Oh, nice.
+
+18
+00:00:55,080 --> 00:00:56,080
+A lot of people.
+
+19
+00:00:56,680 --> 00:01:02,280
+I'm not sure if you've seen me there or not, but it's awesome to see all of you here again.
+
+20
+00:01:02,280 --> 00:01:04,280
+Conferences have been missing, at least for me.
+
+21
+00:01:04,280 --> 00:01:09,720
+Today, I'm going to be talking about Protobuf and about civilization in general, kind of
+
+22
+00:01:09,720 --> 00:01:15,880
+what it is, why do we need it, and how do we make the most of it, some considerations.
+
+23
+00:01:15,880 --> 00:01:19,480
+Before we dive into things, I just want to quickly introduce myself.
+
+24
+00:01:19,480 --> 00:01:20,880
+My name is Lilan Heimovic.
+
+25
+00:01:20,880 --> 00:01:25,080
+I am the CTO and co-founder of Rookout, which I'm going to mention later on.
+
+26
+00:01:25,080 --> 00:01:31,480
+I spend most of my time today focusing on various runtimes and how they operate in
+
+27
+00:01:31,480 --> 00:01:32,480
+cloud environments.
+
+28
+00:01:32,480 --> 00:01:38,480
+Python is definitely one of the ones I spend the most time on, as well as the JVM node,
+
+29
+00:01:38,480 --> 00:01:42,680
+which I'm spending a significant amount of time on, understanding how they run and how
+
+30
+00:01:42,680 --> 00:01:48,280
+to make the most of them in cloud, in Kubernetes, in serverless environments.
+
+31
+00:01:48,280 --> 00:01:52,280
+I spend most of that in the context of observability, of how can you understand what's going on
+
+32
+00:01:52,480 --> 00:01:57,880
+with the applications, how can we instrument them, and how can we get high quality data
+
+33
+00:01:57,880 --> 00:01:58,880
+from them easily.
+
+34
+00:01:58,880 --> 00:02:05,680
+I'm very curious to know how things work behind the scenes, which might help explain some
+
+35
+00:02:05,680 --> 00:02:09,280
+of the things we're going to do with Protobuf later on.
+
+36
+00:02:09,280 --> 00:02:14,680
+Now, before we dive into civilization and all of that fancy stuff, I want you to take
+
+37
+00:02:14,680 --> 00:02:17,880
+a look at this for a second.
+
+38
+00:02:17,880 --> 00:02:21,980
+The reason I started with the Hello World application for Python is because this is
+
+39
+00:02:21,980 --> 00:02:28,880
+probably the first, last, and only application you've ever seen without variables.
+
+40
+00:02:28,880 --> 00:02:32,580
+Whenever we want to do anything meaningful in software engineering, whenever we want
+
+41
+00:02:32,580 --> 00:02:37,880
+to run a significant program of any kind, we must have variables.
+
+42
+00:02:37,880 --> 00:02:43,380
+The reason for that is variables are how we manage data within our code.
+
+43
+00:02:43,380 --> 00:02:48,180
+The dictionary definition is that variables are how we label, store, and manipulate information
+
+44
+00:02:48,180 --> 00:02:49,780
+in high-level computer languages.
+
+45
+00:02:49,780 --> 00:02:54,780
+Especially anything we want to read from the user, anything we want to write as an output,
+
+46
+00:02:54,780 --> 00:03:00,480
+anything we want to process in any way, kind, or form, we're going to use a variable to
+
+47
+00:03:00,480 --> 00:03:01,780
+do that.
+
+48
+00:03:01,780 --> 00:03:08,580
+Obviously, behind the scenes, the Python interpreter doesn't really care so much about our variables.
+
+49
+00:03:08,580 --> 00:03:14,480
+What happens is that there's a CPU running our code some level, and the Python interpreter
+
+50
+00:03:14,480 --> 00:03:20,780
+or any other runtime of any kind you'll be using allocates memory or uses the memory
+
+51
+00:03:20,780 --> 00:03:21,780
+within the machine.
+
+52
+00:03:21,780 --> 00:03:24,780
+We're not going to dive in too much about virtual versus physical memory and all of
+
+53
+00:03:24,780 --> 00:03:26,280
+that.
+
+54
+00:03:26,280 --> 00:03:31,680
+The interpreter uses the application's memory to store and manage your variables.
+
+55
+00:03:31,680 --> 00:03:36,400
+If you say, for instance, create a statement that X equals five, then the Python interpreter
+
+56
+00:03:36,400 --> 00:03:37,700
+has two tasks to do.
+
+57
+00:03:37,700 --> 00:03:42,000
+The first, it has to find somewhere in memory where X is going to reside and know that
+
+58
+00:03:42,000 --> 00:03:45,400
+from now on, whenever X is referred to, that's going to be used.
+
+59
+00:03:45,400 --> 00:03:48,200
+It's going to put five in that memory address.
+
+60
+00:03:48,200 --> 00:03:52,300
+If later on you're going to do X equals seven, then it's going to go to the same address
+
+61
+00:03:52,300 --> 00:03:53,900
+and update to seven.
+
+62
+00:03:53,900 --> 00:03:59,180
+If you go ahead and read X, then it's going to read from that memory address.
+
+63
+00:03:59,180 --> 00:04:04,320
+The reason I'm starting with variables is because just like variables are the key to
+
+64
+00:04:04,320 --> 00:04:08,480
+how we write computer applications, what comes next?
+
+65
+00:04:08,480 --> 00:04:13,560
+What happens when we want our application to communicate with other applications?
+
+66
+00:04:13,560 --> 00:04:17,600
+Maybe we want it to communicate over the network to send a request somewhere.
+
+67
+00:04:17,600 --> 00:04:22,440
+Maybe we want to store some piece of data on file or on disk or even in a database for
+
+68
+00:04:22,440 --> 00:04:27,840
+this application or for another application to read sometime in memory.
+
+69
+00:04:27,840 --> 00:04:30,400
+To do that, we need to extract our information.
+
+70
+00:04:30,920 --> 00:04:34,720
+We need to take that information we've given to the Python interpreter that it's stored
+
+71
+00:04:34,720 --> 00:04:40,000
+somewhere in memory and we need to get it back in a way that we can transfer because
+
+72
+00:04:40,000 --> 00:04:42,960
+we don't really know what's going on within that memory.
+
+73
+00:04:42,960 --> 00:04:46,560
+Essentially, that's what serialization is all about.
+
+74
+00:04:46,560 --> 00:04:52,160
+Serialization is about taking our information from the memory and creating it into a stream
+
+75
+00:04:52,160 --> 00:04:54,880
+of bytes or a buffer, if you will.
+
+76
+00:04:54,880 --> 00:04:58,320
+We get, I know, 100 bytes or 5K, it doesn't matter.
+
+77
+00:04:58,320 --> 00:05:03,480
+We get some amount of bytes that represents the information we want in a clear and usable
+
+78
+00:05:03,480 --> 00:05:09,240
+manner that we can then save to the database, save to the disk, send over the network so
+
+79
+00:05:09,240 --> 00:05:14,040
+that we can, someone else, another application or even our application in the future can
+
+80
+00:05:14,040 --> 00:05:16,800
+read that information and use it.
+
+81
+00:05:16,800 --> 00:05:24,040
+Now, there are quite a few ways, quite a few considerations as you're thinking of serialization.
+
+82
+00:05:24,040 --> 00:05:28,240
+First and foremost, I want to tell you, don't write your own.
+
+83
+00:05:28,240 --> 00:05:32,520
+Whatever you do, whatever you need, chances are you don't want to write your own.
+
+84
+00:05:32,520 --> 00:05:36,160
+There are tons of useful serialization out there.
+
+85
+00:05:36,160 --> 00:05:38,080
+Each with their pros and cons.
+
+86
+00:05:38,080 --> 00:05:41,280
+Chances are that whatever you're going to write yourself is going to have more cons
+
+87
+00:05:41,280 --> 00:05:42,280
+than pros.
+
+88
+00:05:42,280 --> 00:05:46,060
+So, please, unless you're an expert in that, don't write your own.
+
+89
+00:05:46,060 --> 00:05:47,060
+Choose one that's already there.
+
+90
+00:05:47,060 --> 00:05:52,240
+Now, there are a few things to keep in mind as you're choosing your serialization engine.
+
+91
+00:05:52,240 --> 00:05:56,040
+First, you need to think about do you want it to be portable or not.
+
+92
+00:05:56,520 --> 00:05:58,520
+Now, there are many elements in portability.
+
+93
+00:05:58,520 --> 00:06:05,200
+Portability is, can I read this buffer I've created in another application?
+
+94
+00:06:05,200 --> 00:06:07,960
+Can I read it in another runtime?
+
+95
+00:06:07,960 --> 00:06:13,320
+Such as can I move it from Python to Java or to JavaScript?
+
+96
+00:06:13,320 --> 00:06:18,760
+Can I use it in a different operating system or a different CPU architecture or anything
+
+97
+00:06:18,760 --> 00:06:19,760
+like that?
+
+98
+00:06:19,760 --> 00:06:24,280
+Or will this data only be useful within the context it was provided?
+
+99
+00:06:24,280 --> 00:06:29,720
+And there are various levels of portability with various limitations.
+
+100
+00:06:29,720 --> 00:06:34,440
+And obviously, of course, we all want our code to be portable.
+
+101
+00:06:34,440 --> 00:06:35,440
+Because why not?
+
+102
+00:06:35,440 --> 00:06:36,440
+We want our code to be portable.
+
+103
+00:06:36,440 --> 00:06:37,960
+We want our data to be portable.
+
+104
+00:06:37,960 --> 00:06:42,920
+The thing is, if you give up on portability, you can often make a variety of shortcuts
+
+105
+00:06:42,920 --> 00:06:44,640
+that make things easier for you.
+
+106
+00:06:44,640 --> 00:06:49,840
+While if you do go for portability, things can get tougher along the way.
+
+107
+00:06:49,840 --> 00:06:54,040
+Second, you need to decide if you're looking for dynamically typed or statically typed
+
+108
+00:06:54,040 --> 00:06:55,040
+serialization.
+
+109
+00:06:55,040 --> 00:06:59,760
+Now, the reason for that, again, just like you do it for Python, Python recently introduced
+
+110
+00:06:59,760 --> 00:07:00,760
+typing.
+
+111
+00:07:00,760 --> 00:07:04,120
+But even so, we often create small programs.
+
+112
+00:07:04,120 --> 00:07:06,360
+We just want to write something quick and dirty.
+
+113
+00:07:06,360 --> 00:07:08,200
+We can go do without typing.
+
+114
+00:07:08,200 --> 00:07:09,200
+Whatever works, works.
+
+115
+00:07:09,200 --> 00:07:10,360
+It's easy.
+
+116
+00:07:10,360 --> 00:07:15,320
+But later on, as programs grow, as code bases grow, as our consumers for the data we're
+
+117
+00:07:15,320 --> 00:07:20,200
+generating grows, we often want static typing so that both the machine can verify the correctness
+
+118
+00:07:20,200 --> 00:07:23,120
+of the data and also as a form of documentation.
+
+119
+00:07:23,120 --> 00:07:26,760
+So it's going to be easier for people, for other engineers to understand or for future
+
+120
+00:07:26,760 --> 00:07:30,560
+selves to understand what the data is.
+
+121
+00:07:30,560 --> 00:07:34,160
+And last but not least, we have to choose between textual and binary.
+
+122
+00:07:34,160 --> 00:07:40,040
+Textual, usually made for humans, it's going to make your serialization much easier to
+
+123
+00:07:40,040 --> 00:07:41,040
+read.
+
+124
+00:07:41,040 --> 00:07:44,440
+So when you get that stream of bytes, chances are you'll be able to glance at it and get
+
+125
+00:07:44,440 --> 00:07:49,080
+some sense of what's going on, what's the data that you've extracted, and what does
+
+126
+00:07:49,080 --> 00:07:50,080
+it mean.
+
+127
+00:07:50,080 --> 00:07:54,160
+But if you go for binary, chances are it's going to be much harder for you to understand
+
+128
+00:07:54,160 --> 00:07:55,320
+what's going on.
+
+129
+00:07:55,320 --> 00:07:59,680
+But you get this huge benefit that binary is usually better for machines.
+
+130
+00:07:59,680 --> 00:08:04,460
+So performance is usually going to be better if you go with a binary format.
+
+131
+00:08:04,460 --> 00:08:09,600
+So let's take a look at a few popular frameworks that you might be familiar with that you can
+
+132
+00:08:09,600 --> 00:08:12,400
+think of besides a protobuf, obviously.
+
+133
+00:08:12,400 --> 00:08:15,440
+So firstly, JSON, JavaScript object notation.
+
+134
+00:08:15,440 --> 00:08:18,160
+How many of you are familiar with JSON?
+
+135
+00:08:18,160 --> 00:08:19,160
+That's pretty much everyone.
+
+136
+00:08:19,360 --> 00:08:23,880
+So I'm not going to talk too much about JSON, but it's pretty much the standard on the web
+
+137
+00:08:23,880 --> 00:08:24,880
+today.
+
+138
+00:08:24,880 --> 00:08:26,960
+As I'm sure you know, it's very portable.
+
+139
+00:08:26,960 --> 00:08:28,320
+It's very textual.
+
+140
+00:08:28,320 --> 00:08:30,640
+So you can very easily read it by eye.
+
+141
+00:08:30,640 --> 00:08:34,600
+And because it's so widely adopted, chances are that even though it's textual, you're
+
+142
+00:08:34,600 --> 00:08:38,960
+going to get some decent performance in every runtime you choose, let alone Python, because
+
+143
+00:08:38,960 --> 00:08:40,780
+it's going to be great.
+
+144
+00:08:40,780 --> 00:08:42,960
+On the other hand, we have pickle.
+
+145
+00:08:42,960 --> 00:08:45,000
+How many of you are familiar with pickle?
+
+146
+00:08:45,000 --> 00:08:46,280
+Oh, pretty much.
+
+147
+00:08:46,280 --> 00:08:50,720
+So pickle is a built-in package within the Python standard library.
+
+148
+00:08:50,720 --> 00:08:55,360
+It allows you to serialize any Python object with a single line of code and read it later
+
+149
+00:08:55,360 --> 00:08:56,360
+on.
+
+150
+00:08:56,360 --> 00:08:58,480
+It has decent performance.
+
+151
+00:08:58,480 --> 00:09:01,680
+Pickles biggest disadvantage is portability.
+
+152
+00:09:01,680 --> 00:09:05,620
+Besides not being able to read it outside of Python, even within Python, you might find
+
+153
+00:09:05,620 --> 00:09:09,880
+it difficult to deserialize an object if your application has changed or other elements
+
+154
+00:09:09,880 --> 00:09:10,940
+have changed.
+
+155
+00:09:10,940 --> 00:09:11,940
+So it's something to keep in mind.
+
+156
+00:09:11,940 --> 00:09:15,760
+But if you're looking for something weak and dirty, just to get started, pickle can be
+
+157
+00:09:15,800 --> 00:09:18,000
+a great option for short-term serialization.
+
+158
+00:09:19,400 --> 00:09:24,000
+And last but not least, we have protobuf, which is pretty much the topic of what we've
+
+159
+00:09:24,000 --> 00:09:25,000
+discussed today.
+
+160
+00:09:25,000 --> 00:09:29,760
+And at Rookout, I think it's one of the most popular serialization platform we use.
+
+161
+00:09:29,760 --> 00:09:31,440
+We use it for multiple purposes.
+
+162
+00:09:31,440 --> 00:09:32,960
+And there are a few reasons for that.
+
+163
+00:09:34,200 --> 00:09:37,440
+First is that Python is, protobuf is highly portable.
+
+164
+00:09:37,440 --> 00:09:39,760
+I think that's one of my favorite options about it.
+
+165
+00:09:39,760 --> 00:09:45,040
+There are about 20 languages today that support, 20 platforms today that support protobuf.
+
+166
+00:09:45,440 --> 00:09:47,200
+Super important for many use cases.
+
+167
+00:09:49,240 --> 00:09:53,920
+Protobuf offers static typing, which makes it easy to document whatever it is you're
+
+168
+00:09:53,920 --> 00:09:55,160
+trying to serialize.
+
+169
+00:09:55,160 --> 00:09:59,040
+Make it very clear what you are serializing and how it should be written and read.
+
+170
+00:10:00,080 --> 00:10:05,720
+And it has amazing performance, both due to the static typing and its binary nature.
+
+171
+00:10:05,720 --> 00:10:10,200
+Protobuf has amazing performance in pretty much all runtime, Python, obviously.
+
+172
+00:10:10,200 --> 00:10:11,600
+One of them.
+
+173
+00:10:11,600 --> 00:10:14,200
+There is great backward and forward compatibility.
+
+174
+00:10:14,200 --> 00:10:17,320
+So you can add fields, you can remove fields.
+
+175
+00:10:17,320 --> 00:10:19,200
+Everything is pretty much gonna keep going.
+
+176
+00:10:20,760 --> 00:10:22,120
+It's pretty low on boilerplates.
+
+177
+00:10:22,120 --> 00:10:25,280
+That's obviously something that's of key importance because when you're
+
+178
+00:10:25,280 --> 00:10:28,880
+serializing stuff, there are often a lot of boilerplate involved.
+
+179
+00:10:28,880 --> 00:10:33,000
+You have to take all the information that you have in memory and kind of set it up
+
+180
+00:10:33,000 --> 00:10:36,080
+for the serialization algorithm to take its hold.
+
+181
+00:10:36,080 --> 00:10:39,880
+And protobuf is very good at making it easy to do,
+
+182
+00:10:39,920 --> 00:10:42,120
+using a lot of auto-generated code.
+
+183
+00:10:42,120 --> 00:10:43,440
+And we're gonna touch on that in a bit.
+
+184
+00:10:44,920 --> 00:10:46,760
+Protobuf is very time tested.
+
+185
+00:10:46,760 --> 00:10:48,640
+It's been around for 20 years now.
+
+186
+00:10:48,640 --> 00:10:53,520
+It was actually, Google started using it internally in 2002.
+
+187
+00:10:53,520 --> 00:10:55,400
+Open-sourced it a few years later.
+
+188
+00:10:55,400 --> 00:10:59,320
+And today, Protobuf 3 is the main version everybody's using.
+
+189
+00:10:59,320 --> 00:11:01,840
+And that has been also around for quite a few years.
+
+190
+00:11:03,360 --> 00:11:04,880
+And there is a great community.
+
+191
+00:11:04,880 --> 00:11:08,440
+Obviously, nothing compares to JSON, but it's a pretty great community.
+
+192
+00:11:08,440 --> 00:11:12,880
+I think it's the most vibrant community for any binary serializer out there.
+
+193
+00:11:12,880 --> 00:11:16,640
+So those are kind of what do I like about Protobuf?
+
+194
+00:11:16,640 --> 00:11:19,400
+Now before you jump into using Protobuf for everything,
+
+195
+00:11:19,400 --> 00:11:22,680
+a few things you want to keep in mind for when to use Protobuf.
+
+196
+00:11:24,560 --> 00:11:29,880
+First, Protobuf is less appropriate if you do want to read yourself the output.
+
+197
+00:11:29,880 --> 00:11:31,200
+The output is gonna be binary.
+
+198
+00:11:31,200 --> 00:11:33,680
+It's gonna be very hard to read by eye.
+
+199
+00:11:33,680 --> 00:11:34,760
+It's not textual.
+
+200
+00:11:34,760 --> 00:11:35,640
+Then go for it.
+
+201
+00:11:35,640 --> 00:11:37,880
+And also keep in mind that if you're working with Protobuf,
+
+202
+00:11:37,880 --> 00:11:39,600
+you need a spec.
+
+203
+00:11:39,600 --> 00:11:43,240
+The same message can mean different things using different specs.
+
+204
+00:11:43,240 --> 00:11:47,720
+So it's very important to have the static typing of the message to be able to read it.
+
+205
+00:11:49,440 --> 00:11:53,520
+Make sure that if your messages get too big, essentially above a few megabytes,
+
+206
+00:11:53,520 --> 00:11:57,480
+then the serializer hasn't been optimized for that.
+
+207
+00:11:57,480 --> 00:11:59,360
+And you can get some pretty bad performance.
+
+208
+00:12:00,720 --> 00:12:03,840
+And last but not least, if you're dealing with data that has dedicated
+
+209
+00:12:03,880 --> 00:12:06,720
+serialization algorithms, obviously information,
+
+210
+00:12:06,720 --> 00:12:10,960
+matrices, audio, video, images, all of that have their own dedicated
+
+211
+00:12:10,960 --> 00:12:15,320
+serialization formats, it's better to use those rather than using some
+
+212
+00:12:15,320 --> 00:12:16,440
+general purpose algorithm.
+
+213
+00:12:18,160 --> 00:12:24,740
+So let's do a quick three slides overview of what is Protobuf and how to use it.
+
+214
+00:12:24,740 --> 00:12:28,640
+So this is what, as I mentioned, Protobuf is using static typing.
+
+215
+00:12:28,640 --> 00:12:33,800
+And you start out by creating a proto file, in our case example, proto.
+
+216
+00:12:33,800 --> 00:12:39,000
+Which allows you to define whatever data you're trying to serialize.
+
+217
+00:12:39,000 --> 00:12:42,880
+You start by defining your header, the syntax, in our case proto3.
+
+218
+00:12:42,880 --> 00:12:45,320
+And then you create as many messages as you want.
+
+219
+00:12:45,320 --> 00:12:50,240
+Or it's a very simple message, user, it has two fields.
+
+220
+00:12:50,240 --> 00:12:53,760
+One is name, the other is email, both of them are strings.
+
+221
+00:12:53,760 --> 00:12:56,360
+And there are field numbers here, one and two.
+
+222
+00:12:56,360 --> 00:13:01,160
+Now the reason Protobuf asks you to specify the field numbers is that field
+
+223
+00:13:01,200 --> 00:13:04,440
+numbers are how the messages are encoded and are critical for
+
+224
+00:13:04,440 --> 00:13:06,680
+forward and backwards compatibility.
+
+225
+00:13:06,680 --> 00:13:11,240
+And so Protobuf takes the Python approach of explicitly is better than implicit and
+
+226
+00:13:11,240 --> 00:13:15,240
+asks you to define the field that is so they don't change over time.
+
+227
+00:13:15,240 --> 00:13:17,480
+And that it's very clear for you that you can manage that.
+
+228
+00:13:19,040 --> 00:13:21,920
+So once we've got our file, we use the Protobuf compiler,
+
+229
+00:13:21,920 --> 00:13:26,320
+Protosee, to build our Python files that you can use it.
+
+230
+00:13:26,320 --> 00:13:29,240
+Protobuf is compilers for pretty much every operating system out there.
+
+231
+00:13:29,240 --> 00:13:34,600
+You can see the command lines for installing it for a few of the more common ones.
+
+232
+00:13:34,600 --> 00:13:39,720
+And then you just write it, Protosee, Python out into the current folder,
+
+233
+00:13:39,720 --> 00:13:40,720
+create our proto file.
+
+234
+00:13:42,480 --> 00:13:46,320
+Now we have it, it's very, very, very easy.
+
+235
+00:13:46,320 --> 00:13:51,520
+All we do is we can import from example our new class.
+
+236
+00:13:51,520 --> 00:13:56,680
+Essentially, Python has created a class, Protosee has created a class called user
+
+237
+00:13:56,680 --> 00:13:59,720
+to represent our user message.
+
+238
+00:13:59,720 --> 00:14:04,640
+We import it, we create an object, we can set the name and the email of the object.
+
+239
+00:14:04,640 --> 00:14:08,560
+And then we just serialize it into a buffer using buffer serialized string.
+
+240
+00:14:08,560 --> 00:14:09,840
+And we can print it out if we want.
+
+241
+00:14:10,960 --> 00:14:14,960
+As I mentioned, very, very, very light on boilerplate.
+
+242
+00:14:14,960 --> 00:14:17,120
+How do we read this message?
+
+243
+00:14:17,120 --> 00:14:22,680
+Also fairly easily, we create an object, we pass it from the string, and
+
+244
+00:14:22,680 --> 00:14:28,200
+then we can exit the Python class attributes as the fields of the message
+
+245
+00:14:28,200 --> 00:14:29,640
+that we've just read.
+
+246
+00:14:29,640 --> 00:14:33,720
+Very, very, very easy to get started with, very easy to do some pretty impressive stuff.
+
+247
+00:14:35,320 --> 00:14:39,360
+Now there are a few fancier things you can do with Protobuf that I'm
+
+248
+00:14:39,360 --> 00:14:41,080
+gonna touch upon very briefly.
+
+249
+00:14:41,080 --> 00:14:44,720
+First, regarding primitives, I've shown you string primitives.
+
+250
+00:14:44,720 --> 00:14:49,400
+Protobuf also has buffers, booleans, integers, and floats.
+
+251
+00:14:49,400 --> 00:14:52,960
+So you can serialize pretty much all the common stuff.
+
+252
+00:14:52,960 --> 00:14:56,640
+And obviously you can also nest messages into other messages so
+
+253
+00:14:56,640 --> 00:14:59,320
+that you can create more complex objects as you see fit.
+
+254
+00:15:00,840 --> 00:15:05,520
+Protobuf is a few advanced keywords for more advanced use cases.
+
+255
+00:15:05,520 --> 00:15:09,200
+Include repeated, which allows you to make any field into a list.
+
+256
+00:15:09,200 --> 00:15:13,240
+So that instead of having just zero or one instances of the field,
+
+257
+00:15:13,240 --> 00:15:14,320
+you can have as many as you want.
+
+258
+00:15:15,280 --> 00:15:20,240
+You can add one of, which allows you to specify that only one of multiple fields
+
+259
+00:15:20,240 --> 00:15:24,320
+can exist within the same message, kind of like a union, if you're familiar with it.
+
+260
+00:15:25,400 --> 00:15:29,320
+Reserved allows you to specify that a field number shouldn't be used,
+
+261
+00:15:29,320 --> 00:15:31,600
+whether for backward or forward compatibility.
+
+262
+00:15:33,120 --> 00:15:34,760
+And enum allows you to just for
+
+263
+00:15:34,760 --> 00:15:39,160
+synthetic sugar, a kind of number, give names to numbers.
+
+264
+00:15:40,160 --> 00:15:44,200
+And last but not least, Protobuf has its own version of dictionaries,
+
+265
+00:15:44,200 --> 00:15:48,520
+which is called maps, and you can use to serialize those relevant objects.
+
+266
+00:15:50,280 --> 00:15:54,280
+Now, why do we need Protobuf at Rookout and what have we been doing with it?
+
+267
+00:15:54,280 --> 00:15:57,520
+So I'm not sure how many of you are familiar with what we do, but
+
+268
+00:15:57,520 --> 00:16:01,400
+Rookout is essentially a form of a live debugger or a production debugger.
+
+269
+00:16:01,400 --> 00:16:05,920
+We allow you to set a non-breaking breakpoint in any line of code within your
+
+270
+00:16:05,920 --> 00:16:10,480
+application, and once that line of code is hit, we take a snapshot of the state of
+
+271
+00:16:10,480 --> 00:16:13,720
+the application, all the local variables, the stack trace.
+
+272
+00:16:14,120 --> 00:16:17,320
+Then we transmit it in the background so that you can see the state of the
+
+273
+00:16:17,320 --> 00:16:20,440
+application and get a debugger-like experience,
+
+274
+00:16:20,440 --> 00:16:23,280
+even if your application is running in the cloud.
+
+275
+00:16:24,440 --> 00:16:31,240
+Now, this is where we're using Protobuf first and foremost from day one.
+
+276
+00:16:31,240 --> 00:16:34,920
+We use Protobuf to serialize the state of the application.
+
+277
+00:16:34,920 --> 00:16:38,440
+So we take all your local variables, we take everything you have, and
+
+278
+00:16:38,440 --> 00:16:41,640
+kind of put it into a structure for Protobuf.
+
+279
+00:16:41,640 --> 00:16:46,400
+So how did we go about creating a Protobuf message that can represent a variable?
+
+280
+00:16:47,880 --> 00:16:53,640
+We started out by creating a message, obviously, a message named a variable.
+
+281
+00:16:54,800 --> 00:16:56,480
+We added an enum to it.
+
+282
+00:16:56,480 --> 00:17:00,080
+These enums allow us to say what's the type of the variable?
+
+283
+00:17:00,080 --> 00:17:04,800
+Is it a non, is it an int, is it a long, double, binary, string, whatever.
+
+284
+00:17:04,800 --> 00:17:10,080
+There are about 30 different types that we have to describe different objects,
+
+285
+00:17:10,080 --> 00:17:13,280
+including timestamps and objects and so on.
+
+286
+00:17:14,760 --> 00:17:18,040
+And then we add the actual fields.
+
+287
+00:17:18,040 --> 00:17:21,520
+So we have one field, which is the type, which allows us to see it.
+
+288
+00:17:21,520 --> 00:17:23,920
+And we have an union, one for each value.
+
+289
+00:17:23,920 --> 00:17:27,880
+So we have an integer, we have a long, we have a double, we have a binary.
+
+290
+00:17:27,880 --> 00:17:33,920
+So if I were to serialize a non, the type would be zero,
+
+291
+00:17:33,920 --> 00:17:36,400
+and there wouldn't be a value because non is always non.
+
+292
+00:17:36,400 --> 00:17:40,000
+If I were to serialize an int, the type would be one, and
+
+293
+00:17:40,000 --> 00:17:43,240
+the value would be within field number 11, which is the value of an int.
+
+294
+00:17:44,880 --> 00:17:45,480
+And that works.
+
+295
+00:17:46,480 --> 00:17:47,600
+That pretty much works.
+
+296
+00:17:47,600 --> 00:17:50,440
+You can set a break point in any line of code you want.
+
+297
+00:17:50,440 --> 00:17:51,800
+You can see the data.
+
+298
+00:17:51,800 --> 00:17:52,480
+Everyone is happy.
+
+299
+00:17:53,920 --> 00:17:56,120
+But we wanted to take it to the next step.
+
+300
+00:17:56,120 --> 00:17:59,640
+Because if you think about it, once you look at the local variables,
+
+301
+00:17:59,640 --> 00:18:01,320
+there's gonna be one variable.
+
+302
+00:18:01,320 --> 00:18:04,240
+And that might have an attribute that goes to another variable, and
+
+303
+00:18:04,240 --> 00:18:06,240
+another variable, and another variable.
+
+304
+00:18:06,240 --> 00:18:07,920
+And where do you stop?
+
+305
+00:18:07,920 --> 00:18:12,040
+So in our original POC, we started at about level five.
+
+306
+00:18:12,040 --> 00:18:16,520
+We got to five level of object and stopped there.
+
+307
+00:18:16,520 --> 00:18:19,760
+But then one of our customers came by and asked us to go down 20 levels deep.
+
+308
+00:18:20,880 --> 00:18:23,680
+Now, obviously this is an expanding tree, so
+
+309
+00:18:23,680 --> 00:18:26,560
+the amount of data grows exponentially.
+
+310
+00:18:26,560 --> 00:18:31,440
+And getting a tree 20 levels deep can be pretty damn expensive.
+
+311
+00:18:31,440 --> 00:18:33,280
+In memory, in CPU, in latency.
+
+312
+00:18:34,600 --> 00:18:37,560
+And so we found ourselves trying to balance it.
+
+313
+00:18:37,600 --> 00:18:41,160
+And the one that we do give our customers some level of control.
+
+314
+00:18:41,160 --> 00:18:43,920
+Do you want bigger snapshots that might take a little longer?
+
+315
+00:18:43,920 --> 00:18:48,560
+Or do you want smaller snapshots that take a lot of faster?
+
+316
+00:18:48,560 --> 00:18:49,800
+Obviously they want both.
+
+317
+00:18:49,800 --> 00:18:52,520
+They want big snapshots that are very, very quick.
+
+318
+00:18:52,520 --> 00:18:54,520
+And so we wanted to do better.
+
+319
+00:18:54,520 --> 00:18:56,480
+We wanted to increase our performance,
+
+320
+00:18:56,480 --> 00:19:00,040
+especially for larger snapshots that contain a lot of data.
+
+321
+00:19:01,440 --> 00:19:03,960
+So like any optimization project,
+
+322
+00:19:03,960 --> 00:19:08,120
+it's very important to define what you want to optimize for.
+
+323
+00:19:08,120 --> 00:19:10,720
+So we decide first and foremost, we want to optimize for latency.
+
+324
+00:19:11,800 --> 00:19:15,040
+Because that's how we're slowing down or stopping the application.
+
+325
+00:19:15,040 --> 00:19:17,520
+Second, we're optimizing for message size.
+
+326
+00:19:17,520 --> 00:19:19,640
+Because as I mentioned, those,
+
+327
+00:19:19,640 --> 00:19:23,120
+we're getting some pretty big messages, over 100 megabytes.
+
+328
+00:19:23,120 --> 00:19:24,680
+Protobuf is very inefficient for that.
+
+329
+00:19:24,680 --> 00:19:26,640
+It can get messy to transmit them.
+
+330
+00:19:26,640 --> 00:19:28,360
+So we wanted to reduce the message size.
+
+331
+00:19:29,680 --> 00:19:33,320
+And also as a side note, we wanted to reduce CPU utilization and
+
+332
+00:19:33,320 --> 00:19:34,720
+reduce the number of allocations.
+
+333
+00:19:36,120 --> 00:19:40,640
+So the first optimization we've done was asking serialization.
+
+334
+00:19:40,640 --> 00:19:43,800
+We do the very bare minimum in a synchronous manner.
+
+335
+00:19:43,800 --> 00:19:47,440
+We only copy the primitives, capture the immutable data structures, and
+
+336
+00:19:47,440 --> 00:19:50,800
+copy mutable data structures such as list and dictionary.
+
+337
+00:19:50,800 --> 00:19:53,520
+And then we do everything else in the background.
+
+338
+00:19:53,520 --> 00:19:57,880
+The immutable data copying, packaging, managing all our metadata, and
+
+339
+00:19:57,880 --> 00:19:59,760
+the final serialization to bytes.
+
+340
+00:19:59,760 --> 00:20:03,040
+All of that can happen in the background as the application continues
+
+341
+00:20:03,040 --> 00:20:03,760
+to move forward.
+
+342
+00:20:05,400 --> 00:20:10,400
+Second, we've seen that what takes the most amount of data, amount size,
+
+343
+00:20:10,400 --> 00:20:13,480
+within those 100 megabytes of messages is strings.
+
+344
+00:20:13,480 --> 00:20:17,760
+Because an integer would probably take a handful of bytes, maybe two bytes,
+
+345
+00:20:17,760 --> 00:20:20,960
+maybe six bytes, but it's not gonna be much bigger than that.
+
+346
+00:20:20,960 --> 00:20:24,640
+Strings can be dozens, hundreds, and even thousands of bytes.
+
+347
+00:20:24,640 --> 00:20:26,440
+And they repeat themselves.
+
+348
+00:20:26,440 --> 00:20:29,560
+It's not just the string variables themselves, which can often be,
+
+349
+00:20:29,560 --> 00:20:33,080
+you can have multiple variables that are actually the same value.
+
+350
+00:20:33,080 --> 00:20:35,640
+But think about the attribute names or the type names.
+
+351
+00:20:35,640 --> 00:20:38,200
+If you have the same object a thousand times,
+
+352
+00:20:38,200 --> 00:20:40,600
+you're gonna capture its type a thousand times.
+
+353
+00:20:40,600 --> 00:20:41,880
+For each of its attributes,
+
+354
+00:20:41,880 --> 00:20:44,720
+you're gonna capture the string of the attribute a thousand times.
+
+355
+00:20:44,720 --> 00:20:46,840
+So why not deduplicate that?
+
+356
+00:20:46,840 --> 00:20:50,880
+Whenever you encounter the string the first time, give it a number.
+
+357
+00:20:50,880 --> 00:20:54,160
+The next time you encounter the same string, just give it the same number.
+
+358
+00:20:54,160 --> 00:20:57,880
+And then in the background, we also serialize this entire dictionary.
+
+359
+00:20:58,840 --> 00:20:59,800
+So that it can be authorized.
+
+360
+00:21:01,480 --> 00:21:04,640
+Now, I wanted to touch briefly upon Protobuf encoding, but I'm not sure.
+
+361
+00:21:06,040 --> 00:21:11,040
+So Protobuf uses the variant approach for serializing numbers.
+
+362
+00:21:11,040 --> 00:21:13,080
+The most important thing I want you to take,
+
+363
+00:21:13,080 --> 00:21:15,920
+the different numbers take a different number of bytes.
+
+364
+00:21:15,920 --> 00:21:19,760
+If the number is shorter, if the number up to 127 are gonna take one byte.
+
+365
+00:21:19,760 --> 00:21:21,840
+Then number above that are gonna take two bytes or
+
+366
+00:21:21,840 --> 00:21:25,040
+three bytes rather than having the fixed number of bytes.
+
+367
+00:21:25,040 --> 00:21:29,160
+So it's very, very, very important to stick with smaller numbers,
+
+368
+00:21:29,160 --> 00:21:30,840
+especially where it comes to fields.
+
+369
+00:21:31,920 --> 00:21:36,360
+Now, Protobuf uses key value encoding, which essentially means that if you
+
+370
+00:21:36,360 --> 00:21:40,480
+think of our previous message user, then it's gonna be key for name,
+
+371
+00:21:40,480 --> 00:21:42,760
+then the value for name, which was Liran Hamovitch.
+
+372
+00:21:42,760 --> 00:21:46,200
+Then there's gonna be the key for email, and then the value of my email.
+
+373
+00:21:47,720 --> 00:21:53,880
+And keys are a big part of a message, especially for smaller fields.
+
+374
+00:21:53,920 --> 00:21:58,400
+And the way the keys are built, they are also built as variants.
+
+375
+00:21:58,400 --> 00:22:02,120
+They are calculated as the field number shifted by three times,
+
+376
+00:22:02,120 --> 00:22:05,520
+a bit old with the wire type.
+
+377
+00:22:05,520 --> 00:22:09,600
+And so we essentially get four bits for the field numbers.
+
+378
+00:22:09,600 --> 00:22:14,800
+This means that field numbers one through 15 are encoded as one byte.
+
+379
+00:22:14,800 --> 00:22:18,680
+Everything above that is encoded as two bytes or if you go crazy, three bytes.
+
+380
+00:22:19,680 --> 00:22:25,680
+So my third tip for you is make sure that any field ID you're using often
+
+381
+00:22:25,680 --> 00:22:28,240
+resides in the range of one to 15.
+
+382
+00:22:28,240 --> 00:22:31,680
+It's gonna save you a whole lot of memory and make processing faster.
+
+383
+00:22:33,360 --> 00:22:37,520
+Now, one of the things we've seen at that point,
+
+384
+00:22:37,520 --> 00:22:41,040
+we've had about 40 to 50 different field numbers.
+
+385
+00:22:41,040 --> 00:22:45,440
+And some of our most useful fields resided outside of the one to 15.
+
+386
+00:22:45,480 --> 00:22:47,720
+So the next thing we've done was work very,
+
+387
+00:22:47,720 --> 00:22:51,600
+very hard to reduce the number of fields we've been using.
+
+388
+00:22:51,600 --> 00:22:56,360
+Now, I want to mention this is something that's gonna break up structure to a
+
+389
+00:22:56,360 --> 00:22:57,560
+certain degree.
+
+390
+00:22:57,560 --> 00:22:59,480
+And we've decided it's worth it for us.
+
+391
+00:22:59,480 --> 00:23:00,640
+We're taking it to the extreme.
+
+392
+00:23:00,640 --> 00:23:02,520
+We want to make it as fast as possible,
+
+393
+00:23:02,520 --> 00:23:05,000
+even if it's gonna make the code a bit messier.
+
+394
+00:23:05,000 --> 00:23:06,120
+That's not always the case.
+
+395
+00:23:06,120 --> 00:23:07,560
+That's not always good.
+
+396
+00:23:07,560 --> 00:23:11,960
+Many cases you can suffer the extra performance impact to make the code clean.
+
+397
+00:23:11,960 --> 00:23:16,920
+So one of the things we've done was to merge fields.
+
+398
+00:23:16,920 --> 00:23:19,520
+If you have multiple fields where there are very small values,
+
+399
+00:23:19,520 --> 00:23:23,400
+whether it's Booleans or small numbers by themselves, you can merge them.
+
+400
+00:23:23,400 --> 00:23:25,360
+For instance, we had two fields.
+
+401
+00:23:25,360 --> 00:23:28,840
+One of them was an enum, that you remember, that holds a type.
+
+402
+00:23:28,840 --> 00:23:30,760
+And another was a Boolean flag.
+
+403
+00:23:30,760 --> 00:23:32,320
+So we merged them.
+
+404
+00:23:32,320 --> 00:23:36,120
+Using, we've shifted one of them left, added a bitwise or, and
+
+405
+00:23:36,120 --> 00:23:38,360
+we've saved one field, which is awesome.
+
+406
+00:23:38,360 --> 00:23:42,960
+So we've done a lot of work around reusing fields.
+
+407
+00:23:42,960 --> 00:23:46,440
+For instance, if you remember, we had field number 11, that was an int.
+
+408
+00:23:46,440 --> 00:23:48,640
+Field number 12, that was a long.
+
+409
+00:23:48,640 --> 00:23:54,000
+Now, as I mentioned, Protobuf encodes numbers based on their size,
+
+410
+00:23:54,000 --> 00:23:55,480
+not based on their type.
+
+411
+00:23:55,480 --> 00:23:58,560
+So we can just use the same field for
+
+412
+00:23:58,560 --> 00:24:01,680
+a number without spending too much around it.
+
+413
+00:24:03,280 --> 00:24:07,960
+Now, as we got more aggressive, we've seen that each message we create,
+
+414
+00:24:08,760 --> 00:24:11,680
+adds its own key header, adds its own header,
+
+415
+00:24:11,680 --> 00:24:13,680
+which adds additional processing, additional size.
+
+416
+00:24:14,680 --> 00:24:19,320
+And also, if you see the implementation of how lists are made, so
+
+417
+00:24:19,320 --> 00:24:23,600
+lists for complex types are repeated key value sets.
+
+418
+00:24:23,600 --> 00:24:26,240
+So you're adding the key time and time and time again.
+
+419
+00:24:26,240 --> 00:24:30,200
+On the other hand, if you're using a number, a list of numbers,
+
+420
+00:24:30,200 --> 00:24:33,400
+then essentially the length is encoded only once.
+
+421
+00:24:33,400 --> 00:24:36,160
+And then they just add the values one by one.
+
+422
+00:24:36,160 --> 00:24:41,880
+So we've seen that each message we add costs us significantly in performance.
+
+423
+00:24:41,880 --> 00:24:46,320
+And so to manage that, we've figured out how can we use less messages,
+
+424
+00:24:46,320 --> 00:24:48,840
+how can we avoid creating messages.
+
+425
+00:24:48,840 --> 00:24:51,960
+And we found that there are only four complex types that really justify
+
+426
+00:24:51,960 --> 00:24:53,000
+messages.
+
+427
+00:24:53,000 --> 00:24:54,760
+Everything else we can walk around and
+
+428
+00:24:54,760 --> 00:24:58,120
+keep a flatter structure that is much more efficient to encode.
+
+429
+00:24:59,960 --> 00:25:04,240
+And last but not least is the one-off, which I've mentioned.
+
+430
+00:25:04,240 --> 00:25:08,520
+Now, one-off allows you to say that only one thing is.
+
+431
+00:25:08,520 --> 00:25:12,720
+Now if you remember, I've shown you that we created a message for a string.
+
+432
+00:25:12,720 --> 00:25:16,920
+And the reason for that is that with one-off, you can only have one field.
+
+433
+00:25:16,920 --> 00:25:20,120
+So if you want that field to have essentially multiple attributes,
+
+434
+00:25:20,120 --> 00:25:22,000
+you need to wrap it with a message.
+
+435
+00:25:22,000 --> 00:25:24,760
+And as we mentioned, wrapping with a message is bad.
+
+436
+00:25:26,200 --> 00:25:31,080
+So, and also as another side note, one-off doesn't allow you to add repeated
+
+437
+00:25:31,080 --> 00:25:32,040
+to the attribute.
+
+438
+00:25:32,040 --> 00:25:34,760
+And again, you have to walk around that by adding a message.
+
+439
+00:25:35,840 --> 00:25:40,680
+So originally we had a one-off where a lot of the values were.
+
+440
+00:25:42,400 --> 00:25:46,280
+And after that we've removed the one-off, we created a flat structure.
+
+441
+00:25:46,280 --> 00:25:50,160
+And after using fields aggressively and merging them, we actually got to the point
+
+442
+00:25:50,160 --> 00:25:55,840
+that only field 6 to 12 are used to contain the values of the variables.
+
+443
+00:25:55,840 --> 00:25:58,320
+1 through 5 are used for the metadata.
+
+444
+00:25:58,320 --> 00:26:01,080
+And actually everything else is reserved for future use.
+
+445
+00:26:02,840 --> 00:26:05,080
+So this is how it goes.
+
+446
+00:26:05,080 --> 00:26:07,760
+And those are pretty much average messages.
+
+447
+00:26:07,760 --> 00:26:09,720
+And we got some pretty nice performance boot.
+
+448
+00:26:09,720 --> 00:26:13,920
+First we got the latency of serialization up down by 40%.
+
+449
+00:26:13,920 --> 00:26:17,480
+We got size down almost 50%.
+
+450
+00:26:17,480 --> 00:26:21,880
+And if I were to show you larger messages of 100 megabytes or more,
+
+451
+00:26:21,880 --> 00:26:24,120
+you would be seeing even more dramatic results.
+
+452
+00:26:24,120 --> 00:26:27,640
+I think that's not fair, but that was one of our purposes.
+
+453
+00:26:27,640 --> 00:26:31,320
+Now, before I finish this, I do want to mention one thing,
+
+454
+00:26:31,320 --> 00:26:35,360
+which I didn't touch upon because this talk was mostly focused around
+
+455
+00:26:35,360 --> 00:26:38,200
+protobuf in general.
+
+456
+00:26:38,200 --> 00:26:42,920
+There is a C extension for protobuf that can be used within Python.
+
+457
+00:26:42,920 --> 00:26:47,120
+Now, this is something we couldn't use because our code runs within other
+
+458
+00:26:47,120 --> 00:26:48,560
+people's processes.
+
+459
+00:26:48,560 --> 00:26:52,520
+And we don't want to add a native extension that can cause
+
+460
+00:26:52,520 --> 00:26:54,720
+slow problems in some cases.
+
+461
+00:26:54,720 --> 00:26:57,520
+But if you're running protobuf in your own application, and
+
+462
+00:26:57,520 --> 00:27:00,800
+you're just looking for some simple extra performance boost,
+
+463
+00:27:00,800 --> 00:27:03,400
+you can by simply adding an environment variable,
+
+464
+00:27:03,400 --> 00:27:06,560
+you can instruct protobuf to use the native extension.
+
+465
+00:27:06,560 --> 00:27:11,160
+And that's going to use C code instead of Python code for the serialization.
+
+466
+00:27:11,160 --> 00:27:13,360
+So you're going to get some nice performance out of it.
+
+467
+00:27:13,360 --> 00:27:15,400
+It's going to be the same message size, but
+
+468
+00:27:15,400 --> 00:27:18,080
+things can often be faster in many use cases.
+
+469
+00:27:19,360 --> 00:27:23,080
+So, all right, thank you, Lidan.
+
+470
+00:27:24,080 --> 00:27:27,360
+If you have any questions for him, you can, yes, thank you.
+
+471
+00:27:27,360 --> 00:27:28,680
+I appreciate you.
+

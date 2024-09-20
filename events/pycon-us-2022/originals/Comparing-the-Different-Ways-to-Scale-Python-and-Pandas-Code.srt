@@ -1,0 +1,1112 @@
+1
+00:00:00,000 --> 00:00:11,000
+Hi, everyone. How are you doing today? Good. Okay. So we can get started with our next
+
+2
+00:00:11,000 --> 00:00:16,920
+talk. We have comparing the different ways to scale Python and Pandas code. We have the
+
+3
+00:00:16,920 --> 00:00:24,360
+speakers Kevin Koh and Han Wang. Just a quick tip. So there's no Q&A after the talk, but
+
+4
+00:00:24,360 --> 00:00:29,880
+if you'd like to ask questions to the speakers, you can feel free to catch them at the hallway
+
+5
+00:00:29,880 --> 00:00:35,600
+or anywhere outside. All right? Over to you.
+
+6
+00:00:35,600 --> 00:00:42,840
+Thank you. Hey, everyone. Welcome to different ways to scale Python and Pandas code. We're
+
+7
+00:00:42,840 --> 00:00:48,720
+very happy to be here in an in-person conference. Happy to have met a bunch of you and definitely
+
+8
+00:00:48,720 --> 00:00:55,760
+looking forward to chatting with the rest of you also. So a bit about us. So Han and
+
+9
+00:00:55,760 --> 00:01:00,840
+I will be talking. Han is a... We are both affiliated with the Fugue open source project.
+
+10
+00:01:00,840 --> 00:01:05,480
+Han is the main Fugue author and he works for Lyft as a tech lead for the Lyft machine
+
+11
+00:01:05,480 --> 00:01:12,120
+learning platform. I am an engineer at Prefect, which is also a sponsor for this year's conference.
+
+12
+00:01:12,120 --> 00:01:17,320
+We have a sponsor booth. Prefect is an open source workflow orchestration framework and
+
+13
+00:01:17,320 --> 00:01:24,320
+prior to that I was a data scientist. So obviously we're here to look at ways to scale Python
+
+14
+00:01:24,320 --> 00:01:29,960
+and Pandas code, but it's just worth noting what the limitations of Pandas are. So first
+
+15
+00:01:29,960 --> 00:01:35,080
+of all, it's single core by default. It's known to not be memory efficient. You probably
+
+16
+00:01:35,080 --> 00:01:39,920
+heard something along the lines of if you want to handle a Pandas data frame efficiently,
+
+17
+00:01:39,920 --> 00:01:45,800
+you need 3X or 5X as much RAM as your data. So if you have like a 5 gig data set, you
+
+18
+00:01:45,800 --> 00:01:50,260
+then need like 15 gigs of RAM to handle it effectively at least. And of course there's
+
+19
+00:01:50,260 --> 00:01:54,260
+an assumption that everything is confined to a single machine. So once you start hitting
+
+20
+00:01:54,260 --> 00:02:00,260
+these bottlenecks and hitting these limitations, then you need to use other frameworks to scale.
+
+21
+00:02:00,260 --> 00:02:05,200
+So how do you scale out? If you start with your existing computing logic in Python or
+
+22
+00:02:05,200 --> 00:02:11,980
+Pandas and you want to bridge that gap to utilize distributed compute frameworks, what
+
+23
+00:02:11,980 --> 00:02:17,600
+you can use is a semantic layer. And the semantic layer is what will map that existing logic
+
+24
+00:02:17,620 --> 00:02:22,900
+to the distributed compute frameworks. So we have two kinds of semantic layers. The
+
+25
+00:02:22,900 --> 00:02:29,260
+first is Pandas-like and the second one is SQL-like. And what we find is that both of
+
+26
+00:02:29,260 --> 00:02:35,400
+these semantic layers have some deficiencies in them, which Han will talk more about later.
+
+27
+00:02:35,400 --> 00:02:41,620
+And that's why Fugue as a semantic layer aims to provide both of these options so that we
+
+28
+00:02:41,620 --> 00:02:47,560
+can allow the user to describe their logic in the grammar that they prefer. And then
+
+29
+00:02:47,560 --> 00:02:52,960
+we can be responsible for bringing that to the distributed compute framework. So if you're
+
+30
+00:02:52,960 --> 00:02:57,280
+not familiar with the distributed compute frameworks, these are the most popular ones
+
+31
+00:02:57,280 --> 00:03:03,800
+right now, Spark, Dask, and Ray. So what happens with Pandas is when you have like a 5 gig
+
+32
+00:03:03,800 --> 00:03:09,020
+data set and then maybe you use like a 16 gig RAM machine and it's going fine, all of
+
+33
+00:03:09,040 --> 00:03:14,980
+a sudden 5 gigs becomes 10, you then have to bump up the underlying hardware and that's
+
+34
+00:03:14,980 --> 00:03:21,020
+what's called vertical scaling. But what happens is maybe you only have one step in the pipeline
+
+35
+00:03:21,020 --> 00:03:25,960
+that really needs a lot of RAM. But then because of the way Pandas is, you then need to have
+
+36
+00:03:25,960 --> 00:03:32,200
+your machine, your powerful machine for the duration of your entire pipeline. So these
+
+37
+00:03:32,200 --> 00:03:38,720
+distributed compute frameworks allow us to use clusters that utilize auto scaling under
+
+38
+00:03:38,720 --> 00:03:45,720
+the hood, so we only need to bump the resources up for an expensive step. And then these frameworks
+
+39
+00:03:46,500 --> 00:03:51,640
+are also optimized to handle operations for big data. So for example, if you have a lot
+
+40
+00:03:51,640 --> 00:03:58,200
+of columns and you only need two at the end, there are these optimizations that can traverse
+
+41
+00:03:58,200 --> 00:04:03,140
+the computation graph and only use those two columns. Whereas Pandas, you need all the
+
+42
+00:04:03,140 --> 00:04:08,280
+data in memory. But of course these frameworks are not straightforward to use. You have to
+
+43
+00:04:08,280 --> 00:04:15,080
+learn a new syntax or a new framework. And in addition to the new syntax or framework,
+
+44
+00:04:15,080 --> 00:04:22,080
+you then have to learn a lot of concepts such as partitioning, persisting, even schema.
+
+45
+00:04:22,360 --> 00:04:27,660
+And in general, they all have a relatively, I compared to Pandas, a relatively poor developer
+
+46
+00:04:27,660 --> 00:04:34,660
+experience in that it's hard to develop locally quickly and then bring it to the distributed
+
+47
+00:04:35,140 --> 00:04:40,900
+setting. And that's about Spark specifically. Dask is a bit better because it's Python native.
+
+48
+00:04:40,900 --> 00:04:47,320
+And that's why Fugue exists, to bridge that gap between local compute to distributed compute.
+
+49
+00:04:47,320 --> 00:04:52,500
+So there are other projects that do the same thing in Moden and Koalas. The difference
+
+50
+00:04:52,500 --> 00:04:59,020
+is that they use Pandas as the interface. Whereas Fugue uses Python, Pandas, and SQL.
+
+51
+00:04:59,020 --> 00:05:04,220
+So again, these are interoperable. People can choose the language that they prefer.
+
+52
+00:05:04,220 --> 00:05:11,220
+And then we port it over to the relevant distributed system for them. So a lot of this talk will
+
+53
+00:05:14,980 --> 00:05:19,860
+be about what the deficiency of the Pandas interface is and why it's not necessarily
+
+54
+00:05:19,860 --> 00:05:24,440
+the good grammar for distributed compute. But before that, we're going to introduce
+
+55
+00:05:24,440 --> 00:05:29,380
+Fugue. So Fugue is an abstraction layer for distributed computing. And we find that Fugue
+
+56
+00:05:29,700 --> 00:05:35,340
+users often see, because they can describe their code in native Python, we find that
+
+57
+00:05:35,340 --> 00:05:42,060
+maintenance is reduced. And also iteration speed with big data projects increase. So
+
+58
+00:05:42,060 --> 00:05:49,060
+we published an article with Lyft earlier this month. And with, through Fugue, the average
+
+59
+00:05:49,060 --> 00:05:54,420
+wall time of Spark jobs decreased from 3 hours to 0.3 hours. This is because that bridge
+
+60
+00:05:54,420 --> 00:05:59,460
+allows you to prototype quickly and only use the cluster when your code is production
+
+61
+00:05:59,460 --> 00:06:05,740
+ready. We don't have any fancier optimizations other than providing guardrails around best
+
+62
+00:06:05,740 --> 00:06:12,740
+practices so that your code can execute well in the distributed setting. So let's look
+
+63
+00:06:13,260 --> 00:06:19,820
+at the most basic Fugue code. Here in this operation, we have input data with the ID
+
+64
+00:06:19,820 --> 00:06:25,740
+and value, and we want to make a new column called food. So the top code is the Panda
+
+65
+00:06:25,740 --> 00:06:31,920
+syntax, and the bottom code is the Spark syntax. So if you want to, if you already have a lot
+
+66
+00:06:31,920 --> 00:06:37,580
+of Pandas code that you then want to bring to Spark, you then have to rewrite a lot of
+
+67
+00:06:37,580 --> 00:06:44,060
+the code. And this isn't an isolated example. You'll find that a lot of similar operations
+
+68
+00:06:44,220 --> 00:06:51,220
+have drastically different syntax. So let's look at how Fugue would do it. Up above is
+
+69
+00:06:51,300 --> 00:06:58,300
+the Pandas function. All we're using is this map to get the appropriate dictionary value.
+
+70
+00:06:58,380 --> 00:07:05,380
+And then, so all we want to do is get the value in the value column, use the dictionary
+
+71
+00:07:05,380 --> 00:07:11,060
+to map it to the corresponding food, and then create the new column. So here, the function
+
+72
+00:07:11,060 --> 00:07:14,900
+is left unchanged, and what we're going to do is we're going to use the Fugue transform
+
+73
+00:07:14,900 --> 00:07:20,820
+function. And the Fugue transform function takes in the data frame and the function,
+
+74
+00:07:20,820 --> 00:07:26,100
+and then the schema, which will be adding a new column called food, and then we have
+
+75
+00:07:26,100 --> 00:07:30,220
+the parameters passed. And this will work on Pandas. But what happens if we want to
+
+76
+00:07:30,220 --> 00:07:35,260
+bring this to Spark? All we have to do is specify the engine. And the engine is just
+
+77
+00:07:35,260 --> 00:07:40,740
+a Spark session, and we also support Dask at the moment. So what we can do, using the
+
+78
+00:07:40,740 --> 00:07:47,180
+same function, all we have to do is change the engine now, and then the code will run
+
+79
+00:07:47,180 --> 00:07:54,180
+on Spark or Dask. And this is also flexible to however you want to define your function
+
+80
+00:07:54,740 --> 00:08:00,980
+as a user. So I have three other implementations that are non-Pandas-based and purely native
+
+81
+00:08:00,980 --> 00:08:07,980
+Python that can also be brought to Spark or Dask. So all of these use some combination
+
+82
+00:08:18,460 --> 00:08:24,900
+of lists and dictionaries, and then it's flexible whatever the input type is or the output type,
+
+83
+00:08:24,900 --> 00:08:28,860
+the Fugue will then adjust. And now I'll hand it to Han for the second portion of this
+
+84
+00:08:28,860 --> 00:08:35,860
+talk.
+
+85
+00:08:36,860 --> 00:08:43,860
+Hello. Hello, everyone. Nice to meet you. And thank you, Kevin. And now I'm going to
+
+86
+00:08:43,860 --> 00:08:50,860
+have a further discussion on the deficiencies of the Pandas-like semantic layer and the
+
+87
+00:08:57,020 --> 00:09:02,740
+traditional SQL semantic layer. So first of all, let's talk about the limitations of the
+
+88
+00:09:02,740 --> 00:09:06,260
+Pandas-like semantics.
+
+89
+00:09:06,260 --> 00:09:11,640
+Considering this data frame, it has four columns. A, B, C, and D. A and B are strings. And C
+
+90
+00:09:11,640 --> 00:09:18,640
+is just a random number from 0 to 1. And D is just an integer from 0 to 1,000. We're
+
+91
+00:09:18,840 --> 00:09:25,840
+going to use this data frame in the format of Pandas-Coalas, which is also known as Pandas
+
+92
+00:09:26,720 --> 00:09:33,720
+on Spark 3.2. And also Dask data frames and the modding data frame.
+
+93
+00:09:35,280 --> 00:09:40,840
+Okay. We're going to use this data frame as an example to demonstrate some of the problems
+
+94
+00:09:40,840 --> 00:09:47,840
+of the basic assumptions of Pandas. First of all, Pandas assumes that data is physically
+
+95
+00:09:48,000 --> 00:09:54,600
+together. Look at this iLoc function. I think everyone knows iLoc. And I think most of us
+
+96
+00:09:54,600 --> 00:10:01,600
+just love iLoc. But the assumption behind iLoc is that random access is cheap. But this
+
+97
+00:10:01,680 --> 00:10:06,680
+is not true in the distributed system. So look at this data frame with one million rows
+
+98
+00:10:06,680 --> 00:10:12,320
+of the previous example I've shown. And now we are going to run five different cases.
+
+99
+00:10:12,320 --> 00:10:19,320
+And we are going to compare their performances in each backend. Here is the result.
+
+100
+00:10:19,700 --> 00:10:24,560
+So we always use the first case as the reference case. We assume the first case will always
+
+101
+00:10:24,560 --> 00:10:30,600
+take one unit of time. And then we compare horizontally. You will see that for Pandas,
+
+102
+00:10:30,680 --> 00:10:37,680
+iLoc is faster than the popular functions such as head and tail, which is good, right?
+
+103
+00:10:38,000 --> 00:10:42,760
+And no matter where you access the data frame, it's faster. But for modding on Ray, you will
+
+104
+00:10:42,760 --> 00:10:48,480
+see that the performance of the first four cases is very similar. But for the last case,
+
+105
+00:10:48,480 --> 00:10:54,240
+when you try to access the middle of the data frame, somehow it is two times slower. And
+
+106
+00:10:54,240 --> 00:11:01,240
+for Spark, it's even more weird because none of the other cases is even close to the first
+
+107
+00:11:04,720 --> 00:11:10,080
+case. They are way slower than the first case. Especially when you use random access, try
+
+108
+00:11:10,080 --> 00:11:17,080
+to get the middle and the end part of the data frame. You see it's 15 times slower.
+
+109
+00:11:17,160 --> 00:11:24,160
+And for Dusk, Dusk even disallow you to do random access using iLoc. So here, you can
+
+110
+00:11:24,240 --> 00:11:31,160
+see the first discrepancy of the interface. But why does Dusk even disallow this? Because
+
+111
+00:11:31,160 --> 00:11:38,160
+random access is not a good practice in distributed computing. So I think what Dusk is doing is
+
+112
+00:11:38,640 --> 00:11:44,600
+just trying to provide the guardrail for you to use the distributed system in a more efficient
+
+113
+00:11:44,600 --> 00:11:51,600
+way. Natural order. So Pandas assumes that natural order is preserved. But this is not
+
+114
+00:11:52,600 --> 00:11:59,600
+always true in a distributed system. Assume we still use the existing data frame and we
+
+115
+00:11:59,680 --> 00:12:05,400
+sort by C. We compute the diff, we compute the standard deviation. On the other hand,
+
+116
+00:12:05,400 --> 00:12:12,400
+we just save the sorted value to find it back to the same compute. So if natural order is
+
+117
+00:12:12,520 --> 00:12:19,520
+preserved by back-end, then X should equal to Y. So as you can see, it's not true in
+
+118
+00:12:19,760 --> 00:12:26,760
+Spark. Why? Because it is very expensive to preserve the global order of data in a distributed
+
+119
+00:12:26,800 --> 00:12:33,600
+system. Sometimes this is not even a well-defined problem. So that's why you cannot expect a
+
+120
+00:12:33,600 --> 00:12:40,600
+distributed system to always keep the global order for you. It is very expensive.
+
+121
+00:12:41,840 --> 00:12:47,760
+Now let's talk about data shuffle. If the data frame is in memory and local, data shuffle
+
+122
+00:12:47,760 --> 00:12:53,280
+is trivial. But this is always a very big challenge in distributed systems. Assume
+
+123
+00:12:53,280 --> 00:12:58,960
+we have a data frame with 100k rows and for each group of D, we just want to group the
+
+124
+00:12:58,960 --> 00:13:05,320
+data frame by D. And for each group, we just find the row with the largest C. You probably
+
+125
+00:13:05,320 --> 00:13:11,200
+can use group by apply to solve this problem. But someone just figure out a more elegant
+
+126
+00:13:11,320 --> 00:13:18,320
+and smarter way to, like method one, to solve this problem. We just need to sort the values
+
+127
+00:13:18,720 --> 00:13:24,520
+on both columns C and D. And then we just drop the duplicate based on group D and keep
+
+128
+00:13:24,520 --> 00:13:31,520
+the last. Then we get the expected result. It is expressive and it is very elegant. On
+
+129
+00:13:31,720 --> 00:13:38,720
+the second method, just group by D and then we try to find the index with the max C. And
+
+130
+00:13:39,360 --> 00:13:46,360
+then we join back this index to Df on index in order to get the result. The second method
+
+131
+00:13:46,520 --> 00:13:52,400
+is less straightforward. It is more complicated. Let's take a look at the speed. And actually
+
+132
+00:13:52,400 --> 00:13:58,040
+on pandas, the second method is even slower than the first method. That will just confirm
+
+133
+00:13:58,040 --> 00:14:03,200
+you that method two has no value. This is not true on distributed system. You will see
+
+134
+00:14:03,200 --> 00:14:09,240
+that on a distributed system, all of them will get significantly faster on method two.
+
+135
+00:14:09,240 --> 00:14:15,080
+Why? Because method two can avoid shuffling. It can minimize, at least it can minimize
+
+136
+00:14:15,080 --> 00:14:22,080
+shuffling. And in some cases, for example, in Spark, with certain settings, you can completely
+
+137
+00:14:22,600 --> 00:14:27,680
+avoid shuffling. That is why method two is much faster in a distributed system.
+
+138
+00:14:27,680 --> 00:14:34,680
+Now you have a dilemma. If you want to keep use of the pandas syntax and you have to choose
+
+139
+00:14:36,920 --> 00:14:43,920
+between flexibility and elegance versus performance, which one do you choose? It is always a difficult
+
+140
+00:14:45,840 --> 00:14:52,840
+choice. Now let's talk about index. It is common sense that index can speed up pandas
+
+141
+00:14:53,240 --> 00:14:59,680
+computation. But it is not always true in distributed systems. So now the data frame
+
+142
+00:14:59,680 --> 00:15:06,680
+still has one million rows and IDF is just a set index on A. And we do two things. We
+
+143
+00:15:07,360 --> 00:15:14,360
+just use the original data frame and use the data frame with index to get one group of
+
+144
+00:15:14,600 --> 00:15:21,600
+data. And then we compute the sum of C. As you can see, pandas, as expected, it is
+
+145
+00:15:22,920 --> 00:15:29,920
+faster. But look at this distributed backends. They have very different execution behaviors.
+
+146
+00:15:31,280 --> 00:15:36,960
+This is not the only thing. The other thing is multi-index is not fully supported by any
+
+147
+00:15:36,960 --> 00:15:43,960
+of these backends. There is technical difficulties to support this multi-index thing in a distributed
+
+148
+00:15:44,360 --> 00:15:50,960
+system. So here the point is not only you get different execution behavior, but also
+
+149
+00:15:51,000 --> 00:15:58,000
+you get inconsistent interface. And it is not like identical interface with pandas.
+
+150
+00:16:00,320 --> 00:16:06,400
+Now let's talk about eager evaluation and lazy evaluation. Let's use this example. It
+
+151
+00:16:06,400 --> 00:16:13,400
+has two million rows and 40 columns. And we just want to save this to a file. The first
+
+152
+00:16:13,520 --> 00:16:20,520
+example is just we read back this file and we just compute the mean of every column.
+
+153
+00:16:21,720 --> 00:16:28,320
+And the second case we just compute the mean of two columns of this file. And this file,
+
+154
+00:16:28,320 --> 00:16:34,560
+by the way, it has several hundred megabytes of data. So it will take some time to load.
+
+155
+00:16:34,560 --> 00:16:39,880
+So here is the result. You can see that for pandas and modding on ray, the second case
+
+156
+00:16:39,880 --> 00:16:45,280
+is just a little bit faster than the first case. It's expected because the heavy part
+
+157
+00:16:45,280 --> 00:16:51,280
+is read per key. But why in Spark and Dusk they are significantly faster than the first
+
+158
+00:16:51,280 --> 00:16:58,120
+case? This is because of the benefit of lazy evaluation. Lazy evaluation can understand
+
+159
+00:16:58,120 --> 00:17:05,120
+that you only need C0 and C1. So it will just access a small portion of the file. So the
+
+160
+00:17:05,200 --> 00:17:10,920
+I.O. will be much, much smaller than reading the whole file and storing in memory. So that
+
+161
+00:17:10,960 --> 00:17:17,960
+is why Spark and Dusk are so much faster because they save on the I.O. time.
+
+162
+00:17:19,280 --> 00:17:26,400
+Okay, but if you don't fully understand lazy evaluation, then you will get hurt immediately.
+
+163
+00:17:26,400 --> 00:17:33,040
+Look at these two examples. The only difference on the second case is that the second case
+
+164
+00:17:33,040 --> 00:17:38,920
+in addition to computing the mean, it will also compute the max and the average. Look
+
+165
+00:17:38,920 --> 00:17:44,800
+at the time. Again, pandas and modding, they're very predictable. The computer is just a little
+
+166
+00:17:44,800 --> 00:17:50,360
+bit slower on the second case. But look at Spark and Dusk. They are much, much slower.
+
+167
+00:17:50,360 --> 00:17:57,360
+Why? This is also because of lazy evaluation. Lazy evaluation will depend on actions. Action
+
+168
+00:17:57,920 --> 00:18:02,920
+will trigger the lineage to run end to end. So if you don't know that you need to break
+
+169
+00:18:02,960 --> 00:18:09,960
+the lineage here, then these three actions will trigger this read parquet three times.
+
+170
+00:18:11,280 --> 00:18:17,640
+Then now we are facing another dilemma. Do we want to add a persist here in order to
+
+171
+00:18:17,640 --> 00:18:24,640
+save the time? Persist is not even a concept of pandas. And now we have to make a decision,
+
+172
+00:18:24,640 --> 00:18:31,640
+do we want to add additional syntax to pandas? If we add, that is not consistent with the
+
+173
+00:18:35,760 --> 00:18:42,080
+pandas interface. But if we don't add, we can fully control our powerful distributed
+
+174
+00:18:42,080 --> 00:18:48,920
+systems. We cannot fully utilize it. So which one to choose? You can definitely see that
+
+175
+00:18:49,240 --> 00:18:55,360
+modding on RAIN modding does not choose lazy evaluation. It chooses to be eager evaluation
+
+176
+00:18:55,360 --> 00:19:01,920
+to be consistent with pandas. But Spark and Dusk, they choose to provide additional syntax
+
+177
+00:19:01,920 --> 00:19:07,320
+in order for you to have more control of the distributed systems. Pro-assign the cause.
+
+178
+00:19:07,320 --> 00:19:14,320
+But the point is now they are no longer the same. They're very different. So what is the
+
+179
+00:19:15,320 --> 00:19:22,320
+motivation to use pandas-like semantics for distributed computing? Flat learning curve,
+
+180
+00:19:25,800 --> 00:19:32,800
+low migration effort, no vendor logging. So as you see from the previous example, only
+
+181
+00:19:33,840 --> 00:19:39,640
+if you are using Hello World examples, you will find it has flat learning curve. You
+
+182
+00:19:39,640 --> 00:19:46,640
+can have dropping replacement for the pandas input. But if you use anything that is a
+
+183
+00:19:46,960 --> 00:19:53,960
+little bit advanced, you will see a lot of inconsistency on interface and you will see
+
+184
+00:19:54,000 --> 00:20:01,000
+even bigger difference on the execution behaviors. Then you have to write the backend-specific
+
+185
+00:20:01,440 --> 00:20:07,640
+code or corunds, and then you have to optimize towards one backend. But when you make it
+
+186
+00:20:07,640 --> 00:20:14,240
+work for one backend, you get vendor logging because that code is no longer optimal for
+
+187
+00:20:14,240 --> 00:20:21,240
+other backends. That is also the reason that Fig doesn't want to be another pandas-like
+
+188
+00:20:21,480 --> 00:20:28,480
+framework. We don't see much value to be pandas, to use the pandas as our semantic for distributed
+
+189
+00:20:28,720 --> 00:20:35,440
+computing. But we have to clarify that we heavily rely on pandas. But just in, I think
+
+190
+00:20:35,480 --> 00:20:41,080
+in a totally different way. So I will talk about it in the next example.
+
+191
+00:20:41,080 --> 00:20:48,080
+So now let's talk about the limitations of SQL semantics. Considering this data frame,
+
+192
+00:20:48,080 --> 00:20:55,080
+it contains 1,000 time series. Each has 10,000 data points. And instead of using data stamps,
+
+193
+00:20:56,920 --> 00:21:03,920
+we just use IDX, which is integer for simplicity. In the values, there are anomalies. What we
+
+194
+00:21:03,920 --> 00:21:10,440
+want to do is we want to compute the rolling Z score, and then using the Z score to identify
+
+195
+00:21:10,440 --> 00:21:16,240
+anomalies. We want to find the top five series with the most anomalies, and then we want
+
+196
+00:21:16,240 --> 00:21:22,040
+to get the sum of the Z scores. Sounds complicated, right? It is complicated.
+
+197
+00:21:22,040 --> 00:21:28,240
+So here is a Spark solution based on traditional SQL syntax. Because it's not trivial, we will
+
+198
+00:21:28,520 --> 00:21:34,200
+have to use this with statement, which is also known as CTE statement. Because in this
+
+199
+00:21:34,200 --> 00:21:40,520
+way we can write several sub statements and then to combine them together. There are several
+
+200
+00:21:40,520 --> 00:21:45,600
+problems with this CTE statement. Although I know a lot of you just write this kind of
+
+201
+00:21:45,600 --> 00:21:50,600
+statement every day. But have you ever thought about the boilerplate code you have to write
+
+202
+00:21:50,600 --> 00:21:55,960
+every time? For every step you have to write as bracket, bracket, comma, and you have to
+
+203
+00:21:56,160 --> 00:22:02,800
+have width. Also, you have to name every step. Every step. If you write embedded SQL, you
+
+204
+00:22:02,800 --> 00:22:07,000
+don't have to name every step. But now you have to. Even sometimes it's awkward to figure
+
+205
+00:22:07,000 --> 00:22:13,640
+out the name. You still have to give a name. This is probably the minor issue. But this
+
+206
+00:22:13,640 --> 00:22:20,640
+is probably a bigger issue. That this kind of syntax, parquet.file, something like that,
+
+207
+00:22:21,480 --> 00:22:28,480
+is platform specific. So as soon as you write this kind of syntax, you get vendor locking.
+
+208
+00:22:30,560 --> 00:22:37,560
+This SQL is already locked with a certain backend. And another thing is look at this
+
+209
+00:22:38,000 --> 00:22:45,000
+Z. If you're familiar with distributed computing, look at this Z. This Z is used by both top
+
+210
+00:22:45,560 --> 00:22:51,600
+and worst by two data frames. So in order to avoid recompute, what we should do, I mentioned
+
+211
+00:22:51,600 --> 00:22:57,720
+that before, we should use a persist here to break the lineage. How do you add a persist
+
+212
+00:22:57,720 --> 00:23:04,720
+in SQL? It's not even a syntax of SQL. SQL does not have this in mind. Then what can
+
+213
+00:23:04,720 --> 00:23:10,680
+we do? So in Spark, you can break this big width statement to two width statements. You
+
+214
+00:23:10,680 --> 00:23:17,680
+run the first width statement, export that data to Spark, persist it and register it
+
+215
+00:23:18,760 --> 00:23:24,120
+as a temp data frame back, and then you run the second statement. What is the problem
+
+216
+00:23:24,120 --> 00:23:31,120
+with that? This is your logic flow. This is one unit of logic. But now in order to achieve
+
+217
+00:23:32,200 --> 00:23:39,200
+certain features, you have to break it up. Then the code becomes less readable, less
+
+218
+00:23:40,200 --> 00:23:47,200
+understandable, and it's harder to maintain. And there are some other syntax that SQL doesn't
+
+219
+00:23:50,560 --> 00:23:57,560
+have. Grouped map, group apply in Pandas. SQL does not have that. Persist, broadcast.
+
+220
+00:23:58,600 --> 00:24:04,480
+They just very commonly use the syntax. And the next thing is single task. Think about
+
+221
+00:24:04,480 --> 00:24:10,640
+that. This is a very complicated logic flow. Sometimes I want multiple output. What if
+
+222
+00:24:10,640 --> 00:24:17,640
+I want to save the top data frame into a table or into a file? Can we do that? No. The only
+
+223
+00:24:20,040 --> 00:24:27,040
+solution is you have to break up the CTE statement to several parts in order to save the intermediate
+
+224
+00:24:27,040 --> 00:24:34,040
+files. Because by definition, CTE or any statement of SQL is to do one thing. So you have to
+
+225
+00:24:34,640 --> 00:24:39,760
+do multiple things. For this complicated logic, you have to do multiple things. Last but not
+
+226
+00:24:39,760 --> 00:24:44,520
+the least, it's very expensive and difficult to develop such kind of query. Think about
+
+227
+00:24:44,520 --> 00:24:50,560
+that. You're working on big data. Each substatement could take significant time. Every time when
+
+228
+00:24:50,560 --> 00:24:56,800
+you add one more substatement during development, you have to rerun everything from the beginning.
+
+229
+00:24:56,800 --> 00:25:02,760
+So that's a huge amount of recompute. Waste time, it wastes money. And you will find your
+
+230
+00:25:02,760 --> 00:25:09,680
+iteration time is just getting slower and slower while you develop this gigantic query.
+
+231
+00:25:09,680 --> 00:25:16,340
+So here is an example of how Fuque SQL, by improving the syntax of traditional SQL, how
+
+232
+00:25:16,340 --> 00:25:23,340
+we can solve this problem. So look at this SQL and this SQL. Immediately it's smaller.
+
+233
+00:25:24,040 --> 00:25:30,640
+And what we removed is the CTE statement. Of course we support CTE statement, but we
+
+234
+00:25:30,640 --> 00:25:37,640
+don't have to use it. And look at this. We only need to name two steps because it's necessary
+
+235
+00:25:37,880 --> 00:25:42,360
+because we need to join them. So they need a name. And for other steps, they can keep
+
+236
+00:25:42,360 --> 00:25:49,360
+anonymous. And look at this load. It's additional syntax. But Fuque SQL is able to run seamlessly
+
+237
+00:25:50,600 --> 00:25:56,000
+on any backend with support. Locally we can run on .db and distributely we can run on
+
+238
+00:25:56,000 --> 00:26:03,000
+.dask and spark. So using this additional syntax does not give you vendor locking.
+
+239
+00:26:04,960 --> 00:26:10,120
+And also look at this persist. We just need this seven letter keyword. We can totally
+
+240
+00:26:10,120 --> 00:26:15,880
+change the game. So the speed will be much faster. You will see the final benchmark.
+
+241
+00:26:15,880 --> 00:26:22,880
+With this persist, the execution speed of the whole workflow is much faster than before.
+
+242
+00:26:23,520 --> 00:26:29,640
+So now let me talk about another thing. How do you leverage Python? So think about that.
+
+243
+00:26:29,640 --> 00:26:34,360
+For this query, there is still a big chunk of code which is to use the window function
+
+244
+00:26:34,360 --> 00:26:39,640
+to compute the rolling standard deviation and the mean. It is what it is. If you're
+
+245
+00:26:39,640 --> 00:26:45,400
+using SQL, you have to write that. There is no shortcut. But what if you can express that
+
+246
+00:26:45,400 --> 00:26:52,400
+logic in Python? It will be much more elegant. Given that this data frame is already one
+
+247
+00:26:52,520 --> 00:26:58,800
+series of data, it's already sorted, then you can use this very expressive and very
+
+248
+00:26:58,800 --> 00:27:05,800
+short way to describe your logic. Plus you can also do the filtering. So this is to visualize
+
+249
+00:27:08,120 --> 00:27:14,900
+the transformation. It's from a thin, tall data frame to a fat and short data frame.
+
+250
+00:27:14,900 --> 00:27:21,900
+This is not a typical thing that any SQL UDF can do. Because SQL UDF requires the output
+
+251
+00:27:22,220 --> 00:27:29,220
+to be exactly the size of the input data frame. It has to change the dimension on both dimensions,
+
+252
+00:27:31,220 --> 00:27:38,220
+X and Y. So for this kind of transformation, how can we use that in Fugue? As you can see,
+
+253
+00:27:40,340 --> 00:27:45,860
+we just replaced that whole chunk of window function with just one line of code. It is
+
+254
+00:27:45,860 --> 00:27:51,740
+additional syntax, but the syntax can run on any backend with support. We just use this
+
+255
+00:27:51,740 --> 00:27:58,740
+way to call a very simple Python function that has nothing to do with Fugue. And people
+
+256
+00:27:59,680 --> 00:28:06,680
+may ask, so what I heard is that Python is always slower than Spark. Is that true? Actually,
+
+257
+00:28:08,440 --> 00:28:14,580
+that is not true. So here is the example. Here is the final execution result. Firstly,
+
+258
+00:28:14,580 --> 00:28:20,180
+let's take a look at the code size. Original Spark SQL, and then with the Fugue SQL, you
+
+259
+00:28:20,180 --> 00:28:27,180
+can see the code size reduced a bit. But with just that persist keyword, you can see how
+
+260
+00:28:27,700 --> 00:28:34,700
+much drop on execution time. But the final winner is the last one, where we combine the
+
+261
+00:28:35,420 --> 00:28:42,420
+Python logic with the SQL. It has the least code, but it has the best performance. I'm
+
+262
+00:28:43,380 --> 00:28:50,380
+not saying this is always the case, but at least it should be easily available to every
+
+263
+00:28:51,620 --> 00:28:58,620
+developers to try and to figure out which way is the best for you. And here, Fugue SQL
+
+264
+00:28:58,980 --> 00:29:05,980
+just finds a way to get the best part of Python and the best part of SQL together in a very
+
+265
+00:29:06,980 --> 00:29:13,980
+organic way. So let me give a summary of our talk. Moving from log computing to distributed
+
+266
+00:29:18,580 --> 00:29:25,580
+computing, it is just like moving from integers to real numbers. You cannot avoid learning.
+
+267
+00:29:28,180 --> 00:29:34,300
+You must learn. You must accept this fact that you have to learn new things. And you
+
+268
+00:29:34,340 --> 00:29:41,340
+have to change the way of thinking. It is necessary. There is no magic. And as a semantic
+
+269
+00:29:42,300 --> 00:29:49,300
+layer for Fugue, our mission is to keep the operations simple and intuitive, but not magical.
+
+270
+00:29:53,940 --> 00:30:00,940
+You should understand what is going on there. And we should keep you mindful when you program.
+
+271
+00:30:01,940 --> 00:30:08,940
+And we should help you follow good practices. That is the mission of Fugue. Thank you, everyone.
+
+272
+00:30:12,860 --> 00:30:19,860
+And here is the resource page of Fugue. If you are interested in using Fugue or contributing
+
+273
+00:30:20,420 --> 00:30:27,420
+to Fugue, feel free to contact us, and we are open to talk to you. And also, there are
+
+274
+00:30:28,420 --> 00:30:35,420
+tutorials. And feel free to browse the source code in the open source repository. Thank
+
+275
+00:30:35,460 --> 00:30:38,460
+you.
+
+276
+00:30:38,460 --> 00:30:45,460
+Thank you so much. That was pretty informative, and I think it was an amazing talk. Feel free
+
+277
+00:30:49,420 --> 00:30:56,020
+to reach out to the speakers for Q&A. They will be at the hallway. And I think our next
+
+278
+00:30:56,020 --> 00:30:57,980
+talk starts at 3.30.
+

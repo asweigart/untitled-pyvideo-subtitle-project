@@ -1,0 +1,1744 @@
+1
+00:00:00,000 --> 00:00:11,560
+Okay, hello everyone, thanks for coming. Thanks to all the organizers and all that. So we
+
+2
+00:00:11,560 --> 00:00:15,800
+are two of the PiedEyed maintainers and we're here to tell you about PiedEyed, which you
+
+3
+00:00:15,800 --> 00:00:22,320
+may have heard about in Peter's talk this morning. We are a Python distribution for
+
+4
+00:00:22,320 --> 00:00:30,840
+the browser. So a quick about us. So I am a UCLA, a National Science Foundation assistant
+
+5
+00:00:30,840 --> 00:00:35,920
+adjunct professor, which means a postdoc, but there's like title inflation. So yeah,
+
+6
+00:00:35,920 --> 00:00:39,880
+so this work that I've done is partially supported by NSF grant, Department of Material Science,
+
+7
+00:00:39,880 --> 00:00:44,720
+number whatever, mathematical sciences. Okay, and here's Roman.
+
+8
+00:00:44,720 --> 00:00:50,080
+And I'm Roman. So I'm a data scientist working mostly as an independent consultant and I'm
+
+9
+00:00:50,080 --> 00:00:57,760
+a core developer for At-Sec-It Learn and PiedEyed, so mostly projects that are difficult to pronounce.
+
+10
+00:00:57,760 --> 00:01:02,800
+So today we're going to talk about what is PiedEyed. We're going to review some of the
+
+11
+00:01:02,800 --> 00:01:07,600
+most common use cases, which include interactive computing, educational use cases, and machine
+
+12
+00:01:07,600 --> 00:01:12,000
+learning. And then we'll discuss a bit more in detail, like the technical developments
+
+13
+00:01:13,000 --> 00:01:24,840
+on in the last several years in PiedEyed. Sorry. So as you all know, if you have a Python
+
+14
+00:01:24,840 --> 00:01:29,560
+code and you want to run it in the browser, and this is also what was presented in this
+
+15
+00:01:29,560 --> 00:01:33,600
+morning's keynote, essentially the setup is fairly complicated because you have to have
+
+16
+00:01:33,600 --> 00:01:39,360
+some front-end code in JavaScript, probably some backend code in Python, and some infrastructure
+
+17
+00:01:39,680 --> 00:01:45,200
+that you either need to maintain or configure if it's a cloud provider. And so the idea
+
+18
+00:01:45,200 --> 00:01:50,280
+is fairly simple, is could we just run, take this Python application and run it directly
+
+19
+00:01:50,280 --> 00:02:00,280
+inside the browser. So this is possible with WebAssembly and the general implications of
+
+20
+00:02:00,280 --> 00:02:06,760
+this were really well presented this morning in the keynote by Peter.
+
+21
+00:02:06,760 --> 00:02:11,640
+So we're going to talk to introduce you PiedEyed, which is the distribution of Python in the
+
+22
+00:02:11,640 --> 00:02:17,240
+browser, and with the focus of not so much just running the interpreter or being able
+
+23
+00:02:17,240 --> 00:02:23,040
+to execute Python code, but essentially being able to run packages, existing packages and
+
+24
+00:02:23,040 --> 00:02:25,960
+existing tools in the Python ecosystem.
+
+25
+00:02:25,960 --> 00:02:33,400
+Okay. So first, what is WebAssembly? So WebAssembly is the second programming language available
+
+26
+00:02:33,400 --> 00:02:40,200
+in the browser. It's a binary instruction format for a stack-based virtual machine.
+
+27
+00:02:40,200 --> 00:02:46,520
+It's portable. It's designed for small code sizes. It's designed for security, and so
+
+28
+00:02:46,520 --> 00:02:50,080
+as part of that security, it doesn't come with any sort of standard library that it
+
+29
+00:02:50,080 --> 00:02:54,960
+always has. It just defines a set of imports, and it has a system for calling a function,
+
+30
+00:02:54,960 --> 00:03:00,960
+and so it can call the imports. And so the host application has to define what it gets
+
+31
+00:03:00,960 --> 00:03:06,680
+to import. It's implemented in all modern browsers, mobile browsers. You can run it
+
+32
+00:03:06,680 --> 00:03:13,680
+in non-web environments like Node. There's WebAssembly system interface. So yeah. Anyway,
+
+33
+00:03:13,680 --> 00:03:17,200
+that's what WebAssembly is.
+
+34
+00:03:17,200 --> 00:03:21,600
+And so then we have the inscription build tool chain. So as I said, WebAssembly itself
+
+35
+00:03:21,600 --> 00:03:28,600
+has no standard library. It can't do any input or any output. It can only do pure computation.
+
+36
+00:03:29,600 --> 00:03:36,600
+All contact with the outside world has to happen through imports. And so the inscription
+
+37
+00:03:38,200 --> 00:03:45,200
+build tool chain is a compiler tool chain that compiles C and C++ code to WebAssembly.
+
+38
+00:03:46,360 --> 00:03:51,440
+This uses Clang, so you can set up a WebAssembly target for Clang, but then we also need an
+
+39
+00:03:51,440 --> 00:03:56,600
+environment that supports system calls that actually interact with the outside world,
+
+40
+00:03:56,600 --> 00:04:01,360
+and so it also provides JavaScript bindings for all the system calls that you need. It's
+
+41
+00:04:01,360 --> 00:04:08,360
+designed for porting POSIX Linux applications. So it has POSIX Linux system calls implemented
+
+42
+00:04:08,680 --> 00:04:15,680
+in JavaScript. So then you can load this from an HTML page and serve it to a web browser.
+
+43
+00:04:18,560 --> 00:04:24,440
+So the main components of Piotite are we have CPython, which we have some patches for. We'll
+
+44
+00:04:24,440 --> 00:04:29,920
+talk about upstreaming those. It's an ongoing process that's mostly going pretty well,
+
+45
+00:04:29,920 --> 00:04:34,560
+thanks to Christian Himes. And then we have a Python and JavaScript foreign function interface,
+
+46
+00:04:34,560 --> 00:04:40,840
+which is really rich. It allows for very easy usage of one language to the other. We'll
+
+47
+00:04:40,840 --> 00:04:47,840
+talk more about this in a bit. And then we take the CPython interpreter and our foreign
+
+48
+00:04:48,360 --> 00:04:53,160
+function interface, which is like a C extension of Python. We take these two things and we
+
+49
+00:04:53,160 --> 00:04:59,520
+compile them with them scripted into a WebAssembly binary with a JavaScript host that provides
+
+50
+00:04:59,520 --> 00:05:06,520
+the operating system, all of the standard library. We also compile most of the popular
+
+51
+00:05:07,120 --> 00:05:14,120
+Python binary extensions, including NumPy, Panda, SciPy, Matplotlib. Also, we can compile
+
+52
+00:05:15,320 --> 00:05:20,160
+cryptography, so now we have Rust support very recently. And then we have a package
+
+53
+00:05:20,160 --> 00:05:25,280
+called MicroPip, which is for installing pure Python wheels from PyP.
+
+54
+00:05:25,280 --> 00:05:32,280
+Yeah, and we want to call out Michael Drutbom, who was a Mozilla employee who originally
+
+55
+00:05:32,280 --> 00:05:37,280
+made Piotite and did really great work on it. We've sort of been polishing the stuff
+
+56
+00:05:37,280 --> 00:05:44,280
+that he set up. Right, so I mentioned upstreaming RC Python patches. So we used to have to patch
+
+57
+00:05:45,280 --> 00:05:50,640
+all sorts of stuff in order to get Python to run because WebAssembly and Emscripten
+
+58
+00:05:50,640 --> 00:05:57,640
+is a very different sort of host environment than like x86 Linux. And so in order to do
+
+59
+00:06:01,120 --> 00:06:08,120
+signal handling, in order to handle certain extensions, we needed to patch a bunch of
+
+60
+00:06:08,360 --> 00:06:14,560
+things. And so, Christian Himes and Brett Cannon and I guess Ethan Smith have been involved
+
+61
+00:06:14,560 --> 00:06:20,320
+in a process, and many other Python maintainers have been involved in upstreaming a lot of
+
+62
+00:06:20,320 --> 00:06:25,360
+our patches and a lot of other fixes that they're adding to see Python in order to
+
+63
+00:06:25,360 --> 00:06:32,360
+add sort of third party support or tier three support for Piotite in Python. And so this
+
+64
+00:06:32,360 --> 00:06:38,080
+includes like upstreaming our patches. The compiler itself has a lot of bugs. It's fairly
+
+65
+00:06:38,080 --> 00:06:43,480
+new. There's not a huge number of maintainers for Emscripten. And so we're hitting a lot
+
+66
+00:06:43,480 --> 00:06:50,480
+of edge cases, a lot of bugs, trying to get the Python test suite to pass. So over time,
+
+67
+00:06:50,680 --> 00:06:54,440
+this should make Piotite more sustainable and also help like the rest of the ecosystem.
+
+68
+00:06:54,440 --> 00:06:58,800
+So other people who are trying to compile Python to WebAssembly might hit these same
+
+69
+00:06:58,800 --> 00:07:03,920
+edge cases in the Emscripten compiler, and so it should help them too.
+
+70
+00:07:03,920 --> 00:07:10,640
+So for context, Piotite isn't the first project that builds Python for the Web. You have a
+
+71
+00:07:10,640 --> 00:07:15,520
+number of those. So you have, for instance, Brighton, which is a Python 3 re-implementation
+
+72
+00:07:15,520 --> 00:07:20,520
+JavaScript, which re-implements the interpreter and parts of the standard library. There's
+
+73
+00:07:20,520 --> 00:07:25,800
+the PyPy.js, which is essentially fairly similar to what Piotite does, but it was like several
+
+74
+00:07:25,800 --> 00:07:30,960
+years ago, and it used a different technology rather than ASM.js rather than WebAssembly,
+
+75
+00:07:31,160 --> 00:07:35,600
+and this project is no longer maintained currently. And there is the Rust Python project that,
+
+76
+00:07:35,600 --> 00:07:41,000
+because it's like, so it's a re-implementation of the Python interpreter in Rust, and because
+
+77
+00:07:41,000 --> 00:07:45,600
+Rust has already a pretty nice toolchain to port things to WebAssembly, you can essentially
+
+78
+00:07:45,600 --> 00:07:52,600
+with little effort run it in a browser. So the difference, let's say what we are focused
+
+79
+00:07:52,760 --> 00:07:57,240
+on is not so much having the interpreter in the browser, but it's having the whole ecosystem
+
+80
+00:07:57,600 --> 00:08:03,560
+run there, like the whole Python ecosystem. And what matters there is essentially very
+
+81
+00:08:03,560 --> 00:08:07,880
+good compatibility and being able to run your code with minimal changes. And this is, for
+
+82
+00:08:07,880 --> 00:08:10,880
+instance, difficult if you re-implement your interpreter from scratch, because then you
+
+83
+00:08:10,880 --> 00:08:17,440
+will have some edge cases. For instance, in Brighton, it's difficult to have exactly the
+
+84
+00:08:17,440 --> 00:08:23,240
+same behavior as the standard CPython. So by using the standard CPython, we remove a
+
+85
+00:08:23,240 --> 00:08:30,240
+lot of those compatibility issues. And so I'm going to present next how we package the
+
+86
+00:08:32,520 --> 00:08:39,520
+library ecosystem. So we have a tool called MicroPip, which allows to install pure Python
+
+87
+00:08:39,640 --> 00:08:46,640
+wheels from PyPI. So essentially it's like a pip, but very simplified, so it has very
+
+88
+00:08:47,200 --> 00:08:54,200
+rudimentary dependency resolution. It's only allowed to load pure Python wheels, so wheels
+
+89
+00:08:54,600 --> 00:09:00,600
+that have the file extension as you see below. On the contrary, a lot of packages that have
+
+90
+00:09:00,600 --> 00:09:06,880
+binary extensions will not be able to install them. And instead what you have to do is,
+
+91
+00:09:06,880 --> 00:09:12,440
+well, use the PyRide build system to build them specifically for WebAssembly. So we use
+
+92
+00:09:12,440 --> 00:09:19,440
+a configuration format very highly inspired by Conda, so it's MetaYAML, where you can
+
+93
+00:09:19,440 --> 00:09:24,280
+configure how you would need to build your package with a binary extension. There is
+
+94
+00:09:24,280 --> 00:09:31,280
+a cross-compilation setup. And since recently the output is wheels, so you get Python wheels.
+
+95
+00:09:32,280 --> 00:09:37,880
+Those are, however, not still very standardized, because in particular, well, for instance,
+
+96
+00:09:37,960 --> 00:09:43,600
+Emscripten doesn't have a stable ABI, so if you update the Emscripten version, your wheels
+
+97
+00:09:43,600 --> 00:09:49,440
+are not going to be compatible with the previous ones, so that's still a significant problem.
+
+98
+00:09:49,440 --> 00:09:53,120
+There have also been a lot of improvements in the build system, so since recently we
+
+99
+00:09:53,120 --> 00:10:00,120
+used PyPI build tool to have build installations. And we'll do also some custom post-processing
+
+100
+00:10:00,120 --> 00:10:05,160
+steps. For instance, we will un-vendor tests so that the package that you install is a
+
+101
+00:10:05,200 --> 00:10:11,760
+bit smaller, because probably you don't need to have tests when you just use NumPy. However,
+
+102
+00:10:11,760 --> 00:10:17,360
+you will be able to install NumPy tests as a separate package. And so all this is currently
+
+103
+00:10:17,360 --> 00:10:24,360
+distributed with just deliver. So we have, you probably heard the scale of what is involved
+
+104
+00:10:25,680 --> 00:10:31,000
+in distributing Python packages with PyPI. We're clearly not at the same scale, so we're
+
+105
+00:10:31,160 --> 00:10:36,960
+much smaller, but there are still some challenges in making sure that if anybody puts a, you
+
+106
+00:10:36,960 --> 00:10:43,280
+know, a PyIoDiode import, loading PyIoDiode on some high traffic webpage, and everybody
+
+107
+00:10:43,280 --> 00:10:48,600
+is going to download those files, that we are able to support this. And we're really
+
+108
+00:10:48,600 --> 00:10:53,060
+grateful to just deliver who are able to do this, mostly because they're supported by
+
+109
+00:10:53,060 --> 00:11:00,060
+a number of CDN providers. And just to mention, there was also some related work to do with
+
+110
+00:11:01,040 --> 00:11:06,400
+have a build system, which is more closer to Conda, which is to also build essentially
+
+111
+00:11:06,400 --> 00:11:13,400
+packages, Python packages for VASM, which was done in M scripting forge project.
+
+112
+00:11:14,800 --> 00:11:19,960
+So to give you an overview of the packages that we currently can use, well, some of them
+
+113
+00:11:19,960 --> 00:11:24,480
+were mentioned before. So we have all the core scientific computing packages, NumPy,
+
+114
+00:11:24,480 --> 00:11:30,840
+Pandas, SciPy, MetalCleave, et cetera. So this also means that we can actually build,
+
+115
+00:11:30,840 --> 00:11:35,560
+for instance, packages that use Cyton. For SciPy, SciPy was very challenging. We'll
+
+116
+00:11:35,560 --> 00:11:42,560
+talk about this later. But SciPy uses FORTRAN. That's fairly difficult to build. So it requires
+
+117
+00:11:42,760 --> 00:11:48,320
+external libraries such as BLAST and LAPACK for linear algebra. And then with this, we
+
+118
+00:11:48,320 --> 00:11:53,640
+can also use all the downstream, build all the downstream packages, Scikit-learn, Scikit-img,
+
+119
+00:11:53,640 --> 00:12:00,600
+and statmodel. So we can load packages from PyP, and MicroPip, and also we have a number
+
+120
+00:12:00,600 --> 00:12:04,520
+of different other packages that are not part of the scientific computing. So PyIdiode
+
+121
+00:12:04,520 --> 00:12:08,120
+is not a project for scientific computing. It's just that we have a lot of scientific
+
+122
+00:12:08,120 --> 00:12:13,880
+computing packages because those tend to have binary extensions. But you, for instance,
+
+123
+00:12:13,880 --> 00:12:20,880
+can use SQL Alchemy to set up a SQLite database. So that's the only type of database that currently
+
+124
+00:12:22,320 --> 00:12:27,200
+works. And use it for something completely unrelated to scientific computing. And since
+
+125
+00:12:27,200 --> 00:12:32,320
+recently, as Hude mentioned, we also are able to compile the latest version of cryptography,
+
+126
+00:12:32,320 --> 00:12:39,320
+which was implemented in Rust and uses the PyTree library to expose the Rust code to
+
+127
+00:12:40,600 --> 00:12:47,600
+Python. So overall, we have over 120 packages in PyIdiode, and those, in addition to those,
+
+128
+00:12:48,240 --> 00:12:51,720
+you can install from PyP that are just for Python.
+
+129
+00:12:52,400 --> 00:12:57,800
+Okay, so I'm going to talk about the foreign function interface. So we have Python, the
+
+130
+00:12:57,800 --> 00:13:02,480
+interpreter, which you can run in the browser. But the browser's host system is all in JavaScript.
+
+131
+00:13:02,480 --> 00:13:09,480
+So if you want to directly talk to the DOM, you need JavaScript functionality. And so
+
+132
+00:13:09,560 --> 00:13:15,640
+it's important that we can sort of interface well with existing software that's already
+
+133
+00:13:15,640 --> 00:13:22,120
+written for the web. And so we have a very pleasantly designed foreign function interface
+
+134
+00:13:22,120 --> 00:13:27,240
+that makes it very easy to do this. So if you want to use JavaScript from Python, you
+
+135
+00:13:27,240 --> 00:13:33,240
+can import JavaScript objects that are in the global JavaScript scope directly from
+
+136
+00:13:33,240 --> 00:13:40,240
+this sort of magic JS module. So for instance, setTimeout is a JavaScript function that calls
+
+137
+00:13:40,880 --> 00:13:46,200
+a function at some delay. It's in the global scope, so you can import it from JS, and then
+
+138
+00:13:46,200 --> 00:13:52,280
+you can call setTimeout, and it will call a function at 100 millisecond delay.
+
+139
+00:13:52,280 --> 00:13:56,840
+On the other hand, you can also use Python from JavaScript. So like at the start entry
+
+140
+00:13:56,840 --> 00:14:01,600
+point of your application, you want to call into Python to call your main method. So a
+
+141
+00:14:01,600 --> 00:14:05,040
+Python object that's in global scope can be accessed from JavaScript. So here, this is
+
+142
+00:14:05,040 --> 00:14:12,040
+an example where we load the sum built-in method, and then we use it on a list, and
+
+143
+00:14:13,280 --> 00:14:20,280
+you know, it sums the entry. So sum accepts any iterable. That argument is a JavaScript
+
+144
+00:14:20,360 --> 00:14:26,160
+array, but we can make JavaScript arrays into Python iterables, and so sum accepts it and
+
+145
+00:14:26,160 --> 00:14:29,720
+successfully iterates over it and sums the values.
+
+146
+00:14:29,720 --> 00:14:36,720
+So we automatically convert simple types, so float, string, int, void, none, null. Most
+
+147
+00:14:38,120 --> 00:14:45,120
+other types are proxied, so we just make like a wrapper object that allows you to make sort
+
+148
+00:14:45,120 --> 00:14:50,200
+of convenient idiomatic calls in the current language that go across the other language
+
+149
+00:14:50,200 --> 00:14:54,240
+and do operations in the other language.
+
+150
+00:14:54,240 --> 00:14:58,640
+So here's some examples. So here's some examples of using Python utilities from JavaScript.
+
+151
+00:14:58,640 --> 00:15:02,960
+So Python has all these great standard library utilities. So for instance, here is the reduce
+
+152
+00:15:02,960 --> 00:15:09,960
+function. Okay, I can use the mouse here. So the first argument is a lambda. Now this,
+
+153
+00:15:11,280 --> 00:15:16,160
+this is the Python functools package. We imported it and returned it, so this is functools,
+
+154
+00:15:16,160 --> 00:15:22,680
+the Python object, it's a module object. So functools.reduce now is a method, and we can
+
+155
+00:15:22,680 --> 00:15:27,400
+call it, its first argument is supposed to be a function that takes two arguments and
+
+156
+00:15:27,400 --> 00:15:33,080
+returns one. Now this argument is a JavaScript lambda expression, right, multiplies the two
+
+157
+00:15:33,080 --> 00:15:39,080
+arguments. This is a JavaScript array. Reduce expects its second argument to be an iterable.
+
+158
+00:15:39,080 --> 00:15:44,600
+It expects its first argument to be a callable. This is a callable, this is an iterable. It
+
+159
+00:15:44,600 --> 00:15:49,520
+successfully reduces it and gets a 10 or something.
+
+160
+00:15:49,520 --> 00:15:53,840
+So right, okay, here's the second example. So math is like another, you know, standard
+
+161
+00:15:54,320 --> 00:15:58,040
+library package. We can import it, it returns the module, the math module, and then math
+
+162
+00:15:58,040 --> 00:16:02,280
+has a least common multiple method, and this will compute the least common multiple for
+
+163
+00:16:02,280 --> 00:16:08,680
+6 and 13 from JavaScript. So, you know, again, another example which is a bit more complicated.
+
+164
+00:16:08,680 --> 00:16:15,680
+So here we import the random module, and so now random does not take an iterable as its,
+
+165
+00:16:17,960 --> 00:16:22,160
+random.sample is going to sample from a list. And it does not take an iterable as its first
+
+166
+00:16:22,200 --> 00:16:29,200
+argument. It needs a list. Now this is a JavaScript array which is different from a Python list.
+
+167
+00:16:29,560 --> 00:16:34,800
+So we need to convert it into a Python list. So we have this converter function, pi dot
+
+168
+00:16:34,800 --> 00:16:39,480
+2 pi, which takes the JavaScript array and converts it into a Python list so that it's
+
+169
+00:16:39,480 --> 00:16:44,760
+acceptable for random sample. Then this samples five random elements from the pair red and
+
+170
+00:16:44,760 --> 00:16:48,560
+blue so we're going to get like red, red, blue, blue, red or something. And then, but
+
+171
+00:16:48,560 --> 00:16:54,200
+that returns a Python list, but if we want a JavaScript array then we need to convert
+
+172
+00:16:54,200 --> 00:17:01,200
+it back. So that's this to JS function. So here, so that previous example actually leaks
+
+173
+00:17:01,360 --> 00:17:07,760
+a couple of Python objects. They'll eventually get reclaimed by the browser garbage collector,
+
+174
+00:17:07,760 --> 00:17:11,880
+but it takes a while. Whereas like Python garbage collector because its reference counter
+
+175
+00:17:11,880 --> 00:17:16,480
+tends to get called much faster. So here's an example that actually doesn't leak these
+
+176
+00:17:16,520 --> 00:17:20,840
+objects. Where this is basically a wrapper function which you would use to call it from
+
+177
+00:17:20,840 --> 00:17:26,560
+JavaScript. And so in general you might have like some application which does some data
+
+178
+00:17:26,560 --> 00:17:32,880
+processing. It receives some data structure from that you collect from the user interface
+
+179
+00:17:32,880 --> 00:17:36,480
+and then you call into like the main entry point of your Python application. It does
+
+180
+00:17:36,480 --> 00:17:43,000
+some processing and then it returns some data back to JavaScript for display. And so this
+
+181
+00:17:43,320 --> 00:17:48,480
+shows you how you would do the translations at the boundary of the application. So here
+
+182
+00:17:48,480 --> 00:17:53,840
+we have like the sample space. So this would be red and blue. But that again we're expecting
+
+183
+00:17:53,840 --> 00:17:59,320
+this to be called from JavaScript. So we're expecting this sample space to be a JavaScript
+
+184
+00:17:59,320 --> 00:18:06,320
+array. Now sample expects again a Python list. So first we convert space to a Python list
+
+185
+00:18:06,720 --> 00:18:13,720
+using the 2Py method. And then we sample from it. We get a Python list and then we want
+
+186
+00:18:15,280 --> 00:18:20,000
+to return it to the UI potentially that's going to display it to the user in some way.
+
+187
+00:18:20,000 --> 00:18:27,000
+And so we convert the result list back to JavaScript at the boundary. Yeah. So here's
+
+188
+00:18:27,280 --> 00:18:34,280
+another example. So this uses the fetch API. So fetch is a way to download you know like
+
+189
+00:18:34,360 --> 00:18:40,600
+URLs in the browser. So we fetch example dot com. We can specify some options. And it
+
+190
+00:18:40,600 --> 00:18:47,600
+looks very much like normal Python code but it's calling into a JavaScript method. You
+
+191
+00:18:47,800 --> 00:18:52,200
+will see in some of this in Peter Wang's talk if you went to it too. So here's another example
+
+192
+00:18:52,200 --> 00:18:59,200
+where so this shows using low level memory buffers. So NumPy has a multi-dimensional
+
+193
+00:18:59,200 --> 00:19:05,200
+array interface. So it makes like you know fast memory buffers. And you can actually
+
+194
+00:19:05,200 --> 00:19:11,720
+call like make direct memory accesses from JavaScript. So for instance if you want to
+
+195
+00:19:11,720 --> 00:19:18,720
+use a JavaScript image or video processing library you can pass it an indie array from
+
+196
+00:19:18,720 --> 00:19:24,760
+NumPy and you can access from this buffer the strides and the dimensions and all the
+
+197
+00:19:24,760 --> 00:19:30,120
+stuff and you can hand it to a JavaScript indie array library and then call into whatever
+
+198
+00:19:30,120 --> 00:19:35,600
+this image processing or AI library you want to use as.
+
+199
+00:19:35,600 --> 00:19:42,600
+So what we're doing is essentially we're running our Python code in the scripting host environment
+
+200
+00:19:43,600 --> 00:19:49,600
+which we use as a VM. So it's essentially as running Python code on any like a bit strange
+
+201
+00:19:50,240 --> 00:19:57,240
+VM. So the features of this one is that it's a 32 bit architecture. So well normally it
+
+202
+00:19:58,600 --> 00:20:05,000
+works but some Python packages are a bit like less well tested on 32 bit. We have in file
+
+203
+00:20:05,000 --> 00:20:09,800
+in memory file system so Emscripten provides this. So you have a file system you can write
+
+204
+00:20:09,800 --> 00:20:16,800
+files like your Python modules are loaded from files but it's in memory one.
+
+205
+00:20:20,320 --> 00:20:27,320
+So and the limitation is that you cannot use for instance super ss's you cannot use threading
+
+206
+00:20:29,840 --> 00:20:36,840
+because those are not allowed by this VM. You can also not use sockets and some system
+
+207
+00:20:37,960 --> 00:20:44,960
+calls are implemented but not all. So it's also difficult to use some of the standard
+
+208
+00:20:45,960 --> 00:20:52,960
+like IOS streams such as STD out because like if you want to show something you need to
+
+209
+00:20:53,440 --> 00:20:59,280
+render it on the HTML page not like as you would normally on an OS.
+
+210
+00:20:59,280 --> 00:21:04,640
+And next we'll present some of the use cases we have that are used by that.
+
+211
+00:21:04,640 --> 00:21:09,360
+Right so I guess our three main use cases that we want to talk about are interactive
+
+212
+00:21:09,360 --> 00:21:14,320
+computing as was discussed by Peter Wang and then education and machine learning are sort
+
+213
+00:21:14,320 --> 00:21:21,320
+of special cases of the interactive computing that we're particularly good for. It's very
+
+214
+00:21:21,440 --> 00:21:24,680
+good for like scientific communication and that sort of stuff.
+
+215
+00:21:24,680 --> 00:21:28,560
+So we want to talk about client only architectures which is what Peter Wang again talked about
+
+216
+00:21:28,560 --> 00:21:34,880
+this morning. So the idea is that if you have a back end server you know so then the user
+
+217
+00:21:34,880 --> 00:21:39,920
+is using your website your web application it sends data back to the server. The server
+
+218
+00:21:39,920 --> 00:21:44,280
+does some computations with it and then it sends the results back to the UI to be displayed
+
+219
+00:21:45,160 --> 00:21:51,400
+and so the client only architecture the server's only role is to send a set of static files
+
+220
+00:21:51,400 --> 00:21:57,360
+to the user and then all of the logic all of the computation happens inside of the browser
+
+221
+00:21:57,360 --> 00:22:01,680
+and you know so this has benefits to privacy it has benefits from the right I guess we'll
+
+222
+00:22:01,680 --> 00:22:08,000
+talk about here right okay so usability benefits right so you don't need to install Python
+
+223
+00:22:08,000 --> 00:22:12,720
+so if you're like doing scientific computation you can share your work with other people
+
+224
+00:22:12,840 --> 00:22:17,680
+they don't need to have Python installed right so there's big benefits to scalability so
+
+225
+00:22:17,680 --> 00:22:21,440
+you don't need to have a web server you don't need or you need to have a static you need
+
+226
+00:22:21,440 --> 00:22:26,380
+to sort of static files you don't need like any containerization you don't need any cloud
+
+227
+00:22:26,380 --> 00:22:31,280
+you don't need to figure out how to organize the compute because it all happens on the
+
+228
+00:22:31,280 --> 00:22:36,240
+client side. Yeah and generally packages only need to be downloaded once and then the browser
+
+229
+00:22:36,240 --> 00:22:39,840
+will cache them so it takes a long time on the first use but if you're using it like
+
+230
+00:22:40,040 --> 00:22:45,880
+every day as part of your like scientific computing workflow then you'll only see that
+
+231
+00:22:45,880 --> 00:22:51,240
+time hit on the first load right so it also has big benefits to privacy so because all
+
+232
+00:22:51,240 --> 00:22:55,480
+calculations are run locally no data is sent to a remote server which is you know good
+
+233
+00:22:55,480 --> 00:22:58,400
+for users because their data is private it's good for developers because they don't have
+
+234
+00:22:58,400 --> 00:23:02,760
+to fill out as much paperwork so for instance there's this talk analyzing sensitive data
+
+235
+00:23:02,760 --> 00:23:08,560
+at scale doesn't have to be a headache which is about analyzing you know children's financial
+
+236
+00:23:08,560 --> 00:23:13,840
+data with python where they have a lot of trouble installing software there's a complicated
+
+237
+00:23:13,840 --> 00:23:18,120
+paperwork they have to do to install software but they also cannot use software as a service
+
+238
+00:23:18,120 --> 00:23:22,840
+because they cannot send out that private data so what they do is they go to a website
+
+239
+00:23:22,840 --> 00:23:28,160
+they download the python application with Piedide and then they can turn off the internet
+
+240
+00:23:28,160 --> 00:23:32,680
+airgap the computer plug in a flash drive with the children's sensitive financial data
+
+241
+00:23:32,920 --> 00:23:36,400
+and then do the analysis there.
+
+242
+00:23:36,400 --> 00:23:41,080
+And so what's also interesting that lately there has been a growing ecosystem of tools
+
+243
+00:23:41,080 --> 00:23:47,080
+that allow you to make client only python applications so there's PyScrip which was
+
+244
+00:23:47,080 --> 00:23:53,000
+introduced in this morning's keynote which allows you to create rich python applications
+
+245
+00:23:53,000 --> 00:24:00,000
+in the browser using HTML there is Iridium which is a tool that allows you to make interactive
+
+246
+00:24:00,200 --> 00:24:07,200
+documents and data visualizations like they use a lot of markdown so it's nice to write
+
+247
+00:24:07,400 --> 00:24:13,640
+there are also attempts to essentially interface react like to use react from python using
+
+248
+00:24:13,640 --> 00:24:20,640
+the Piedide type translation tools and then there's like project like VC code which runs
+
+249
+00:24:23,320 --> 00:24:27,760
+essentially python snippets as HTML type so there's like a growing ecosystem of tools
+
+250
+00:24:27,920 --> 00:24:34,360
+we can also mention all the projects that allow you to run notebooks on the client side
+
+251
+00:24:34,360 --> 00:24:41,360
+so one of the most popular ones is Jupyter Lite currently which is essentially the code
+
+252
+00:24:41,360 --> 00:24:48,120
+base of Jupyter Lab which normally requires a kernel on the server but in this case the
+
+253
+00:24:48,120 --> 00:24:54,160
+kernel was moved inside the web browser and it runs on Piedide and there's also Startboard
+
+254
+00:24:54,160 --> 00:24:58,600
+Notebook there's Baston which is a fork of Jupyter Notebook with the same idea as Jupyter
+
+255
+00:24:58,600 --> 00:25:05,600
+Lite so this allows to have interactive computing in your browser without having to stop servers
+
+256
+00:25:10,400 --> 00:25:17,400
+and for instance if you go now on the NumPy page there will be some examples that use
+
+257
+00:25:17,720 --> 00:25:24,720
+these tools to illustrate NumPy another significant topic of applications Piedide applications
+
+258
+00:25:27,840 --> 00:25:34,840
+has been education so to give an example for instance currently python is mandatory in
+
+259
+00:25:34,840 --> 00:25:41,000
+French high school curriculum and so the problem they face is that well teachers are not really
+
+260
+00:25:41,000 --> 00:25:48,000
+python developers so they don't have time to try to install python on students laptops
+
+261
+00:25:49,280 --> 00:25:53,320
+and on the other side if you actually want to have some centralized infrastructure that
+
+262
+00:25:53,320 --> 00:25:58,160
+allows you to execute python code well this is costly both in terms of servers, compute
+
+263
+00:25:58,160 --> 00:26:05,160
+time and in terms of maintenance and so what they did is to essentially run one like to
+
+264
+00:26:05,320 --> 00:26:12,320
+develop a notebook solution Baston which is backed by Piedide and they deploy this massively
+
+265
+00:26:12,440 --> 00:26:18,720
+in high schools in France and so they have like 100,000 weekly users while only having
+
+266
+00:26:18,720 --> 00:26:24,480
+to maintain a very small like essentially just serving static files and generally there
+
+267
+00:26:24,480 --> 00:26:30,560
+have been a lot of different projects that try to use some of these ideas for either
+
+268
+00:26:30,640 --> 00:26:34,520
+for education or for research.
+
+269
+00:26:34,520 --> 00:26:41,240
+Another use case that I'm personally interested in is how do we deploy machine learning models
+
+270
+00:26:41,240 --> 00:26:46,400
+so the traditional way to do this is you train your model which is often python code so it's
+
+271
+00:26:46,400 --> 00:26:53,400
+going to be I don't know scikit learn or tensor flow or PyTorch you serialize it on two disks
+
+272
+00:26:53,520 --> 00:26:58,160
+somehow so there's you can use the standard pickle format which is like the standard way
+
+273
+00:26:58,160 --> 00:27:04,600
+to serialize python objects or there are some specific serialization formats then you
+
+274
+00:27:04,600 --> 00:27:09,120
+develop a web service you package it probably in a container and then you deploy it somewhere
+
+275
+00:27:09,120 --> 00:27:15,800
+on some server so this is again this is complicated and there are tools that actually work with
+
+276
+00:27:15,800 --> 00:27:20,600
+this custom serialization formats that allow you to do inference in the browser so that
+
+277
+00:27:20,600 --> 00:27:26,680
+support web assembly however they only work for a fairly limited set of operations so
+
+278
+00:27:26,840 --> 00:27:33,840
+for instance if you use TensorFlow.js you will be able to run tensor flow operators
+
+279
+00:27:34,320 --> 00:27:37,880
+but you will not be able to run arbitrary python code that you might need to pre-process
+
+280
+00:27:37,880 --> 00:27:44,120
+your data or transform it somehow and so the idea is that well since you now have python
+
+281
+00:27:44,120 --> 00:27:51,120
+running in the browser you can just use pickle so pickle is a standard python serialization
+
+282
+00:27:52,000 --> 00:27:57,120
+format it has some disadvantages because it's a bit unsafe since you're running arbitrary
+
+283
+00:27:57,120 --> 00:28:02,760
+python code it's a bit brittle to environment changes but it's essentially portable and
+
+284
+00:28:02,760 --> 00:28:06,320
+non-epic meaning that once you just realize it you get your original python object and
+
+285
+00:28:06,320 --> 00:28:13,320
+you can explore it and so the steps to now to deploy scikit learn models for instance
+
+286
+00:28:13,800 --> 00:28:18,160
+with pyodide would be just you create the environment which needs to match between the
+
+287
+00:28:18,240 --> 00:28:22,280
+environment where you train your model and the environment where you predict you pick
+
+288
+00:28:22,280 --> 00:28:27,280
+your model you unpickle it in the browser and then you run inference on your python
+
+289
+00:28:27,280 --> 00:28:33,880
+object so also training can also happen directly in the browser we can illustrate this with
+
+290
+00:28:33,880 --> 00:28:40,880
+the following example yeah that was not it yeah I did that before the time sorry sorry
+
+291
+00:28:48,560 --> 00:28:55,560
+the home key is a bit of a okay so here we have an example which is a react application
+
+292
+00:28:58,440 --> 00:29:05,040
+that's used to display classifier decision boundaries using matplotlib so it loads it
+
+293
+00:29:05,040 --> 00:29:10,800
+has uses some example data it trains a model in it and then it displays the decision boundary
+
+294
+00:29:10,800 --> 00:29:14,800
+here so you have here for instance you have three classes and you see the decision boundary
+
+295
+00:29:15,000 --> 00:29:22,000
+here with the logistic regression model and then switch browser tabs no it's not sorry
+
+296
+00:29:25,240 --> 00:29:30,760
+so you can see the three boundaries three classes that are categorized with this model
+
+297
+00:29:30,760 --> 00:29:35,380
+and now you can just change that for instance your model it's going to be retrained live
+
+298
+00:29:35,380 --> 00:29:40,460
+in the browser you're going to have it change fairly quickly and then even here in this
+
+299
+00:29:40,500 --> 00:29:44,340
+application you can like add extra points for instance and your model is going to be
+
+300
+00:29:44,340 --> 00:29:51,340
+retrained each time you do this and it's going to be adapted and like fairly very very quickly
+
+301
+00:29:56,300 --> 00:29:59,140
+okay so now I'm going to talk about latest developments in Outlook right there were a
+
+302
+00:29:59,140 --> 00:30:02,500
+bunch more fancier demos at Peter Wang's talk this morning so you can see more of the stuff
+
+303
+00:30:02,500 --> 00:30:06,220
+that we can do with this right so now I'm going to talk about some of the technical
+
+304
+00:30:06,220 --> 00:30:11,400
+things that have gone into making Pydide work recently which we think are really fun so
+
+305
+00:30:11,400 --> 00:30:17,100
+what issue is packaging SciPy and Fortran so there's not a working Fortran compiler
+
+306
+00:30:17,100 --> 00:30:22,900
+based on LLVM RM script and toolchain is based on LLVM and so this is a problem for us there's
+
+307
+00:30:22,900 --> 00:30:29,280
+three work in progress compilers there's LFortran and there's Flang Classic and there's Flang
+
+308
+00:30:29,280 --> 00:30:34,140
+and then so I mean you can do even like very desperate things like there's a GCC plugin
+
+309
+00:30:34,180 --> 00:30:39,340
+called Dragon Egg which allows you to produce LLVM IR and then you can like hand that over
+
+310
+00:30:39,340 --> 00:30:44,980
+to LLVM and like compile it to WebAssembly but this is sort of a desperation move so
+
+311
+00:30:44,980 --> 00:30:51,980
+we use FQC which is a program to convert Fortran 77 code to Z code one problem with this
+
+312
+00:30:52,620 --> 00:30:59,620
+is that much of the code in SciPy is Fortran that's newer than Fortran 77, Fortran 90
+
+313
+00:31:00,580 --> 00:31:07,380
+even newer ones and FQC sometimes exceeds on it but we have lots of trouble with it
+
+314
+00:31:07,380 --> 00:31:12,900
+so we use a mix we have an automatic source transformations that we do on the Fortran
+
+315
+00:31:12,900 --> 00:31:18,900
+input we have automatic source transformations on the C output that we do both before and
+
+316
+00:31:18,900 --> 00:31:24,080
+after conversion and then we also have a lot of sort of manual patches and this gets most
+
+317
+00:31:24,080 --> 00:31:29,080
+of the SciPy test passing but it's sort of a big effort.
+
+318
+00:31:29,080 --> 00:31:36,080
+Okay so another big issue for us is function pointer casts so Python C extensions define
+
+319
+00:31:37,360 --> 00:31:43,760
+C functions and then call them with the wrong number of arguments. The C standard says this
+
+320
+00:31:43,760 --> 00:31:50,080
+is undefined behavior but most C compilers generate code that doesn't crash so if you
+
+321
+00:31:50,080 --> 00:31:54,120
+define a function that takes two arguments but ignore the second one and then you call
+
+322
+00:31:54,120 --> 00:32:01,120
+it with one argument usually on native architecture this doesn't crash. WebAssembly however puts
+
+323
+00:32:01,420 --> 00:32:07,640
+the signature of the function into the assembly and the runtime will validate the function
+
+324
+00:32:07,640 --> 00:32:12,560
+pointer at runtime and check whether its signature matches the asserted signature if it does
+
+325
+00:32:12,560 --> 00:32:18,560
+not it will crash with call indirect function pointer signature mismatch.
+
+326
+00:32:18,560 --> 00:32:24,040
+So here's an example so here's your C extension like numpy or something so we define the function
+
+327
+00:32:24,040 --> 00:32:27,240
+called do something now this function actually just doesn't do anything it just returns
+
+328
+00:32:27,240 --> 00:32:33,040
+none and it takes a single object which is the representation of this function as a Python
+
+329
+00:32:33,040 --> 00:32:37,920
+object and it's going to return none all the time. So then you need to tell the Python
+
+330
+00:32:37,920 --> 00:32:42,840
+virtual machine the Python interpreter how to invoke this so we say its name is do something
+
+331
+00:32:42,840 --> 00:32:46,680
+and we say that here's the function pointer that we're going to call when we want to call
+
+332
+00:32:46,680 --> 00:32:51,760
+this and then we give it the calling convention which is no arms. Now people in the back probably
+
+333
+00:32:51,760 --> 00:32:56,120
+won't see this at the bottom but in method object dot C in the interpreter it will call
+
+334
+00:32:56,120 --> 00:33:01,680
+this function with two arguments see this null here so it's going to put a null in
+
+335
+00:33:01,680 --> 00:33:06,280
+as the second argument you know of course the reason we didn't take that as an argument
+
+336
+00:33:06,280 --> 00:33:11,040
+is because it's always null so it doesn't give you useful information so C developers
+
+337
+00:33:12,040 --> 00:33:19,040
+forget about it but in WebAssembly this is a crash and there's tons of these right so
+
+338
+00:33:19,040 --> 00:33:23,280
+I mean all the solution would be to fix all of them in the packages but we don't have
+
+339
+00:33:23,280 --> 00:33:28,360
+the maintainer effort to do that because there's so many of them. So the solution that we finally
+
+340
+00:33:28,360 --> 00:33:34,560
+found after much contemplation is that calls from JavaScript into WebAssembly are flexible
+
+341
+00:33:34,560 --> 00:33:38,880
+they can be called with the wrong number of arguments and it just works. So we use a trampling
+
+342
+00:33:38,880 --> 00:33:42,400
+call we call from WebAssembly back out to JavaScript and we say JavaScript why don't
+
+343
+00:33:42,400 --> 00:33:46,360
+you call back into WebAssembly with this function these arguments and then it calls back into
+
+344
+00:33:46,360 --> 00:33:49,720
+JavaScript and that accepts the wrong number of arguments is fine. This solution has been
+
+345
+00:33:49,720 --> 00:33:55,400
+upstreamed into Python 3.11 thanks to encouragement from Christian Himes you know and that's why
+
+346
+00:33:55,400 --> 00:34:00,400
+I have a blog post about this you can see the poll request if you want it's a big thing.
+
+347
+00:34:01,240 --> 00:34:08,240
+Okay so another issue of this veramind. Right so another problem that most like a lot of
+
+348
+00:34:08,600 --> 00:34:13,600
+PyLite users face is that you cannot use essentially HTTP client or requests or all those libraries
+
+349
+00:34:13,600 --> 00:34:17,800
+that need to interact with the network because sockets don't work. So what you have to do
+
+350
+00:34:17,800 --> 00:34:23,720
+instead is to use JavaScript API such as fetch but then there is another problem that those
+
+351
+00:34:23,760 --> 00:34:30,760
+APIs are often async and Python expects those functions to be sync. So there is a work in
+
+352
+00:34:31,640 --> 00:34:36,020
+progress solution which tries to use a WebWorker so WebWorker is essentially like a process
+
+353
+00:34:36,020 --> 00:34:42,000
+in classical Python so it's another so it's another worker you can run in your browser
+
+354
+00:34:42,000 --> 00:34:48,000
+to which you can actually send the requests to download your package async and meanwhile
+
+355
+00:34:48,320 --> 00:34:55,320
+you block your main thread with atomics to until that fetch completes. So there is a
+
+356
+00:34:55,320 --> 00:35:00,200
+project that's being worked by hood called sync link which aims to make this process
+
+357
+00:35:00,200 --> 00:35:04,800
+easier and so as an example another thing is for instance because you are in the browser
+
+358
+00:35:04,800 --> 00:35:10,280
+sandbox you cannot access files on your file system due to security reasons however there
+
+359
+00:35:10,280 --> 00:35:15,680
+is a Chrome file system API which allows you to essentially using this system to mount
+
+360
+00:35:15,720 --> 00:35:22,120
+point like a local folder inside the M scripting file system and then you can directly write
+
+361
+00:35:22,120 --> 00:35:24,320
+into the host OS file system.
+
+362
+00:35:24,320 --> 00:35:31,320
+Okay so right so we have async IO in the browser so this is each browser process I guess we
+
+363
+00:35:31,520 --> 00:35:38,520
+are going to call it comes with its own event loop and Python has event loops you can implement
+
+364
+00:35:38,520 --> 00:35:43,320
+and so we have a custom event loop for async IO which basically all it does to do is schedule
+
+365
+00:35:43,320 --> 00:35:47,440
+tasks on the browser event loop. So it has certain limitations like async IO dot run
+
+366
+00:35:47,440 --> 00:35:53,120
+until complete cannot work as expected because it blocks the same process that's actually
+
+367
+00:35:53,120 --> 00:35:59,520
+doing the Python computation and so it cannot block and we also have no control over the
+
+368
+00:35:59,520 --> 00:36:03,760
+event loop lifecycle but one of the big benefits of this is that you don't need to control
+
+369
+00:36:03,760 --> 00:36:07,360
+the event loop lifecycle no one wants to do that you know you really just want to run
+
+370
+00:36:07,360 --> 00:36:11,280
+your async code setting up the event loop is sort of baggage that like we have to go
+
+371
+00:36:11,600 --> 00:36:15,760
+through to get to the running the async code and so yeah.
+
+372
+00:36:15,760 --> 00:36:21,120
+So another frequent question is how big are like packages you download so for instance
+
+373
+00:36:21,120 --> 00:36:25,760
+if you have an application on the right here that loads pandas well you have to load pandas
+
+374
+00:36:25,760 --> 00:36:31,080
+and all the dependencies of pandas so including numpy here and then you have to load CPython
+
+375
+00:36:31,080 --> 00:36:35,560
+the standard library so in this example at the very bottom you can see that we in total
+
+376
+00:36:35,560 --> 00:36:42,560
+downloaded 18 megabytes and around 30 megabytes we get around 30 megabytes after it's uncompressed.
+
+377
+00:36:44,120 --> 00:36:49,080
+So this is a significant issue because while Python ecosystem was never optimized for size
+
+378
+00:36:49,080 --> 00:36:52,760
+because if you install local it doesn't really matter there are historically large packages
+
+379
+00:36:52,760 --> 00:36:56,920
+such as CPy which has a lot of modules that maybe you are not going to use in the given
+
+380
+00:36:56,920 --> 00:37:01,520
+application but they're still there when you install CPy and also as you mentioned before
+
+381
+00:37:01,520 --> 00:37:03,840
+some packages will include tests.
+
+382
+00:37:03,840 --> 00:37:06,160
+So what can we do about this?
+
+383
+00:37:06,160 --> 00:37:11,760
+Well there are several possible ways so we could try to break large packages into smaller
+
+384
+00:37:11,760 --> 00:37:16,440
+ones the problem is basically it changes your dependency graph so you have new packages
+
+385
+00:37:16,440 --> 00:37:19,200
+that are created and that's a bit difficult to manage.
+
+386
+00:37:19,200 --> 00:37:24,480
+A different approach is to use a bundler tool so a bundler tool it means that we have some
+
+387
+00:37:24,480 --> 00:37:28,840
+Python code that we need to run we know the code in advance we're going to run it in the
+
+388
+00:37:28,880 --> 00:37:34,120
+PIO diet and we're going to check at runtime which files are actually accessed and then
+
+389
+00:37:34,120 --> 00:37:38,160
+we're going to recreate an archive with just those files which should be much smaller than
+
+390
+00:37:38,160 --> 00:37:40,440
+all the files that were installed.
+
+391
+00:37:40,440 --> 00:37:45,800
+And finally last approach is using dynamic imports so essentially fetch the file when
+
+392
+00:37:45,800 --> 00:37:52,800
+you import it however there are often like more than 50 modules that a given application
+
+393
+00:37:52,920 --> 00:37:58,240
+can import so it's a lot of like it's probably a significant performance concerns.
+
+394
+00:37:58,240 --> 00:38:02,080
+And finally the last solution is to well we can just wait for the average webpage size
+
+395
+00:38:02,080 --> 00:38:08,360
+to grow larger I mean it's a sad situation but it turns out that it's a trend that goes
+
+396
+00:38:08,360 --> 00:38:09,360
+in our favor.
+
+397
+00:38:09,360 --> 00:38:16,360
+Okay so now we're going to talk about the roadmap so what we're up to in the future.
+
+398
+00:38:16,360 --> 00:38:20,000
+There's a lot of maintenance work to do so we need to keep up with inscription releases
+
+399
+00:38:20,000 --> 00:38:23,360
+currently we're stuck on an old version of inscription due to a bug in recent versions
+
+400
+00:38:23,360 --> 00:38:28,740
+of Firefox combined with recent versions of LLVM but it's a fair amount of work to keep
+
+401
+00:38:28,740 --> 00:38:32,520
+up with them scripted in because of very weird bugs.
+
+402
+00:38:32,520 --> 00:38:38,480
+We need to upstream patches so NumPy has a lot of patches we'd like to upstream them
+
+403
+00:38:38,480 --> 00:38:43,720
+many other packages have like a few patches and it would be nice to get more of those
+
+404
+00:38:43,720 --> 00:38:44,720
+upstream.
+
+405
+00:38:44,720 --> 00:38:49,320
+Yeah support for synchronous I.O. and web workers as we talked about a couple minutes
+
+406
+00:38:49,320 --> 00:38:54,760
+ago it would be nice to re-implement certain standard library modules that use web APIs
+
+407
+00:38:54,760 --> 00:38:59,320
+like HTTP client you know could use fetch.
+
+408
+00:38:59,320 --> 00:39:03,820
+Reducing size of packages improving the sustainability of the build system maybe someday threading
+
+409
+00:39:03,820 --> 00:39:09,920
+support so there's a lot of work to be done both upstream and downstream you know in fact
+
+410
+00:39:09,920 --> 00:39:13,840
+it would be very valuable to work on the inscription compiler and improve some of these weird edge
+
+411
+00:39:13,840 --> 00:39:14,840
+cases that we had.
+
+412
+00:39:15,360 --> 00:39:19,840
+And of course to actually get this to users our project is very much sort of down the
+
+413
+00:39:19,840 --> 00:39:25,240
+trenches of doing platform compatibility problems that we're trying to solve but we're also
+
+414
+00:39:25,240 --> 00:39:29,840
+trying to be useful tool to downstream so there's documentation work there's all sorts
+
+415
+00:39:29,840 --> 00:39:31,680
+of work to be done.
+
+416
+00:39:31,680 --> 00:39:40,680
+We love anyone that has issues please write your questions on our issue tracker please
+
+417
+00:39:41,160 --> 00:39:45,880
+Any help with the docs any work on our package or work downstream we're very happy to see
+
+418
+00:39:45,880 --> 00:39:51,560
+exciting projects downstream.
+
+419
+00:39:51,560 --> 00:39:56,280
+And so just last note is that there's still a lot of things to be done and some of those
+
+420
+00:39:56,280 --> 00:39:58,640
+things don't require that much work to finish.
+
+421
+00:39:58,640 --> 00:40:00,480
+Yeah there's a lot of very accessible problems.
+
+422
+00:40:00,480 --> 00:40:05,280
+So we would also like to thank all the people who contributed to Piedad directly and indirectly
+
+423
+00:40:05,480 --> 00:40:11,080
+so there are directly the Piedad contributors starting from Michael Dordboom who created
+
+424
+00:40:11,080 --> 00:40:12,080
+Piedad.
+
+425
+00:40:12,080 --> 00:40:19,240
+There are like users who report bug issues our sponsors and then the community so M
+
+426
+00:40:19,240 --> 00:40:25,480
+scripting Piedad wouldn't exist without M scripting CPython for the improvements that's
+
+427
+00:40:25,480 --> 00:40:30,280
+like for the support for WebAssembly that's happening now all our downstream libraries
+
+428
+00:40:30,360 --> 00:40:37,360
+that like that will make creating client side application with Python in browser easier
+
+429
+00:40:37,360 --> 00:40:42,520
+so Jupyter, Jupyter Lite, PyScript, Redim etc.
+
+430
+00:40:42,520 --> 00:40:48,120
+The iodide team so initially the Piedad was created as part of the iodide project at Mozilla
+
+431
+00:40:48,120 --> 00:40:53,080
+and also the all the package maintainers that help us to review well they review our patches
+
+432
+00:40:53,080 --> 00:40:55,440
+when we try to fix things.
+
+433
+00:40:55,440 --> 00:40:56,440
+So thank you.
+
+434
+00:40:56,440 --> 00:41:01,760
+So do a sprint at the end of PyCon if you want to work on any of those subjects or related
+
+435
+00:41:01,760 --> 00:41:04,160
+subjects don't hesitate to come.
+
+436
+00:41:04,160 --> 00:41:04,660
+Thank you.
+

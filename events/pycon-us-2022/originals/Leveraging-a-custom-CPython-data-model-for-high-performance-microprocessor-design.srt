@@ -1,0 +1,812 @@
+1
+00:00:00,000 --> 00:00:08,080
+All right, looks like we have everybody here now.
+
+2
+00:00:08,080 --> 00:00:12,280
+We're going to start the second talk of this session.
+
+3
+00:00:12,280 --> 00:00:17,480
+Our presenter is Richard Taggart from IBM, and he'll be talking about leveraging a custom
+
+4
+00:00:17,480 --> 00:00:21,400
+CPython data model for high-performance microprocessor design.
+
+5
+00:00:21,400 --> 00:00:25,080
+All right, off to you, Richard.
+
+6
+00:00:25,080 --> 00:00:26,800
+Thanks Bill.
+
+7
+00:00:26,800 --> 00:00:27,800
+So I'm Rich Taggart.
+
+8
+00:00:27,800 --> 00:00:29,400
+Good afternoon, everyone.
+
+9
+00:00:29,440 --> 00:00:36,240
+I'm a senior engineer, and I'm speaking on behalf of the IBM EDA team.
+
+10
+00:00:36,240 --> 00:00:44,680
+Today I'd like to talk about how we used CPython to build a custom data model for high-performance
+
+11
+00:00:44,680 --> 00:00:47,680
+microprocessor design.
+
+12
+00:00:47,680 --> 00:00:53,640
+The first thing I'm going to talk about is I'm going to dive a little bit into how we
+
+13
+00:00:53,640 --> 00:00:56,040
+build a microprocessor.
+
+14
+00:00:56,040 --> 00:00:58,880
+These are very complicated devices.
+
+15
+00:00:58,880 --> 00:01:07,120
+They require significant simulation and analysis to ensure that they'll work the way that we
+
+16
+00:01:07,120 --> 00:01:12,320
+expect them to out in the real world after they're manufactured.
+
+17
+00:01:12,320 --> 00:01:17,720
+This design process ends up generating a ton of information, which leaves us with a big
+
+18
+00:01:17,720 --> 00:01:20,480
+data problem.
+
+19
+00:01:20,480 --> 00:01:28,040
+We used CPython to create a custom data model which can efficiently store all of this design
+
+20
+00:01:28,160 --> 00:01:32,360
+data and derived analysis data.
+
+21
+00:01:32,360 --> 00:01:39,480
+I'm also going to share some examples of how we used the Python ecosystem to help us wrangle
+
+22
+00:01:39,480 --> 00:01:43,440
+all of this data and analyze it.
+
+23
+00:01:43,440 --> 00:01:49,680
+I'm going to wrap up with some things that we've learned along the way.
+
+24
+00:01:49,680 --> 00:01:56,040
+Before we talk about microprocessor design, I thought it would be helpful to illustrate
+
+25
+00:01:56,120 --> 00:02:00,080
+how complicated these devices really are.
+
+26
+00:02:00,080 --> 00:02:08,040
+We can see they've grown exponentially more complicated over the last half century.
+
+27
+00:02:08,040 --> 00:02:16,520
+For context, the U.S. roadway system has just under 130,000 intersections.
+
+28
+00:02:16,520 --> 00:02:23,120
+Facebook had 2.1 billion active users at the end of last year.
+
+29
+00:02:23,160 --> 00:02:32,160
+Modern microprocessors have on the order of 20 billion transistors with 100 billion connected
+
+30
+00:02:32,160 --> 00:02:39,720
+wires all squeezed onto a piece of silicon roughly the size of a U.S. quarter.
+
+31
+00:02:39,720 --> 00:02:47,360
+Naturally, we need a special custom process and also specialized software to help us build
+
+32
+00:02:47,360 --> 00:02:49,880
+these.
+
+33
+00:02:49,880 --> 00:02:58,560
+The first process or the first step in designing a microprocessor is defining the microarchitecture.
+
+34
+00:02:58,560 --> 00:03:05,120
+This contains all of the instructions that are used by operating systems and programs.
+
+35
+00:03:05,120 --> 00:03:09,600
+One example is the add operation.
+
+36
+00:03:09,600 --> 00:03:18,360
+The next step is to describe all of the logic required to implement that instruction.
+
+37
+00:03:18,360 --> 00:03:24,880
+That logic then needs to be synthesized into a set of equivalent logical gates.
+
+38
+00:03:24,880 --> 00:03:29,760
+Those gates need to be physically placed and wired together.
+
+39
+00:03:29,760 --> 00:03:35,920
+Once we do this for all of the instructions in the microarchitecture, we end up with
+
+40
+00:03:35,920 --> 00:03:39,240
+a working processor.
+
+41
+00:03:39,240 --> 00:03:46,920
+It turns out that optimizing these designs to meet all of the performance, power usage,
+
+42
+00:03:46,920 --> 00:03:54,320
+and size constraints that we have is a problem of similar complexity to the traveling salesman
+
+43
+00:03:54,320 --> 00:03:55,760
+problem.
+
+44
+00:03:55,760 --> 00:04:01,920
+These are some steps that we use to simulate and analyze the design and ensure that it
+
+45
+00:04:01,920 --> 00:04:07,720
+will ultimately work the way we expect it to.
+
+46
+00:04:07,720 --> 00:04:11,820
+This design process is not simply one and done.
+
+47
+00:04:11,820 --> 00:04:17,660
+It requires multiple iterations where an engineer makes some changes.
+
+48
+00:04:17,660 --> 00:04:23,380
+They run the new design through the synthesis and analysis workflow that I mentioned.
+
+49
+00:04:23,380 --> 00:04:30,780
+That ends up generating a large pile of data and leaves our engineer with many questions,
+
+50
+00:04:30,780 --> 00:04:38,540
+namely what happened, why did it happen, and how do we improve the design for next time?
+
+51
+00:04:38,540 --> 00:04:45,620
+It turns out these processors are so complicated we can't analyze them all in one shot.
+
+52
+00:04:45,620 --> 00:04:51,760
+We have to break the single design up into multiple hierarchical components, each of
+
+53
+00:04:51,760 --> 00:04:55,900
+which are analyzed and optimized separately.
+
+54
+00:04:55,900 --> 00:05:01,700
+And then we as engineers need to stitch that back together so that we can think of it as
+
+55
+00:05:01,700 --> 00:05:03,660
+a single entity.
+
+56
+00:05:03,660 --> 00:05:11,340
+And as you can see here, each iteration ends up generating a lot of data.
+
+57
+00:05:11,340 --> 00:05:17,140
+I'm now going to dive into some of the details of how we built a custom data model to help
+
+58
+00:05:17,140 --> 00:05:20,380
+us address this problem.
+
+59
+00:05:20,380 --> 00:05:26,980
+Some key things to think about is that our engineers need to manage multiple versions
+
+60
+00:05:26,980 --> 00:05:29,380
+of the design over time.
+
+61
+00:05:29,420 --> 00:05:34,040
+They need to manage multiple separate hierarchical components.
+
+62
+00:05:34,040 --> 00:05:39,800
+They need to have access to the design and derived analysis data.
+
+63
+00:05:39,800 --> 00:05:45,380
+And they need to make sure the multiple teams working across these components are able to
+
+64
+00:05:45,380 --> 00:05:49,060
+collaborate effectively.
+
+65
+00:05:49,060 --> 00:05:57,020
+If you take a look at the picture on the right, throughout the design project, an engineer
+
+66
+00:05:57,140 --> 00:06:00,860
+may end up running thousands of experiments.
+
+67
+00:06:00,860 --> 00:06:06,900
+Let's consider one of these experiments where we have an EDA application running on one
+
+68
+00:06:06,900 --> 00:06:09,020
+of our servers.
+
+69
+00:06:09,020 --> 00:06:17,060
+That EDA application is built of multiple modules, each of which corresponds to one
+
+70
+00:06:17,060 --> 00:06:21,720
+of those steps in the design flow I mentioned earlier.
+
+71
+00:06:21,720 --> 00:06:27,880
+All of these modules are connected together and end up generating their own set of data.
+
+72
+00:06:27,880 --> 00:06:34,760
+An engineer then needs to review this information either manually or with the help of some scripting
+
+73
+00:06:34,760 --> 00:06:37,120
+and automation.
+
+74
+00:06:37,120 --> 00:06:44,680
+We've built a custom module which integrates directly into this EDA application to help
+
+75
+00:06:44,680 --> 00:06:48,520
+us solve this problem.
+
+76
+00:06:48,560 --> 00:06:57,880
+Design data, or DD, is a read-only, self-contained binary file-based database.
+
+77
+00:06:57,880 --> 00:07:05,440
+You can think of it as a graph database that's built specifically for processor design and
+
+78
+00:07:05,440 --> 00:07:10,080
+stores all of the information in a single binary file.
+
+79
+00:07:10,080 --> 00:07:16,660
+It efficiently stores design data, including the interconnected logical gates and wires,
+
+80
+00:07:16,660 --> 00:07:24,180
+as well as derived analysis data, such as estimated signal delay, power usage, and the
+
+81
+00:07:24,180 --> 00:07:28,060
+other examples shown here.
+
+82
+00:07:28,060 --> 00:07:37,300
+If we consider our EDA application, one of these analysis modules may require 16 processor
+
+83
+00:07:37,300 --> 00:07:44,300
+cores, more than half a terabyte of memory, and up to eight hours to finish analyzing
+
+84
+00:07:44,520 --> 00:07:47,800
+one of these design components.
+
+85
+00:07:47,800 --> 00:07:53,360
+Our data model integrates directly into this EDA application so that at the end of the
+
+86
+00:07:53,360 --> 00:08:00,360
+analysis all of that data is written out into a compressed binary file.
+
+87
+00:08:00,360 --> 00:08:08,360
+Afterward, an engineer can load all of that data into a Python process in less than five
+
+88
+00:08:08,360 --> 00:08:10,920
+minutes.
+
+89
+00:08:10,920 --> 00:08:16,140
+You may be looking at these pictures and thinking to yourself, this system seems pretty
+
+90
+00:08:16,140 --> 00:08:17,380
+complicated.
+
+91
+00:08:17,380 --> 00:08:22,060
+Are all of these layers here really necessary?
+
+92
+00:08:22,060 --> 00:08:29,460
+Let's consider the example of a fully connected, complete graph with 10,000 nodes and just
+
+93
+00:08:29,460 --> 00:08:32,620
+under 50 million edges.
+
+94
+00:08:32,620 --> 00:08:39,620
+A pure Python implementation took six minutes and more than eight gigabytes of memory to
+
+95
+00:08:39,840 --> 00:08:43,460
+generate one of these graphs.
+
+96
+00:08:43,460 --> 00:08:49,560
+An equivalent C++ implementation took less than four seconds and just over one gigabyte
+
+97
+00:08:49,560 --> 00:08:54,680
+of memory to generate an identical graph.
+
+98
+00:08:54,680 --> 00:09:01,040
+Using CPython to build a Python extension module allows us to have the best of both
+
+99
+00:09:01,040 --> 00:09:06,760
+worlds where our engineers can prototype quickly and answer questions that they have using
+
+100
+00:09:06,760 --> 00:09:13,760
+Python and many of the packages available while still relying on the efficient implementation
+
+101
+00:09:15,260 --> 00:09:21,300
+of a C++ data model.
+
+102
+00:09:21,300 --> 00:09:26,980
+So now that I've covered some details about how we built a data model helping to address
+
+103
+00:09:26,980 --> 00:09:32,420
+the big data problem that we have from the microprocessor design process, I'm going to
+
+104
+00:09:32,760 --> 00:09:39,760
+next several minutes walking through some examples of how we used Python in interesting
+
+105
+00:09:40,120 --> 00:09:45,880
+ways to query this information and analyze the data available to us.
+
+106
+00:09:45,880 --> 00:09:52,520
+The Python environment I mentioned earlier supports multiple engineering use models.
+
+107
+00:09:52,520 --> 00:09:59,520
+We have dashboards that help address common tasks including having quick access to operational
+
+108
+00:09:59,740 --> 00:10:06,740
+metrics as well as being able to perform visual discovery and visual exploration.
+
+109
+00:10:07,980 --> 00:10:14,980
+The system also supports less common tasks including ad hoc analysis and being able to
+
+110
+00:10:15,700 --> 00:10:21,900
+answer questions we may not yet even know that we have.
+
+111
+00:10:21,900 --> 00:10:28,900
+Considering one of our dashboards, this allows an engineer to answer the question, what happened?
+
+112
+00:10:29,820 --> 00:10:36,820
+You are looking at the number of failures reported for a given version of the design.
+
+113
+00:10:37,900 --> 00:10:43,960
+This gives us some insight into what has happened over time and allows us to answer questions
+
+114
+00:10:43,960 --> 00:10:50,960
+like how did the new problems that are reported, how significant are they? The goal here is
+
+115
+00:10:51,100 --> 00:10:58,100
+to form a mental model of the whole picture. This application is powered by a Flask web
+
+116
+00:10:58,560 --> 00:11:05,560
+server which uses pandas to efficiently process the data and quickly return it so that the
+
+117
+00:11:06,080 --> 00:11:10,680
+application can render all of that information for the user.
+
+118
+00:11:10,680 --> 00:11:17,040
+The next step is to dive into one of these bars and understand more details about a specific
+
+119
+00:11:17,040 --> 00:11:24,040
+version of the design. This engineering view allows us to understand how specific aspects
+
+120
+00:11:24,040 --> 00:11:31,040
+of the design have changed, giving us the ability to answer questions like how did the
+
+121
+00:11:32,080 --> 00:11:39,080
+boundary paths between my hierarchical components change or was there a major change in the
+
+122
+00:11:40,420 --> 00:11:47,420
+architecture of the design which ended up causing unintended side effects?
+
+123
+00:11:47,860 --> 00:11:54,860
+This dashboard is powered by a WebSocket server which already has the design data loaded into
+
+124
+00:11:56,580 --> 00:12:03,580
+it. It can then quickly process and respond to requests as the users are trying to understand
+
+125
+00:12:05,980 --> 00:12:12,980
+what's going on. This engineering view also allows us to answer the question, how do we
+
+126
+00:12:13,700 --> 00:12:20,700
+fix the problems you reported? As we consider this example, imagine a high-speed highway
+
+127
+00:12:23,620 --> 00:12:30,620
+of data signals running all the way across a microprocessor. Now imagine placing a construction
+
+128
+00:12:32,100 --> 00:12:39,100
+zone right in the middle of that highway with a 30, that's interesting, mile an hour speed
+
+129
+00:12:40,100 --> 00:12:47,100
+limit. I'm going to just not touch this. All right, cool. Uh-oh. Awesome. Where was I?
+
+130
+00:12:55,220 --> 00:13:02,220
+Now imagine a construction zone placed right in the middle of that high-speed highway with
+
+131
+00:13:02,420 --> 00:13:09,420
+a 30 mile an hour speed limit. This engineering view allows an engineer to filter based on
+
+132
+00:13:13,660 --> 00:13:20,660
+those slow data signals which are surrounded by high-speed signals. This WebSocket server
+
+133
+00:13:24,080 --> 00:13:31,080
+can find all of those points which were reported as failures and from those points, the data
+
+134
+00:13:32,220 --> 00:13:39,220
+can trace the longest path reporting all of the coordinates of the wires along the
+
+135
+00:13:42,860 --> 00:13:49,860
+way. Consider the image on the right which you can see sometimes it looks like. We'll
+
+136
+00:13:49,900 --> 00:13:56,740
+take storage element B and move it just a little bit. Oh, I forgot to mention here.
+
+137
+00:13:56,740 --> 00:14:03,740
+This image depicts a multi-cycle path which is taking a scenic route through multiple
+
+138
+00:14:04,720 --> 00:14:11,720
+design components. If we take storage element B and move it just a little bit to the left
+
+139
+00:14:12,560 --> 00:14:19,560
+so that it's in the same component as both A and C, we can then rerun the design through
+
+140
+00:14:19,660 --> 00:14:26,040
+the optimization engine which will do what it's really good at and fix the problem for
+
+141
+00:14:26,040 --> 00:14:33,040
+us. Remember, each of these gray boxes here is a separate analysis and a separate component
+
+142
+00:14:35,320 --> 00:14:42,320
+which ends up generating its own set of data. We can load all of these DD files into the
+
+143
+00:14:42,640 --> 00:14:49,640
+same process and view the information as if it was a single entity. This allows us to
+
+144
+00:14:50,640 --> 00:14:57,640
+solve problems which would have been really hard and makes them actually pretty easy.
+
+145
+00:15:00,840 --> 00:15:07,840
+The system also supports custom analysis allowing users to answer questions such as which slow
+
+146
+00:15:11,220 --> 00:15:18,220
+data paths contain mostly slow signals. In this case, we can write a script which loads
+
+147
+00:15:19,020 --> 00:15:26,020
+a DD file, iterates through all of the tests which are reported as failing, traces the
+
+148
+00:15:27,620 --> 00:15:34,620
+longest path and then aggregates some metrics, stuffs it all in a data frame and renders
+
+149
+00:15:36,220 --> 00:15:41,980
+the image that you see here on the right. Having all of this available in memory allows
+
+150
+00:15:41,980 --> 00:15:48,380
+engineers to then filter and dive into the specific aspects of the data which are causing
+
+151
+00:15:48,380 --> 00:15:55,380
+these unexpected anomalies. We can also load multiple DD files into a single process allowing
+
+152
+00:15:57,260 --> 00:16:04,260
+us to compare multiple versions of the data over time. This system has been completely
+
+153
+00:16:05,260 --> 00:16:12,260
+invaluable in allowing us to identify significant systemic problems that show up in the design.
+
+154
+00:16:15,420 --> 00:16:22,420
+I'm going to switch gears to a developer's experience. There was a case where some of
+
+155
+00:16:22,940 --> 00:16:29,100
+our automated regressions ended up showing a whole bunch of differences that we weren't
+
+156
+00:16:29,100 --> 00:16:36,100
+expecting. It also showed significant performance degradations. One was so bad that it never
+
+157
+00:16:37,500 --> 00:16:44,500
+even finished as you can see by the big red bars here. Naturally, this led us to asking
+
+158
+00:16:45,740 --> 00:16:52,420
+the question, where is this poor runtime coming from? In fact, the process was still running
+
+159
+00:16:52,420 --> 00:16:58,340
+so we were able to log into the machine where it was running and attach a debugger. After
+
+160
+00:16:58,340 --> 00:17:03,900
+looking at a couple of stack traces, we saw the same function showing up over and over
+
+161
+00:17:03,900 --> 00:17:10,820
+again. The author confirmed, yeah, this is a pretty expensive operation and you probably
+
+162
+00:17:10,820 --> 00:17:17,820
+shouldn't call it too many times. Looking at some of the other performance data from
+
+163
+00:17:18,260 --> 00:17:25,260
+the runs that had finished, we were able to confirm where the source was coming from and
+
+164
+00:17:25,380 --> 00:17:32,380
+also we were calling it way too many times. So fortunately, we were able to revert the
+
+165
+00:17:33,620 --> 00:17:40,140
+patch that was causing this and go along on our merry way. We've built another utility
+
+166
+00:17:40,140 --> 00:17:47,140
+which helps engineers process and figure out, are they making the changes in the code that's
+
+167
+00:17:48,300 --> 00:17:54,860
+causing the output they're really expecting? In this case, our program reads in two data
+
+168
+00:17:54,860 --> 00:18:01,860
+frames, merges them together, compares the relevant columns, in this case, diffs them
+
+169
+00:18:01,860 --> 00:18:08,860
+and then renders only the data values that are showing differences. This allowed us to
+
+170
+00:18:09,020 --> 00:18:15,300
+quickly understand that either code changes were impacting things we weren't expecting
+
+171
+00:18:15,300 --> 00:18:22,300
+them to and we can also verify that we're only impacting the data that we are expecting
+
+172
+00:18:22,300 --> 00:18:28,780
+you. As a side note, if you're working in Pandas and manipulating data, I would highly
+
+173
+00:18:28,780 --> 00:18:35,780
+recommend using a vectorized approach whenever you can. These four different approaches are
+
+174
+00:18:36,740 --> 00:18:42,780
+listed in order from shortest run time to longest and we can see from the charts on
+
+175
+00:18:42,780 --> 00:18:49,780
+the right, using a vectorized approach for data manipulation provides a 500X improvement
+
+176
+00:18:50,780 --> 00:18:57,780
+over the loop based methods. So now, I'm going to wrap up by sharing some things that we've
+
+177
+00:18:59,140 --> 00:19:06,140
+learned starting with learning from the open source community and building our user interaction
+
+178
+00:19:06,860 --> 00:19:13,540
+model around that. We have our active users who do what they usually do and when they
+
+179
+00:19:13,540 --> 00:19:20,540
+find a problem, they let us know about it and also ask for enhancements or ask us questions
+
+180
+00:19:22,120 --> 00:19:28,260
+about the tool. The goal here is to ensure a low barrier to entry and make sure it's
+
+181
+00:19:28,260 --> 00:19:35,260
+as easy as possible for people to get started. Moving along the spectrum, we have power users
+
+182
+00:19:36,720 --> 00:19:43,180
+which can help answer questions and also start creating prototypes and experiments and maybe
+
+183
+00:19:43,180 --> 00:19:50,180
+even some more complex features. The goal here is to make sure that it's as easy as
+
+184
+00:19:50,440 --> 00:19:57,440
+possible for your power users to contribute to your project in whatever way makes sense
+
+185
+00:19:57,440 --> 00:20:04,440
+for them. And lastly, we have the code maintainers and developers who are responsible for supporting
+
+186
+00:20:04,960 --> 00:20:11,960
+and maintaining the system and setting project strategy. The goal here is to maintain a long-term
+
+187
+00:20:12,520 --> 00:20:19,520
+engagement so that you can continue to leverage all of the learning and the deep knowledge
+
+188
+00:20:21,800 --> 00:20:27,960
+that they've acquired with the project. This is one example of how we've enabled this use
+
+189
+00:20:27,960 --> 00:20:34,960
+model where people can move along the spectrum over time in whatever way makes sense for
+
+190
+00:20:35,440 --> 00:20:42,440
+them. And this has democratized the whole analysis process for us in microprocessor
+
+191
+00:20:42,440 --> 00:20:49,440
+design. So hopefully by this point, you're thinking, this is pretty cool and I'd like
+
+192
+00:20:50,040 --> 00:20:56,640
+to get something like this. Well, you could make one. If you're not familiar with Python,
+
+193
+00:20:56,640 --> 00:21:02,460
+I assume most of us here are, I would recommend starting with these references. I find these
+
+194
+00:21:02,460 --> 00:21:08,300
+very useful and this is the first place that I go. Whenever I have a question with Python,
+
+195
+00:21:08,300 --> 00:21:15,300
+I go here first and if I can't find my answer, then I'll go to Stack Overflow or do a search
+
+196
+00:21:15,500 --> 00:21:22,500
+engine. Similarly, I found these references really helpful for C and C++. If you're familiar
+
+197
+00:21:23,420 --> 00:21:30,420
+with both, maybe you want to consider creating an extension module. The tutorials are great
+
+198
+00:21:31,420 --> 00:21:38,420
+and we have found that once you start doing more complex things, it can be a little bit
+
+199
+00:21:38,740 --> 00:21:44,220
+more difficult to find exactly what you're looking for, especially if you move away from
+
+200
+00:21:44,220 --> 00:21:51,220
+the pre-canned examples that are available there. So what have we learned? Building an
+
+201
+00:21:52,220 --> 00:21:59,220
+ecosystem on top of Python and using CPython has been a complete game changer for us in
+
+202
+00:22:03,060 --> 00:22:10,060
+microprocessor design. It allows us to take advantage of all of the tools that are available
+
+203
+00:22:12,620 --> 00:22:19,620
+and really focus on the hard problems. So with that, thank you everyone.
+
