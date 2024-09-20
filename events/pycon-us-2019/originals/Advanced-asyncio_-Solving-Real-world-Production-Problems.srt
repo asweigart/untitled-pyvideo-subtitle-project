@@ -1,0 +1,1620 @@
+1
+00:00:00,000 --> 00:00:04,000
+Hello, everyone. How's everyone doing?
+
+2
+00:00:04,000 --> 00:00:08,000
+Come on, I need more energy. This is only day two. Come on.
+
+3
+00:00:12,000 --> 00:00:20,000
+All right, we've got a great talk. This is Advanced Async IOs Solving Real-World Production Problems by Lynn Root.
+
+4
+00:00:20,000 --> 00:00:29,000
+Lynn has requested that if you have any questions, please hold off, and she can answer those questions in the hall after the talk.
+
+5
+00:00:30,000 --> 00:00:33,000
+So without further ado, Lynn Root.
+
+6
+00:00:38,000 --> 00:00:45,000
+Thank you. The jam-packed room. I feel like a lot of people have some real-world problems to solve.
+
+7
+00:00:46,000 --> 00:00:52,000
+So my name is Lynn Root, and forgive me, I have to do this because I'm kind of a nerd.
+
+8
+00:00:52,000 --> 00:00:55,000
+Happy May the Fourth be with you.
+
+9
+00:01:00,000 --> 00:01:12,000
+So I'm a staff engineer at Spotify. For the past few months, I've been building infrastructure to help support those that do some machine learning models to do digital signal processing.
+
+10
+00:01:12,000 --> 00:01:15,000
+So that's quite interesting, quite fun.
+
+11
+00:01:15,000 --> 00:01:23,000
+I'm also a FOSS evangelist at Spotify. I help folks release their code under the Spotify GitHub organization.
+
+12
+00:01:23,000 --> 00:01:32,000
+And then you might know me from Pi Ladies as well. And if you don't know about Pi Ladies, we are a mentorship group for women and allies in the Python community.
+
+13
+00:01:32,000 --> 00:01:38,000
+And I encourage you to go to our booth and buy all the T-shirts so I don't have to take them home.
+
+14
+00:01:38,000 --> 00:01:44,000
+So this is the agenda for today. It doesn't look like it, but it's pretty jam-packed.
+
+15
+00:01:44,000 --> 00:01:50,000
+We're going to be covering some graceful shutdowns, exception handling, and threading, along with testing, debugging, and profiling.
+
+16
+00:01:50,000 --> 00:01:59,000
+And I think I'll probably use all of my time, but we'll save the questions for the hallway, either way.
+
+17
+00:01:59,000 --> 00:02:08,000
+This presentation is pretty code-heavy. I will show this link at the end as well, so don't worry. But the slides are there.
+
+18
+00:02:08,000 --> 00:02:18,000
+All right. So let's get to it. Async I.O., the concurrent Python programmer's dream. The answer to everyone's prayers, right?
+
+19
+00:02:18,000 --> 00:02:26,000
+The module itself has a lot of layers of abstraction, allowing developers as much control as they need and are comfortable with.
+
+20
+00:02:26,000 --> 00:02:35,000
+Simple hello world-like examples can show how simple it is. But it's very easy to get lulled into a false sense of security.
+
+21
+00:02:35,000 --> 00:02:40,000
+For me, this isn't that helpful.
+
+22
+00:02:40,000 --> 00:02:46,000
+So we're led to believe that we were able to do a lot with the structured async and await API layer.
+
+23
+00:02:46,000 --> 00:02:57,000
+Some tutorials, while great for the developer to get their toes wet, try to illustrate real-world examples, but they're just beefed up hello world examples.
+
+24
+00:02:58,000 --> 00:03:07,000
+Some even misuse the async I.O. interface, allowing one to easily fall into the callback hell that we're familiar with.
+
+25
+00:03:07,000 --> 00:03:19,000
+And then some get you easily up and running with async I.O., but then you may realize that you're not really doing it correctly or it's not exactly what you want or it only gets you part of the way there.
+
+26
+00:03:19,000 --> 00:03:29,000
+So while some tutorials will walk through and do a lot to improve upon the basic hello world use case, it might still be just like a web crawler.
+
+27
+00:03:29,000 --> 00:03:34,000
+And I'm not sure about others, but I'm not building web crawlers at Spotify.
+
+28
+00:03:34,000 --> 00:03:41,000
+Sure, I build a lot of services that have to make a lot of HTTP requests that should be non-blocking.
+
+29
+00:03:41,000 --> 00:04:01,000
+But these services of mine, they also need to react to PubSub events to measure progress of actions initiated from those events, to handle any incomplete action or other external errors, deal with PubSub lease management, and measure service level indicators, and then send metrics.
+
+30
+00:04:01,000 --> 00:04:07,000
+And sometimes I need non-async I.O. friendly dependencies.
+
+31
+00:04:07,000 --> 00:04:11,000
+So for me, my problem got difficult quickly.
+
+32
+00:04:11,000 --> 00:04:17,000
+So allow me to provide you with a real-world example that actually comes from the real world.
+
+33
+00:04:17,000 --> 00:04:27,000
+Recently at Spotify, or actually a few years ago at Spotify, we built a service that does periodic hard restarts of our entire fleet of instances.
+
+34
+00:04:27,000 --> 00:04:30,000
+And that's what we're going to do here.
+
+35
+00:04:30,000 --> 00:04:32,000
+Has anyone heard of a chaos monkey?
+
+36
+00:04:32,000 --> 00:04:34,000
+Yeah, right.
+
+37
+00:04:34,000 --> 00:04:36,000
+So we're going to build a service called mayhem mandrill.
+
+38
+00:04:36,000 --> 00:04:43,000
+And it will listen for a PubSub message and then restart a host based off of that message.
+
+39
+00:04:43,000 --> 00:04:53,000
+And as we build this service, I'll point out some best practices that I have learned along the way, slash traps that I've fallen into.
+
+40
+00:04:53,000 --> 00:04:59,000
+And this will essentially become the type of resource that Paslin would have wanted about like three years ago.
+
+41
+00:04:59,000 --> 00:05:03,000
+So we're going to start off with some foundational code.
+
+42
+00:05:03,000 --> 00:05:05,000
+We're going to write a simple publisher.
+
+43
+00:05:05,000 --> 00:05:07,000
+And here's where we're going to start.
+
+44
+00:05:07,000 --> 00:05:13,000
+We have a simple while true loop, a unique ID for each message to publish to our queue.
+
+45
+00:05:13,000 --> 00:05:19,000
+I want to highlight that we're not using the await on the queue.put of a message.
+
+46
+00:05:19,000 --> 00:05:28,000
+We're using async.io.createTask because it will actually schedule the coroutine on the loop without blocking the rest of the for loop.
+
+47
+00:05:28,000 --> 00:05:36,000
+The createTask method returns a task, but we essentially are using this as like a fire and forget mechanism.
+
+48
+00:05:36,000 --> 00:05:41,000
+If we had the await here, everything after it would be a fire and forget.
+
+49
+00:05:41,000 --> 00:05:44,000
+It isn't necessarily an issue for our current setup, though.
+
+50
+00:05:44,000 --> 00:05:50,000
+It would be if we were to limit the size of our queue and we would be waiting on space to free up.
+
+51
+00:05:50,000 --> 00:05:56,000
+But we will just stick with the createTask method.
+
+52
+00:05:56,000 --> 00:06:02,000
+So now that we have a publisher coroutine function, we now need a consumer.
+
+53
+00:06:02,000 --> 00:06:04,000
+So this is our consumer.
+
+54
+00:06:04,000 --> 00:06:07,000
+So this is our consumer for the publishMessage messages.
+
+55
+00:06:07,000 --> 00:06:10,000
+It's still kind of similar to the publisher itself.
+
+56
+00:06:10,000 --> 00:06:12,000
+We do have a while true loop.
+
+57
+00:06:12,000 --> 00:06:16,000
+But then we await on the queue for a message.
+
+58
+00:06:16,000 --> 00:06:28,000
+We don't want to create a task out of queue.get because it doesn't really make sense to block the coroutine because you can't really do much without a message itself.
+
+59
+00:06:28,000 --> 00:06:34,000
+I want to highlight again that we're only blocking within the scope of the consume coroutine.
+
+60
+00:06:34,000 --> 00:06:40,000
+We're not actually blocking the event loop or any other task coroutines that are scheduled.
+
+61
+00:06:40,000 --> 00:06:46,000
+So now we're going to replace async.io.sleep with a function that will restart a host.
+
+62
+00:06:46,000 --> 00:06:52,000
+I'm sure it looks like I'm just pushing the simulation of I.O. work to restart host function.
+
+63
+00:06:52,000 --> 00:06:57,000
+But in doing so, I'm actually able to create a task.
+
+64
+00:06:57,000 --> 00:07:04,000
+And out of that, I'm therefore no longer blocking on waiting for more messages.
+
+65
+00:07:04,000 --> 00:07:09,000
+We may also want to do more than one thing per message.
+
+66
+00:07:09,000 --> 00:07:17,000
+For example, in addition to restarting a host, maybe we'd like to store that message in a database for potentially replaying later on.
+
+67
+00:07:17,000 --> 00:07:23,000
+So we'll make use of async.io.create task again for the save coroutine to be scheduled on the loop.
+
+68
+00:07:23,000 --> 00:07:29,000
+I'm basically checking it over to the loop to execute for when it can.
+
+69
+00:07:29,000 --> 00:07:35,000
+So in this example, the two tasks of restarting and saving don't necessarily depend on one another.
+
+70
+00:07:35,000 --> 00:07:43,000
+And I'm completely sidestepping the concern that if we should restart a host, if we can't save a message, we should restart a host.
+
+71
+00:07:43,000 --> 00:07:48,000
+But maybe you do want your work to happen serially.
+
+72
+00:07:48,000 --> 00:07:53,000
+Maybe you do not want to have concurrency for some asynchronous tasks.
+
+73
+00:07:53,000 --> 00:08:00,000
+So for this instance, maybe you want to restart hosts that only have an uptime of more than seven days.
+
+74
+00:08:00,000 --> 00:08:05,000
+Just like you should check the balance of your checking account before you actually debit it.
+
+75
+00:08:05,000 --> 00:08:11,000
+So needing code to be serial to have steps or dependencies, it doesn't necessarily have to be a single step.
+
+76
+00:08:11,000 --> 00:08:16,000
+So you can't have a single step to have steps or dependencies.
+
+77
+00:08:16,000 --> 00:08:19,000
+It doesn't mean that you can't be asynchronous.
+
+78
+00:08:19,000 --> 00:08:28,000
+The await last restart date will yield to the loop, but it doesn't mean that restart host will be the next thing that the loop executes.
+
+79
+00:08:28,000 --> 00:08:33,000
+It just allows other things outside of that coroutine to run.
+
+80
+00:08:33,000 --> 00:08:38,000
+So with that in mind, I'm going to put all this message-related logic in a separate coroutine.
+
+81
+00:08:39,000 --> 00:08:42,000
+Saving a message shouldn't block. Restart hosts if needed.
+
+82
+00:08:42,000 --> 00:08:44,000
+So we're going to make that a task again.
+
+83
+00:08:44,000 --> 00:08:52,000
+And we're just going to remove the uptime check and restart hosts indiscriminately because YOLO.
+
+84
+00:08:52,000 --> 00:08:57,000
+So we've pulled a message from a queue, and we found out work based off of that message.
+
+85
+00:08:57,000 --> 00:09:02,000
+But now we need to perform any finalization work from that message.
+
+86
+00:09:02,000 --> 00:09:11,000
+So often with the PubSub technologies, if you don't acknowledge a message within a predefined time frame, it will get redelivered.
+
+87
+00:09:11,000 --> 00:09:19,000
+So for a finalization task, we should acknowledge the message so it doesn't get redelivered to us.
+
+88
+00:09:19,000 --> 00:09:24,000
+So we currently have two separate tasks, save and restart host.
+
+89
+00:09:24,000 --> 00:09:28,000
+And we want to make sure both are done before the message is cleaned up.
+
+90
+00:09:29,000 --> 00:09:35,000
+We could go back to the sequential awaits since they're a very direct way to manipulate ordering.
+
+91
+00:09:35,000 --> 00:09:39,000
+But we can also use sort of callbacks on a completed task.
+
+92
+00:09:39,000 --> 00:09:48,000
+What we therefore want is somehow to wrap both tasks since we have to wait on both and then do the cleanup.
+
+93
+00:09:48,000 --> 00:09:54,000
+And with that, we can make use of async.gather, which returns a future-like object.
+
+94
+00:09:54,000 --> 00:09:59,000
+And with that future-like object, we can then attach a callback to it.
+
+95
+00:09:59,000 --> 00:10:03,000
+And then we can just await on the future itself.
+
+96
+00:10:03,000 --> 00:10:13,000
+And so when we run this, we can see that both the save coroutine and the restart coroutine are complete, and then the cleanup is called.
+
+97
+00:10:13,000 --> 00:10:16,000
+And then we still maintain concurrency.
+
+98
+00:10:18,000 --> 00:10:22,000
+So I personally have an allergy to callbacks.
+
+99
+00:10:23,000 --> 00:10:27,000
+And as well, perhaps you want the cleanup to be non-blocking.
+
+100
+00:10:27,000 --> 00:10:35,000
+So then here we can just await clean after the gather since it sort of takes care of the order of operations.
+
+101
+00:10:35,000 --> 00:10:37,000
+And it's so much cleaner.
+
+102
+00:10:39,000 --> 00:10:47,000
+So a quick TLDR of that last section, async.io is pretty easy to use, but it doesn't automatically mean that you're using it correctly.
+
+103
+00:10:47,000 --> 00:10:51,000
+You can't just throw around async and await keywords around your blocking code.
+
+104
+00:10:51,000 --> 00:10:54,000
+It's sort of like a mental paradigm shift.
+
+105
+00:10:54,000 --> 00:11:00,000
+You have to think about what you can farm out as well as what you actually still need to be sequential.
+
+106
+00:11:00,000 --> 00:11:07,000
+And so having steps within your code, like the first A and then B and then C, may seem like it's blocking when it's not.
+
+107
+00:11:07,000 --> 00:11:11,000
+Sequential code can still be asynchronous.
+
+108
+00:11:11,000 --> 00:11:18,000
+For instance, I might have to call customer service of my bank, and I'm on hold.
+
+109
+00:11:18,000 --> 00:11:23,000
+And I can put that down and put it on speakerphone and then play with my super needy cat as I wait.
+
+110
+00:11:23,000 --> 00:11:27,000
+So I might be single threaded, but I can still sort of multitask like CPUs.
+
+111
+00:11:29,000 --> 00:11:36,000
+So often you'll want to you want your service to shut down gracefully if it receives a signal of some sort.
+
+112
+00:11:36,000 --> 00:11:42,000
+You'll probably want to clean up the database connections that you have, stop consuming messages,
+
+113
+00:11:42,000 --> 00:11:46,000
+finish the corresponding current requests that you have while not accepting new requests.
+
+114
+00:11:48,000 --> 00:11:54,000
+So if we happen to restart our own instance of our mayhem mandrill service, we should essentially clean up our own mess.
+
+115
+00:11:54,000 --> 00:11:59,000
+So here's a typical boilerplate code of getting a service running.
+
+116
+00:11:59,000 --> 00:12:07,000
+We have a queue instance setting up the loop, scheduling the publish and consume tasks, and then start and then close the event loop.
+
+117
+00:12:09,000 --> 00:12:13,000
+Maybe you even catch the keyboard interrupt exception.
+
+118
+00:12:14,000 --> 00:12:24,000
+So if we run this and as is and we give it the signal, we do see that we get into the accept and finally block of those two log lines that we had.
+
+119
+00:12:25,000 --> 00:12:35,000
+But if we were to send another signal to our program like sigterm, we can see that we don't reach that finally clause that we have defined here.
+
+120
+00:12:36,000 --> 00:12:44,000
+It should be pointed out that even though even if we only care about the keyboard interrupt or the signal,
+
+121
+00:12:44,000 --> 00:12:53,000
+it could happen outside of the catching of exception, potentially causing the service to end up in an incomplete or otherwise unknown state.
+
+122
+00:12:55,000 --> 00:13:01,000
+So instead of catching keyboard interrupt, let's attach a signal handler to the loop.
+
+123
+00:13:01,000 --> 00:13:09,000
+So we'll define a shutdown care routine that is responsible for doing all of our necessary shutdown tasks.
+
+124
+00:13:09,000 --> 00:13:21,000
+And here what I'm doing is simulating like closing the database connections, returning pubs of messages as not acknowledged so that they can be redelivered and not dropped.
+
+125
+00:13:22,000 --> 00:13:28,000
+And then collecting all the outstanding tasks except for the shutdown task itself and then canceling them.
+
+126
+00:13:28,000 --> 00:13:33,000
+And we don't necessarily need to cancel the pending tasks. We could just allow them to finish as well.
+
+127
+00:13:33,000 --> 00:13:40,000
+And we may also want to take this opportunity to flush any collected metrics so that they're not lost.
+
+128
+00:13:42,000 --> 00:13:46,000
+So let's then add this shutdown care routine to our event loop.
+
+129
+00:13:46,000 --> 00:13:53,000
+The first thing we should do is to set up our loop and then add the signal handlers that we want to respond to.
+
+130
+00:13:53,000 --> 00:13:58,000
+And then we can remove that keyboard interrupt catch.
+
+131
+00:13:58,000 --> 00:14:08,000
+So running this again, we see that we do get to that finally clause as well as like the whole shutdown log lines that we see.
+
+132
+00:14:08,000 --> 00:14:14,000
+So you might be wondering which signals to react to now.
+
+133
+00:14:14,000 --> 00:14:16,000
+And apparently there is no standard.
+
+134
+00:14:16,000 --> 00:14:22,000
+Basically, you should be aware of how you're running your service and handle it accordingly.
+
+135
+00:14:22,000 --> 00:14:30,000
+And it seems like it could get a bit messy with conflicting signals, especially when you add Docker into the mix.
+
+136
+00:14:32,000 --> 00:14:39,000
+There's another misleading API or a confusing API at least for me, the async.io.shield.
+
+137
+00:14:39,000 --> 00:14:47,000
+Now the docs say that it means it's a means to shut down or to shield a future from being like cancellation.
+
+138
+00:14:47,000 --> 00:14:56,000
+But if you have a care routine that must not be canceled during shutdown, async.io.shield will not help you at all.
+
+139
+00:14:56,000 --> 00:15:10,000
+And this is because the task that async.io.shield creates gets included in async.io.all tasks and therefore receives the cancellation signal just like the rest of tasks.
+
+140
+00:15:11,000 --> 00:15:16,000
+So to illustrate really quick, I have a super simple async function with a long sleep.
+
+141
+00:15:16,000 --> 00:15:19,000
+And it says just done at the end.
+
+142
+00:15:19,000 --> 00:15:25,000
+And we want to shield it from cancellation with async.io.shield.
+
+143
+00:15:25,000 --> 00:15:30,000
+And so running this and canceling it after a second, we see that we don't actually get to that done line.
+
+144
+00:15:30,000 --> 00:15:32,000
+That's immediately canceled.
+
+145
+00:15:32,000 --> 00:15:38,000
+And to be honest, I actually could not get shield to work under any circumstances.
+
+146
+00:15:38,000 --> 00:15:43,000
+So I've taken out the signal handler and I feel like this should work.
+
+147
+00:15:43,000 --> 00:15:48,000
+And running this and canceling it after a second, I still don't get to that done line.
+
+148
+00:15:48,000 --> 00:15:52,000
+And trying it again, I thought I might have misinterpreted the docs.
+
+149
+00:15:52,000 --> 00:15:56,000
+So I've tried canceling the care routine from another care routine.
+
+150
+00:15:56,000 --> 00:15:59,000
+But no, I still couldn't get it to work.
+
+151
+00:15:59,000 --> 00:16:05,000
+I've tried shielding a task from another care routine that raises a canceled error itself, but I couldn't get that to work.
+
+152
+00:16:05,000 --> 00:16:09,000
+I ran into Yuri, one of the core developers of async.io.
+
+153
+00:16:09,000 --> 00:16:11,000
+And I was complaining. I was like, I must be stupid.
+
+154
+00:16:11,000 --> 00:16:14,000
+But he told me that no, async.io is stupid.
+
+155
+00:16:16,000 --> 00:16:18,000
+It makes me feel a little bit better.
+
+156
+00:16:18,000 --> 00:16:21,000
+But I still feel like I'm an idiot. I'm probably missing something.
+
+157
+00:16:21,000 --> 00:16:26,000
+So if someone in the crowd can come to me afterwards, tell me what I'm doing wrong, that would be super helpful.
+
+158
+00:16:26,000 --> 00:16:33,000
+Anyways, so we don't necessarily have nurseries to help us clean up after ourselves.
+
+159
+00:16:33,000 --> 00:16:36,000
+We need to be responsible and close up connections.
+
+160
+00:16:36,000 --> 00:16:42,000
+The files that we've opened respond to our outstanding requests, basically leaving things how we found them.
+
+161
+00:16:42,000 --> 00:16:50,000
+And doing a cleanup in a finally clause isn't enough, though, since a signal could be sent outside of that try accept clause.
+
+162
+00:16:50,000 --> 00:16:52,000
+So we should do it when we construct the loop.
+
+163
+00:16:52,000 --> 00:16:58,000
+We should tell how the loop should be deconstructed as soon as the program gets interrupted some way.
+
+164
+00:16:58,000 --> 00:17:01,000
+This ensures that all of our bases are covered.
+
+165
+00:17:03,000 --> 00:17:12,000
+And finally, once we are aware of how our program should be shut down, we should know to what signals to respond to.
+
+166
+00:17:12,000 --> 00:17:15,000
+If it's a manual script, then sigint might be fine.
+
+167
+00:17:15,000 --> 00:17:20,000
+But if it's within a demonized Docker container, then sigterm might be more appropriate.
+
+168
+00:17:23,000 --> 00:17:25,000
+Moving on to exception handling.
+
+169
+00:17:25,000 --> 00:17:28,000
+You might have noticed that we have not handled any exceptions so far.
+
+170
+00:17:29,000 --> 00:17:33,000
+So let's revisit our restart host coroutine.
+
+171
+00:17:33,000 --> 00:17:37,000
+And we're going to add a super realistic exception.
+
+172
+00:17:37,000 --> 00:17:45,000
+And so when we run this, we do see that that super serious exception was raised.
+
+173
+00:17:45,000 --> 00:17:49,000
+But that we also get a task exception was never retrieved.
+
+174
+00:17:49,000 --> 00:17:54,000
+This is because we don't properly handle the result of a task when it raises.
+
+175
+00:17:55,000 --> 00:17:59,000
+What we can do is define an exception handler.
+
+176
+00:17:59,000 --> 00:18:01,000
+Super complicated, I know.
+
+177
+00:18:01,000 --> 00:18:07,000
+And then we can attach it to our loop, much like signal handling.
+
+178
+00:18:08,000 --> 00:18:14,000
+And so when we rerun this, we see that our logging of exception does happen.
+
+179
+00:18:14,000 --> 00:18:20,000
+And we don't get that try or the task cannot be retrieved.
+
+180
+00:18:21,000 --> 00:18:26,000
+So we've set exception handling on the global level as a global default.
+
+181
+00:18:26,000 --> 00:18:30,000
+But perhaps you want to treat some exceptions differently for certain tasks.
+
+182
+00:18:31,000 --> 00:18:35,000
+So we're going to revisit our handle message coroutine here.
+
+183
+00:18:35,000 --> 00:18:40,000
+So say, for instance, you're fine with a logging when the save message fails.
+
+184
+00:18:40,000 --> 00:18:47,000
+But you want to knock the PubSub message and have it go back to the queue to retry the whole message.
+
+185
+00:18:47,000 --> 00:18:53,000
+So since async.io gather returns results in a deterministic way,
+
+186
+00:18:53,000 --> 00:18:59,000
+we can have a more fine grain exception handler and attach the results as we wish.
+
+187
+00:18:59,000 --> 00:19:01,000
+Or handle the results as we wish.
+
+188
+00:19:01,000 --> 00:19:08,000
+So I want to highlight that setting the return exceptions to true is super imperative.
+
+189
+00:19:08,000 --> 00:19:11,000
+Otherwise, exceptions will be handled by the default handler.
+
+190
+00:19:11,000 --> 00:19:16,000
+And if the default handler isn't set, they'll just get swallowed and it's not going to work.
+
+191
+00:19:16,000 --> 00:19:19,000
+They'll just get swallowed and it's kind of confusing.
+
+192
+00:19:21,000 --> 00:19:28,000
+So I guess be sure to set some sort of exception handling, either globally or individually, or you probably want a mix.
+
+193
+00:19:28,000 --> 00:19:32,000
+Otherwise, exceptions may go unnoticed or cause some weird behavior.
+
+194
+00:19:32,000 --> 00:19:37,000
+I personally like async.io.gather because of the order of return results.
+
+195
+00:19:37,000 --> 00:19:38,000
+It is deterministic.
+
+196
+00:19:38,000 --> 00:19:41,000
+But it's easy to sort of get tripped up with it.
+
+197
+00:19:41,000 --> 00:19:45,000
+By default, it will swallow sort of exceptions and then happily continue working on the other tasks
+
+198
+00:19:45,000 --> 00:19:46,000
+that it was given.
+
+199
+00:19:46,000 --> 00:19:50,000
+So if an exception is never returned, then weird behavior can happen.
+
+200
+00:19:53,000 --> 00:19:54,000
+All right.
+
+201
+00:19:54,000 --> 00:19:56,000
+Sometimes you need to work with threads.
+
+202
+00:19:56,000 --> 00:19:58,000
+And I'm sorry if you do.
+
+203
+00:19:59,000 --> 00:20:05,000
+So maybe you have like a threaded PubSub client and you want to consume a message on one thread.
+
+204
+00:20:05,000 --> 00:20:10,000
+And then handle the message with a coroutine on your main event loop.
+
+205
+00:20:10,000 --> 00:20:14,000
+So let's first attempt to use the async.io API that we're familiar with.
+
+206
+00:20:14,000 --> 00:20:23,000
+And update our synchronous callback function with creating a task via async.io.createTask and create a task out of handleMessage.
+
+207
+00:20:26,000 --> 00:20:34,000
+So then this is how we would call via the thread pool executor, very similar to synchronous functions.
+
+208
+00:20:34,000 --> 00:20:37,000
+But you can see that we actually don't get very far.
+
+209
+00:20:38,000 --> 00:20:40,000
+And at this point, we are in another thread.
+
+210
+00:20:40,000 --> 00:20:43,000
+And then there's no running event loop in that thread.
+
+211
+00:20:43,000 --> 00:20:45,000
+It's only in the main thread.
+
+212
+00:20:48,000 --> 00:21:00,000
+So if we take what we have right now and update our function to use the main event loop, if we try running this, it looks like it works.
+
+213
+00:21:00,000 --> 00:21:02,000
+But it's actually deceptive.
+
+214
+00:21:04,000 --> 00:21:06,000
+We're not being thread safe.
+
+215
+00:21:07,000 --> 00:21:09,000
+So we're going to try this again.
+
+216
+00:21:09,000 --> 00:21:14,000
+So instead of loop.createTask, we're going to make use of the thread safe API.
+
+217
+00:21:14,000 --> 00:21:16,000
+That should give us a clue.
+
+218
+00:21:16,000 --> 00:21:19,000
+So we're going to use run coroutine thread safe.
+
+219
+00:21:20,000 --> 00:21:28,000
+And now it can be difficult to tell when you're not being thread safe, particularly when it looks like it worked like it did in our previous attempt.
+
+220
+00:21:28,000 --> 00:21:35,000
+But in a bit, I'll show you how you can easily surface the issue of thread safety.
+
+221
+00:21:35,000 --> 00:21:40,000
+So I guess in my opinion, it's not too difficult to work with threaded code and async IOM.
+
+222
+00:21:40,000 --> 00:21:44,000
+It's similar to how we work with non-async code in the async world.
+
+223
+00:21:44,000 --> 00:21:49,000
+We'll make use of the thread pool executor, which essentially creates an awaitable for us.
+
+224
+00:21:49,000 --> 00:21:58,000
+However, it can be difficult in the sense of when you need to share state between both of them and when you want a thread to schedule something on the main event loop.
+
+225
+00:21:58,000 --> 00:22:02,000
+So if you must do that, then use the thread safe API.
+
+226
+00:22:02,000 --> 00:22:07,000
+And I will admit it took an embarrassing long time for me to realize this.
+
+227
+00:22:07,000 --> 00:22:11,000
+I had services already in production and I was deadlocking myself.
+
+228
+00:22:11,000 --> 00:22:14,000
+So on to testing.
+
+229
+00:22:14,000 --> 00:22:21,000
+So for a more simplistic starting point, we're going to test async IOM code before we introduced threading.
+
+230
+00:22:21,000 --> 00:22:24,000
+So we're going to start simple.
+
+231
+00:22:24,000 --> 00:22:27,000
+We're going to test the thread safe API.
+
+232
+00:22:27,000 --> 00:22:32,000
+Since the save coroutine is a coroutine, we need to run it in our event loop.
+
+233
+00:22:32,000 --> 00:22:34,000
+Like so.
+
+234
+00:22:34,000 --> 00:22:39,000
+And Python 3.7 makes it easy for us with the async IOM.run function.
+
+235
+00:22:39,000 --> 00:22:44,000
+Older Python versions, Python 3 versions will have to construct and deconstruct the loop.
+
+236
+00:22:44,000 --> 00:22:47,000
+So we're going to run it in our event loop.
+
+237
+00:22:47,000 --> 00:22:52,000
+And we're going to test it in the async IOM.run function.
+
+238
+00:22:52,000 --> 00:22:58,000
+So for Python versions, Python 3 versions will have to construct and deconstruct the loop yourself.
+
+239
+00:22:58,000 --> 00:23:01,000
+But some of you might be saying there's a better way.
+
+240
+00:23:01,000 --> 00:23:03,000
+And there is.
+
+241
+00:23:03,000 --> 00:23:10,000
+There is a PyTest plugin called PyTest-async IOM that will essentially do the hard work for you.
+
+242
+00:23:10,000 --> 00:23:19,000
+You just need to mark the particular tests that they are async code that needs to be run with this decorator.
+
+243
+00:23:19,000 --> 00:23:23,000
+And make the test function itself a coroutine.
+
+244
+00:23:23,000 --> 00:23:32,000
+Now when running the tests, the plugin will essentially do the work for you of constructing and deconstructing the event loop.
+
+245
+00:23:32,000 --> 00:23:36,000
+So the PyTest-async IOM plugin can get you pretty far.
+
+246
+00:23:36,000 --> 00:23:41,000
+But it doesn't help you when you need to mock out coroutines.
+
+247
+00:23:41,000 --> 00:23:47,000
+For instance, our save coroutine function calls another coroutine, the async IOM sleep.
+
+248
+00:23:47,000 --> 00:23:50,000
+Or it might actually call a database.
+
+249
+00:23:50,000 --> 00:23:55,000
+Now you don't actually want to wait for async IOM sleep to complete while you're running the tests.
+
+250
+00:23:55,000 --> 00:23:59,000
+Nor do you actually want to call a database while you're running your tests.
+
+251
+00:23:59,000 --> 00:24:07,000
+So both the unit-test.mock library and the PyTest-mock package do not support asynchronous mocks.
+
+252
+00:24:07,000 --> 00:24:10,000
+So we'll sort of have to work around this.
+
+253
+00:24:10,000 --> 00:24:14,000
+We are going to make use of the PyTest-mock library and create a fixture.
+
+254
+00:24:14,000 --> 00:24:17,000
+That's essentially returning a function.
+
+255
+00:24:17,000 --> 00:24:23,000
+So the outer function returns this inner function as a fixture that we'll end up using in our tests.
+
+256
+00:24:23,000 --> 00:24:30,000
+And then the inner function is basically creating and returning a mock object that we will play with in our test.
+
+257
+00:24:30,000 --> 00:24:36,000
+As well as a stubbed coroutine that will actually end up getting called.
+
+258
+00:24:36,000 --> 00:24:40,000
+And then it will call our mock for us.
+
+259
+00:24:40,000 --> 00:24:44,000
+It also patches if we need the desired coroutine with the stub.
+
+260
+00:24:44,000 --> 00:24:50,000
+So we can avoid the network calls, the sleeps that we don't want to happen.
+
+261
+00:24:50,000 --> 00:24:58,000
+So then we're going to create another PyTest fixture that will use this create-co-mock fixture that we just defined.
+
+262
+00:24:58,000 --> 00:25:01,000
+To mock and patch the async IOM sleep.
+
+263
+00:25:01,000 --> 00:25:04,000
+And we don't need the stub coroutine that is returned.
+
+264
+00:25:04,000 --> 00:25:07,000
+So we can just sort of throw that away.
+
+265
+00:25:07,000 --> 00:25:13,000
+And then we can use the mock sleep fixture in our test save function.
+
+266
+00:25:13,000 --> 00:25:20,000
+So what we've done is basically patched async IOM sleep in our mayhem module with the stub coroutine function.
+
+267
+00:25:20,000 --> 00:25:29,000
+And then we can assert the mock async IOM sleep object was called once the mayhem.save coroutine was called.
+
+268
+00:25:29,000 --> 00:25:36,000
+Because we now have a mock object, instead of the actual coroutine, we can now do anything that's supported with mocks.
+
+269
+00:25:36,000 --> 00:25:43,000
+We can do assert called once with and play with the return values and side effects as we need, et cetera.
+
+270
+00:25:43,000 --> 00:25:53,000
+Mind you, when I'm testing, I do test to assert that parameters were called as accordingly and not just the simple call count thing.
+
+271
+00:25:53,000 --> 00:25:55,000
+So that's simple enough.
+
+272
+00:25:55,000 --> 00:26:00,000
+But sometimes you need to test code that is using the create-task method.
+
+273
+00:26:00,000 --> 00:26:06,000
+And we can't simply use the create-code-or-mock fixture that we defined a second ago.
+
+274
+00:26:06,000 --> 00:26:11,000
+So for instance, let's revisit our consume coroutine.
+
+275
+00:26:11,000 --> 00:26:19,000
+And this, which will create and schedule a task on the loop and it will pass the handle message coroutine.
+
+276
+00:26:19,000 --> 00:26:23,000
+So we'll first need a couple of fixtures for that queue.
+
+277
+00:26:23,000 --> 00:26:28,000
+We will mock and patch the async IOM.queue class within our module.
+
+278
+00:26:28,000 --> 00:26:34,000
+And then we'll use the mock queue fixture in another one, in the mock get fixture.
+
+279
+00:26:34,000 --> 00:26:46,000
+So unlike our mock sleep fixture, we will use that stub coroutine that create mock code returns and set it to the mock queues get method.
+
+280
+00:26:46,000 --> 00:26:53,000
+So here is our test consume function where we are giving the newly created fixtures.
+
+281
+00:26:53,000 --> 00:27:03,000
+And so we will try to use the create-code-or-mock to mock and patch the call to handle message coroutine via that create task.
+
+282
+00:27:03,000 --> 00:27:15,000
+And I want to highlight that we're setting the mock get side effect to one real value and one exception to make sure that we're not permanently stuck in that while true loop that the consume has.
+
+283
+00:27:15,000 --> 00:27:22,000
+And finally, we want to assert that our mock for handle message has been called after consume has been run.
+
+284
+00:27:22,000 --> 00:27:27,000
+So when running this, we see that mock handle message does not actually get called like we were expecting.
+
+285
+00:27:27,000 --> 00:27:32,000
+And this is because the scheduled tasks are only scheduled and pending at this point.
+
+286
+00:27:32,000 --> 00:27:35,000
+We sort of have to nudge them along.
+
+287
+00:27:35,000 --> 00:27:42,000
+And so to do this, we kind of collect all the running tasks except for the test itself and then run this explicitly.
+
+288
+00:27:42,000 --> 00:27:44,000
+I know this is a bit clunky.
+
+289
+00:27:44,000 --> 00:27:49,000
+Perhaps this is an opportunity to contribute to a pi test during a sprint.
+
+290
+00:27:49,000 --> 00:27:58,000
+But if you use the unit test library from the standard library, there's a package called async test that handles this.
+
+291
+00:27:58,000 --> 00:28:06,000
+And it's a bit better and it exhausts the scheduling of tasks for you.
+
+292
+00:28:06,000 --> 00:28:14,000
+So I hear that you're wanting to get 100% test coverage, just like me, which can be difficult for our main function.
+
+293
+00:28:14,000 --> 00:28:21,000
+So we set up the signal handling and exception handling and we create a few tasks and then we start and close the loop.
+
+294
+00:28:21,000 --> 00:28:29,000
+We can't exactly use the event loop fixture that the pi test dash async library gives us.
+
+295
+00:28:29,000 --> 00:28:35,000
+We need to manipulate that fixture that gets ends up getting injected into our code.
+
+296
+00:28:35,000 --> 00:28:42,000
+And we do this by updating the event loop so we can override the closed behavior.
+
+297
+00:28:42,000 --> 00:28:50,000
+If we close the loop during the test, we actually lose access to the exception and signal handlers that we set up within the main function.
+
+298
+00:28:50,000 --> 00:28:53,000
+So we actually need to close when we're done with the test.
+
+299
+00:28:53,000 --> 00:29:00,000
+And then we can use the mock to assert that the main function actually closes the loop.
+
+300
+00:29:00,000 --> 00:29:07,000
+And so we write the test main function that actually kind of borders on an integration or functional test.
+
+301
+00:29:07,000 --> 00:29:14,000
+And we want to make sure in addition to the expected calls to publish and consume that shutdown gets called when expected.
+
+302
+00:29:14,000 --> 00:29:31,000
+We can't exactly mock out shutdown with our create co-mock since it will just patch it with another coroutine and therefore run the coroutine every time a signal rather than canceling tasks and stopping the loop.
+
+303
+00:29:31,000 --> 00:29:39,000
+So instead we mock out the coroutines within shutdown, the async.io.gather.
+
+304
+00:29:39,000 --> 00:29:45,000
+And then here I'm starting a thread that will essentially send the process a signal after a tenth of a second.
+
+305
+00:29:45,000 --> 00:29:52,000
+And after starting that thread, we will then call the main function that we want to test.
+
+306
+00:29:52,000 --> 00:30:07,000
+So this looking at the second half of the test, we can then assert that the loop is set up the way that we expected, that our mocked out functions have been called.
+
+307
+00:30:07,000 --> 00:30:11,000
+And then returning to the test set up real quick.
+
+308
+00:30:11,000 --> 00:30:23,000
+So you can, yeah, you can, you might want to think about parameterizing the test itself with not just the signal but all the signals that we might be expecting.
+
+309
+00:30:23,000 --> 00:30:31,000
+And it's probably good to have a test of a signal that you're not explicitly attaching the handler to like sig quit.
+
+310
+00:30:31,000 --> 00:30:36,000
+So basically the TLDR is use py test async.io.
+
+311
+00:30:36,000 --> 00:30:41,000
+It's also a package called async test as I mentioned before for the unit test library.
+
+312
+00:30:41,000 --> 00:30:47,000
+It's similar to py test async.io in that it will handle the event loop construction for you.
+
+313
+00:30:47,000 --> 00:30:59,000
+But it also has the exhaustion of scheduled tasks and actually mocking coroutines ability right there.
+
+314
+00:30:59,000 --> 00:31:05,000
+So we're pretty decent programmers and we have good code coverage but sometimes stuff breaks.
+
+315
+00:31:05,000 --> 00:31:08,000
+We need to figure out what's going on.
+
+316
+00:31:08,000 --> 00:31:12,000
+So we can use everyone's favorite debugger printing.
+
+317
+00:31:12,000 --> 00:31:14,000
+Sort of.
+
+318
+00:31:14,000 --> 00:31:22,000
+So if you have just one small thing to debug, it might help to use the print stack method on task instance.
+
+319
+00:31:22,000 --> 00:31:32,000
+And so when you run this, you can see that the print stack will like, you'll see the stack for every running task.
+
+320
+00:31:32,000 --> 00:31:38,000
+And you can increase the number of frames that are printed as well.
+
+321
+00:31:38,000 --> 00:31:44,000
+So async.io has a debug mode actually already available and it's quite useful.
+
+322
+00:31:44,000 --> 00:31:53,000
+So along with setting our logging to the debug level, we can easily turn on async.io debug when we run our script.
+
+323
+00:31:53,000 --> 00:31:58,000
+So say for instance we didn't have that proper exception handling set up.
+
+324
+00:31:58,000 --> 00:32:04,000
+We can see that the task was never achieved but we also get information about the task that was affected.
+
+325
+00:32:04,000 --> 00:32:11,000
+And what's called a source trace back to give us more context in addition to the trace back.
+
+326
+00:32:11,000 --> 00:32:16,000
+So without debug mode, we get told that there is an exception that's not properly handled.
+
+327
+00:32:16,000 --> 00:32:22,000
+And with debug mode, it gives us more additional clues what might be happening.
+
+328
+00:32:22,000 --> 00:32:29,000
+Another very handy thing, which I knew a few years ago, is it's able to tell you if you're thread safe.
+
+329
+00:32:29,000 --> 00:32:42,000
+So if you got threads in the event loop interacting with each other, debug mode will surface any non-thread safe operations for you as a runtime error.
+
+330
+00:32:42,000 --> 00:32:53,000
+And then one really nice feature about debug mode in async.io is how it sort of acts like a tiny little profiler that will log asynchronous calls that are slower than 100 milliseconds.
+
+331
+00:32:53,000 --> 00:33:00,000
+So we're going to fake a slow coroutine by putting a blocking call into time.sleep.
+
+332
+00:33:00,000 --> 00:33:12,000
+So then we run our script again and we can see that async.io will surface slow to finish tasks, potentially highlighting any unnecessarily blocking tasks.
+
+333
+00:33:12,000 --> 00:33:17,000
+So the default for what's considered slow is 100 milliseconds, but that's configurable too.
+
+334
+00:33:17,000 --> 00:33:26,000
+You can set the slow callback duration in seconds on the loop directly.
+
+335
+00:33:26,000 --> 00:33:37,000
+So much like some people's testing philosophies, sometimes you need to debug in production, but you usually don't want full on debug mode while in production.
+
+336
+00:33:37,000 --> 00:33:45,000
+So there's a lightweight package called aio-debug that will log slow callbacks for you.
+
+337
+00:33:45,000 --> 00:33:50,000
+And it also comes with the ability to report delayed calls to statsd if you use that.
+
+338
+00:33:50,000 --> 00:33:58,000
+Now that's the only thing that the package will do, so it's super lightweight.
+
+339
+00:33:58,000 --> 00:34:08,000
+So to wrap up debugging, you can easily print the stack of the task if needed, but you can also get a lot with async.io's debug mode.
+
+340
+00:34:08,000 --> 00:34:17,000
+It gives more information around unhandled exceptions when you're not being thread safe and when they're slow to complete tasks.
+
+341
+00:34:17,000 --> 00:34:29,000
+And if you want to understand slow to complete tasks in production, aio-debug is a lightweight library that essentially does only that.
+
+342
+00:34:29,000 --> 00:34:37,000
+All right, so as we saw with async.io's debug mode, the event loop can already track coroutines that take up too much CPU time to execute,
+
+343
+00:34:37,000 --> 00:34:41,000
+but it might be hard to tell what is an anomaly and what is a pattern.
+
+344
+00:34:41,000 --> 00:34:51,000
+So a lot of folks might first reach for a C profile to try and understand performance, and we can try that out here too.
+
+345
+00:34:51,000 --> 00:34:55,000
+But there's not much to actually glean from it. I kind of snippet for the slide a little bit.
+
+346
+00:34:55,000 --> 00:35:00,000
+But the top item here is essentially the event loop itself.
+
+347
+00:35:00,000 --> 00:35:05,000
+If we limit to only looking at our code, we kind of get a picture of what's going on.
+
+348
+00:35:05,000 --> 00:35:12,000
+Like we can see that our main function takes up the most time, but that's where the event loop is ran.
+
+349
+00:35:12,000 --> 00:35:16,000
+But nothing else is immediately obvious.
+
+350
+00:35:16,000 --> 00:35:24,000
+So I actually recently discovered that KcashGrind, I don't know if you're all familiar with it, can be used with Python.
+
+351
+00:35:24,000 --> 00:35:31,000
+So to do so, we just save the output of C profile and then use a package called pyprof to call tree.
+
+352
+00:35:31,000 --> 00:35:38,000
+That takes the output of C profile and converts it into data that KcashGrind will understand.
+
+353
+00:35:38,000 --> 00:35:43,000
+And so when doing this, you're met with this UI.
+
+354
+00:35:43,000 --> 00:35:46,000
+And I'm sorry if you can't see this. You definitely can't see this.
+
+355
+00:35:46,000 --> 00:35:53,000
+But basically the left-hand side is the profiling data that we would otherwise see from C profile output.
+
+356
+00:35:53,000 --> 00:35:59,000
+And then we can click on some of those functions on that right side or on the left side to update the right side,
+
+357
+00:35:59,000 --> 00:36:08,000
+where we see information about callers and callees, including the call graph right there and the map of the callees on the top.
+
+358
+00:36:08,000 --> 00:36:18,000
+Now if we limit the view to our own script and clicking around the coroutine functions, we can kind of get an idea of where time is spent.
+
+359
+00:36:18,000 --> 00:36:24,000
+This visualization kind of groups modules together by color.
+
+360
+00:36:24,000 --> 00:36:29,000
+And so when I was first actually profiling this, I saw a lot of blue.
+
+361
+00:36:29,000 --> 00:36:32,000
+And you can kind of click through and get a little more information.
+
+362
+00:36:32,000 --> 00:36:38,000
+And you realize or I realize that all that blue that we see is related to logging.
+
+363
+00:36:38,000 --> 00:36:42,000
+Now we're going to hold on to that thought.
+
+364
+00:36:42,000 --> 00:36:51,000
+So KcashGrind will allow us to get sort of a broad picture of what's going on and give us some visual clues of where to look for potential areas of unnecessary time spent.
+
+365
+00:36:51,000 --> 00:36:53,000
+And then there's a line profiler package.
+
+366
+00:36:53,000 --> 00:36:58,000
+And with this, we can kind of hone in on areas of our code that we're suspicious of.
+
+367
+00:36:58,000 --> 00:37:05,000
+So after installing the line profiler, you can add the profile decorator where you want to profile.
+
+368
+00:37:05,000 --> 00:37:11,000
+And here I'm only decorating the save coroutine.
+
+369
+00:37:11,000 --> 00:37:19,000
+So the line profiler library comes with a CLI tool called KernProf that we will invoke our script with.
+
+370
+00:37:19,000 --> 00:37:28,000
+And then we render the output with the line profile module itself, which gives us a line by line assessment of our decorated code.
+
+371
+00:37:28,000 --> 00:37:34,000
+So the total time spent here in this function is just over two milliseconds.
+
+372
+00:37:34,000 --> 00:37:38,000
+And the majority of that time is spent in logging.
+
+373
+00:37:38,000 --> 00:37:41,000
+Now, if only there was something we could do about that.
+
+374
+00:37:41,000 --> 00:37:45,000
+Coincidentally, there is. Someone already has done something.
+
+375
+00:37:46,000 --> 00:37:51,000
+And so there's this package called AIOLogger that allows for non-blocking logging.
+
+376
+00:37:51,000 --> 00:37:57,000
+And so if we switch out our default logger with AIOLogger and rerun the profiler,
+
+377
+00:37:57,000 --> 00:38:06,000
+we can see that our total time spent on the function is halved, as well as the time spent logging itself.
+
+378
+00:38:06,000 --> 00:38:11,000
+And so certainly these are like minuscule improvements that we're doing here.
+
+379
+00:38:11,000 --> 00:38:15,000
+But you can extrapolate on a much larger scale.
+
+380
+00:38:15,000 --> 00:38:20,000
+And also, as I see it, if we have an event loop, let's try and take full advantage of it.
+
+381
+00:38:23,000 --> 00:38:28,000
+So we've profiled Cprofile with Cprofile and with a line profiler.
+
+382
+00:38:28,000 --> 00:38:33,000
+But we've had to stop the service in order to look at results.
+
+383
+00:38:33,000 --> 00:38:38,000
+So perhaps you would like a live profiler to go along with your production debugging.
+
+384
+00:38:39,000 --> 00:38:48,000
+There's this package called profiling that provides an interactive UI and supports async IOM, as well as threads and greenlets.
+
+385
+00:38:48,000 --> 00:38:53,000
+Granted, you can't attach to a running process with this particular tool.
+
+386
+00:38:53,000 --> 00:38:56,000
+You'll need to launch your service with it.
+
+387
+00:38:56,000 --> 00:39:02,000
+But when you do, you get this text-based UI that regularly updates.
+
+388
+00:39:02,000 --> 00:39:10,000
+And with this, you can drill down and pause when you're inspecting something and then restart it when you're ready.
+
+389
+00:39:10,000 --> 00:39:16,000
+You're also able to just save the performance data and view it with this UI at a later time.
+
+390
+00:39:16,000 --> 00:39:22,000
+And then what's actually kind of cool is it provides a server so that you can remotely connect to it from elsewhere.
+
+391
+00:39:22,000 --> 00:39:27,000
+So the TLDR of profiling.
+
+392
+00:39:27,000 --> 00:39:32,000
+There's basically not much difference with profiling async IOM code from non-async IOM code.
+
+393
+00:39:32,000 --> 00:39:37,000
+It can be confusing, though, with just looking at the output from Cprofile.
+
+394
+00:39:37,000 --> 00:39:45,000
+So to get an initial picture of your service's performance, using Cprofile with Kcashgrind can help surface areas to investigate.
+
+395
+00:39:46,000 --> 00:39:51,000
+Without that visualization, it can be difficult to identify hot spots.
+
+396
+00:39:51,000 --> 00:40:00,000
+But then once you do have some sort of idea of where hot spots are, you can use LineProfiler to get a line-by-line performance data.
+
+397
+00:40:00,000 --> 00:40:09,000
+And then finally, if you want to profile with production data, I would suggest taking a look at the profile package, profiling package.
+
+398
+00:40:09,000 --> 00:40:11,000
+All right. That was a lot.
+
+399
+00:40:11,000 --> 00:40:16,000
+But in essence, this talk is something that I would have liked to have like three years ago.
+
+400
+00:40:16,000 --> 00:40:19,000
+So I'm kind of talking to Paslin here.
+
+401
+00:40:19,000 --> 00:40:27,000
+But I'm hoping that someone else or you all have some benefit from this use case that is not a web crawler.
+
+402
+00:40:27,000 --> 00:40:34,000
+So I know it's lunchtime, but I will be around here through all the conference as well as the sprint.
+
+403
+00:40:34,000 --> 00:40:36,000
+So if you have questions, you can come find me.
+
+404
+00:40:36,000 --> 00:40:38,000
+But thank you.
+
+405
+00:40:41,000 --> 00:40:43,000
+Thank you.
+

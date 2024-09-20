@@ -1,0 +1,1104 @@
+1
+00:00:00,000 --> 00:00:02,000
+.
+
+2
+00:00:30,600 --> 00:00:33,400
+!
+
+3
+00:00:33,460 --> 00:00:36,040
+.
+
+4
+00:00:53,060 --> 00:00:56,220
+.
+
+5
+00:01:00,000 --> 00:01:04,640
+have existing APIs that you would like to maintain and innovate on them without
+
+6
+00:01:04,640 --> 00:01:09,960
+breaking anyone that depends on them. This is that talk. So everyone, please give a
+
+7
+00:01:09,960 --> 00:01:12,960
+warm welcome to Jesse.
+
+8
+00:01:19,480 --> 00:01:26,120
+So I'm Jesse and I work for MongoDB in New York. I've worked with some very
+
+9
+00:01:26,120 --> 00:01:31,120
+popular open source libraries for many years and seen them change and evolve
+
+10
+00:01:31,120 --> 00:01:36,600
+over time. I've learned a lot in that process and I want to teach you some
+
+11
+00:01:36,600 --> 00:01:45,000
+shortcuts to learning how to evolve your APIs the right way. So imagine that you
+
+12
+00:01:45,000 --> 00:01:52,000
+are a creator deity and you are in charge of designing the body for a
+
+13
+00:01:52,000 --> 00:01:57,600
+creature. If you think of ways to improve the creature's body over time so
+
+14
+00:01:57,600 --> 00:02:03,320
+it's better evolved, you should make those changes. It would really appreciate
+
+15
+00:02:03,320 --> 00:02:07,720
+it. It shouldn't be stuck in the same body forever. But at the same time you
+
+16
+00:02:07,720 --> 00:02:12,560
+can't just go changing its scales or adding wings willy-nilly. You need some
+
+17
+00:02:12,560 --> 00:02:20,280
+sort of process for it to adapt its lifestyle for changes in its body. And if
+
+18
+00:02:20,320 --> 00:02:25,960
+you are a responsible creator deity, you have to balance these two obligations to
+
+19
+00:02:25,960 --> 00:02:31,880
+your creature. It's the same for library maintainers. We are in charge of
+
+20
+00:02:31,880 --> 00:02:36,400
+responsible evolution for our libraries. We have promises to our users. We
+
+21
+00:02:36,400 --> 00:02:42,000
+promise to fix bugs, add features, maybe delete features if that's the right
+
+22
+00:02:42,000 --> 00:02:48,880
+thing for the library's future. But at the same time we can't break code that
+
+23
+00:02:48,920 --> 00:02:54,160
+our users have written that relies on the way that our library works today. How
+
+24
+00:02:54,160 --> 00:02:59,760
+do we fulfill all of these promises at once? By the way, I'm going to go fast
+
+25
+00:02:59,760 --> 00:03:03,800
+because the talk is too long, but I'll share a link at the end to a written
+
+26
+00:03:03,800 --> 00:03:08,560
+version of this talk so you don't have to memorize everything at the speed that
+
+27
+00:03:08,560 --> 00:03:13,760
+I'm saying it. So the first thing for a responsible creator is that if we think
+
+28
+00:03:13,760 --> 00:03:17,720
+of features that would make our library more useful, we should add them if we
+
+29
+00:03:17,760 --> 00:03:21,280
+think that adding wings would improve the library, we should go ahead and do it.
+
+30
+00:03:21,280 --> 00:03:29,320
+But adding features comes with risks. I'm going to show an example of a feature
+
+31
+00:03:29,320 --> 00:03:34,560
+that was added to the standard library and what went wrong. Yeah, so we should add
+
+32
+00:03:34,560 --> 00:03:39,160
+features. That's what I meant to say. All right. So here's an example from the
+
+33
+00:03:39,160 --> 00:03:47,680
+Python standard library. From early days it had this datetime.time object and it's
+
+34
+00:03:47,680 --> 00:03:52,680
+got a special dunder bool operator for converting it to bool and 9.30 in the
+
+35
+00:03:52,680 --> 00:03:59,240
+morning converts to true. What do you think about zero? Well, depending on the
+
+36
+00:03:59,240 --> 00:04:05,360
+circumstances, it will evaluate as false. This is a very surprising quirk. I've
+
+37
+00:04:05,360 --> 00:04:09,480
+been coding Python for more than 10 years. I only recently found out about
+
+38
+00:04:09,480 --> 00:04:16,040
+this. You can imagine what sort of bugs might arise if you don't know about this.
+
+39
+00:04:16,080 --> 00:04:22,280
+Say that you're writing a calendar application and you have a create event
+
+40
+00:04:22,280 --> 00:04:29,560
+function. It might take a day and also the start time and the end time. And it
+
+41
+00:04:29,560 --> 00:04:33,960
+doesn't make sense to have an end time with no start time, so you write a check
+
+42
+00:04:33,960 --> 00:04:42,640
+for that. What can go wrong here? What about an event that starts at midnight?
+
+43
+00:04:42,640 --> 00:04:46,960
+Well, this should be allowed, but it's going to fail the check because of that
+
+44
+00:04:46,960 --> 00:04:54,600
+quirk. You could code defensively. You could say that if end time is not none
+
+45
+00:04:54,600 --> 00:05:02,240
+and start time is none, then that's okay. But this is a really subtle point. If you
+
+46
+00:05:02,240 --> 00:05:08,640
+wanted to design an API that would bite people by surprise, this is the kind of
+
+47
+00:05:08,640 --> 00:05:14,120
+quirk that you would add. But we're not those sort of designers. We are
+
+48
+00:05:14,120 --> 00:05:19,440
+responsible creators. We want to make our libraries easy to use correctly. And
+
+49
+00:05:19,440 --> 00:05:24,800
+that's what the core developers eventually did is that it took years, but
+
+50
+00:05:24,800 --> 00:05:34,720
+in Python 3, all datetime.time objects evaluate as true. How do we avoid making
+
+51
+00:05:34,880 --> 00:05:41,600
+these sorts of mistakes in our own APIs? As responsible creators, we must obey the
+
+52
+00:05:41,600 --> 00:05:48,640
+first of the ten covenants, which is to avoid adding bad features. I don't want
+
+53
+00:05:48,640 --> 00:05:52,720
+to be too critical of this midnight quirk. It was actually coded by Tim
+
+54
+00:05:52,720 --> 00:05:57,920
+Peters, who is one of the founding coders, one of the most brilliant Python
+
+55
+00:05:57,920 --> 00:06:04,040
+contributors ever. If even he can make such a mistake, how do we avoid it? Well,
+
+56
+00:06:04,080 --> 00:06:10,160
+we can do it by just minimizing features overall. Don't add a public class or
+
+57
+00:06:10,160 --> 00:06:15,520
+method or attribute unless there's a really good reason for it. Remember that
+
+58
+00:06:15,520 --> 00:06:19,360
+adding features is fun, but they're kind of like children. They're conceived in a
+
+59
+00:06:19,360 --> 00:06:25,240
+moment of passion. You're enthusiastic. You're not thinking. And next thing you
+
+60
+00:06:25,240 --> 00:06:31,360
+know, you've got something that you have to maintain for years. Let's say that you
+
+61
+00:06:31,400 --> 00:06:36,400
+as a responsible creator, you've decided that it's time to add a feature. You want
+
+62
+00:06:36,400 --> 00:06:41,280
+to make your library better. How do you choose the right feature for the job?
+
+63
+00:06:42,080 --> 00:06:45,840
+I'm going to look at another example from the standard library. So this one's in
+
+64
+00:06:45,840 --> 00:06:51,440
+async.io. So a little bit of background. You know that you can create a coroutine
+
+65
+00:06:51,440 --> 00:06:59,840
+with this async.def syntax, but when you execute this coroutine function, which
+
+66
+00:06:59,880 --> 00:07:05,280
+you get is a coroutine object. The coroutine is not actually executed until
+
+67
+00:07:05,280 --> 00:07:13,040
+you await that coroutine. It's easy to forget to do, and so the async.io
+
+68
+00:07:13,040 --> 00:07:21,240
+developers, they wanted some way to catch the mistake of deleting a coroutine
+
+69
+00:07:21,240 --> 00:07:25,440
+without ever having awaited it. So they wanted some sort of wrapper around a
+
+70
+00:07:25,480 --> 00:07:30,960
+coroutine that in debug mode could warn you if you've never awaited the coroutine.
+
+71
+00:07:32,520 --> 00:07:37,680
+What they introduced to solve this problem was this incredibly powerful hook
+
+72
+00:07:37,680 --> 00:07:43,320
+called setCoroutineWrapper. What you pass in there is a function which takes a
+
+73
+00:07:43,320 --> 00:07:49,360
+coroutine and returns something. The intention was that this something would be
+
+74
+00:07:49,360 --> 00:07:53,160
+a thing that would warn you if you've never awaited the coroutine, but you could
+
+75
+00:07:53,200 --> 00:07:58,440
+throw anything in there. You could set up a hook that replaces all coroutines with
+
+76
+00:07:58,440 --> 00:08:05,760
+a string high. This is unbelievably powerful as a customization. It changes
+
+77
+00:08:05,760 --> 00:08:11,760
+the very meaning of the word async throughout the program globally. This is
+
+78
+00:08:11,760 --> 00:08:17,840
+much too powerful for the job. As Nathaniel Smith wrote in the Bug Tracker,
+
+79
+00:08:17,920 --> 00:08:24,080
+sys.setCoroutineWrapper is a problematic API. It was added to solve a specific
+
+80
+00:08:24,080 --> 00:08:28,720
+problem to track where coroutine objects are created so the warning they print can
+
+81
+00:08:28,720 --> 00:08:34,160
+include a traceback. But to do this, it adds a very generic hook to replace all
+
+82
+00:08:34,160 --> 00:08:41,680
+instances of a built-in type with an arbitrary new type. This is more power
+
+83
+00:08:41,760 --> 00:08:48,160
+than we need for the circumstances. It's too easy to misuse. We can avoid these
+
+84
+00:08:48,160 --> 00:08:52,920
+sorts of mistakes by obeying the third of the ten covenants, which is to keep
+
+85
+00:08:52,920 --> 00:09:00,240
+features narrow. This actually contradicts a lot of what we learn in college or OO
+
+86
+00:09:00,240 --> 00:09:05,880
+textbooks. We're encouraged to come up with these very general and universal and
+
+87
+00:09:05,880 --> 00:09:10,320
+powerful customizations, but in my experience, it's better to give users what
+
+88
+00:09:10,320 --> 00:09:16,480
+they actually need to get the job done. That's what the async.io developers
+
+89
+00:09:16,480 --> 00:09:21,200
+ended up doing, which is that they replaced that overpowered hook with
+
+90
+00:09:21,200 --> 00:09:26,200
+something that is specific to the actual problem they're solving. It's set
+
+91
+00:09:26,200 --> 00:09:31,280
+coroutine tracking depth, and it's just a way to say how many lines of traceback
+
+92
+00:09:31,280 --> 00:09:36,200
+do you get if you forget to await a coroutine. It doesn't change the meaning
+
+93
+00:09:36,200 --> 00:09:45,080
+of async. It just prints out the line where you created the leaked coroutine.
+
+94
+00:09:45,080 --> 00:09:50,360
+This is a success story because the async.io developers, they thought ahead,
+
+95
+00:09:50,360 --> 00:09:56,960
+and they had marked that overpowered hook as provisional. We can learn from their
+
+96
+00:09:56,960 --> 00:10:03,360
+example as well. If we're not sure about a feature, we can release it in order to
+
+97
+00:10:03,360 --> 00:10:09,440
+gain some user feedback. Let's say that you think that this snake would be cool
+
+98
+00:10:09,440 --> 00:10:15,240
+if it had a couple of horns and a quadruple forked tongue, but for some reason,
+
+99
+00:10:15,240 --> 00:10:20,280
+you don't have a good way to ask it its opinion. You release these features as
+
+100
+00:10:20,280 --> 00:10:24,840
+provisional. Maybe the snake says, the horns just get in the way, but the tongue
+
+101
+00:10:24,840 --> 00:10:32,320
+is awesome, so let's keep that. This opinion that releasing features as
+
+102
+00:10:32,320 --> 00:10:37,640
+provisional is a good way to do user testing. This is controversial. In the
+
+103
+00:10:37,640 --> 00:10:43,880
+language summit the other day, the async.io developers came under some fire for doing
+
+104
+00:10:43,880 --> 00:10:47,920
+this, for marking features provisional and changing them, so be aware that not
+
+105
+00:10:47,920 --> 00:10:52,240
+everybody will love you for it, but I think that this is a reasonable way to get
+
+106
+00:10:52,240 --> 00:10:59,800
+some feedback. All right, so despite all of your best efforts to make narrow
+
+107
+00:10:59,800 --> 00:11:05,160
+features, sometimes you release a feature that it turns out that you need to delete.
+
+108
+00:11:05,160 --> 00:11:11,560
+Like, let's say that we've got a lizard here with long spindly toes. You want to
+
+109
+00:11:11,560 --> 00:11:17,600
+delete them and turn it into a sleek, modern python. There's a couple of reasons
+
+110
+00:11:17,600 --> 00:11:22,040
+that you might need to delete a feature. One of them is just if, you know,
+
+111
+00:11:22,040 --> 00:11:28,640
+you discover that it's dangerous. We saw this with that quirk of the midnight
+
+112
+00:11:28,640 --> 00:11:33,480
+bullion value. Another thing that can happen is just that your ecology changes
+
+113
+00:11:33,480 --> 00:11:39,120
+around the library. Maybe another creator deity has invented tasty mammals,
+
+114
+00:11:39,120 --> 00:11:44,400
+and they live in these narrow burrows. You want your creature to be able to slither
+
+115
+00:11:44,400 --> 00:11:49,880
+down in and eat the tasty mammal filling, but in order to fit, you've got to lose
+
+116
+00:11:49,880 --> 00:11:56,800
+the legs. We can look at another example in async.io where a feature was deleted
+
+117
+00:11:56,800 --> 00:12:02,560
+due to a change in the ecology around that library. So from early on,
+
+118
+00:12:02,560 --> 00:12:08,120
+async.io had this lock class. It acts a lot like a multi-threading lock.
+
+119
+00:12:08,120 --> 00:12:14,280
+It introduces a critical section. But you have to remember to release the lock,
+
+120
+00:12:14,280 --> 00:12:19,960
+even if you throw an exception, so you need to release it in a tri-finally block.
+
+121
+00:12:19,960 --> 00:12:24,640
+A couple of versions later, the ecology changed. The language itself introduced
+
+122
+00:12:24,640 --> 00:12:30,920
+this async with syntax, which makes it far more reliable. Now you are guaranteed
+
+123
+00:12:30,920 --> 00:12:35,920
+when you leave the block, no matter how you leave it, to release the lock.
+
+124
+00:12:35,920 --> 00:12:41,560
+This is much better, but what about this old API that's sort of been left behind
+
+125
+00:12:41,560 --> 00:12:47,760
+by ecological change? It's dangerous, and besides, in Python, there should really
+
+126
+00:12:48,760 --> 00:12:55,760
+be only one way to do it. So the old API has got to go. If you are a responsible
+
+127
+00:12:55,760 --> 00:12:59,760
+creator and you're in this situation, you've decided that you've got a feature
+
+128
+00:12:59,760 --> 00:13:04,920
+that you might need to delete, you need to kind of weigh the pros and cons of making
+
+129
+00:13:04,920 --> 00:13:11,480
+this disruption. Some contraindications might be if your users need to change a lot
+
+130
+00:13:11,480 --> 00:13:18,680
+of code in response to the deleted feature, and especially if those changes are,
+
+131
+00:13:18,680 --> 00:13:24,680
+they require thinking or logical changes that users might get wrong, maybe you
+
+132
+00:13:24,680 --> 00:13:28,680
+should just leave the feature in place. On the other hand, if the changes are just sort
+
+133
+00:13:28,680 --> 00:13:33,440
+of mechanical, a big search and replace, or if the feature you're deleting is
+
+134
+00:13:33,440 --> 00:13:40,120
+dangerous, then you should go ahead and delete it. Given that you've decided that
+
+135
+00:13:40,120 --> 00:13:44,040
+you're going to delete a feature, how do you actually do it? Let's say we're
+
+136
+00:13:44,040 --> 00:13:49,320
+deleting the legs so this creature will no longer be able to walk. It will only be
+
+137
+00:13:49,320 --> 00:13:54,480
+able to slither. Do you just replace the walk method with a slither method and
+
+138
+00:13:54,480 --> 00:13:59,480
+release a new version of your library? No, right? Because there's still all of this
+
+139
+00:13:59,480 --> 00:14:06,160
+user code out in the world that depends on walk, and when they upgrade your library,
+
+140
+00:14:06,200 --> 00:14:12,640
+that'll be an error. So how do we gently move the library along and gently delete
+
+141
+00:14:12,640 --> 00:14:20,120
+this feature? There are a couple of steps to gently deleting a feature. In the first
+
+142
+00:14:20,120 --> 00:14:25,560
+one, we introduce the new API while keeping the old API in place so that people can
+
+143
+00:14:25,560 --> 00:14:33,080
+transition, and then we mark the old API as deprecated. The warnings module is
+
+144
+00:14:33,080 --> 00:14:37,640
+really interesting. It's very configurable. The main thing that I want you to notice
+
+145
+00:14:37,640 --> 00:14:42,200
+here is that stack level equals two parameter. That's going to come up again
+
+146
+00:14:42,200 --> 00:14:48,960
+in a minute. So you mark this method as deprecated, and the first thing that your
+
+147
+00:14:48,960 --> 00:14:54,720
+users will notice is that it appears differently in their IDEs. In PyCharm and
+
+148
+00:14:54,720 --> 00:14:59,920
+in other IDEs, they can actually parse that deprecation warning, and they'll render
+
+149
+00:14:59,960 --> 00:15:06,480
+the method call with a strike through. When users run their code, by default, they'll
+
+150
+00:15:06,480 --> 00:15:13,160
+just see these warnings printed to standard error. You'll see that the script, it still
+
+151
+00:15:13,160 --> 00:15:20,920
+completes. It still prints step, step, step, and has exit code zero, but it prints out
+
+152
+00:15:20,920 --> 00:15:26,320
+the line that the user needs to change. That's what that stack level argument did, is it
+
+153
+00:15:26,320 --> 00:15:33,280
+says how to render the trace back so that users know what line in their code they need
+
+154
+00:15:33,280 --> 00:15:41,960
+to change. Notice also that this is a, come on, that this is an instructive error. It
+
+155
+00:15:41,960 --> 00:15:49,680
+doesn't just say that walk is deprecated. It says what to do. It says use slither instead.
+
+156
+00:15:49,680 --> 00:15:55,400
+How do users actually test that they have migrated away from all of those deprecated
+
+157
+00:15:55,400 --> 00:16:02,080
+APIs? In this case, a test won't catch the error because it's just a print to standard
+
+158
+00:16:02,080 --> 00:16:10,600
+error, but there's this cool command line option you can pass that will change the warning
+
+159
+00:16:10,600 --> 00:16:16,200
+into an error, and so that way your users can test their code and ensure that they are
+
+160
+00:16:16,200 --> 00:16:24,400
+not using any deprecated errors at all. Deprecated methods at all. So once you've done this step,
+
+161
+00:16:24,400 --> 00:16:30,400
+you've deprecated the old method, what next? Can you just delete it now and release a new
+
+162
+00:16:30,400 --> 00:16:37,960
+version of your library? You're still not ready because consider how your users are
+
+163
+00:16:37,960 --> 00:16:44,000
+deploying their code that uses your library. They might have this requirements.txt that
+
+164
+00:16:44,000 --> 00:16:50,120
+just has a bare requirement on the reptile library, and so the next time they deploy,
+
+165
+00:16:50,720 --> 00:16:58,720
+the latest version, and they might get reptile 2.0, it lacks the walk method, and your users
+
+166
+00:16:58,720 --> 00:17:05,720
+have an error again. You need to teach your users how to upgrade your library safely,
+
+167
+00:17:05,720 --> 00:17:11,720
+and there are three covenants that we're going to follow that are related to this. The first
+
+168
+00:17:11,720 --> 00:17:19,360
+of these is responsible creators maintain a changelog, and the changelog, the main point
+
+169
+00:17:19,360 --> 00:17:25,760
+of it is to talk about new features that are introduced, features deprecated, and when
+
+170
+00:17:25,760 --> 00:17:32,080
+they are removed. So this says version 1.1 adds slither, and version 2.0 will remove
+
+171
+00:17:32,080 --> 00:17:40,360
+walk. Why am I choosing these particular version numbers to make these changes? Version numbering
+
+172
+00:17:40,360 --> 00:17:47,760
+is a language for communicating the pace of change of your library, and a responsible
+
+173
+00:17:47,760 --> 00:17:54,000
+creator has to use version numbers consistently. So the seventh of the ten covenants is to
+
+174
+00:17:54,000 --> 00:18:02,920
+choose a versioning scheme. There are two mainstream choices. Overwhelmingly, people
+
+175
+00:18:02,920 --> 00:18:09,280
+use semantic versioning. This is throughout the software industry, not just Python. Some
+
+176
+00:18:09,280 --> 00:18:17,280
+libraries time-based versioning is better suited, and again, I'll share links to all
+
+177
+00:18:17,280 --> 00:18:23,440
+of this stuff at the end, but I would really recommend twisted versioning policy here,
+
+178
+00:18:23,440 --> 00:18:29,040
+even if you don't plan to use time-based versioning, it's a really good read for a good compatibility
+
+179
+00:18:29,040 --> 00:18:34,440
+policy that works for lots of people. But I think overwhelmingly, libraries should choose
+
+180
+00:18:34,440 --> 00:18:42,040
+semantic versioning. The syntax for it is defined for Python and pep 440, and it would
+
+181
+00:18:42,040 --> 00:18:46,640
+go something like this. Your first stable release is called 1.0, that's where you start
+
+182
+00:18:46,720 --> 00:18:53,520
+to make API promises to your users. In minor releases, you can introduce new features and
+
+183
+00:18:53,520 --> 00:18:58,200
+deprecate old ones, and then you have to wait for the next major release for the first number
+
+184
+00:18:58,200 --> 00:19:03,240
+of increments before you can actually make any breaking changes like deleting a deprecated
+
+185
+00:19:03,240 --> 00:19:13,400
+API. Tools like pip understand semantic versioning, so your users can update their requirements
+
+186
+00:19:13,400 --> 00:19:19,200
+to say, my code is prepared for anything in the 1.0 series, but don't upgrade me to 2.0
+
+187
+00:19:19,200 --> 00:19:27,800
+until I'm ready. This is great, but you're still not all of the way to helping your users
+
+188
+00:19:27,800 --> 00:19:33,600
+upgrade safely. We need one more step, which is to actually write an upgrade guide. This
+
+189
+00:19:33,600 --> 00:19:39,240
+is the eighth of the ten covenants. An upgrade guide, it might look something like this,
+
+190
+00:19:39,240 --> 00:19:45,360
+where you say, here's how to upgrade to reptile 2.0. First of all, you need to read the change
+
+191
+00:19:45,360 --> 00:19:51,960
+log so you know what's changed, and you remind your users about that command line switch
+
+192
+00:19:51,960 --> 00:19:56,940
+for how to test their code to make sure they're not using deprecated methods. You tell them
+
+193
+00:19:56,940 --> 00:20:03,760
+to upgrade to the last minor release before the next major release. In that case, it's
+
+194
+00:20:03,760 --> 00:20:09,080
+version 1.1, and I call this a bridge release. The purpose of the bridge release is to
+
+195
+00:20:09,080 --> 00:20:15,360
+raise deprecation warnings for every deprecated method that will be removed in the next major
+
+196
+00:20:15,360 --> 00:20:21,440
+release. It's sort of like the last body that the creature has before you delete its legs.
+
+197
+00:20:21,440 --> 00:20:31,320
+They're just still barely there. So if we follow these covenants, our users can safely
+
+198
+00:20:31,320 --> 00:20:37,660
+upgrade from version to version, and we can add or remove methods safely. There's another
+
+199
+00:20:37,660 --> 00:20:42,460
+level after this, though. Methods aren't the only way that you add and remove features.
+
+200
+00:20:42,460 --> 00:20:48,780
+We can also do the same with parameters. So let's talk about how to change your parameters
+
+201
+00:20:48,780 --> 00:20:54,580
+safely over time. Let's say that you've added wings to your reptile, so now it has a new
+
+202
+00:20:54,580 --> 00:20:59,900
+way of moving. It doesn't only slither in a given direction, it also has the option
+
+203
+00:20:59,900 --> 00:21:04,880
+of flying. So we want to add a new mode parameter that allows the creature to choose between
+
+204
+00:21:04,880 --> 00:21:10,200
+slithering and flying. This is great, but again, think about all that user code in the
+
+205
+00:21:10,200 --> 00:21:17,900
+world. It's only passing the first parameter. So now this is an error. What we need to learn
+
+206
+00:21:17,900 --> 00:21:25,040
+how to do is to add parameters safely, and this is the ninth of the ten covenants. The
+
+207
+00:21:25,040 --> 00:21:31,960
+way that we add parameters compatibly is every time we add a parameter, we need to give it
+
+208
+00:21:31,960 --> 00:21:39,480
+a default value, and the default value must preserve the old behavior. So in that case,
+
+209
+00:21:39,480 --> 00:21:44,700
+this preserves the slithering mode, and over time, as you add more parameters, it becomes
+
+210
+00:21:44,700 --> 00:21:49,260
+like a history of the function's evolution. They appear in the order they were added,
+
+211
+00:21:49,260 --> 00:21:55,020
+and each has a default that preserves the old behavior. This is great in Python because
+
+212
+00:21:55,020 --> 00:22:00,760
+it means that users can write their applications to choose by name which of the defaults to
+
+213
+00:22:00,760 --> 00:22:09,580
+override. But there's still a potential risk here because users can also write their code
+
+214
+00:22:09,580 --> 00:22:16,680
+like this, passing parameters by position. And in this case, they have chosen by position
+
+215
+00:22:16,680 --> 00:22:22,120
+to accept a certain number of defaults and then only override the one at the end, moving
+
+216
+00:22:22,120 --> 00:22:28,520
+extra sinuously. The problem here will arise if in the next major release I decide that
+
+217
+00:22:28,520 --> 00:22:33,280
+I want to delete one of these parameters. Maybe I think that turbo sounds sort of outdated
+
+218
+00:22:33,280 --> 00:22:40,400
+to me these days, so I want to delete it. Now, user code will still run, but it's no
+
+219
+00:22:40,400 --> 00:22:46,920
+longer doing what's intended. It's no longer moving sinuously. Instead, it's hailing a
+
+220
+00:22:46,920 --> 00:22:56,440
+lift. So we need to go through an explicit deprecation cycle for a parameter like this,
+
+221
+00:22:56,440 --> 00:23:06,000
+and I kind of like this pattern. So we create a sentinel value. I'm going to call it turbo
+
+222
+00:23:06,000 --> 00:23:14,080
+default, and we swap it in for the previous default for this parameter. Then in the body
+
+223
+00:23:14,080 --> 00:23:18,960
+of the function, we can check if the user has overridden this default. If they have,
+
+224
+00:23:18,960 --> 00:23:22,160
+we print a warning because it's going to be deprecated. Otherwise, we just accept the
+
+225
+00:23:22,160 --> 00:23:30,040
+old default. Once we've done this, we can in the next major version delete the parameter.
+
+226
+00:23:30,040 --> 00:23:35,520
+It's still though it's only a warning. Users can ignore warnings. The even better style
+
+227
+00:23:35,520 --> 00:23:42,200
+is in Python 3 to use the star syntax. When you use an asterisk this way, it means that
+
+228
+00:23:42,200 --> 00:23:51,120
+all parameters after it can only be passed by name. And this means that if you later
+
+229
+00:23:51,120 --> 00:23:57,920
+delete a parameter, you know that this will either cause errors in your user code or
+
+230
+00:23:57,920 --> 00:24:02,880
+it will not affect them at all. So you know that there's no user code out here like this
+
+231
+00:24:02,880 --> 00:24:11,720
+that uses the positional style instead. And so you can safely delete the turbo parameter.
+
+232
+00:24:11,720 --> 00:24:16,920
+The kind of underlying message here is not just to add parameters compatibly, but to
+
+233
+00:24:17,920 --> 00:24:23,560
+very, very loudly if users are doing the wrong thing. Reptiles, their hearing is not very
+
+234
+00:24:23,560 --> 00:24:31,280
+good. You sort of have to shout at them. Warnings are easy to ignore. If you use the star syntax
+
+235
+00:24:31,280 --> 00:24:38,680
+instead, that will make your users much safer. But you've got to think ahead because you
+
+236
+00:24:38,680 --> 00:24:44,560
+can't add the star syntax in a later release. That's a backwards breaking change. So use
+
+237
+00:24:44,760 --> 00:24:49,640
+the star as soon as you anticipate that you might change any of the parameters that come
+
+238
+00:24:49,640 --> 00:24:58,040
+after the star. So that's how to change parameters safely. We've got one more challenge here.
+
+239
+00:24:58,040 --> 00:25:04,360
+And it's changing behavior without changing the API. So let's say that our creature here
+
+240
+00:25:04,360 --> 00:25:13,400
+is a rattlesnake and we want to give it a new means of moving, which is sidewinding.
+
+241
+00:25:13,400 --> 00:25:20,560
+This is amazing because it's a new feature with no visible change to the creature's body.
+
+242
+00:25:20,560 --> 00:25:26,520
+We can see an example of a behavior change without an API change like this in the standard
+
+243
+00:25:26,520 --> 00:25:33,200
+library. This story is an oldie-bittie-goody. So once upon a time, Python introduced the
+
+244
+00:25:33,200 --> 00:25:40,600
+OS.stat function for getting file statistics. And statistics like the modification time
+
+245
+00:25:40,600 --> 00:25:48,440
+here were integers. Now, most systems can provide a lot more precision. So the core
+
+246
+00:25:48,440 --> 00:25:53,720
+devs wanted to turn this integer into a floating point number. But they were concerned that
+
+247
+00:25:53,720 --> 00:25:59,960
+people were not prepared for that change. So they made it configurable. In Python 2.3,
+
+248
+00:25:59,960 --> 00:26:09,440
+you have to opt into the new behavior by saying set stat float times. And in 2.5, they swapped
+
+249
+00:26:09,440 --> 00:26:16,060
+the default. So now you don't have to call this and you'll still get floating point statistics.
+
+250
+00:26:16,060 --> 00:26:22,800
+If you want to preserve the old behavior, you can. Or if you explicitly opt into the
+
+251
+00:26:22,800 --> 00:26:30,720
+new behavior, then you get consistent behavior in Python 2.3 and later. This is getting complicated.
+
+252
+00:26:30,720 --> 00:26:38,280
+I will share a link at the end, I promise. All right. So years pass, oceans rise, empires
+
+253
+00:26:38,280 --> 00:26:46,120
+fall, Python 3 comes around, and the core devs decide it's time to remove this setting
+
+254
+00:26:46,120 --> 00:26:52,000
+entirely. So they deprecate any usage of it, whether it's true or false. More years go
+
+255
+00:26:52,000 --> 00:26:56,040
+by. It's been more than a decade since the story began. And finally, we're at Python
+
+256
+00:26:56,040 --> 00:27:03,360
+3.7 and the option is removed entirely. So these are the steps again. If you want to
+
+257
+00:27:04,360 --> 00:27:10,600
+change behavior gradually, do this. First, in a minor release, add a flag that allows
+
+258
+00:27:10,600 --> 00:27:19,440
+people to opt into the new behavior. Its default is false, but the default is also deprecated.
+
+259
+00:27:19,440 --> 00:27:25,440
+In the next major release, you swap the default and you deprecate any usage of the setting
+
+260
+00:27:25,440 --> 00:27:31,320
+at all. And then in another major release after that, you are finally allowed to remove
+
+261
+00:27:31,320 --> 00:27:38,440
+the setting entirely and only allow people to use the new behavior. So that's it. Those
+
+262
+00:27:38,440 --> 00:27:49,040
+are the ten precepts, ten covenants that a responsible creator upholds in order to responsibly
+
+263
+00:27:49,040 --> 00:27:55,800
+evolve our libraries without breaking user code. And I think that these kind of are categorizable
+
+264
+00:27:56,800 --> 00:28:03,800
+into three big buckets. First, to evolve cautiously. Minimize features. Don't add them unless
+
+265
+00:28:03,800 --> 00:28:11,160
+you know they're useful. Scope them narrowly. And if you're not sure, mark them provisional.
+
+266
+00:28:11,160 --> 00:28:19,120
+We also want to maintain a rigorous natural history of our library's evolution. Choose
+
+267
+00:28:19,120 --> 00:28:24,100
+a version scheme, maintain a changelog, and write an upgrade guide so that users know
+
+268
+00:28:24,100 --> 00:28:31,100
+how to test their code and upgrade safely. And finally, change gradually and loudly.
+
+269
+00:28:32,100 --> 00:28:37,180
+If you're going to delete features, go through a deprecation cycle before removal. If you're
+
+270
+00:28:37,180 --> 00:28:42,900
+going to add parameters, do it compatibly. Think of the star syntax first before you
+
+271
+00:28:42,900 --> 00:28:48,460
+even reach version 1.0. And if you're going to change behavior without changing API, do
+
+272
+00:28:48,460 --> 00:28:55,460
+that very slowly and do it over the course of three releases. So here is the promised
+
+273
+00:28:55,460 --> 00:29:00,580
+link. This will take you to a written article version of this talk. It's got links out to
+
+274
+00:29:00,580 --> 00:29:06,780
+more information about all of this. If you read it to the end, your reward is that it
+
+275
+00:29:06,780 --> 00:29:12,160
+will tell you the source of all of the silly old snake pictures. I don't have time for
+
+276
+00:29:12,160 --> 00:29:15,420
+questions right now, but I'd love to talk with you in the hallway. Thank you very much.
+

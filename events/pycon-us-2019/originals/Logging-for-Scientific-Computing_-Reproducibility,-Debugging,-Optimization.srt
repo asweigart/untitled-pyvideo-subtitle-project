@@ -1,0 +1,1876 @@
+1
+00:00:00,000 --> 00:00:03,040
+Hello, everyone.
+
+2
+00:00:03,040 --> 00:00:11,760
+Welcome to the talk on Logging for Scientific Computing, Reproductibility, Debugging, Optimization.
+
+3
+00:00:11,760 --> 00:00:16,200
+And our speaker is Itamar Turner-Turing.
+
+4
+00:00:16,200 --> 00:00:19,200
+Let's give it up for Itamar.
+
+5
+00:00:19,200 --> 00:00:22,800
+Hi.
+
+6
+00:00:22,800 --> 00:00:23,800
+Thanks for coming.
+
+7
+00:00:23,800 --> 00:00:25,280
+My name is Itamar.
+
+8
+00:00:25,280 --> 00:00:30,120
+I'll be talking about logging for scientific computing.
+
+9
+00:00:30,120 --> 00:00:32,880
+And I offer consulting services.
+
+10
+00:00:32,880 --> 00:00:34,920
+And you can read about that at pythonspeed.com.
+
+11
+00:00:34,920 --> 00:00:41,000
+And there's also going to be on that website a prose version of this talk if you want to
+
+12
+00:00:41,000 --> 00:00:43,280
+just read it as text.
+
+13
+00:00:43,280 --> 00:00:46,760
+So I'm a software engineer, not a scientist.
+
+14
+00:00:46,760 --> 00:00:54,000
+But I spent a year and a half on my last job doing scientific computing together with biologists.
+
+15
+00:00:55,000 --> 00:01:00,720
+And I learned a little bit about the nature of scientific computing, which makes it rather
+
+16
+00:01:00,720 --> 00:01:04,920
+different than the kinds of software engineering that I had previously been used to.
+
+17
+00:01:04,920 --> 00:01:10,640
+And so there's three characteristics that I think define what scientific computing is.
+
+18
+00:01:10,640 --> 00:01:16,160
+And the first is it tends to be very complex calculations.
+
+19
+00:01:16,160 --> 00:01:17,160
+There's a lot of math.
+
+20
+00:01:17,160 --> 00:01:19,280
+There's a lot of logic.
+
+21
+00:01:19,280 --> 00:01:24,280
+It's very complicated compared to the usual kind of software that I've done as a software
+
+22
+00:01:24,280 --> 00:01:26,080
+engineer in the past.
+
+23
+00:01:26,080 --> 00:01:28,720
+Second characteristic is a structure, how you run the software.
+
+24
+00:01:28,720 --> 00:01:33,240
+Typically, when you're doing scientific computing, you're loading in data, sometimes very large
+
+25
+00:01:33,240 --> 00:01:34,240
+amounts of data.
+
+26
+00:01:34,240 --> 00:01:37,360
+You're doing some processing and you're spitting out a result.
+
+27
+00:01:37,360 --> 00:01:41,760
+And so as a side effect, you basically end up with these long-running batch processes.
+
+28
+00:01:41,760 --> 00:01:46,040
+And the third characteristic, which is really the most fundamental, is the goal of scientific
+
+29
+00:01:46,040 --> 00:01:47,040
+computing.
+
+30
+00:01:47,240 --> 00:01:49,400
+You're trying to make an inference about reality.
+
+31
+00:01:49,400 --> 00:01:55,840
+So what I was trying to do at work was take some images off a device and figure out what
+
+32
+00:01:55,840 --> 00:02:00,320
+the DNA sequence was on a cell culture.
+
+33
+00:02:00,320 --> 00:02:04,440
+If you're a meteorologist, you might be taking all these data points and trying to predict
+
+34
+00:02:04,440 --> 00:02:06,560
+the weather next Tuesday.
+
+35
+00:02:06,560 --> 00:02:09,880
+So you're trying to make a statement about reality, try to figure out something about
+
+36
+00:02:09,880 --> 00:02:13,920
+reality from your data.
+
+37
+00:02:14,200 --> 00:02:20,280
+Each of these characteristics has a corresponding set of problems that come along with it.
+
+38
+00:02:20,280 --> 00:02:24,840
+So if you have highly complicated logic, if you have all these calculations, you're doing
+
+39
+00:02:24,840 --> 00:02:30,200
+a lot of math, you're doing a lot of transformations, it's very easy to make, refer to a small typo
+
+40
+00:02:30,200 --> 00:02:33,080
+to destroy your results.
+
+41
+00:02:33,080 --> 00:02:37,600
+You have a wrong negative sign somewhere and now all your results are completely wrong.
+
+42
+00:02:37,600 --> 00:02:42,640
+And so you want to be able to figure out when your calculation goes wrong where the mistake
+
+43
+00:02:42,680 --> 00:02:47,520
+is and it can be difficult when you have large amounts of calculations to pinpoint
+
+44
+00:02:47,520 --> 00:02:50,400
+where exactly you made a mistake.
+
+45
+00:02:50,400 --> 00:02:56,000
+When it comes to structure, if you have long running batch processes, long running software
+
+46
+00:02:56,000 --> 00:03:00,280
+is very painful, as we'll talk about later in the talk.
+
+47
+00:03:00,280 --> 00:03:02,120
+And so you're going to want to make it faster.
+
+48
+00:03:02,120 --> 00:03:07,800
+So you're going to want to figure out how can I make this software faster.
+
+49
+00:03:07,800 --> 00:03:10,000
+Having something that runs for two days is no fun.
+
+50
+00:03:10,000 --> 00:03:13,800
+Having something that runs for two hours is no fun.
+
+51
+00:03:13,800 --> 00:03:17,200
+And finally, and again, most fundamentally, if you're trying to make a statement about
+
+52
+00:03:17,200 --> 00:03:21,400
+reality and if you're going to then share that statement with other people, if you're
+
+53
+00:03:21,400 --> 00:03:25,880
+going to say, these are the genes in this cell culture, if you're going to say, this
+
+54
+00:03:25,880 --> 00:03:30,640
+is what the weather is going to be next week, you want to be able to trust that statement.
+
+55
+00:03:30,640 --> 00:03:35,840
+You want to be able to say, I can trust the results that came out of this software.
+
+56
+00:03:35,840 --> 00:03:43,760
+And that trust has to be about like some relate, like it does actually match reality within
+
+57
+00:03:43,760 --> 00:03:46,040
+the limits of your modeling.
+
+58
+00:03:46,040 --> 00:03:49,560
+And so for the rest of this talk, I'm talking about these three problems and how logging
+
+59
+00:03:49,560 --> 00:03:52,800
+can help you address all three of them.
+
+60
+00:03:52,800 --> 00:03:56,040
+And the first problem is bugs in your code.
+
+61
+00:03:56,040 --> 00:03:59,320
+How do you deal with wrong calculations?
+
+62
+00:03:59,320 --> 00:04:04,280
+And this is made worse by the fact that when you're doing scientific computing, you might
+
+63
+00:04:04,320 --> 00:04:06,320
+have a very slow feedback loop.
+
+64
+00:04:06,320 --> 00:04:09,640
+So imagine you've run your batch process, you've processed all your data, you finally
+
+65
+00:04:09,640 --> 00:04:16,640
+have a result, and it only took you 12 hours, so it's a good day, and the results are completely
+
+66
+00:04:16,640 --> 00:04:17,640
+wrong.
+
+67
+00:04:17,640 --> 00:04:22,880
+So say you're processing weather data and you're loading some data about summer around
+
+68
+00:04:22,880 --> 00:04:25,080
+here and it's telling you it's going to snow.
+
+69
+00:04:25,080 --> 00:04:29,360
+And so you know it's not going to snow, like your weather model is broken, but you don't
+
+70
+00:04:29,360 --> 00:04:33,840
+know where or why.
+
+71
+00:04:33,840 --> 00:04:38,720
+And so how do you figure out where your calculation went wrong?
+
+72
+00:04:38,720 --> 00:04:44,520
+So one problem that often happens with this kind of thing is that it only happens with
+
+73
+00:04:44,520 --> 00:04:47,080
+real data.
+
+74
+00:04:47,080 --> 00:04:54,960
+It's difficult to get simulated data, and so it's difficult to get small edge case examples.
+
+75
+00:04:54,960 --> 00:04:58,480
+And so you can't just write it with a small test that runs in three minutes and get a
+
+76
+00:04:58,480 --> 00:05:00,760
+result showing you the mistake.
+
+77
+00:05:00,760 --> 00:05:03,420
+You only get, this only happens to you when you're running it with real data, which means
+
+78
+00:05:03,420 --> 00:05:06,180
+it takes a really long time to run.
+
+79
+00:05:06,180 --> 00:05:11,340
+And if it takes a really long time to run, using a debugger isn't going to help you because
+
+80
+00:05:11,340 --> 00:05:16,500
+you're not going to sit there for 12 hours and hit next and then wait another hour and
+
+81
+00:05:16,500 --> 00:05:18,380
+then hit next and then step to the code that way.
+
+82
+00:05:18,380 --> 00:05:19,380
+It's just too slow.
+
+83
+00:05:19,380 --> 00:05:20,700
+You can't.
+
+84
+00:05:20,700 --> 00:05:23,660
+If you're really desperate, you might do that, but you really don't want to.
+
+85
+00:05:23,660 --> 00:05:29,340
+So what you'd like, what would be ideal is to have a record of everything that your batch
+
+86
+00:05:30,340 --> 00:05:34,740
+steps, and then you can go look at that record and say, this is what happened, and then this
+
+87
+00:05:34,740 --> 00:05:35,740
+happened, and then we did this.
+
+88
+00:05:35,740 --> 00:05:38,140
+Oh, that looks wrong.
+
+89
+00:05:38,140 --> 00:05:39,860
+Which is to say you want logging.
+
+90
+00:05:39,860 --> 00:05:43,460
+You want to log what happened as your batch process ran.
+
+91
+00:05:43,460 --> 00:05:45,940
+You want to know which functions called which other functions.
+
+92
+00:05:45,940 --> 00:05:47,620
+You have branching logic.
+
+93
+00:05:47,620 --> 00:05:51,300
+You want to be able to see which branches you went down.
+
+94
+00:05:51,300 --> 00:05:55,380
+You want the inputs and the outputs to all your calculations.
+
+95
+00:05:55,380 --> 00:05:58,780
+And you want the intermediate results of your calculations.
+
+96
+00:05:58,980 --> 00:06:01,700
+Basically, you want transcripts of everything that happened.
+
+97
+00:06:03,220 --> 00:06:10,300
+And the way I was doing logging at my job, and I feel the examples I'm going to be giving
+
+98
+00:06:10,300 --> 00:06:12,540
+are using a library that I created called Elliott.
+
+99
+00:06:13,940 --> 00:06:15,580
+It started in 2014.
+
+100
+00:06:15,580 --> 00:06:20,140
+It was originally designed for a small but complex distributed system.
+
+101
+00:06:21,500 --> 00:06:25,340
+And I didn't actually design it for scientific computing.
+
+102
+00:06:25,340 --> 00:06:28,140
+But when I started doing scientific computing, I discovered it was actually a really good
+
+103
+00:06:28,140 --> 00:06:30,140
+fit.
+
+104
+00:06:30,140 --> 00:06:35,900
+And normal logging systems, like Python's built-in logging, you basically have logging
+
+105
+00:06:35,900 --> 00:06:37,580
+as a series of statements.
+
+106
+00:06:37,580 --> 00:06:38,940
+This thing happened.
+
+107
+00:06:38,940 --> 00:06:39,940
+This thing happened.
+
+108
+00:06:39,940 --> 00:06:41,420
+Another thing happened.
+
+109
+00:06:41,420 --> 00:06:45,140
+And other than the fact that this one statement happened after another, you don't have any
+
+110
+00:06:45,140 --> 00:06:46,140
+relationship.
+
+111
+00:06:46,140 --> 00:06:49,420
+Like they're just isolated statements.
+
+112
+00:06:49,420 --> 00:06:54,900
+Also many logging systems, though not all, tend to be oriented towards pros.
+
+113
+00:06:54,900 --> 00:07:02,860
+So you write a English or German or whatever language's statement about what happened.
+
+114
+00:07:02,860 --> 00:07:04,740
+Elliott in contrast has a very different model.
+
+115
+00:07:04,740 --> 00:07:05,740
+At first it's structured.
+
+116
+00:07:05,740 --> 00:07:11,580
+So it outputs data that you can parse with a program, JSON by default.
+
+117
+00:07:11,580 --> 00:07:13,420
+But more importantly, it gives you a trace.
+
+118
+00:07:13,420 --> 00:07:20,140
+It gives you a tree of actions of what happened, which is what makes it useful for the sort
+
+119
+00:07:20,140 --> 00:07:21,260
+of things we'll be talking about.
+
+120
+00:07:21,260 --> 00:07:25,380
+And it also has some built-in support for scientific computing that I've added.
+
+121
+00:07:25,380 --> 00:07:30,940
+And so to see what this means, we'll look at an example.
+
+122
+00:07:30,940 --> 00:07:32,500
+So this is a program.
+
+123
+00:07:32,500 --> 00:07:35,040
+It's a very simple calculation.
+
+124
+00:07:35,040 --> 00:07:39,380
+We have a function that takes two inputs and adds them together and returns a result.
+
+125
+00:07:39,380 --> 00:07:43,540
+We have another function that takes two numbers and multiplies them and returns a result.
+
+126
+00:07:43,540 --> 00:07:48,020
+Then we have function multiply sum that takes three inputs.
+
+127
+00:07:48,020 --> 00:07:51,380
+It takes two of the inputs and adds them together.
+
+128
+00:07:51,380 --> 00:07:56,900
+Then it uses the multiply function to multiply them with a third number and return the result.
+
+129
+00:07:56,900 --> 00:08:01,300
+So for example, we're going to call multiply sum with one, two, and four.
+
+130
+00:08:01,300 --> 00:08:02,900
+So it's going to add one and two.
+
+131
+00:08:02,900 --> 00:08:05,100
+So we expect to get three.
+
+132
+00:08:05,100 --> 00:08:06,700
+It's going to multiply three by four.
+
+133
+00:08:06,700 --> 00:08:08,140
+We expect to get 12.
+
+134
+00:08:08,140 --> 00:08:11,580
+And so when we run this program, we expect it to output 12.
+
+135
+00:08:11,580 --> 00:08:15,980
+It's a very simple calculation.
+
+136
+00:08:16,020 --> 00:08:17,020
+And so we run it.
+
+137
+00:08:17,020 --> 00:08:18,500
+And we don't get 12.
+
+138
+00:08:18,500 --> 00:08:19,820
+We get zero.
+
+139
+00:08:19,820 --> 00:08:23,660
+So something is wrong in this program.
+
+140
+00:08:23,660 --> 00:08:27,420
+And since this is a trivial example, you can just go, if I showed you the implementation,
+
+141
+00:08:27,420 --> 00:08:29,380
+you would know exactly where the code was wrong.
+
+142
+00:08:29,380 --> 00:08:35,900
+But if you're doing scientific computation, you have a much more complex and harder to
+
+143
+00:08:35,900 --> 00:08:38,500
+debug piece of code.
+
+144
+00:08:38,500 --> 00:08:42,460
+You're not going to be able to just read it necessarily and pinpoint this point, the spot
+
+145
+00:08:42,460 --> 00:08:44,540
+where things went wrong.
+
+146
+00:08:44,540 --> 00:08:46,700
+So what you want is to have logging.
+
+147
+00:08:46,700 --> 00:08:50,220
+And so ideally, you've added logging before you ran the program.
+
+148
+00:08:50,220 --> 00:08:53,780
+If it's going to be, if you know your batch process is going to take hours and hours to
+
+149
+00:08:53,780 --> 00:08:58,540
+run, you don't want it to run hours and hours, see the result is wrong, and say, oh, I should
+
+150
+00:08:58,540 --> 00:08:59,540
+have added logging.
+
+151
+00:08:59,540 --> 00:09:01,900
+You want to add logging in advance.
+
+152
+00:09:01,900 --> 00:09:05,180
+But that is not how it happens.
+
+153
+00:09:05,180 --> 00:09:07,660
+In this case, we're going to add logging afterwards.
+
+154
+00:09:07,660 --> 00:09:13,820
+So to use Elliot, the first thing you want to do is actually tell it to emit log messages.
+
+155
+00:09:13,820 --> 00:09:17,460
+And so we're going to use a decorator called log underscore call.
+
+156
+00:09:17,460 --> 00:09:23,140
+And log underscore call will log all the inputs to a function, and it'll log the return result
+
+157
+00:09:23,140 --> 00:09:25,540
+of the function.
+
+158
+00:09:25,540 --> 00:09:28,900
+This is the simplest API that Elliot provides.
+
+159
+00:09:28,900 --> 00:09:33,020
+It provides a lot more sophisticated, nuanced APIs.
+
+160
+00:09:33,020 --> 00:09:35,580
+You don't actually have to log only on function boundaries.
+
+161
+00:09:35,580 --> 00:09:37,140
+You can log within a function.
+
+162
+00:09:37,140 --> 00:09:41,300
+I'm using log underscore call because it's the simplest and sufficient.
+
+163
+00:09:41,300 --> 00:09:46,500
+This is a talk about the ideas rather than the specific APIs.
+
+164
+00:09:46,500 --> 00:09:50,340
+And the other thing you need to do to use Elliot is to tell it, add a little bit of
+
+165
+00:09:50,340 --> 00:09:52,960
+boilerplate telling it where to log to a file.
+
+166
+00:09:52,960 --> 00:09:58,380
+So I'm saying open a file called out.log in writable mode, send all your messages to that
+
+167
+00:09:58,380 --> 00:09:59,380
+file.
+
+168
+00:09:59,380 --> 00:10:01,580
+So just a little boilerplate you add at the top of your program.
+
+169
+00:10:01,580 --> 00:10:05,980
+And so I've added five lines of code here, I think.
+
+170
+00:10:05,980 --> 00:10:11,180
+One import, if you were to do this in your application, there's three functions we annotated
+
+171
+00:10:11,180 --> 00:10:14,820
+with logging, and we added an import, and we added a little boilerplate to log to a
+
+172
+00:10:14,820 --> 00:10:15,820
+file.
+
+173
+00:10:15,820 --> 00:10:16,820
+So not very heavyweight.
+
+174
+00:10:16,820 --> 00:10:20,620
+We run the program, and we get zero again.
+
+175
+00:10:20,620 --> 00:10:22,620
+But this time we have logs.
+
+176
+00:10:22,620 --> 00:10:27,180
+So we run a program called Elliot Tree that was written by Jonathan Jacobs, one of Elliot's
+
+177
+00:10:27,180 --> 00:10:28,180
+users.
+
+178
+00:10:28,180 --> 00:10:32,860
+And Elliot Tree takes these logs and it formats them as a tree of actions.
+
+179
+00:10:32,860 --> 00:10:36,620
+And so this is where you can see where Elliot is fundamentally different with most logging
+
+180
+00:10:36,620 --> 00:10:37,620
+systems.
+
+181
+00:10:37,620 --> 00:10:39,500
+Most logging systems you would just have a series of messages.
+
+182
+00:10:39,500 --> 00:10:40,500
+They would have no structure.
+
+183
+00:10:40,500 --> 00:10:46,660
+With Elliot, you have a tree of actions, showing which actions cause which actions, the parameters,
+
+184
+00:10:46,660 --> 00:10:52,020
+the results, and you can also add intermediate values and individual messages if you want.
+
+185
+00:10:52,020 --> 00:10:56,620
+I have simplified the output of Elliot Tree because it's a lot more verbose and has more
+
+186
+00:10:56,620 --> 00:10:59,180
+information and it wouldn't fit in a slide.
+
+187
+00:10:59,180 --> 00:11:02,340
+But the basic structure you're seeing is what it'll output.
+
+188
+00:11:02,340 --> 00:11:06,900
+So if you look at it, you can see we have a top-level action, which is multiply sum.
+
+189
+00:11:06,900 --> 00:11:10,060
+And it has three inputs, one, two, and four.
+
+190
+00:11:10,060 --> 00:11:15,380
+And multiply sum called another subaction called add with one and two.
+
+191
+00:11:15,380 --> 00:11:16,380
+And the result is three.
+
+192
+00:11:16,380 --> 00:11:18,740
+You can see in the logs.
+
+193
+00:11:18,740 --> 00:11:24,300
+And then it called another multiply sum called second subaction, which is multiply with inputs
+
+194
+00:11:24,300 --> 00:11:26,180
+three and four.
+
+195
+00:11:26,180 --> 00:11:29,980
+Presumably three came from the previous action, although we can't be sure from the logs.
+
+196
+00:11:29,980 --> 00:11:31,740
+And the result of that is zero.
+
+197
+00:11:31,740 --> 00:11:34,780
+And then the overall result of multiply sum is zero.
+
+198
+00:11:34,780 --> 00:11:38,740
+So if you look at this log transcript, you can see that adding worked just fine.
+
+199
+00:11:38,740 --> 00:11:40,500
+We added one, two, got three.
+
+200
+00:11:40,500 --> 00:11:44,940
+But multiplying, we multiply three and four and got zero, which is not what we expected.
+
+201
+00:11:44,940 --> 00:11:46,700
+We expected to get 12.
+
+202
+00:11:46,700 --> 00:11:52,260
+And so we've pinpointed where the problem is to the multiply function just by reading
+
+203
+00:11:52,260 --> 00:11:53,500
+the logs.
+
+204
+00:11:53,500 --> 00:11:57,700
+And because it's a tree and not just individual statements, we can see the relationship to
+
+205
+00:11:57,700 --> 00:12:01,140
+some extent between all the different actions in the program.
+
+206
+00:12:01,180 --> 00:12:10,060
+So this is how logging can help you debug your programs and find bugs in your calculations.
+
+207
+00:12:10,060 --> 00:12:16,660
+The second problem we'll talk about is how do you figure out why your program is slow,
+
+208
+00:12:16,660 --> 00:12:21,540
+which matters a lot when it's taking hours or days.
+
+209
+00:12:21,540 --> 00:12:26,940
+And so the typical way to approach performance optimization is to run your program under
+
+210
+00:12:26,940 --> 00:12:28,700
+a profiler.
+
+211
+00:12:28,780 --> 00:12:31,260
+This is extremely useful and extremely helpful.
+
+212
+00:12:31,260 --> 00:12:36,300
+And I've gotten great results from profiling my code, optimizing it, and building the algorithms
+
+213
+00:12:36,300 --> 00:12:40,420
+based on that, specifically for scientific computing.
+
+214
+00:12:40,420 --> 00:12:43,860
+But profilers are limited.
+
+215
+00:12:43,860 --> 00:12:45,540
+And they're not the only...
+
+216
+00:12:45,540 --> 00:12:49,780
+They're not sufficient on their own to solve all the problems you might have.
+
+217
+00:12:49,780 --> 00:12:54,580
+And one problem is profilers are typically designed for a single process.
+
+218
+00:12:54,620 --> 00:12:57,420
+And if you're doing...
+
+219
+00:12:57,420 --> 00:13:00,460
+Running a calculation that's going to take hours or days, you are typically going to
+
+220
+00:13:00,460 --> 00:13:06,340
+try to use multiple cores, multi-CPUs, maybe multiple machines to speed up your calculation
+
+221
+00:13:06,340 --> 00:13:07,340
+parallelism.
+
+222
+00:13:07,340 --> 00:13:10,580
+So maybe you have 30 processes running in parallel.
+
+223
+00:13:10,580 --> 00:13:14,940
+Maybe you have a thousand machines running in parallel.
+
+224
+00:13:14,940 --> 00:13:19,940
+And profilers don't really support that notion of profiling across machines, typically.
+
+225
+00:13:19,940 --> 00:13:22,420
+Usually it's you're profiling one process.
+
+226
+00:13:22,460 --> 00:13:29,780
+And so while you can profile individual tasks, it's difficult to profile your whole execution.
+
+227
+00:13:29,780 --> 00:13:35,300
+And Elliott, since it was originally designed for distributed systems, has support for connecting
+
+228
+00:13:35,300 --> 00:13:39,220
+the logs from different processes into one big tree of actions.
+
+229
+00:13:39,220 --> 00:13:44,740
+So you can watch an action start in one process and then continue to another.
+
+230
+00:13:44,740 --> 00:13:50,500
+And it has specifically built-in support for the Dask parallel computation framework.
+
+231
+00:13:50,500 --> 00:13:55,940
+So if you're using Dask, it's very easy to just trace your computation across your whole
+
+232
+00:13:55,940 --> 00:13:58,900
+cluster that's using Dask.
+
+233
+00:13:58,900 --> 00:14:05,460
+The other reason the profilers are insufficient, though useful, is that a profiler is typically
+
+234
+00:14:05,460 --> 00:14:07,760
+focused on functions.
+
+235
+00:14:07,760 --> 00:14:10,860
+So it'll tell you this function is slow.
+
+236
+00:14:10,860 --> 00:14:13,820
+Or if it's a good profiler, it'll tell you this function will call by that function,
+
+237
+00:14:13,820 --> 00:14:15,300
+will call by that function.
+
+238
+00:14:15,300 --> 00:14:21,940
+This function, this call graph call tree, is a slow function.
+
+239
+00:14:21,940 --> 00:14:25,460
+But especially when you're doing the algorithmic code, your function might be slow in some
+
+240
+00:14:25,460 --> 00:14:29,020
+inputs but fast in others.
+
+241
+00:14:29,020 --> 00:14:31,300
+And the profiler can't tell you that.
+
+242
+00:14:31,300 --> 00:14:36,700
+It just sort of averages out all the inputs and just tells you this function is slow.
+
+243
+00:14:36,700 --> 00:14:41,460
+And that's useful, but you might be able to figure out the performance problem much more
+
+244
+00:14:41,660 --> 00:14:45,780
+quickly if you knew which particular inputs were causing this lowness.
+
+245
+00:14:45,780 --> 00:14:50,380
+And this, again, is where logging and Elliott's similar system is going to be very useful
+
+246
+00:14:50,380 --> 00:14:53,140
+because we're giving you a trace of the execution.
+
+247
+00:14:53,140 --> 00:14:57,300
+So you can see who called what and how long each action took.
+
+248
+00:14:57,300 --> 00:15:01,700
+But also it tells you what the inputs were, what the parameters were to each of the actions
+
+249
+00:15:01,700 --> 00:15:03,100
+that you logged.
+
+250
+00:15:03,100 --> 00:15:08,140
+And so you can identify slow actions based not only on which function it was or which
+
+251
+00:15:08,340 --> 00:15:14,300
+action, if it doesn't have to be mapped to functions, but also based on the inputs to
+
+252
+00:15:14,300 --> 00:15:16,900
+those functions.
+
+253
+00:15:16,900 --> 00:15:21,940
+So in this program, the calculation is slow.
+
+254
+00:15:21,940 --> 00:15:26,620
+And if you were to run a profiler, it would tell you that the double function is slow.
+
+255
+00:15:26,620 --> 00:15:32,980
+And so that's useful, but it doesn't necessarily tell us why double is slow under what inputs.
+
+256
+00:15:32,980 --> 00:15:35,580
+And if double is a simple function, that's fine.
+
+257
+00:15:35,620 --> 00:15:41,100
+If double is 300 line function, it would be useful to know which inputs are causing it
+
+258
+00:15:41,100 --> 00:15:42,100
+to be slow.
+
+259
+00:15:42,100 --> 00:15:45,340
+But if we have logging, we can actually answer this question.
+
+260
+00:15:45,340 --> 00:15:47,820
+We run the program, takes a while.
+
+261
+00:15:47,820 --> 00:15:52,060
+They run Elliott tree to generate a human readable tree.
+
+262
+00:15:52,060 --> 00:15:56,460
+And then we extract only those lines that relate to the double function because we've
+
+263
+00:15:56,460 --> 00:16:00,940
+already determined that the double function is a slow one using a profiler.
+
+264
+00:16:00,940 --> 00:16:04,060
+You could also read the whole tree, but this way it'd fit on the slide.
+
+265
+00:16:04,060 --> 00:16:07,500
+So we can see that double got called three times as we expected.
+
+266
+00:16:07,500 --> 00:16:11,860
+Each time with a different argument, it got called the 13, 0, and 4.
+
+267
+00:16:11,860 --> 00:16:13,780
+There's a little hourglass on each line.
+
+268
+00:16:13,780 --> 00:16:17,660
+Hourglass is how many seconds each action took.
+
+269
+00:16:17,660 --> 00:16:22,620
+And you can see the first action took zero seconds, and the last action took zero seconds.
+
+270
+00:16:22,620 --> 00:16:24,780
+The second action took 10 seconds.
+
+271
+00:16:24,780 --> 00:16:29,300
+And so we know that double, when it's called with 13 and 4, ran quite quickly.
+
+272
+00:16:29,300 --> 00:16:32,180
+But when it was called with 0, the double function ran really slowly.
+
+273
+00:16:32,180 --> 00:16:36,380
+And so we know not only did double function, logs can tell us not only which function was
+
+274
+00:16:36,380 --> 00:16:44,940
+slow, they can tell us that this particular function or these inputs were slow.
+
+275
+00:16:44,940 --> 00:16:47,800
+And the third problem I'd like to talk about is trust.
+
+276
+00:16:47,800 --> 00:16:51,100
+How can you trust your code?
+
+277
+00:16:51,100 --> 00:16:53,780
+So scientific code is an argument about reality.
+
+278
+00:16:53,780 --> 00:16:58,340
+You might say this cell culture has these particular genes.
+
+279
+00:16:58,340 --> 00:17:00,500
+The weather is going to be rainy on Tuesday.
+
+280
+00:17:00,500 --> 00:17:03,340
+This behavior has correlated with that behavior.
+
+281
+00:17:03,340 --> 00:17:04,820
+This causes that.
+
+282
+00:17:04,820 --> 00:17:05,820
+You're making a claim.
+
+283
+00:17:05,820 --> 00:17:10,660
+And you want to be able to trust that claim.
+
+284
+00:17:10,660 --> 00:17:15,020
+And to begin with, you want to be able to trust it yourself.
+
+285
+00:17:15,020 --> 00:17:20,020
+You don't want to go and share your results with someone if you don't trust that the results
+
+286
+00:17:20,020 --> 00:17:22,100
+are correct.
+
+287
+00:17:22,100 --> 00:17:27,780
+You want to be sure, as sure as you can, that you can actually trust the statement that
+
+288
+00:17:27,780 --> 00:17:28,780
+you're claiming.
+
+289
+00:17:29,060 --> 00:17:34,740
+And then once you're sure yourself, you need to then share those results with someone else.
+
+290
+00:17:34,740 --> 00:17:37,700
+And then you're going to have to convince them to trust your results, convince them
+
+291
+00:17:37,700 --> 00:17:42,360
+to trust your code, which is a little bit different than convincing yourself.
+
+292
+00:17:42,360 --> 00:17:46,140
+Because they might not understand what you've done as well as you do.
+
+293
+00:17:46,140 --> 00:17:49,620
+But they also might be more objective.
+
+294
+00:17:49,620 --> 00:17:53,980
+There are some ways you can gain trust in your scientific computation.
+
+295
+00:17:53,980 --> 00:17:55,780
+Reproducibility is a big thing.
+
+296
+00:17:55,780 --> 00:18:00,300
+If I run your software with the same inputs and I get a completely different result than
+
+297
+00:18:00,300 --> 00:18:04,340
+you did, or if I just can't run it at all, I'm going to have a hard time trusting any
+
+298
+00:18:04,340 --> 00:18:05,340
+of the results.
+
+299
+00:18:05,340 --> 00:18:06,980
+You want your results to be consistent.
+
+300
+00:18:06,980 --> 00:18:11,500
+You want your software runs to always be the same.
+
+301
+00:18:11,500 --> 00:18:14,860
+You can test your software with automated tests.
+
+302
+00:18:14,860 --> 00:18:19,860
+You can do unit tests with test cases for your computations.
+
+303
+00:18:19,860 --> 00:18:23,940
+You can do metamorphic tests for high-level properties.
+
+304
+00:18:24,900 --> 00:18:28,540
+The thing I learned about a couple months ago, if you search for the phrase, there's
+
+305
+00:18:28,540 --> 00:18:29,540
+an article by Hildelewein.
+
+306
+00:18:29,540 --> 00:18:30,540
+They're really neat.
+
+307
+00:18:30,540 --> 00:18:31,540
+You should learn about them.
+
+308
+00:18:31,540 --> 00:18:36,820
+And once you understand it, it's much less intimidating than the name.
+
+309
+00:18:36,820 --> 00:18:38,540
+It's actually quite a simple idea.
+
+310
+00:18:38,540 --> 00:18:44,820
+And you can validate your computation against information you have about reality.
+
+311
+00:18:44,820 --> 00:18:49,980
+So if you have a weather model, you can run it using past data and compare it to past
+
+312
+00:18:49,980 --> 00:18:52,540
+weather predictions.
+
+313
+00:18:52,540 --> 00:18:58,820
+If you're doing gene sequencing, you can run a similar sample from the same place through
+
+314
+00:18:58,820 --> 00:19:02,700
+an existing gene sequencing machine and you can compare the results.
+
+315
+00:19:02,700 --> 00:19:05,340
+You can compare it to your knowledge of the domain.
+
+316
+00:19:05,340 --> 00:19:10,420
+You know the ratio of frequency between this gene and that gene should be, say, 4 to 1.
+
+317
+00:19:10,420 --> 00:19:18,580
+If the results are 20 to 1, then you're missing something.
+
+318
+00:19:18,580 --> 00:19:25,260
+And logging can help with reproducibility, at least, because it can...
+
+319
+00:19:25,260 --> 00:19:26,260
+Reproducibility is often in terms...
+
+320
+00:19:26,260 --> 00:19:29,820
+It can be thought of in terms of the end result, but you can also think about reproducing the
+
+321
+00:19:29,820 --> 00:19:30,820
+intermediate results.
+
+322
+00:19:30,820 --> 00:19:35,380
+If the intermediate results are the same, that gives you even more trust that it's actually
+
+323
+00:19:35,380 --> 00:19:39,700
+the same calculation that ran before.
+
+324
+00:19:39,700 --> 00:19:45,940
+But all of those things, which you should be doing, reproducibility and testing and
+
+325
+00:19:46,020 --> 00:19:52,140
+obviously validating against your knowledge of reality, may not be sufficient to gain
+
+326
+00:19:52,140 --> 00:19:59,380
+someone's trust that your code is good or that your results make sense.
+
+327
+00:19:59,380 --> 00:20:04,460
+Because if you just hand someone an opaque black box, if you say, here's this thing,
+
+328
+00:20:04,460 --> 00:20:08,020
+I shove in data and I get this result, you should totally trust it.
+
+329
+00:20:08,020 --> 00:20:10,180
+People aren't going to really buy that.
+
+330
+00:20:10,180 --> 00:20:15,860
+People want to understand how you did it, how it works, why it works, what it does.
+
+331
+00:20:16,100 --> 00:20:20,020
+You need to explain what it is you're doing.
+
+332
+00:20:20,020 --> 00:20:25,620
+And so if you read a scientific paper about some computation, they'll explain the steps
+
+333
+00:20:25,620 --> 00:20:27,980
+they did and why they did them.
+
+334
+00:20:27,980 --> 00:20:33,180
+So you need a coherent explanation saying, here's why we did these things.
+
+335
+00:20:33,180 --> 00:20:38,820
+We did this step, and here's a graph showing the intermediate results with a relationship
+
+336
+00:20:38,820 --> 00:20:40,420
+that makes sense.
+
+337
+00:20:40,420 --> 00:20:44,100
+And then we did another thing, and here's a table with a distribution, and here's what
+
+338
+00:20:44,100 --> 00:20:45,100
+we think, this makes sense.
+
+339
+00:20:45,340 --> 00:20:50,260
+And you can talk through and explain what you did and tell a story that makes sense
+
+340
+00:20:50,260 --> 00:20:57,300
+and with the data and a causal explanation about why your calculation does what it does.
+
+341
+00:20:57,300 --> 00:21:00,620
+And the common tool for doing this is Jupyter.
+
+342
+00:21:00,620 --> 00:21:07,140
+And Jupyter Notebook lets you create basically a story interleaving code, graphs, diagrams,
+
+343
+00:21:07,140 --> 00:21:09,180
+pictures and text.
+
+344
+00:21:09,180 --> 00:21:12,540
+Just English or whatever.
+
+345
+00:21:12,540 --> 00:21:16,860
+And it's really great at writing an explanation because you can say, here's my code, here's
+
+346
+00:21:16,860 --> 00:21:21,820
+a result, here's a diagram, here's some text explaining what I did.
+
+347
+00:21:21,820 --> 00:21:27,380
+But as a software engineer, I also see some problems with writing software at Jupyter
+
+348
+00:21:27,380 --> 00:21:33,660
+because it encourages you to write software in ways that aren't modular, that are harder
+
+349
+00:21:33,660 --> 00:21:37,740
+to test.
+
+350
+00:21:37,740 --> 00:21:39,660
+In terms of writing explanation, it's a great tool.
+
+351
+00:21:39,660 --> 00:21:44,140
+In terms of writing software that you can maintain over long periods, software you can
+
+352
+00:21:44,140 --> 00:21:45,980
+use as a library, it's just not very good.
+
+353
+00:21:45,980 --> 00:21:50,220
+And it's not designed for that, and that's fine, but it's a trade-off.
+
+354
+00:21:50,220 --> 00:21:54,620
+But you can also think of logging as a way of explaining your software.
+
+355
+00:21:54,620 --> 00:21:59,300
+Because if your logs have a causal trace of what you did, if your logs show you all intermediate
+
+356
+00:21:59,300 --> 00:22:03,740
+results, your log in some sense is a story about what your software did.
+
+357
+00:22:03,740 --> 00:22:07,940
+And if you can read that story and understand it and see what it did, you're going to trust
+
+358
+00:22:07,980 --> 00:22:10,340
+your software better.
+
+359
+00:22:10,340 --> 00:22:16,420
+And Elliott is just a library you can add to any piece of software where you need logging.
+
+360
+00:22:16,420 --> 00:22:21,980
+And so it doesn't sort of strongly impact the way you write software the way Jupyter
+
+361
+00:22:21,980 --> 00:22:23,300
+does.
+
+362
+00:22:23,300 --> 00:22:30,900
+But as a downside, it is very much tied to the specific implementation.
+
+363
+00:22:30,900 --> 00:22:34,100
+It's not really, you don't have any way to add images, you don't have a way to add explanations.
+
+364
+00:22:34,100 --> 00:22:40,460
+And so it is much more useful for allowing you to trust your own software, whereas you
+
+365
+00:22:40,460 --> 00:22:45,060
+can't really put a dump of your Elliott logs as a scientific paper.
+
+366
+00:22:45,060 --> 00:22:47,340
+Sharing it with others might be a problem.
+
+367
+00:22:47,340 --> 00:22:50,140
+So it's not ideal either.
+
+368
+00:22:50,140 --> 00:22:54,820
+But you can imagine a future where you can combine the two.
+
+369
+00:22:54,820 --> 00:22:59,700
+You could, Elliott, you probably don't, right now you probably don't want, with the default
+
+370
+00:22:59,700 --> 00:23:04,060
+setup, you probably don't want to dump a 300-megabyte array into Elliott.
+
+371
+00:23:04,100 --> 00:23:07,300
+But it could be extended to support that better.
+
+372
+00:23:07,300 --> 00:23:11,260
+And you can add support to Jupyter to load a trace of your logs.
+
+373
+00:23:11,260 --> 00:23:18,220
+And then you can imagine developing your scientific software just as you write regular software
+
+374
+00:23:18,220 --> 00:23:20,980
+in libraries and tests and so on.
+
+375
+00:23:20,980 --> 00:23:26,700
+But then taking a run and taking a full trace of all the execution and then loading it into
+
+376
+00:23:26,700 --> 00:23:32,260
+Jupyter and then using Jupyter to analyze that data, to create visualizations, to tell
+
+377
+00:23:32,300 --> 00:23:33,860
+a story to explain what it did.
+
+378
+00:23:33,860 --> 00:23:40,140
+And so you can basically combine the, what Elliott gives you and combine what Jupyter
+
+379
+00:23:40,140 --> 00:23:42,780
+gives you and get the best of both worlds.
+
+380
+00:23:42,780 --> 00:23:47,420
+And if there's something that interests you, please come talk to me or send me an email.
+
+381
+00:23:47,420 --> 00:23:51,380
+I'd love to talk about this.
+
+382
+00:23:51,380 --> 00:23:55,660
+So in conclusion, logging can help you debug your code.
+
+383
+00:23:55,660 --> 00:24:00,940
+Logging can help you figure out some of the performance problems in your code.
+
+384
+00:24:00,980 --> 00:24:05,420
+Logging can help you understand and trust the results of a long computation.
+
+385
+00:24:05,420 --> 00:24:09,820
+And so next week when you head home from PyCon, if you do scientific computing, I encourage
+
+386
+00:24:09,820 --> 00:24:12,860
+you to maybe add some logs to your code.
+
+387
+00:24:12,860 --> 00:24:20,180
+And then next time you have a bug, you will have some logs that will help you debug it.
+
+388
+00:24:20,180 --> 00:24:26,620
+If you want to learn more about Elliott, there's documentation at Elliott.ReadTheDocs.io.
+
+389
+00:24:26,660 --> 00:24:32,460
+I offer consulting services, both bridging the gap between scientific computing and
+
+390
+00:24:32,460 --> 00:24:35,500
+software engineering and performance optimization for Python.
+
+391
+00:24:35,500 --> 00:24:38,020
+That's my email, Twitter.
+
+392
+00:24:38,020 --> 00:24:39,020
+And thank you very much for coming.
+
+393
+00:24:39,020 --> 00:24:40,020
+I really appreciate it.
+
+394
+00:24:40,020 --> 00:24:49,020
+Thank you, Itamar.
+
+395
+00:24:49,020 --> 00:24:50,940
+We've got a few minutes for questions.
+
+396
+00:24:50,940 --> 00:24:56,300
+So if you have any, walk up to the microphone.
+
+397
+00:24:56,620 --> 00:25:00,700
+By the way, I will be outside after the talk if you want to talk to me afterwards.
+
+398
+00:25:02,700 --> 00:25:04,700
+Right outside the hall.
+
+399
+00:25:04,700 --> 00:25:06,700
+Hi, Elliott.
+
+400
+00:25:06,700 --> 00:25:08,700
+Okay.
+
+401
+00:25:08,700 --> 00:25:16,300
+So lots of people on production systems, they use log shipping services to aggregate and
+
+402
+00:25:16,300 --> 00:25:19,700
+search the logs from all their services in a single place.
+
+403
+00:25:19,700 --> 00:25:21,980
+How well does Elliott interact with that?
+
+404
+00:25:21,980 --> 00:25:31,820
+Can I point Elliott to standard output and then be able to filter the things that Elliott
+
+405
+00:25:31,820 --> 00:25:37,020
+produces so that I can feed it into the Elliott tree file later?
+
+406
+00:25:37,020 --> 00:25:42,860
+How does that interact with standard Python logging, logging at the same file, those kinds
+
+407
+00:25:42,860 --> 00:25:43,860
+of things?
+
+408
+00:25:43,860 --> 00:25:45,780
+Do you have any idea?
+
+409
+00:25:45,780 --> 00:25:52,140
+So as far as standard Python logging, you can route standard Python logging into Elliott
+
+410
+00:25:52,140 --> 00:25:54,980
+and the log messages will end up in the right place in the tree.
+
+411
+00:25:54,980 --> 00:25:56,900
+So you don't have to switch all your logs.
+
+412
+00:25:56,900 --> 00:25:58,780
+If you have existing logging, you don't have to replace it all.
+
+413
+00:25:58,780 --> 00:26:03,220
+You can keep it and just add a few Elliott decorators and all your logs will end up in
+
+414
+00:26:03,220 --> 00:26:04,740
+the right place in the tree.
+
+415
+00:26:04,740 --> 00:26:10,140
+As far as aggregating the logs from multiple machines, I have not done this recently, but
+
+416
+00:26:10,140 --> 00:26:17,140
+you can pipe Elliott into logstash, which is a tool for shipping logs around, and then
+
+417
+00:26:17,140 --> 00:26:22,340
+put them into a log search thing like elastic search.
+
+418
+00:26:22,340 --> 00:26:29,980
+In certain versions of and you can sort of coax a certain log, generic log visualization
+
+419
+00:26:29,980 --> 00:26:38,100
+tools like Kibana to sort the log messages based on causality.
+
+420
+00:26:38,100 --> 00:26:41,760
+And then you get sort of the equivalent of Elliott tree, not quite as nice.
+
+421
+00:26:41,760 --> 00:26:48,620
+You do get the causal order of the log messages in a generic log viewing UI.
+
+422
+00:26:48,620 --> 00:26:55,900
+You can also each tree has a unique ID, so you can talk to the log database and extract
+
+423
+00:26:55,900 --> 00:26:59,700
+all the log messages for a particular unique ID and then type that into Elliott tree in
+
+424
+00:26:59,700 --> 00:27:02,220
+a viewer, which I know one company has done.
+
+425
+00:27:02,220 --> 00:27:05,220
+So it is possible, yes.
+
+426
+00:27:05,220 --> 00:27:06,220
+Thanks.
+
+427
+00:27:06,220 --> 00:27:07,220
+Okay.
+
+428
+00:27:07,220 --> 00:27:20,220
+It sounds like Elliott is possibly a best practice for scientific computing, or is there
+
+429
+00:27:20,220 --> 00:27:26,500
+another solution that may be applicable in other situations, and can you expand on those
+
+430
+00:27:26,500 --> 00:27:31,700
+other situations and other options?
+
+431
+00:27:31,700 --> 00:27:39,980
+I have not done a huge amount of searching for logging solutions for scientific computing.
+
+432
+00:27:39,980 --> 00:27:42,860
+I have done a little bit of research.
+
+433
+00:27:42,860 --> 00:27:44,080
+I haven't found much.
+
+434
+00:27:44,080 --> 00:27:47,580
+You can use standard logging systems.
+
+435
+00:27:47,580 --> 00:27:51,700
+None of them give you a tree.
+
+436
+00:27:51,700 --> 00:27:57,500
+Most logging systems will just give you individual statements.
+
+437
+00:27:58,500 --> 00:28:05,420
+There is a library called struct log that only gives you structured logging.
+
+438
+00:28:05,420 --> 00:28:12,180
+So at least it gives you a logging that you can parse with a machine with the software
+
+439
+00:28:12,180 --> 00:28:16,420
+and therefore get the parameters and service pros.
+
+440
+00:28:16,420 --> 00:28:17,420
+There may be other solutions.
+
+441
+00:28:17,420 --> 00:28:24,780
+I don't know if that is for Python.
+
+442
+00:28:24,780 --> 00:28:34,780
+Do you have any insight into how Elliott would work with Spark or Kubernetes?
+
+443
+00:28:34,780 --> 00:28:41,940
+I don't know much about Spark, so I can't really answer that.
+
+444
+00:28:41,940 --> 00:28:46,540
+But if you explain the execution model, I did a little research on my answer.
+
+445
+00:28:46,540 --> 00:28:52,060
+For Kubernetes, Kubernetes is a way of running software in a cluster.
+
+446
+00:28:52,140 --> 00:28:58,540
+Kubernetes will capture logs and aggregate them.
+
+447
+00:28:58,540 --> 00:29:01,660
+You would then have to feed it into something like Elliott tree if you wanted to visualize
+
+448
+00:29:01,660 --> 00:29:08,300
+it better, but I would expect it to work fine.
+
+449
+00:29:08,300 --> 00:29:14,980
+How well does Elliott cope with really large inputs if I have a 10 gig matrix that I am
+
+450
+00:29:14,980 --> 00:29:16,860
+putting into a function?
+
+451
+00:29:16,860 --> 00:29:18,460
+So it will work really badly.
+
+452
+00:29:18,460 --> 00:29:19,860
+By default.
+
+453
+00:29:19,860 --> 00:29:21,260
+So there are two layers.
+
+454
+00:29:21,260 --> 00:29:26,380
+There is a generic logging layer which has the concept of actions and then there is a
+
+455
+00:29:26,380 --> 00:29:32,100
+serialization format which writes it by default to JSON.
+
+456
+00:29:32,100 --> 00:29:35,620
+So when I added the thing where it writes the file, it just writes JSON.
+
+457
+00:29:35,620 --> 00:29:40,340
+You could write your own destination that did whatever you wanted.
+
+458
+00:29:40,340 --> 00:29:43,580
+So when I was talking about hooking up Elliott to Jupiter, one of the things I would want
+
+459
+00:29:43,580 --> 00:29:50,580
+to do there is to write a custom destination that wrote large arrays to some sort of storage.
+
+460
+00:29:50,580 --> 00:29:57,260
+I have imagined things like if you are running on AWS, you would write it to an S3 bucket
+
+461
+00:29:57,260 --> 00:30:01,940
+where it expires after a couple of weeks because you probably don't want to look at batch processes
+
+462
+00:30:01,940 --> 00:30:03,740
+from two weeks ago.
+
+463
+00:30:03,740 --> 00:30:07,780
+So you can write custom destinations for your logs and that is where you would be logging
+
+464
+00:30:07,780 --> 00:30:12,020
+in situations where you want to log large arrays.
+
+465
+00:30:12,020 --> 00:30:16,260
+If you want to talk about that outside, I would be happy to talk about it.
+
+466
+00:30:16,260 --> 00:30:18,700
+I think we are out of time.
+
+467
+00:30:18,700 --> 00:30:19,700
+Thank you everyone.
+
+468
+00:30:19,700 --> 00:30:22,220
+Let's give it up for Itamar once again.
+
+469
+00:30:22,220 --> 00:30:22,740
+Thank you for coming.
+

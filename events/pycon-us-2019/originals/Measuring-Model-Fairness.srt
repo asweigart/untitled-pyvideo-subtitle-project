@@ -1,0 +1,2660 @@
+1
+00:00:00,000 --> 00:00:03,040
+Hello again, everyone.
+
+2
+00:00:03,040 --> 00:00:06,760
+This talk is Measuring Model Fairness with Henry Hinefeld.
+
+3
+00:00:06,760 --> 00:00:08,260
+Please give him a warm welcome.
+
+4
+00:00:08,260 --> 00:00:13,760
+Well, thank you.
+
+5
+00:00:13,760 --> 00:00:14,680
+Hi, everyone.
+
+6
+00:00:14,680 --> 00:00:15,920
+My name is Henry Hinefeld.
+
+7
+00:00:15,920 --> 00:00:18,760
+I'm a data scientist at Civis Analytics.
+
+8
+00:00:18,760 --> 00:00:21,080
+And today I'm going to talk to you about measuring model
+
+9
+00:00:21,080 --> 00:00:22,920
+fairness.
+
+10
+00:00:22,920 --> 00:00:24,460
+Before we jump right into it, I'll
+
+11
+00:00:24,460 --> 00:00:26,720
+start with an outline of where we're headed.
+
+12
+00:00:26,720 --> 00:00:29,760
+I'm going to start by motivating the problem a little bit.
+
+13
+00:00:29,760 --> 00:00:31,400
+And the problem I'm talking about here
+
+14
+00:00:31,400 --> 00:00:34,160
+is specifically measuring model fairness, not
+
+15
+00:00:34,160 --> 00:00:35,720
+model fairness writ large.
+
+16
+00:00:35,720 --> 00:00:37,960
+There was a really great talk earlier today about that.
+
+17
+00:00:37,960 --> 00:00:40,040
+So I encourage you to go find the video for that later
+
+18
+00:00:40,040 --> 00:00:41,200
+if you're interested.
+
+19
+00:00:41,200 --> 00:00:43,700
+But today I'm specifically talking about the problem
+
+20
+00:00:43,700 --> 00:00:46,880
+of measuring the fairness of a model's predictions.
+
+21
+00:00:46,880 --> 00:00:48,680
+This is actually a pretty tricky problem.
+
+22
+00:00:48,680 --> 00:00:50,920
+So next I'll talk through some of the subtleties that
+
+23
+00:00:50,920 --> 00:00:54,480
+make this hard, and then talk through a case study using
+
+24
+00:00:54,480 --> 00:00:57,520
+some real world data that shows how these subtleties show up
+
+25
+00:00:57,520 --> 00:00:59,080
+in practice.
+
+26
+00:00:59,080 --> 00:01:00,800
+Finally, I'll talk about some Python tools,
+
+27
+00:01:00,800 --> 00:01:02,840
+some open source tools you can use
+
+28
+00:01:02,840 --> 00:01:04,720
+to address these problems in your own work,
+
+29
+00:01:04,720 --> 00:01:06,380
+and end with some concluding remarks.
+
+30
+00:01:09,880 --> 00:01:12,760
+So at this point, I think it's pretty commonly accepted
+
+31
+00:01:12,760 --> 00:01:16,280
+that machine learning models can have a big impact
+
+32
+00:01:16,280 --> 00:01:18,140
+on people's lives.
+
+33
+00:01:18,140 --> 00:01:20,240
+Things like credit scoring models
+
+34
+00:01:20,240 --> 00:01:24,280
+can determine whether or not you can buy a home.
+
+35
+00:01:24,280 --> 00:01:27,240
+Advertising models can affect what kind of job
+
+36
+00:01:27,240 --> 00:01:32,000
+offers you're exposed to, what kind of credit products you see.
+
+37
+00:01:32,000 --> 00:01:36,240
+And models can even affect how long you spend in jail.
+
+38
+00:01:36,240 --> 00:01:38,960
+Now as machine learning models have made their way
+
+39
+00:01:38,960 --> 00:01:42,200
+into these really socially impactful domains,
+
+40
+00:01:42,200 --> 00:01:44,960
+a consensus has emerged that it's really important
+
+41
+00:01:44,960 --> 00:01:47,520
+that we make sure the predictions of these models
+
+42
+00:01:47,520 --> 00:01:49,360
+are fair.
+
+43
+00:01:49,360 --> 00:01:52,640
+Unfortunately, that's kind of where the consensus ends,
+
+44
+00:01:52,640 --> 00:01:55,360
+because there are many different ways to define fairness,
+
+45
+00:01:55,360 --> 00:01:57,760
+and many different ways to measure the fairness of model
+
+46
+00:01:57,760 --> 00:02:00,080
+predictions.
+
+47
+00:02:00,080 --> 00:02:04,240
+And this last example is actually a really illustrative case
+
+48
+00:02:04,240 --> 00:02:04,880
+for that.
+
+49
+00:02:04,880 --> 00:02:07,200
+So a quick show of hands, how many of you
+
+50
+00:02:07,200 --> 00:02:11,640
+all have heard of the Compass Recidivism Model Controversy?
+
+51
+00:02:11,640 --> 00:02:14,720
+That's a pretty good response.
+
+52
+00:02:14,720 --> 00:02:16,900
+For those of you who are not familiar,
+
+53
+00:02:16,900 --> 00:02:19,680
+there is a model called Compass, which
+
+54
+00:02:19,680 --> 00:02:21,520
+is used to predict recidivism.
+
+55
+00:02:21,520 --> 00:02:24,500
+So to predict the likelihood that a person convicted
+
+56
+00:02:24,500 --> 00:02:27,220
+of a crime will go on to re-offend
+
+57
+00:02:27,220 --> 00:02:29,520
+when they're released, so go on to be convicted
+
+58
+00:02:29,520 --> 00:02:31,260
+of future crimes.
+
+59
+00:02:31,260 --> 00:02:34,500
+This model is used pretty widely across the country
+
+60
+00:02:34,500 --> 00:02:37,300
+in making parole decisions.
+
+61
+00:02:37,300 --> 00:02:40,340
+And so a little while ago, this organization
+
+62
+00:02:40,340 --> 00:02:43,600
+called ProPublica, which is an independent investigative
+
+63
+00:02:43,600 --> 00:02:47,300
+journalism outfit, found out about this
+
+64
+00:02:47,300 --> 00:02:50,700
+and went out and collected some data, first about the scores
+
+65
+00:02:50,700 --> 00:02:53,780
+that this model was generating, and second,
+
+66
+00:02:53,780 --> 00:02:56,140
+about the actual outcome, so about whether people actually
+
+67
+00:02:56,140 --> 00:02:59,780
+did go on to recidivate.
+
+68
+00:02:59,780 --> 00:03:03,780
+And what they found when they analyzed this data
+
+69
+00:03:03,780 --> 00:03:07,820
+was that the model's error rates were different for people
+
+70
+00:03:07,820 --> 00:03:09,220
+of different races.
+
+71
+00:03:09,220 --> 00:03:12,140
+So the chart I have here is comparing
+
+72
+00:03:12,140 --> 00:03:15,700
+the false positive rates and the false negative rates
+
+73
+00:03:15,700 --> 00:03:17,340
+for white and black defendants.
+
+74
+00:03:17,340 --> 00:03:21,320
+So the false positive rate is the fraction of people
+
+75
+00:03:21,320 --> 00:03:23,920
+that the model labeled as high risk,
+
+76
+00:03:23,920 --> 00:03:26,360
+but who actually did not go on to re-offend.
+
+77
+00:03:26,360 --> 00:03:28,520
+Similarly, the false negative rate
+
+78
+00:03:28,520 --> 00:03:30,960
+are the people that the model said
+
+79
+00:03:30,960 --> 00:03:34,880
+had a low risk of re-offending, but did go on to re-offend.
+
+80
+00:03:34,880 --> 00:03:38,360
+And if you look at these error rates for the COMPAS models,
+
+81
+00:03:38,360 --> 00:03:40,640
+well, the false positive rate, the people falsely labeled
+
+82
+00:03:40,640 --> 00:03:43,640
+as high risk, that error rate is about 24%
+
+83
+00:03:43,640 --> 00:03:48,040
+for white defendants and about 45% for black defendants.
+
+84
+00:03:48,040 --> 00:03:50,600
+And on the other hand, the false negative rate,
+
+85
+00:03:50,600 --> 00:03:53,280
+the people that the model falsely said
+
+86
+00:03:53,280 --> 00:03:55,720
+were at a low risk of re-offending,
+
+87
+00:03:55,720 --> 00:03:58,620
+that error rate is about 48% for white defendants
+
+88
+00:03:58,620 --> 00:04:01,280
+and about 28% for black defendants.
+
+89
+00:04:01,280 --> 00:04:03,960
+So ProPublica went out, collected this data,
+
+90
+00:04:03,960 --> 00:04:07,400
+did this analysis, and on the basis of this analysis,
+
+91
+00:04:07,400 --> 00:04:11,960
+wrote a report saying this model used in parole decisions
+
+92
+00:04:11,960 --> 00:04:14,760
+is biased against black defendants.
+
+93
+00:04:14,760 --> 00:04:17,760
+Seems pretty cut and dried so far, right?
+
+94
+00:04:17,760 --> 00:04:20,640
+Well, the second half of the story
+
+95
+00:04:20,640 --> 00:04:23,240
+is that the company which makes this model, which
+
+96
+00:04:23,240 --> 00:04:26,240
+makes this product, the company Northpoint,
+
+97
+00:04:26,240 --> 00:04:28,360
+put out a rebuttal where they showed
+
+98
+00:04:28,360 --> 00:04:31,200
+that the overall accuracy, so the overall error rate,
+
+99
+00:04:31,200 --> 00:04:36,320
+or I'm sorry, the overall accuracy of this model
+
+100
+00:04:36,320 --> 00:04:38,920
+is very similar for white defendants and black defendants.
+
+101
+00:04:38,920 --> 00:04:44,560
+So the overall accuracy is about 63% for both groups.
+
+102
+00:04:44,560 --> 00:04:46,860
+So this leaves us with a question.
+
+103
+00:04:46,860 --> 00:04:48,060
+Is this model fair?
+
+104
+00:04:48,060 --> 00:04:48,780
+Who's right?
+
+105
+00:04:48,780 --> 00:04:51,080
+Which is the appropriate way to measure
+
+106
+00:04:51,080 --> 00:04:55,340
+the fairness of this model, of this model's predictions?
+
+107
+00:04:55,340 --> 00:04:57,820
+Intuitively, you might think, well, let's just
+
+108
+00:04:57,820 --> 00:04:58,980
+satisfy both conditions.
+
+109
+00:04:58,980 --> 00:05:00,780
+Let's make sure that the error rates are balanced,
+
+110
+00:05:00,780 --> 00:05:02,980
+and let's make sure that the overall accuracy is also
+
+111
+00:05:02,980 --> 00:05:04,100
+balanced.
+
+112
+00:05:04,100 --> 00:05:06,860
+Unfortunately, that's not possible.
+
+113
+00:05:06,860 --> 00:05:09,220
+As this controversy was coming out,
+
+114
+00:05:09,220 --> 00:05:11,780
+some academics took a look at the problem
+
+115
+00:05:11,780 --> 00:05:16,060
+and proved mathematically that, except in very contrived cases,
+
+116
+00:05:16,460 --> 00:05:19,100
+where, for example, your model is 100% correct,
+
+117
+00:05:19,100 --> 00:05:21,760
+it just gives you the right answer every single time,
+
+118
+00:05:21,760 --> 00:05:24,180
+except in contrived cases like that,
+
+119
+00:05:24,180 --> 00:05:26,940
+it's mathematically impossible to satisfy
+
+120
+00:05:26,940 --> 00:05:30,980
+both of these definitions of fairness at the same time.
+
+121
+00:05:30,980 --> 00:05:32,540
+So we're left with this question of,
+
+122
+00:05:32,540 --> 00:05:35,900
+how do you decide what is an appropriate way to define
+
+123
+00:05:35,900 --> 00:05:38,020
+fairness for your machine learning modeling problem?
+
+124
+00:05:38,020 --> 00:05:41,140
+How do you define this, and how do you measure it?
+
+125
+00:05:41,140 --> 00:05:43,860
+This is a really tricky problem with a lot of subtleties.
+
+126
+00:05:43,860 --> 00:05:45,580
+So next, I'm going to talk through three
+
+127
+00:05:45,580 --> 00:05:47,980
+of these subtleties and how they impact this problem.
+
+128
+00:05:51,260 --> 00:05:55,220
+The first subtlety is that different groups
+
+129
+00:05:55,220 --> 00:05:58,940
+can have different ground truth positive rates.
+
+130
+00:05:58,940 --> 00:06:00,940
+So to illustrate this with an example,
+
+131
+00:06:00,940 --> 00:06:05,020
+say you were trying to make a model that predicted diagnoses
+
+132
+00:06:05,020 --> 00:06:06,700
+of breast cancer.
+
+133
+00:06:06,700 --> 00:06:08,780
+Well, men and women are diagnosed with breast cancer
+
+134
+00:06:08,780 --> 00:06:10,380
+at very different rates.
+
+135
+00:06:10,380 --> 00:06:12,220
+For women, it's approximately one in eight,
+
+136
+00:06:12,220 --> 00:06:15,900
+so something like 12% over the course of a lifetime.
+
+137
+00:06:15,900 --> 00:06:18,020
+And for men, it's something like one in a thousand,
+
+138
+00:06:18,020 --> 00:06:19,780
+so 0.1%.
+
+139
+00:06:19,780 --> 00:06:23,300
+So there is a very different incidence rate,
+
+140
+00:06:23,300 --> 00:06:25,740
+a very different true positive rate in the ground truth
+
+141
+00:06:25,740 --> 00:06:28,100
+between men and women for this type of problem.
+
+142
+00:06:29,100 --> 00:06:32,300
+Well, this makes measuring fairness tricky
+
+143
+00:06:32,300 --> 00:06:35,820
+because certain fairness metrics make assumptions
+
+144
+00:06:35,820 --> 00:06:38,780
+about the balance of ground truth between groups.
+
+145
+00:06:38,780 --> 00:06:41,100
+One of these metrics, which is a very popular one,
+
+146
+00:06:41,100 --> 00:06:43,540
+is called disparate impact.
+
+147
+00:06:43,540 --> 00:06:46,940
+And in words, what disparate impact is measuring
+
+148
+00:06:46,940 --> 00:06:51,820
+is the ratio of the probability of a positive classification
+
+149
+00:06:51,820 --> 00:06:52,860
+between two different groups.
+
+150
+00:06:52,860 --> 00:06:54,140
+So that's this equation down here,
+
+151
+00:06:54,140 --> 00:06:56,620
+the probability that you get a yes
+
+152
+00:06:56,620 --> 00:06:59,060
+or a positive classification for different groups.
+
+153
+00:06:59,060 --> 00:07:01,140
+And because this is a ratio,
+
+154
+00:07:01,140 --> 00:07:02,500
+you want it to be very close to one
+
+155
+00:07:02,500 --> 00:07:05,100
+according to this definition of fairness.
+
+156
+00:07:05,100 --> 00:07:07,340
+But if we think back to our breast cancer modeling problem,
+
+157
+00:07:07,340 --> 00:07:10,260
+you can see how this definition of failure
+
+158
+00:07:10,300 --> 00:07:11,420
+just falls on its face
+
+159
+00:07:11,420 --> 00:07:13,180
+because the ground truth positive rate
+
+160
+00:07:13,180 --> 00:07:15,100
+is very different between our two groups.
+
+161
+00:07:15,100 --> 00:07:17,260
+And so that conflicts with an assumption
+
+162
+00:07:17,260 --> 00:07:20,300
+that this fairness metric has baked in.
+
+163
+00:07:20,300 --> 00:07:21,700
+So subtlety number one,
+
+164
+00:07:22,580 --> 00:07:24,580
+there can be legitimate differences
+
+165
+00:07:24,580 --> 00:07:26,580
+in the ground truth positive rate
+
+166
+00:07:26,580 --> 00:07:28,780
+between different groups that you're looking at.
+
+167
+00:07:31,540 --> 00:07:33,420
+Subtlety number two
+
+168
+00:07:33,420 --> 00:07:35,460
+is that you don't know what ground truth is.
+
+169
+00:07:35,460 --> 00:07:37,740
+You only know what your data says,
+
+170
+00:07:37,780 --> 00:07:41,100
+and your data is a biased representation of ground truth.
+
+171
+00:07:42,060 --> 00:07:45,620
+There's a quote from the statistician George Box
+
+172
+00:07:45,620 --> 00:07:48,900
+that I like a lot, which is that all models are wrong,
+
+173
+00:07:48,900 --> 00:07:50,900
+some models are useful.
+
+174
+00:07:50,900 --> 00:07:53,700
+And I think you can kind of paraphrase that
+
+175
+00:07:53,700 --> 00:07:56,540
+into the data context by saying all data sets are biased,
+
+176
+00:07:56,540 --> 00:07:57,660
+some data sets are useful.
+
+177
+00:07:57,660 --> 00:07:58,620
+So you always have to remember
+
+178
+00:07:58,620 --> 00:08:01,180
+that your data isn't an exact representation
+
+179
+00:08:01,180 --> 00:08:02,940
+of the real world of ground truth.
+
+180
+00:08:03,780 --> 00:08:07,620
+Data can be non-representative in a couple different ways.
+
+181
+00:08:07,620 --> 00:08:11,900
+And one of those ways is that it can contain label bias.
+
+182
+00:08:11,900 --> 00:08:16,180
+So label bias is when a protected attribute
+
+183
+00:08:16,180 --> 00:08:19,100
+affects the way individuals are assigned labels.
+
+184
+00:08:19,100 --> 00:08:20,700
+People from different groups
+
+185
+00:08:20,700 --> 00:08:24,420
+get assigned labels differently in your data set.
+
+186
+00:08:24,420 --> 00:08:26,500
+As an example of this,
+
+187
+00:08:26,500 --> 00:08:30,220
+consider this quote from an analysis of school discipline.
+
+188
+00:08:30,580 --> 00:08:33,060
+In this paper, the authors found that students
+
+189
+00:08:33,060 --> 00:08:35,660
+from African American and Latino families
+
+190
+00:08:35,660 --> 00:08:37,980
+were more likely than their white peers
+
+191
+00:08:37,980 --> 00:08:40,020
+to receive expulsion or suspension
+
+192
+00:08:40,020 --> 00:08:43,820
+for similar problem behavior.
+
+193
+00:08:43,820 --> 00:08:45,660
+So if you were using this data set
+
+194
+00:08:45,660 --> 00:08:48,860
+and trying to predict student problem behavior,
+
+195
+00:08:48,860 --> 00:08:51,620
+but your label has been suspended,
+
+196
+00:08:51,620 --> 00:08:54,820
+then you're working with a data set that has label bias
+
+197
+00:08:54,820 --> 00:08:56,180
+because different groups
+
+198
+00:08:56,180 --> 00:08:58,180
+are being assigned labels differently.
+
+199
+00:08:58,380 --> 00:09:01,100
+This is a problem for measuring fairness
+
+200
+00:09:01,100 --> 00:09:02,740
+because some fairness metrics
+
+201
+00:09:02,740 --> 00:09:05,180
+are based on your agreement with the labels.
+
+202
+00:09:05,180 --> 00:09:06,620
+And if your labels are biased,
+
+203
+00:09:06,620 --> 00:09:08,340
+then making sure that your predictions agree
+
+204
+00:09:08,340 --> 00:09:10,860
+with those labels is just perpetuating the bias
+
+205
+00:09:10,860 --> 00:09:13,140
+that was in your data set in the first place.
+
+206
+00:09:14,340 --> 00:09:16,700
+A popular example of one of these metrics
+
+207
+00:09:16,700 --> 00:09:18,940
+is called equal opportunity.
+
+208
+00:09:18,940 --> 00:09:21,180
+And equal opportunity is comparing
+
+209
+00:09:21,180 --> 00:09:24,020
+the true positive rate between different groups.
+
+210
+00:09:24,020 --> 00:09:26,500
+So this is a very common example
+
+211
+00:09:26,540 --> 00:09:27,340
+of this in different groups.
+
+212
+00:09:27,340 --> 00:09:30,820
+So this is given that in the data set,
+
+213
+00:09:30,820 --> 00:09:32,580
+you are labeled as a one,
+
+214
+00:09:32,580 --> 00:09:34,060
+what is the probability that the model
+
+215
+00:09:34,060 --> 00:09:35,820
+classifies you as a one?
+
+216
+00:09:35,820 --> 00:09:37,540
+And looking at the difference in that rate
+
+217
+00:09:37,540 --> 00:09:40,180
+between the two different groups that you care about.
+
+218
+00:09:40,180 --> 00:09:42,620
+But again, here you're optimizing for agreement
+
+219
+00:09:42,620 --> 00:09:43,940
+with these labels.
+
+220
+00:09:43,940 --> 00:09:46,460
+And if the process that generated the labels themselves
+
+221
+00:09:46,460 --> 00:09:49,460
+is biased, then all you're doing is perpetuating the bias
+
+222
+00:09:49,460 --> 00:09:51,700
+that generated your data in the first place.
+
+223
+00:09:52,700 --> 00:09:56,940
+Another way your data can be non-representative
+
+224
+00:09:56,940 --> 00:09:59,740
+is that it can contain sample bias.
+
+225
+00:09:59,740 --> 00:10:02,940
+Sample bias is when different groups
+
+226
+00:10:02,940 --> 00:10:06,460
+are sampled into your data set in different ways.
+
+227
+00:10:06,460 --> 00:10:09,500
+So as an example of this, consider this quote
+
+228
+00:10:09,500 --> 00:10:14,340
+from an analysis of the NYPD stop and frisk policy.
+
+229
+00:10:14,340 --> 00:10:16,940
+And in this analysis, they found that people
+
+230
+00:10:16,940 --> 00:10:19,460
+of African and Hispanic descent were stopped
+
+231
+00:10:19,460 --> 00:10:21,180
+more frequently than white people
+
+232
+00:10:21,180 --> 00:10:23,940
+even controlling for various other factors.
+
+233
+00:10:23,940 --> 00:10:26,060
+So if you were trying to build a model
+
+234
+00:10:26,060 --> 00:10:28,380
+on top of this data set, you would be working
+
+235
+00:10:28,380 --> 00:10:30,300
+with something that had sample bias
+
+236
+00:10:30,300 --> 00:10:32,100
+because whether or not a person shows up
+
+237
+00:10:32,100 --> 00:10:33,900
+in your data set in the first place
+
+238
+00:10:33,900 --> 00:10:35,180
+is different for different groups.
+
+239
+00:10:35,180 --> 00:10:37,980
+The sampling process is different for different groups.
+
+240
+00:10:40,500 --> 00:10:41,860
+I think you see where this is going.
+
+241
+00:10:41,860 --> 00:10:44,460
+This is a problem for measuring fairness
+
+242
+00:10:44,460 --> 00:10:48,820
+because some metrics look at classification ratios
+
+243
+00:10:48,820 --> 00:10:49,980
+between groups.
+
+244
+00:10:49,980 --> 00:10:51,900
+So here I'll go back to disparate impact.
+
+245
+00:10:51,900 --> 00:10:54,100
+This was the first metric we talked about,
+
+246
+00:10:54,100 --> 00:10:56,140
+the one that's comparing the ratio
+
+247
+00:10:56,140 --> 00:10:59,620
+of the positive classification between groups.
+
+248
+00:10:59,620 --> 00:11:01,780
+Well, if you're sampling the groups differently,
+
+249
+00:11:01,780 --> 00:11:03,660
+then the things that you're comparing in this ratio
+
+250
+00:11:03,660 --> 00:11:06,020
+is not an apples to apples comparison.
+
+251
+00:11:06,020 --> 00:11:07,860
+If you're sampling, for example,
+
+252
+00:11:07,860 --> 00:11:10,300
+only high risk individuals in one group,
+
+253
+00:11:10,300 --> 00:11:13,980
+but then an entire population uniformly in another group,
+
+254
+00:11:13,980 --> 00:11:16,140
+when you do that ratio, you're not getting
+
+255
+00:11:16,140 --> 00:11:17,700
+an accurate assessment of how your model
+
+256
+00:11:17,700 --> 00:11:18,660
+is treating those different groups
+
+257
+00:11:18,660 --> 00:11:21,460
+because the populations aren't sampled the same way.
+
+258
+00:11:21,460 --> 00:11:24,180
+It's not an apples to apples comparison.
+
+259
+00:11:24,180 --> 00:11:27,860
+So to recap so far, subtlety number one,
+
+260
+00:11:27,860 --> 00:11:29,860
+there can be legitimate differences
+
+261
+00:11:29,860 --> 00:11:32,740
+in the ground truth positive rate between classes.
+
+262
+00:11:32,740 --> 00:11:37,140
+Sample number two, your data is a biased representation
+
+263
+00:11:37,140 --> 00:11:38,220
+of ground truth.
+
+264
+00:11:39,500 --> 00:11:42,820
+Subtlety number three is that the consequences
+
+265
+00:11:42,820 --> 00:11:44,340
+of your model matter.
+
+266
+00:11:45,220 --> 00:11:48,220
+I can see an argument where if your model is punitive,
+
+267
+00:11:48,220 --> 00:11:50,140
+so the consequences of your model is negative,
+
+268
+00:11:50,140 --> 00:11:52,460
+it's handing out something like more jail time,
+
+269
+00:11:53,500 --> 00:11:56,660
+then you might care more about false positives.
+
+270
+00:11:56,660 --> 00:11:59,820
+You might care more about the cases where your model
+
+271
+00:11:59,820 --> 00:12:03,420
+is assigning someone a punishment that they don't deserve.
+
+272
+00:12:03,420 --> 00:12:06,220
+On the flip side, if your model is assistive,
+
+273
+00:12:06,220 --> 00:12:09,100
+if your model is handing out a benefit to people who need it,
+
+274
+00:12:09,100 --> 00:12:11,380
+I can see an argument where you care more
+
+275
+00:12:11,380 --> 00:12:13,580
+about false negatives, about where your model says
+
+276
+00:12:13,580 --> 00:12:15,900
+a person doesn't need this benefit, but they really do,
+
+277
+00:12:15,900 --> 00:12:18,060
+and they aren't getting it as a consequence.
+
+278
+00:12:19,100 --> 00:12:21,820
+I'm not arguing that this is the only way to think about
+
+279
+00:12:21,820 --> 00:12:24,460
+assistive and punitive models.
+
+280
+00:12:24,460 --> 00:12:27,940
+I'm just saying you have to think about these questions.
+
+281
+00:12:29,260 --> 00:12:31,460
+This takes me to what is actually the main point
+
+282
+00:12:31,460 --> 00:12:32,460
+of this talk.
+
+283
+00:12:32,460 --> 00:12:34,220
+If you don't remember anything else from this,
+
+284
+00:12:34,220 --> 00:12:36,380
+this is what I want you to come away with.
+
+285
+00:12:37,140 --> 00:12:41,340
+You can't math your way out of having to think
+
+286
+00:12:41,340 --> 00:12:42,860
+about fairness.
+
+287
+00:12:42,860 --> 00:12:46,300
+You still need a human person to think about
+
+288
+00:12:46,300 --> 00:12:48,060
+the ethical implications of your model,
+
+289
+00:12:48,060 --> 00:12:49,700
+of the tool that you're building.
+
+290
+00:12:51,180 --> 00:12:54,100
+When machine learning and this kind of modeling approach
+
+291
+00:12:54,100 --> 00:12:56,780
+first started being applied to these different types
+
+292
+00:12:56,780 --> 00:12:59,860
+of domains, at the beginning, there was kind of
+
+293
+00:12:59,860 --> 00:13:03,220
+a common impulse to think, well, models are just math,
+
+294
+00:13:03,220 --> 00:13:04,740
+so they must be fair.
+
+295
+00:13:04,740 --> 00:13:06,620
+It's just numbers, it's just algorithms, it's math.
+
+296
+00:13:06,620 --> 00:13:08,180
+Of course it's fair.
+
+297
+00:13:08,180 --> 00:13:10,220
+At this point, I think that attitude
+
+298
+00:13:10,220 --> 00:13:11,780
+is pretty thoroughly debunked,
+
+299
+00:13:12,580 --> 00:13:15,980
+but there's a temptation to take the same kind of reasoning
+
+300
+00:13:15,980 --> 00:13:18,500
+and apply it just one step farther down the modeling chain.
+
+301
+00:13:18,500 --> 00:13:21,620
+It's not models are math, so they must be fair.
+
+302
+00:13:21,620 --> 00:13:24,500
+It's I'm gonna add this extra constraint to my math
+
+303
+00:13:24,500 --> 00:13:26,180
+and it will automatically be fair.
+
+304
+00:13:26,180 --> 00:13:27,900
+And that's still not automatically true.
+
+305
+00:13:27,900 --> 00:13:30,860
+You need a human person thinking about
+
+306
+00:13:30,860 --> 00:13:32,580
+what does fairness mean in my context?
+
+307
+00:13:32,580 --> 00:13:33,460
+What does it mean?
+
+308
+00:13:33,460 --> 00:13:35,220
+What are the consequences?
+
+309
+00:13:35,220 --> 00:13:37,780
+You need that person doing that thinking
+
+310
+00:13:37,780 --> 00:13:41,100
+before you can say this constraint makes my model fair.
+
+311
+00:13:42,740 --> 00:13:45,660
+So these are some of the ways it can be tricky.
+
+312
+00:13:45,660 --> 00:13:48,220
+So far this has all been kind of theoretical.
+
+313
+00:13:48,220 --> 00:13:50,700
+So next I'm gonna walk through a case study
+
+314
+00:13:50,700 --> 00:13:52,620
+that uses some real world data
+
+315
+00:13:52,620 --> 00:13:55,780
+from one of Civus's consulting engagements
+
+316
+00:13:55,780 --> 00:13:59,060
+to show how these kind of effects can show up in practice.
+
+317
+00:14:00,780 --> 00:14:04,220
+So the way this case study is set up
+
+318
+00:14:04,220 --> 00:14:07,980
+is we start with some real world data
+
+319
+00:14:07,980 --> 00:14:10,260
+from one of our consulting engagements.
+
+320
+00:14:10,780 --> 00:14:12,980
+The features we have here are mostly demographic things
+
+321
+00:14:12,980 --> 00:14:16,500
+and like socioeconomic status indicators.
+
+322
+00:14:16,500 --> 00:14:19,820
+And the outcome in the original raw data set
+
+323
+00:14:19,820 --> 00:14:22,660
+is the probability that a person will sign up
+
+324
+00:14:22,660 --> 00:14:24,580
+for the services of a state agency.
+
+325
+00:14:24,580 --> 00:14:27,300
+So each row in the data set is a person
+
+326
+00:14:27,300 --> 00:14:28,500
+and the outcome is the likelihood
+
+327
+00:14:28,500 --> 00:14:30,420
+they sign up for this agency.
+
+328
+00:14:30,420 --> 00:14:32,900
+And we're gonna investigate racial bias.
+
+329
+00:14:32,900 --> 00:14:34,820
+So look at fairness for white people
+
+330
+00:14:34,820 --> 00:14:36,660
+versus black people in this data set.
+
+331
+00:14:38,060 --> 00:14:39,700
+And the way we're gonna proceed
+
+332
+00:14:40,060 --> 00:14:43,860
+is we're going to generate hypothetical worlds
+
+333
+00:14:43,860 --> 00:14:45,260
+that match these different subtleties
+
+334
+00:14:45,260 --> 00:14:46,740
+I've been talking about.
+
+335
+00:14:46,740 --> 00:14:48,860
+So we'll generate a hypothetical world
+
+336
+00:14:48,860 --> 00:14:50,620
+where ground truth is balanced
+
+337
+00:14:50,620 --> 00:14:52,300
+and another hypothetical world
+
+338
+00:14:52,300 --> 00:14:54,780
+where ground truth isn't balanced.
+
+339
+00:14:54,780 --> 00:14:57,500
+To make the ground truth balanced,
+
+340
+00:14:57,500 --> 00:15:00,380
+we take only the white people in the original data set
+
+341
+00:15:00,380 --> 00:15:02,820
+and then randomly reassign race labels.
+
+342
+00:15:02,820 --> 00:15:04,300
+So in that hypothetical world,
+
+343
+00:15:04,300 --> 00:15:06,780
+ground truth is totally balanced.
+
+344
+00:15:06,780 --> 00:15:09,220
+We also take the original data set
+
+345
+00:15:09,220 --> 00:15:10,740
+where white people were much more likely
+
+346
+00:15:10,740 --> 00:15:13,340
+to sign up for the services of this agency
+
+347
+00:15:13,340 --> 00:15:16,420
+as a hypothetical world where ground truth is not balanced.
+
+348
+00:15:16,420 --> 00:15:18,340
+So remember this is subtlety number one,
+
+349
+00:15:18,340 --> 00:15:20,100
+ground truth isn't always balanced.
+
+350
+00:15:21,380 --> 00:15:24,580
+Subtlety number two was that your data
+
+351
+00:15:24,580 --> 00:15:27,140
+can be a biased representation of ground truth.
+
+352
+00:15:27,140 --> 00:15:29,300
+So within each of these hypothetical worlds
+
+353
+00:15:29,300 --> 00:15:30,580
+that we've generated,
+
+354
+00:15:30,580 --> 00:15:33,500
+we're gonna generate some new data sets
+
+355
+00:15:33,500 --> 00:15:36,980
+where we inject known types of these different biases.
+
+356
+00:15:36,980 --> 00:15:40,340
+So for example, we generate a data set
+
+357
+00:15:40,340 --> 00:15:42,860
+where we inject sampling bias
+
+358
+00:15:42,860 --> 00:15:44,740
+by preferentially sampling white people
+
+359
+00:15:44,740 --> 00:15:47,700
+and black people differently from that hypothetical world.
+
+360
+00:15:47,700 --> 00:15:50,860
+So we sample white people with a high score
+
+361
+00:15:50,860 --> 00:15:52,380
+with a high likelihood,
+
+362
+00:15:52,380 --> 00:15:55,100
+sample white people with a low score with a low likelihood
+
+363
+00:15:55,100 --> 00:15:56,780
+and then sample black people uniformly.
+
+364
+00:15:56,780 --> 00:15:59,020
+So by this process,
+
+365
+00:15:59,020 --> 00:16:02,020
+we're generating a data set that we know has sample bias.
+
+366
+00:16:03,340 --> 00:16:06,660
+And similarly, we can do a related kind of thing
+
+367
+00:16:06,660 --> 00:16:09,380
+where we take those original probabilities
+
+368
+00:16:09,380 --> 00:16:11,380
+and turn them into binary labels,
+
+369
+00:16:11,380 --> 00:16:13,220
+but we do that differently for the different groups.
+
+370
+00:16:13,220 --> 00:16:15,540
+So this way we introduce label bias.
+
+371
+00:16:15,540 --> 00:16:19,020
+So we use a threshold of 0.3 for white people
+
+372
+00:16:19,020 --> 00:16:21,500
+and a threshold of 0.7 for white people.
+
+373
+00:16:21,500 --> 00:16:24,500
+So at this point, we have two hypothetical worlds,
+
+374
+00:16:24,500 --> 00:16:27,580
+one where ground truth is balanced, one where it's not,
+
+375
+00:16:27,580 --> 00:16:29,780
+and we have a number of different data sets
+
+376
+00:16:29,780 --> 00:16:32,060
+where we know there's different types of bias
+
+377
+00:16:32,060 --> 00:16:33,020
+in the data set.
+
+378
+00:16:34,020 --> 00:16:36,540
+Then what we do is we train models
+
+379
+00:16:36,540 --> 00:16:39,940
+on those different data sets in those hypothetical worlds
+
+380
+00:16:39,940 --> 00:16:41,860
+and then apply the two fairness metrics
+
+381
+00:16:41,860 --> 00:16:43,580
+I've been talking about so far,
+
+382
+00:16:43,580 --> 00:16:46,180
+disparate impact, which is that ratio one,
+
+383
+00:16:46,180 --> 00:16:48,940
+and equal opportunity, which is that difference one.
+
+384
+00:16:48,940 --> 00:16:50,540
+We apply those two metrics,
+
+385
+00:16:50,540 --> 00:16:52,740
+two models trained on these different data sets
+
+386
+00:16:52,740 --> 00:16:54,780
+and see what the fairness metrics tell us.
+
+387
+00:16:56,540 --> 00:16:59,460
+So first, when ground truth is balanced,
+
+388
+00:16:59,460 --> 00:17:00,820
+this is the hypothetical world
+
+389
+00:17:00,820 --> 00:17:02,820
+where ground truth is totally balanced.
+
+390
+00:17:03,660 --> 00:17:04,500
+Things look pretty good.
+
+391
+00:17:04,500 --> 00:17:08,220
+So to explain this figure, I have on,
+
+392
+00:17:08,220 --> 00:17:09,060
+can you see my arrow?
+
+393
+00:17:09,060 --> 00:17:09,900
+Yeah.
+
+394
+00:17:09,900 --> 00:17:12,060
+On the left over here is disparate impact.
+
+395
+00:17:12,060 --> 00:17:13,380
+So this is the ratio one.
+
+396
+00:17:13,380 --> 00:17:15,020
+So that means a value close to one
+
+397
+00:17:15,020 --> 00:17:17,380
+indicates no measured unfairness.
+
+398
+00:17:17,380 --> 00:17:19,700
+Over here on the right is equal opportunity.
+
+399
+00:17:19,700 --> 00:17:20,900
+This is the difference one.
+
+400
+00:17:20,900 --> 00:17:24,660
+So a value close to zero means no measured unfairness.
+
+401
+00:17:24,660 --> 00:17:26,140
+And then the different bars
+
+402
+00:17:26,140 --> 00:17:27,820
+are different data sets that we generated.
+
+403
+00:17:27,820 --> 00:17:30,460
+So on the far left is one where we haven't done
+
+404
+00:17:30,460 --> 00:17:33,100
+either of these bias injecting processes.
+
+405
+00:17:33,100 --> 00:17:35,780
+Then the next one is where we injected sample bias,
+
+406
+00:17:35,780 --> 00:17:37,580
+where we injected label bias,
+
+407
+00:17:37,580 --> 00:17:39,900
+and where we injected both types of bias.
+
+408
+00:17:39,900 --> 00:17:41,420
+And so what you can see here
+
+409
+00:17:41,420 --> 00:17:44,540
+is that both of these metrics measure no unfairness
+
+410
+00:17:44,540 --> 00:17:48,100
+in the case where we haven't added bias to the data set.
+
+411
+00:17:48,100 --> 00:17:50,140
+And as we start adding these different types of bias
+
+412
+00:17:50,140 --> 00:17:53,060
+into the data set, the metrics report
+
+413
+00:17:53,060 --> 00:17:54,460
+more measured unfairness.
+
+414
+00:17:54,460 --> 00:17:56,760
+So, so far, so good.
+
+415
+00:17:56,760 --> 00:17:58,460
+The metrics are doing what we want.
+
+416
+00:17:59,300 --> 00:18:01,660
+The situation is a lot less rosy
+
+417
+00:18:01,660 --> 00:18:04,860
+in the hypothetical world where ground truth is imbalanced.
+
+418
+00:18:04,860 --> 00:18:07,460
+So here we're saying this is a hypothetical world
+
+419
+00:18:07,460 --> 00:18:08,940
+where there's a legitimate difference
+
+420
+00:18:08,940 --> 00:18:10,100
+between different groups.
+
+421
+00:18:10,100 --> 00:18:12,700
+Think back to the breast cancer example.
+
+422
+00:18:12,700 --> 00:18:16,140
+And now these are the same plots, the same interpretation.
+
+423
+00:18:16,140 --> 00:18:18,980
+So a value of one over here on the left plot
+
+424
+00:18:18,980 --> 00:18:20,740
+means no measured unfairness.
+
+425
+00:18:20,740 --> 00:18:22,980
+A value of zero over here on the right plot
+
+426
+00:18:22,980 --> 00:18:24,600
+means no measured unfairness.
+
+427
+00:18:24,600 --> 00:18:26,700
+Now both of these metrics
+
+428
+00:18:26,700 --> 00:18:29,020
+are detecting significant unfairness,
+
+429
+00:18:29,020 --> 00:18:30,940
+even in the case where our data
+
+430
+00:18:30,940 --> 00:18:32,520
+is totally representative of the real world.
+
+431
+00:18:32,520 --> 00:18:34,060
+We haven't injected any of these biases.
+
+432
+00:18:34,060 --> 00:18:36,220
+Our data is just the real world.
+
+433
+00:18:36,220 --> 00:18:37,400
+But these metrics are telling us
+
+434
+00:18:37,400 --> 00:18:39,200
+that our model is very, very unfair.
+
+435
+00:18:41,000 --> 00:18:44,940
+And also you'll notice the label bias,
+
+436
+00:18:44,940 --> 00:18:47,460
+this is when different labels are assigned
+
+437
+00:18:47,460 --> 00:18:50,480
+different labels differently, is very hard to detect.
+
+438
+00:18:50,480 --> 00:18:52,440
+And that's because in this case
+
+439
+00:18:52,440 --> 00:18:53,660
+where ground truth is imbalanced,
+
+440
+00:18:53,660 --> 00:18:55,160
+it's really hard to tease apart
+
+441
+00:18:55,180 --> 00:18:57,920
+where differences in labels are between
+
+442
+00:18:57,920 --> 00:19:01,000
+biased data generating process and just the ground truth.
+
+443
+00:19:02,360 --> 00:19:05,220
+So the point I want you to take away from this case study
+
+444
+00:19:05,220 --> 00:19:07,860
+is that it's really hard to interpret
+
+445
+00:19:07,860 --> 00:19:10,300
+these fairness measures in a vacuum.
+
+446
+00:19:10,300 --> 00:19:12,100
+If you were doing this kind of analysis,
+
+447
+00:19:12,100 --> 00:19:13,780
+if you were trying to measure the fairness
+
+448
+00:19:13,780 --> 00:19:15,200
+of your model's predictions,
+
+449
+00:19:15,200 --> 00:19:17,200
+you don't get all four of these bars
+
+450
+00:19:17,200 --> 00:19:19,360
+or all eight of these bars,
+
+451
+00:19:19,360 --> 00:19:20,260
+you don't get to see like,
+
+452
+00:19:20,260 --> 00:19:21,480
+well this is what it would look like in this case,
+
+453
+00:19:21,480 --> 00:19:23,160
+this is what it would look like in this case.
+
+454
+00:19:23,160 --> 00:19:25,040
+You just get one of these numbers
+
+455
+00:19:25,880 --> 00:19:27,040
+and you have to interpret that number
+
+456
+00:19:27,040 --> 00:19:29,760
+by thinking about the world you're trying to model
+
+457
+00:19:29,760 --> 00:19:31,560
+and the process that generated your data.
+
+458
+00:19:31,560 --> 00:19:34,220
+You have to think about is ground truth balanced
+
+459
+00:19:34,220 --> 00:19:35,880
+in this problem I'm trying to model?
+
+460
+00:19:35,880 --> 00:19:38,100
+You have to think about where did my data come from?
+
+461
+00:19:38,100 --> 00:19:41,440
+Is it possible that the labels are being generated
+
+462
+00:19:41,440 --> 00:19:42,280
+in a biased way?
+
+463
+00:19:42,280 --> 00:19:43,780
+Is it possible that the sampling is different
+
+464
+00:19:43,780 --> 00:19:45,100
+between these two groups?
+
+465
+00:19:45,100 --> 00:19:47,400
+You have to think about all of these questions
+
+466
+00:19:47,400 --> 00:19:50,680
+when you go to interpret the numbers of these
+
+467
+00:19:50,680 --> 00:19:53,080
+that these fairness metrics generate for you.
+
+468
+00:19:53,600 --> 00:19:56,680
+So that's kind of how this works in practice.
+
+469
+00:19:56,680 --> 00:19:58,640
+Next, I'm gonna give you a couple tools
+
+470
+00:19:58,640 --> 00:20:00,240
+from the Python ecosystem
+
+471
+00:20:00,240 --> 00:20:02,080
+that you can use to do these kind of measurements
+
+472
+00:20:02,080 --> 00:20:05,180
+to apply to measure the fairness of your predictions.
+
+473
+00:20:06,960 --> 00:20:09,400
+The first of this is called Equitas.
+
+474
+00:20:09,400 --> 00:20:12,100
+This is a tool out of the University of Chicago.
+
+475
+00:20:12,100 --> 00:20:15,480
+It's a Python library and also a web front end.
+
+476
+00:20:15,480 --> 00:20:19,200
+And the way it works is you provide some data.
+
+477
+00:20:19,200 --> 00:20:22,480
+Within that data, you select what the protected group is.
+
+478
+00:20:22,480 --> 00:20:24,920
+So if you're interested in looking at race or gender
+
+479
+00:20:24,920 --> 00:20:28,200
+or age or disability status, something like that,
+
+480
+00:20:28,200 --> 00:20:30,500
+then you select which fairness metric is appropriate
+
+481
+00:20:30,500 --> 00:20:32,740
+for your context, which metric makes sense
+
+482
+00:20:32,740 --> 00:20:34,800
+for the problem that you're working on.
+
+483
+00:20:34,800 --> 00:20:37,280
+And then the tool will go off and tell you
+
+484
+00:20:37,280 --> 00:20:38,960
+according to the data that you provided
+
+485
+00:20:38,960 --> 00:20:40,640
+and the model scores you provided
+
+486
+00:20:40,640 --> 00:20:43,720
+and the fairness metrics that you set are relevant,
+
+487
+00:20:43,720 --> 00:20:46,120
+how do those metrics evaluate on your data set?
+
+488
+00:20:47,360 --> 00:20:50,560
+Pros of this tool is that it's easy to use.
+
+489
+00:20:50,560 --> 00:20:53,120
+The con is that it comes with a non-standard license.
+
+490
+00:20:53,120 --> 00:20:54,800
+So it's from University of Chicago.
+
+491
+00:20:54,800 --> 00:20:56,000
+It has an academic license,
+
+492
+00:20:56,000 --> 00:20:58,720
+which isn't one of the standard MIT, GPO, whatever.
+
+493
+00:20:59,560 --> 00:21:02,160
+Another tool comes from IBM
+
+494
+00:21:02,160 --> 00:21:05,200
+and this is called the AI Fairness 360 Open Source Toolkit.
+
+495
+00:21:07,000 --> 00:21:08,660
+The pro here is it's very comprehensive.
+
+496
+00:21:08,660 --> 00:21:10,000
+It has implementations
+
+497
+00:21:10,000 --> 00:21:11,980
+of many, many different fairness metrics
+
+498
+00:21:11,980 --> 00:21:14,160
+along with lots of documentation, tutorials,
+
+499
+00:21:14,160 --> 00:21:17,080
+Jupyter notebooks that will walk you through the use of them.
+
+500
+00:21:17,080 --> 00:21:19,260
+The con is that it's probably more comprehensive
+
+501
+00:21:19,260 --> 00:21:20,100
+than you need.
+
+502
+00:21:20,580 --> 00:21:21,420
+There's a ton of stuff in here,
+
+503
+00:21:21,420 --> 00:21:23,560
+also implementations of some research papers.
+
+504
+00:21:24,620 --> 00:21:26,220
+And it also comes with lots of dependencies.
+
+505
+00:21:26,220 --> 00:21:27,220
+So if you're trying to bundle this
+
+506
+00:21:27,220 --> 00:21:28,220
+into a production environment,
+
+507
+00:21:28,220 --> 00:21:31,220
+it might be a heavier import than you want.
+
+508
+00:21:31,220 --> 00:21:33,900
+And finally, another class of tools
+
+509
+00:21:33,900 --> 00:21:36,460
+are things that you can use to interpret models.
+
+510
+00:21:36,460 --> 00:21:37,520
+I'll mention these in passing
+
+511
+00:21:37,520 --> 00:21:38,900
+because they're a whole nother topic
+
+512
+00:21:38,900 --> 00:21:40,620
+and I don't have time to go into them here.
+
+513
+00:21:40,620 --> 00:21:42,140
+But if you're interested in understanding
+
+514
+00:21:42,140 --> 00:21:44,680
+why a model is making a particular prediction,
+
+515
+00:21:44,680 --> 00:21:47,140
+I suggest you look into these tools LIME and SHAP.
+
+516
+00:21:47,940 --> 00:21:50,420
+So finally, some concluding thoughts.
+
+517
+00:21:50,420 --> 00:21:53,580
+There's no one size fits all solution to this problem
+
+518
+00:21:53,580 --> 00:21:57,260
+other than think hard about your inputs and your outputs.
+
+519
+00:21:57,260 --> 00:22:00,980
+Think hard about the world you're trying to model,
+
+520
+00:22:00,980 --> 00:22:02,940
+about the problem you're trying to model.
+
+521
+00:22:02,940 --> 00:22:04,340
+Think hard about the process
+
+522
+00:22:04,340 --> 00:22:07,180
+that's generating the data that you're using.
+
+523
+00:22:07,180 --> 00:22:09,500
+And then think hard about the consequences
+
+524
+00:22:09,500 --> 00:22:10,500
+of your model downstream.
+
+525
+00:22:10,500 --> 00:22:11,540
+Where are these scores going?
+
+526
+00:22:11,540 --> 00:22:13,340
+What kind of decisions are being made
+
+527
+00:22:13,340 --> 00:22:15,740
+based on the output of this tool that you're building?
+
+528
+00:22:16,140 --> 00:22:18,820
+These metrics can help and others,
+
+529
+00:22:18,820 --> 00:22:20,420
+but you have to use them carefully.
+
+530
+00:22:22,300 --> 00:22:26,340
+Second, use a diverse team to create these models
+
+531
+00:22:26,340 --> 00:22:27,660
+and do this thinking.
+
+532
+00:22:27,660 --> 00:22:29,060
+Throughout the course of this talk,
+
+533
+00:22:29,060 --> 00:22:30,940
+I've tried to emphasize how important it is
+
+534
+00:22:30,940 --> 00:22:34,340
+to have a human person doing this kind of thinking.
+
+535
+00:22:34,340 --> 00:22:36,940
+But if all the people doing that thinking
+
+536
+00:22:36,940 --> 00:22:39,500
+come from the same background, the same social context,
+
+537
+00:22:39,500 --> 00:22:41,060
+the same lived experiences,
+
+538
+00:22:41,060 --> 00:22:42,540
+then you're gonna have blind spots.
+
+539
+00:22:42,540 --> 00:22:45,260
+So when you're doing this kind of thinking,
+
+540
+00:22:45,260 --> 00:22:48,340
+this kind of ethical inspection of your models,
+
+541
+00:22:48,340 --> 00:22:49,460
+do that with a diverse team
+
+542
+00:22:49,460 --> 00:22:52,940
+so you have different perspectives on the question.
+
+543
+00:22:54,740 --> 00:22:56,580
+And finally, just know your data
+
+544
+00:22:56,580 --> 00:22:58,740
+and think about your consequences.
+
+545
+00:22:58,740 --> 00:23:03,740
+I'll leave you with this quote from Cathy O'Neill's book,
+
+546
+00:23:03,740 --> 00:23:05,740
+Weapons of Mass Destruction,
+
+547
+00:23:05,740 --> 00:23:07,900
+about how it's the job of all of us
+
+548
+00:23:07,900 --> 00:23:11,580
+who build these kind of models and build these kind of tools
+
+549
+00:23:11,580 --> 00:23:14,460
+to do this ethical introspection.
+
+550
+00:23:15,340 --> 00:23:16,700
+Your data is not the truth,
+
+551
+00:23:16,700 --> 00:23:18,420
+and even if it were the truth,
+
+552
+00:23:18,420 --> 00:23:21,700
+is it the kind of truth that you wanna see in the world?
+
+553
+00:23:21,700 --> 00:23:23,660
+That's a deeply human question,
+
+554
+00:23:23,660 --> 00:23:27,180
+and you really need people thinking about it.
+
+555
+00:23:27,180 --> 00:23:28,020
+Thank you.
+
+556
+00:23:28,020 --> 00:23:28,860
+Thank you.
+
+557
+00:23:28,860 --> 00:23:29,700
+Thank you.
+
+558
+00:23:29,700 --> 00:23:30,540
+Thank you.
+
+559
+00:23:30,540 --> 00:23:31,380
+Thank you.
+
+560
+00:23:31,380 --> 00:23:32,220
+Thank you.
+
+561
+00:23:32,220 --> 00:23:33,060
+Thank you.
+
+562
+00:23:33,060 --> 00:23:33,900
+Thank you.
+
+563
+00:23:33,900 --> 00:23:34,740
+Thank you.
+
+564
+00:23:34,740 --> 00:23:35,580
+Thank you.
+
+565
+00:23:35,580 --> 00:23:36,420
+Thank you.
+
+566
+00:23:36,420 --> 00:23:37,260
+Thank you.
+
+567
+00:23:37,260 --> 00:23:38,100
+Thank you.
+
+568
+00:23:38,100 --> 00:23:38,940
+We have about five minutes left.
+
+569
+00:23:38,940 --> 00:23:39,780
+Sure.
+
+570
+00:23:39,780 --> 00:23:41,540
+I'm happy to take questions if people wanna step up,
+
+571
+00:23:41,540 --> 00:23:43,420
+and I'll also be up in the front
+
+572
+00:23:43,420 --> 00:23:44,820
+if we get cut off for time.
+
+573
+00:23:51,140 --> 00:23:52,460
+I have a question.
+
+574
+00:23:52,460 --> 00:23:56,540
+So, you seem like a very civic-minded person,
+
+575
+00:23:56,540 --> 00:23:58,540
+and I was just wondering,
+
+576
+00:23:58,540 --> 00:24:01,260
+how do you deal with pushback?
+
+577
+00:24:01,260 --> 00:24:05,580
+So first of all, have you ever experienced pushback
+
+578
+00:24:05,580 --> 00:24:09,260
+in your workplace when you kind of say that,
+
+579
+00:24:09,260 --> 00:24:11,780
+all right, we need to think about this fairness,
+
+580
+00:24:11,780 --> 00:24:13,380
+and then you get kind of the reaction,
+
+581
+00:24:13,380 --> 00:24:17,620
+yeah, well, you know, math is fair, it's objective.
+
+582
+00:24:17,620 --> 00:24:20,620
+This isn't really the place for politics.
+
+583
+00:24:20,620 --> 00:24:23,220
+And secondly, so first of all, have you encountered that?
+
+584
+00:24:23,220 --> 00:24:25,900
+And secondly, how do you respond to that?
+
+585
+00:24:26,860 --> 00:24:29,340
+To your first point, I'm fortunate to work at a place
+
+586
+00:24:29,340 --> 00:24:31,620
+where I think these kind of ideas have a lot of currency,
+
+587
+00:24:31,620 --> 00:24:34,940
+so I don't get a lot of institutional pushback
+
+588
+00:24:34,940 --> 00:24:37,220
+on just raising the issue in the first place.
+
+589
+00:24:38,500 --> 00:24:40,100
+As to how I would address it,
+
+590
+00:24:40,100 --> 00:24:44,500
+I think there are a couple different tacks you can take.
+
+591
+00:24:44,500 --> 00:24:47,860
+One, you can try and take an education-type tack,
+
+592
+00:24:47,860 --> 00:24:50,900
+where if someone does come in with the perspective,
+
+593
+00:24:50,900 --> 00:24:52,660
+the models are just math, of course they're fair,
+
+594
+00:24:52,660 --> 00:24:55,860
+then you can try to kind of present
+
+595
+00:24:55,860 --> 00:24:57,100
+some of this kind of reasoning to say,
+
+596
+00:24:57,100 --> 00:24:58,740
+well, that's actually not quite accurate,
+
+597
+00:24:58,740 --> 00:25:01,780
+and try to educate whatever stakeholder is pushing back.
+
+598
+00:25:02,820 --> 00:25:06,780
+If it's a case where people understand the problem,
+
+599
+00:25:06,780 --> 00:25:10,140
+but don't want to make the profit sacrifice,
+
+600
+00:25:12,740 --> 00:25:15,780
+that's just a much harder kind of interpersonal
+
+601
+00:25:15,780 --> 00:25:17,100
+corporate dynamics kind of problem,
+
+602
+00:25:17,100 --> 00:25:18,940
+and the best I can tell you
+
+603
+00:25:18,940 --> 00:25:20,940
+is that you just have to advocate for it.
+
+604
+00:25:22,020 --> 00:25:25,180
+Thank you, that was a really fucking awesome talk, thank you.
+
+605
+00:25:25,180 --> 00:25:26,020
+Thank you.
+
+606
+00:25:27,260 --> 00:25:28,180
+On the right side.
+
+607
+00:25:30,220 --> 00:25:35,140
+Given the issues with ground truths,
+
+608
+00:25:37,020 --> 00:25:38,740
+ground truth rates being different,
+
+609
+00:25:38,740 --> 00:25:43,740
+depending on what sort of labels you're looking at,
+
+610
+00:25:46,380 --> 00:25:49,100
+is it possible to normalize them
+
+611
+00:25:49,100 --> 00:25:54,100
+while possibly controlling for any sort of sampling bias?
+
+612
+00:25:57,140 --> 00:26:00,220
+There are definitely approaches
+
+613
+00:26:00,220 --> 00:26:01,460
+you can take in that direction.
+
+614
+00:26:01,460 --> 00:26:04,580
+So there's actually a pretty substantial body
+
+615
+00:26:04,580 --> 00:26:08,180
+of academic literature around how you can do
+
+616
+00:26:08,180 --> 00:26:10,460
+this kind of rebalancing data sets,
+
+617
+00:26:10,460 --> 00:26:12,700
+or reweighting data sets
+
+618
+00:26:12,700 --> 00:26:14,700
+to try to remove some of these issues.
+
+619
+00:26:15,980 --> 00:26:18,220
+I think there's promising work in that direction,
+
+620
+00:26:18,220 --> 00:26:21,660
+but with the caveat that you really have to do this
+
+621
+00:26:21,660 --> 00:26:24,940
+thinking ahead of time, you can't throw your data set
+
+622
+00:26:24,940 --> 00:26:28,580
+into an algorithm that translates it in such a way
+
+623
+00:26:28,580 --> 00:26:30,900
+that now everything is independent of gender or something,
+
+624
+00:26:30,900 --> 00:26:33,260
+without thinking ahead of time
+
+625
+00:26:33,260 --> 00:26:34,980
+about the problem you're trying to model
+
+626
+00:26:34,980 --> 00:26:36,340
+and whether that kind of approach makes sense.
+
+627
+00:26:36,340 --> 00:26:40,820
+So short answer, yes, there are mathematical approaches
+
+628
+00:26:40,820 --> 00:26:43,540
+in that direction, but you have to use them carefully.
+
+629
+00:26:43,540 --> 00:26:44,780
+Thank you.
+
+630
+00:26:44,780 --> 00:26:45,940
+Does that answer your question?
+
+631
+00:26:45,940 --> 00:26:47,300
+Yeah. Okay, thanks.
+
+632
+00:26:49,100 --> 00:26:51,500
+How does Compass compare to just human judgment?
+
+633
+00:26:51,500 --> 00:26:54,740
+I mean, I presume Compass is replacing human judgment
+
+634
+00:26:54,740 --> 00:26:56,340
+in these matters.
+
+635
+00:26:56,340 --> 00:27:01,340
+I think Compass is one element that judges use
+
+636
+00:27:01,860 --> 00:27:03,700
+in making their decisions.
+
+637
+00:27:04,860 --> 00:27:08,700
+I don't know offhand of comparison I can give you
+
+638
+00:27:08,700 --> 00:27:10,740
+of the decisions judges make with
+
+639
+00:27:10,740 --> 00:27:12,260
+and without the Compass input.
+
+640
+00:27:14,100 --> 00:27:14,940
+That's a good question,
+
+641
+00:27:14,940 --> 00:27:16,500
+but I don't have a good answer for you.
+
+642
+00:27:20,100 --> 00:27:23,500
+So you mentioned a couple of times that you need a human
+
+643
+00:27:23,500 --> 00:27:27,340
+to consider this equation and consider possible biases
+
+644
+00:27:27,340 --> 00:27:30,220
+and how to manipulate or how to work with your data
+
+645
+00:27:30,220 --> 00:27:32,180
+in light of that.
+
+646
+00:27:32,180 --> 00:27:35,980
+I'm curious if you, like, there isn't a formula for that.
+
+647
+00:27:35,980 --> 00:27:38,780
+I'm curious if there are resources you know of
+
+648
+00:27:38,780 --> 00:27:41,660
+that provide something in the direction of a formula
+
+649
+00:27:41,660 --> 00:27:44,620
+or at least a starting place for issues
+
+650
+00:27:44,620 --> 00:27:47,460
+that people should consider when approaching these problems.
+
+651
+00:27:49,300 --> 00:27:53,020
+So I'm not familiar with this tool myself,
+
+652
+00:27:53,020 --> 00:27:55,020
+but the earlier Fairness Talk today
+
+653
+00:27:55,020 --> 00:27:58,660
+mentioned this Dion Checklist,
+
+654
+00:27:58,660 --> 00:28:01,980
+which was presented as like a checklist
+
+655
+00:28:01,980 --> 00:28:04,540
+for ethical questions when you're building a model.
+
+656
+00:28:05,660 --> 00:28:06,900
+I'm a little hesitant to recommend it
+
+657
+00:28:06,900 --> 00:28:07,900
+having not read it myself,
+
+658
+00:28:07,900 --> 00:28:09,980
+but that sounds like something in the direction
+
+659
+00:28:09,980 --> 00:28:10,820
+of what you're asking about.
+
+660
+00:28:10,820 --> 00:28:11,660
+Is that fair?
+
+661
+00:28:11,660 --> 00:28:12,660
+Yeah. Okay.
+
+662
+00:28:15,740 --> 00:28:17,260
+I think we're about at the end of time,
+
+663
+00:28:17,260 --> 00:28:19,820
+but I'm happy to stand up front and keep taking questions.
+
+664
+00:28:19,820 --> 00:28:21,220
+So thank you for your attention.
+
+665
+00:28:21,220 --> 00:28:22,300
+Thank you.
+

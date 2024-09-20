@@ -1,0 +1,1072 @@
+1
+00:00:00,000 --> 00:00:07,320
+Hello, everybody. Welcome to our next talk. Our speaker today is Eric Snow. He is a C
+
+2
+00:00:07,320 --> 00:00:13,320
+Python core contributor, core developer, and he is going to be talking to us today about
+
+3
+00:00:13,320 --> 00:00:19,240
+to-gil or not to-gil, the future of multi-core C Python. Thanks, Eric.
+
+4
+00:00:19,240 --> 00:00:28,600
+All right. Thank you, everybody. Today we'll be talking about C Python's gil and how we
+
+5
+00:00:28,600 --> 00:00:36,560
+can move past it. I'm going to try not to talk too fast or this might be a short talk.
+
+6
+00:00:36,560 --> 00:00:42,360
+So follow that URL to get to the slide deck, all the updates to the slides or other resources
+
+7
+00:00:42,360 --> 00:00:49,000
+on Twitter. You may or may not recognize some of the things that I've done as a Python core
+
+8
+00:00:49,000 --> 00:00:57,840
+developer. So why is the gil a topic in which I have any interest? In late 2014, I had an
+
+9
+00:00:57,840 --> 00:01:05,040
+experience that motivated me to work on fixing Python's multi-core story. So it's been a
+
+10
+00:01:05,040 --> 00:01:12,320
+while. Along those lines, we'll work on an understanding of the situation and how it
+
+11
+00:01:12,320 --> 00:01:17,360
+can be changed. But let me be clear before we start, I'm not going to be perfect in this
+
+12
+00:01:17,360 --> 00:01:24,800
+description and I don't have time to go into every detail. And there are a lot of details.
+
+13
+00:01:24,800 --> 00:01:33,040
+If we have time at the end, I'll take questions. I'm guessing that we will. Okay. So brace
+
+14
+00:01:33,040 --> 00:01:39,480
+yourselves. There's a fire host coming. We're going to zip through a lot of these upcoming
+
+15
+00:01:39,480 --> 00:01:47,040
+slides. But by the end, we should have a pretty good understanding. These are effectively
+
+16
+00:01:47,040 --> 00:01:54,880
+the layers of CPython. So there's just one runtime in the process. And then there are
+
+17
+00:01:54,880 --> 00:02:01,920
+one or more interpreters in the runtime. There are one or more Python threads per interpreter.
+
+18
+00:02:01,920 --> 00:02:07,200
+And there's one call stack per Python thread. And then there's one eval loop per frame in
+
+19
+00:02:07,200 --> 00:02:17,200
+the call stack. So let's see how this applies in practice. The next bunch of slides are
+
+20
+00:02:17,200 --> 00:02:22,840
+a less than exact representation, but it's going to be good enough for us. When a process
+
+21
+00:02:22,840 --> 00:02:30,880
+starts, there are certain resources it has which are global to the process. Likewise,
+
+22
+00:02:31,880 --> 00:02:38,960
+certain exclusive resources. The runtime is effectively everything Python related in the
+
+23
+00:02:38,960 --> 00:02:46,440
+process. And an interpreter is all runtime state that Python threads share in common.
+
+24
+00:02:46,440 --> 00:02:52,640
+We usually use this term a bit more generally, but for this talk, we're going to use a lot
+
+25
+00:02:52,640 --> 00:02:59,560
+more specific meaning. The Python thread is associated with the OS thread and it keeps
+
+26
+00:02:59,560 --> 00:03:08,360
+the thread specific runtime state. So when loaded, scripts, modules, functions, classes,
+
+27
+00:03:08,360 --> 00:03:14,360
+and a number of other things compile to code objects. So when your Python program runs,
+
+28
+00:03:14,360 --> 00:03:20,680
+it gets loaded. And so we end up with that code object, a key part of which is the sequence
+
+29
+00:03:20,680 --> 00:03:27,640
+of bytecode instructions to be executed by the Python interpreter. For simplicity, let's
+
+30
+00:03:27,720 --> 00:03:34,400
+say that our imaginary Python program compiles to only a handful of instructions when loaded.
+
+31
+00:03:34,400 --> 00:03:40,400
+Real Python program would have a lot more instructions. So the frame here holds the
+
+32
+00:03:40,400 --> 00:03:46,600
+execution state of a running code object. And the eval loop in the frame or for the
+
+33
+00:03:46,600 --> 00:03:53,840
+frame executes one instruction each time through. So as we step through the program, we're going
+
+34
+00:03:54,480 --> 00:04:01,480
+to do that now. Watch how we visit each instruction in a deterministic order. So that's kind of
+
+35
+00:04:02,200 --> 00:04:09,200
+the nature of a single thread. And here's a rough sketch of what happens in the eval
+
+36
+00:04:09,200 --> 00:04:16,200
+loop. At a high level, it's pretty simple. But there's certainly a lot of detail in there.
+
+37
+00:04:16,800 --> 00:04:23,680
+And including here, you get kind of a sneak peek at the driver for this talk, the gil.
+
+38
+00:04:23,680 --> 00:04:29,160
+At this point in our code, let's say that there's a function call. Again, there would
+
+39
+00:04:29,160 --> 00:04:36,160
+be a lot more instructions involved in the real sequence of bytecode. So for the call,
+
+40
+00:04:37,200 --> 00:04:43,880
+we push another frame onto the call stack in the thread. And then we walk through the
+
+41
+00:04:43,880 --> 00:04:50,400
+code of the called function. So here we're at the last instruction, and then we're back
+
+42
+00:04:50,400 --> 00:04:57,400
+to the original code object. And we pop that frame off the stack. And then we end our original
+
+43
+00:04:57,900 --> 00:05:03,280
+code object here. And now we're done. And everything gets cleaned up at this point,
+
+44
+00:05:03,280 --> 00:05:09,560
+and the process ends. So as I hinted earlier, we could have deterministically flattened
+
+45
+00:05:09,560 --> 00:05:16,560
+all that execution just into a single linear list, kind of like we see there. But what
+
+46
+00:05:16,920 --> 00:05:23,320
+happens if there is more than one thread? So again, we have a simplified fake program
+
+47
+00:05:23,320 --> 00:05:28,520
+similar to the first, and we pretend that the program matches the two lists of instructions
+
+48
+00:05:28,520 --> 00:05:35,520
+shown here. Once the second thread is running, we'll see it both in the process and in the
+
+49
+00:05:37,120 --> 00:05:44,120
+Python runtime state. Each Python thread will be associated with its own OS thread. And
+
+50
+00:05:44,400 --> 00:05:51,400
+then in our code, the new thread will split off at that A20 labeled instruction, and we'll
+
+51
+00:05:51,760 --> 00:05:58,760
+wait for the thread again at A40. So let's walk through this execution now. And as we
+
+52
+00:06:00,720 --> 00:06:07,720
+do, try to imagine how we might possibly flatten this code as it executes. At this point, the
+
+53
+00:06:08,720 --> 00:06:15,720
+new thread is created. And then now the eval loop in each Python thread is running different
+
+54
+00:06:19,240 --> 00:06:26,240
+code. And on a multi-core processor, they'll probably be running in parallel, not just
+
+55
+00:06:26,360 --> 00:06:33,360
+concurrently. So we can see we have both eval loops. I put arrows there, but that's kind
+
+56
+00:06:34,280 --> 00:06:38,520
+of what we're running through the eval loops. So we get to walk through both instruction
+
+57
+00:06:38,520 --> 00:06:45,520
+sequences at the same time. And here the second one, the second thread is about to finish.
+
+58
+00:06:46,960 --> 00:06:51,600
+So here the second thread is finished and cleaned up, but the original thread keeps
+
+59
+00:06:51,600 --> 00:06:58,600
+going. And then the new thread had already finished, so when we get to this point, we're
+
+60
+00:06:58,600 --> 00:07:05,600
+joined. There's nothing to do, so now we're done. So if we look back at how the execution
+
+61
+00:07:06,840 --> 00:07:12,640
+unfolded and we had the two things going on at the same time, you know, you can't really
+
+62
+00:07:12,640 --> 00:07:19,640
+flatten the code like we did before, deterministically. Why? Because threading is non-deterministic
+
+63
+00:07:22,120 --> 00:07:27,640
+concurrency. And so there are a bunch of different permutable permutations of the instructions.
+
+64
+00:07:27,680 --> 00:07:34,680
+And here I'm just showing four of the permutations. And there's a closely related problem that
+
+65
+00:07:34,840 --> 00:07:40,820
+is pretty important to what we're talking about today, which is race conditions. Because
+
+66
+00:07:40,820 --> 00:07:47,440
+of that non-determinism, code in one thread may modify code in another thread unexpectedly,
+
+67
+00:07:47,440 --> 00:07:53,840
+or modify the data relied on by that code. And this is known as a race condition. Notice
+
+68
+00:07:53,920 --> 00:08:00,920
+how it's possible for thread A to make the assumptions of thread B invalid here. If you
+
+69
+00:08:00,920 --> 00:08:07,920
+get into that if block, you would expect that spam.a would still be 42, or not be 42, but
+
+70
+00:08:09,320 --> 00:08:14,880
+that gets broken. So mostly we solve this by using something called a lock or a mutex
+
+71
+00:08:14,880 --> 00:08:20,040
+around the critical sections of the code. The locks allow you to synchronize between
+
+72
+00:08:20,040 --> 00:08:26,120
+two threads, thus giving you deterministic order for the locked code. Only one thread
+
+73
+00:08:26,120 --> 00:08:32,880
+can hold the lock at a time, which is from the time it is acquired until it is released.
+
+74
+00:08:32,880 --> 00:08:37,680
+If another thread tries to acquire the lock while it is held, then that thread blocks
+
+75
+00:08:37,680 --> 00:08:44,000
+until the lock gets released. So we're not going to have both threads running at the
+
+76
+00:08:44,000 --> 00:08:50,200
+same time through those sections. So if we assume that thread A acquires the lock first,
+
+77
+00:08:50,200 --> 00:08:57,200
+we end up with the execution order that I have there on the right. So you notice how
+
+78
+00:08:58,000 --> 00:09:04,560
+the logic of thread A, it doesn't interfere with that of thread B anymore. And if thread
+
+79
+00:09:04,560 --> 00:09:09,080
+B had gotten the lock first, then that section would have run first, but the same protection
+
+80
+00:09:09,240 --> 00:09:16,240
+would have taken place. Okay. So that's a lot of detail. Take a breather. You've learned
+
+81
+00:09:17,640 --> 00:09:24,640
+it. Okay. That's enough. So the gill is the lock that protects CPython's runtime resources
+
+82
+00:09:26,800 --> 00:09:33,800
+from races. And if the gill wasn't there, then CPython wouldn't be thread safe for the
+
+83
+00:09:34,080 --> 00:09:40,240
+gill. You'd have some pretty serious problems. So here's a look at a lot of the state that
+
+84
+00:09:40,240 --> 00:09:47,240
+the gill is protecting from races. The eval loop we see here is the main driver for how
+
+85
+00:09:48,440 --> 00:09:55,440
+the gill guards those resources. Only one eval loop runs at a time. So when we're multithreading,
+
+86
+00:09:55,880 --> 00:10:02,880
+this is the state we're in. We have one arrow instead of two like we did before. The Python
+
+87
+00:10:07,440 --> 00:10:13,440
+threads take turns executing a few bytecode instructions in their eval loops, which is
+
+88
+00:10:13,440 --> 00:10:20,440
+kind of in this position in our simplified look at the eval loop. The gill is also released
+
+89
+00:10:21,160 --> 00:10:28,160
+in blocking situations in a few other places. Now that we know what the gill is, let's talk
+
+90
+00:10:28,160 --> 00:10:35,160
+about why we care. There are probably some maybe more than this, but really this is the
+
+91
+00:10:35,880 --> 00:10:42,880
+best I could come up with for the costs of the gill. But when I thought about the benefits,
+
+92
+00:10:43,800 --> 00:10:50,240
+these are a number of the ones that I could think of. And it really, if you think about
+
+93
+00:10:50,240 --> 00:10:54,920
+it, there's a lot to be gained by the gill that people don't consider when they talk
+
+94
+00:10:54,920 --> 00:11:01,520
+about the gill. But aside from the technical considerations, there's also an unfair perception
+
+95
+00:11:01,520 --> 00:11:07,800
+that the gill hurts everybody. I don't want to downplay the pain that it causes on people
+
+96
+00:11:07,800 --> 00:11:14,800
+who really need to do some CPU intensive Python code, but otherwise, I mean, is the gill really
+
+97
+00:11:15,480 --> 00:11:22,480
+a problem? So why isn't it as big a problem as so many people suggest? One of the big
+
+98
+00:11:26,160 --> 00:11:32,960
+reasons is that the gill gets released in a lot of key situations. So unless you're
+
+99
+00:11:32,960 --> 00:11:39,600
+doing some serious computation in pure Python code, the gill really isn't going to hurt
+
+100
+00:11:39,600 --> 00:11:45,760
+you all that much. But as long as there's a gill, folks will complain. It's just the
+
+101
+00:11:45,760 --> 00:11:52,760
+way it is. So people have a few ways of dealing with the gill. So in C extension modules,
+
+102
+00:11:52,760 --> 00:11:58,760
+you can take advantage of various features that allow you to release the gill around
+
+103
+00:11:58,760 --> 00:12:05,760
+C code that doesn't really touch Python's, the different resources in the Python state.
+
+104
+00:12:09,000 --> 00:12:16,000
+Over time, there have been a number of attempts to remove the gill. And each ran into its
+
+105
+00:12:16,000 --> 00:12:22,000
+own problem, a lot related to performance of single threaded code. I will point out
+
+106
+00:12:22,000 --> 00:12:28,000
+that the work that Larry Hastings has done with the galectomy, while it's kind of on
+
+107
+00:12:28,000 --> 00:12:35,000
+hiatus right now, there are certainly opportunities if some of the blockers can get taken care
+
+108
+00:12:37,480 --> 00:12:44,480
+of, then it's entirely feasible that that might actually remove the gill. So I think
+
+109
+00:12:44,480 --> 00:12:51,480
+that's a good idea. I know that he would say that he's already removed the gill, and
+
+110
+00:12:51,760 --> 00:12:58,760
+that's correct. But it's about getting the performance up to stuff. And what's interesting,
+
+111
+00:13:00,840 --> 00:13:05,960
+one of the best things about PyCon is that people get talking in person. And so there's
+
+112
+00:13:05,960 --> 00:13:12,960
+some neat developments going on that I really hope bear fruit in that regard. So we may
+
+113
+00:13:12,960 --> 00:13:19,240
+be seeing more from the galectomy. Or not. We'll see how things play out. But it's neat
+
+114
+00:13:19,240 --> 00:13:26,240
+stuff. I recommend reading up on galectomy and watching Larry's past talks about it.
+
+115
+00:13:28,400 --> 00:13:34,600
+So C Python isn't the only Python implementation. And sometimes we forget about that. Some of
+
+116
+00:13:34,600 --> 00:13:41,600
+the others don't have a gill. They already support multi-core Python code. And yes, they
+
+117
+00:13:41,600 --> 00:13:48,600
+aren't up to maybe the Python version that you want. But, you know, you can always help
+
+118
+00:13:49,720 --> 00:13:56,720
+out. And sometimes it's worth really diving in and see what you can do to help these tools.
+
+119
+00:13:58,320 --> 00:14:04,300
+And then you can take advantage of them. So worth looking at. If you're really interested,
+
+120
+00:14:04,300 --> 00:14:11,300
+there are opportunities there. Okay. We made it. So I think that's a good
+
+121
+00:14:12,000 --> 00:14:19,000
+So let's talk about what we're doing about the gill. Changes to the CPI are one major
+
+122
+00:14:20,520 --> 00:14:27,520
+way to deal with the gill. The CPI is a great thing. But it's got a handful of problems,
+
+123
+00:14:28,520 --> 00:14:34,480
+some of which we've worked at resolving and some we're still working on. And they have
+
+124
+00:14:34,480 --> 00:14:41,480
+a cost to us. To a large extent, the CPI is one of the main blockers to removing the gill.
+
+125
+00:14:42,440 --> 00:14:48,040
+The hard part is that we can't just change the CPI in any way we want. Backward compatibility
+
+126
+00:14:48,040 --> 00:14:55,040
+has always been very important for the core development of Python. And notably, the same
+
+127
+00:14:55,480 --> 00:15:02,480
+problem also impacts efforts to improve CPI's performance. So why do we have these problems?
+
+128
+00:15:03,280 --> 00:15:10,280
+Well, it's not like anybody messed up. It's just it's hard to look 20 years in the future.
+
+129
+00:15:11,280 --> 00:15:17,720
+But let's look at possible solutions. So just to be clear, nothing's going to change on
+
+130
+00:15:17,720 --> 00:15:24,720
+its own. And Python's all volunteers. So there's a limit to how much gets done based on how
+
+131
+00:15:25,960 --> 00:15:32,960
+much people have time just to use for free to do this stuff. But that's the nature of
+
+132
+00:15:33,080 --> 00:15:40,080
+open source. And we own that. Two things that help are things that we're already working
+
+133
+00:15:40,080 --> 00:15:47,080
+to improve right now. And specifically, one of the things we're doing is trying to layer
+
+134
+00:15:49,320 --> 00:15:54,860
+the CPI so things don't leak out of the different layers quite as easily. It's part of that
+
+135
+00:15:54,860 --> 00:16:01,860
+the leaking is part of the problem. Here are some of the ways we might resolve CPI problems,
+
+136
+00:16:04,040 --> 00:16:09,840
+particularly for the sake of the gill. And there are plenty of other solutions, possible
+
+137
+00:16:09,840 --> 00:16:15,120
+solutions. These are just a few of them. So quite a few people are involved in the effort
+
+138
+00:16:15,120 --> 00:16:21,560
+to fix problems with the CPI. Here are some of the projects with which I'm most familiar
+
+139
+00:16:21,560 --> 00:16:28,560
+or I'm involved even. So these are and you can follow these links. You can look at my
+
+140
+00:16:30,280 --> 00:16:36,000
+slides later and take a look at some of these things. Really interesting projects going
+
+141
+00:16:36,000 --> 00:16:43,000
+on. A lot of discussion on here, on the CPI SIG and also on the Python dev mailing list.
+
+142
+00:16:46,440 --> 00:16:53,440
+So what else is there? So if any of you have ever talked to me about this stuff, then you
+
+143
+00:16:54,080 --> 00:17:01,080
+should have expected this. What are subinterpreters, you might ask? Well, so remember we said that
+
+144
+00:17:02,080 --> 00:17:09,080
+we're using the interpreter in kind of the more specific way. And a subinterpreter is
+
+145
+00:17:09,640 --> 00:17:14,760
+any extra interpreter beyond the main one in the process. We started with one interpreter
+
+146
+00:17:14,760 --> 00:17:21,880
+like in our diagrams and then we add more. Each of those extra ones is a subinterpreter.
+
+147
+00:17:21,880 --> 00:17:26,300
+So if we look at that earlier diagram, here we have three interpreters, the main one and
+
+148
+00:17:26,300 --> 00:17:33,300
+two subinterpreters. They're all doing different stuff. You have multiple threads per interpreter.
+
+149
+00:17:34,060 --> 00:17:41,060
+They're all more or less the same. And they each have their own state. All interpreters
+
+150
+00:17:42,100 --> 00:17:47,060
+are mostly effectively isolated from one another. We're working on fixing some of the corner
+
+151
+00:17:47,060 --> 00:17:54,140
+cases. But for the most part they're isolated. And that's really the objective. It's also
+
+152
+00:17:54,220 --> 00:17:58,540
+worth noting that not all C extension modules will be able to run in subinterpreters quite
+
+153
+00:17:58,540 --> 00:18:05,220
+yet for a number of reasons. But we're working on that too. Finally, subinterpreters aren't
+
+154
+00:18:05,220 --> 00:18:11,060
+a new feature. They've been around for a long time. And the new thing that's going on is
+
+155
+00:18:11,060 --> 00:18:18,060
+we're working to possibly expose them in the standard library. So my PEP, which is PEP
+
+156
+00:18:19,060 --> 00:18:26,060
+554, is focused on exposing the existing subinterpreter C API in a useful but minimal way. The proposal
+
+157
+00:18:29,020 --> 00:18:34,820
+is still under consideration for Python 3.9. And there's no guarantee it will be accepted,
+
+158
+00:18:34,820 --> 00:18:40,860
+but I'm hopeful. And first off, with this PEP, what we're doing is we're adding a new
+
+159
+00:18:40,860 --> 00:18:47,260
+module to the standard library that exposes that essential functionality from the CPI.
+
+160
+00:18:47,260 --> 00:18:54,260
+Here's a simple example of executing code in a subinterpreter. First we create a new
+
+161
+00:18:55,140 --> 00:19:01,720
+interpreter, which is what that call does, but nothing gets executed yet. And then we
+
+162
+00:19:01,720 --> 00:19:08,720
+execute some code. So for now, we only execute text strings. We'll at some point look at
+
+163
+00:19:11,020 --> 00:19:16,780
+the possibility of executing other stuff too, like code objects, functions, whatever. But
+
+164
+00:19:16,780 --> 00:19:22,700
+we're starting with minimal and moving out from there. Also note that when the code runs
+
+165
+00:19:22,700 --> 00:19:29,700
+in a subinterpreter, it runs in the subinterpreter's Dunder main module. Subinterpreters will be
+
+166
+00:19:32,180 --> 00:19:39,180
+most useful when combined with threads. So here's another example. This one, same thing,
+
+167
+00:19:39,620 --> 00:19:46,620
+just running in a thread. So here's another example where we're using the same subinterpreter
+
+168
+00:19:47,180 --> 00:19:53,100
+multiple times. And what's neat is state is preserved between runs in the Dunder main
+
+169
+00:19:53,100 --> 00:20:00,100
+module. So we'll look at that. It can be super useful. In the first run, we set up some state.
+
+170
+00:20:03,220 --> 00:20:07,840
+And then in the second run, we use it. So what's nice is if you've got a whole bunch
+
+171
+00:20:07,840 --> 00:20:14,840
+of workers set up in subinterpreters, you can initialize those in the interpreter ahead
+
+172
+00:20:15,840 --> 00:20:22,840
+of time and then handle requests coming in with your subinterpreter already prepopulated
+
+173
+00:20:23,720 --> 00:20:30,720
+and set up ready to go. Okay. So the CIPI only covers creating subinterpreters and running
+
+174
+00:20:30,880 --> 00:20:37,880
+code in them and that sort of thing. So at first, the PEP exposed this functionality
+
+175
+00:20:37,920 --> 00:20:44,920
+and nothing else. And I found pretty quickly that that wasn't quite enough. So isolated
+
+176
+00:20:47,080 --> 00:20:53,480
+interpreters aren't really useful. They are useful but not nearly as useful as when you
+
+177
+00:20:53,480 --> 00:20:59,000
+can pass data between them safely. So the PEP adds a minimal mechanism that I've called
+
+178
+00:20:59,000 --> 00:21:06,000
+channels based on law prior out there. And currently, only simple mutable built-in types
+
+179
+00:21:06,600 --> 00:21:13,600
+and singletons are supported in channels. Also, for now, we pass serialized raw data
+
+180
+00:21:13,960 --> 00:21:19,040
+between the interpreters rather than the actual objects. And finally, channels are currently
+
+181
+00:21:19,040 --> 00:21:25,200
+unbuffered. And there are a few other details. But basically, again, we're starting minimally
+
+182
+00:21:25,200 --> 00:21:31,720
+and we're going to kind of expand out from there. So we do have plans for addressing
+
+183
+00:21:31,840 --> 00:21:38,280
+these limitations in future iterations. Here's an example that generates some data in a thread
+
+184
+00:21:38,280 --> 00:21:44,240
+under a subinterpreter and processes that data in the main interpreter. So first, we
+
+185
+00:21:44,240 --> 00:21:49,000
+create the interpreter in the channel and we get back the two ends of the channels,
+
+186
+00:21:49,000 --> 00:21:55,400
+distinctly typed objects. And then we start a thread that will execute some simple code
+
+187
+00:21:55,400 --> 00:22:02,400
+in our subinterpreter. And here, notice how when we call run, we specify the channel end
+
+188
+00:22:03,800 --> 00:22:10,540
+to inject into the subinterpreter's Dundermain module. And then we use that channel end in
+
+189
+00:22:10,540 --> 00:22:17,540
+the executed code. And there, in that case, we're sending data out. And then finally,
+
+190
+00:22:18,540 --> 00:22:25,180
+we pop the data off the channel in the main interpreter so we can process it there. An
+
+191
+00:22:25,180 --> 00:22:30,580
+important feature of channels is that sending and receiving are both blocking operations.
+
+192
+00:22:30,580 --> 00:22:37,580
+And this is the main way that interpreters can be synchronized. Async await, for me,
+
+193
+00:22:38,260 --> 00:22:45,260
+doesn't really fit in my brain. It just doesn't work for me. I suspect I'm not the only one.
+
+194
+00:22:46,260 --> 00:22:52,020
+So, I'm happy to say that subinterpreters facilitate an alternate concurrency model
+
+195
+00:22:52,020 --> 00:22:59,020
+that I find fits my brain quite well. And this model is pretty well described. A lot
+
+196
+00:22:59,180 --> 00:23:06,180
+of research, a guy named Tony Hoare, CSP it's called, communicating sequential processes.
+
+197
+00:23:06,180 --> 00:23:13,180
+So, a key here is that unlike traditional threading with its unbounded data sharing,
+
+198
+00:23:15,860 --> 00:23:21,660
+with subinterpreters you get opt-in sharing. And next, even though it isn't perfect, we're
+
+199
+00:23:21,660 --> 00:23:28,660
+getting better. I love this analogy here. It really matters in a lot of situations.
+
+200
+00:23:28,820 --> 00:23:35,820
+So, let's get to the part where this intersects with the gill. Subinterpreters are a way that
+
+201
+00:23:37,140 --> 00:23:44,140
+we can get rid of the gill. But how? We're going to stop sharing the gill. So, currently
+
+202
+00:23:46,140 --> 00:23:51,500
+subinterpreters still share the gill between them. And that's how you get all the downsides
+
+203
+00:23:51,500 --> 00:23:58,500
+of the gill. If you remember this chart, with all the state that we have to deal with, currently
+
+204
+00:23:58,820 --> 00:24:04,140
+the gill is part of Python's global run time state. If we move it to per interpreter state,
+
+205
+00:24:04,140 --> 00:24:10,780
+then we can get multi-core parallelism. So, I'm a bit hand wavy here, I'll admit. But
+
+206
+00:24:10,780 --> 00:24:17,740
+making this happen shouldn't be a terribly invasive change. In fact, that's an important
+
+207
+00:24:17,740 --> 00:24:23,780
+requirement for what I've been working on. I don't want to make big changes. So, all
+
+208
+00:24:23,780 --> 00:24:30,780
+this sounds too good to be true. No one's done it yet. But why? Because, well, possibly
+
+209
+00:24:32,580 --> 00:24:37,060
+they didn't know about subinterpreters or subinterpreters weren't important enough
+
+210
+00:24:37,060 --> 00:24:43,740
+to those people. But regardless, I'm doing the work right now. I came along. I'm trying
+
+211
+00:24:43,740 --> 00:24:50,740
+to make this happen. Regarding the blockers, there are some blockers that are straightforward
+
+212
+00:24:50,820 --> 00:24:57,820
+and pretty discrete. We're working on those. We've got to figure out what to do. If we
+
+213
+00:24:59,700 --> 00:25:04,260
+don't have a gill anymore to protect global state, then we have to minimize global run
+
+214
+00:25:04,260 --> 00:25:09,980
+time state and guard the remainder with more granular locks. But that's not really going
+
+215
+00:25:09,980 --> 00:25:16,980
+to impact the execution of Python code. Now, my projects advanced kind of slowly. I just
+
+216
+00:25:17,740 --> 00:25:24,740
+haven't had a lot of time. But I've relatively recently joined Microsoft, and they've been
+
+217
+00:25:25,060 --> 00:25:30,980
+kind enough to give me time to work on this each week. And so I'm hopeful that we'll make
+
+218
+00:25:30,980 --> 00:25:37,980
+a lot more progress coming up. So I've, there's another blocker that's really a serious pain
+
+219
+00:25:38,580 --> 00:25:44,260
+point. We've got to deal with this. There are all sorts of things, especially in C extension
+
+220
+00:25:44,260 --> 00:25:49,380
+modules. We can handle the C Python part, but C extension modules is kind of a problem.
+
+221
+00:25:49,380 --> 00:25:55,180
+We're working on a solution, though, or a variety of solutions. It's going to be important,
+
+222
+00:25:55,180 --> 00:26:02,180
+though. So the bottom line is I'm working on this. It's an active thing, and I'm really
+
+223
+00:26:02,700 --> 00:26:07,340
+hopeful that it's going to happen. I'm always looking for people to help. So if you want
+
+224
+00:26:08,020 --> 00:26:15,020
+to help, let me know. So what's nice is that a lot of my underlying needs for this project
+
+225
+00:26:15,900 --> 00:26:21,380
+coincide with those of other core developers and also other projects out there, even in
+
+226
+00:26:21,380 --> 00:26:28,380
+a lot of enterprise use cases. So I'm getting a lot of help indirectly that way. My project
+
+227
+00:26:29,580 --> 00:26:36,580
+entails these three efforts. And the most important one of those is moving the gill
+
+228
+00:26:37,140 --> 00:26:44,140
+down to the interpreter level. Here's all the state we're going to probably be moving.
+
+229
+00:26:45,420 --> 00:26:52,420
+And then really all this stuff is a good idea regardless of how my project ends up. Like
+
+230
+00:26:53,940 --> 00:27:00,940
+90% of the work that I'm doing is worth doing regardless. So, you know, I've got that. I
+
+231
+00:27:02,060 --> 00:27:06,260
+will never feel like I've wasted my time on this regardless of how it turns out. I'm still
+
+232
+00:27:06,260 --> 00:27:13,260
+hopeful though. So this is my plan. Pretty straightforward, right? That's it.
+
+233
+00:27:23,620 --> 00:27:30,620
+So I think we have like zero seconds for questions. So if you have any questions, just I'll stay
+
+234
+00:27:31,440 --> 00:27:35,460
+in the hall for a few minutes afterward or you can find me during the conference or get
+
+235
+00:27:35,460 --> 00:27:36,460
+in touch with me. Thank you.
+
+236
+00:27:36,460 --> 00:27:40,260
+We've actually got about three minutes for questions. So if you have questions, you can
+
+237
+00:27:40,260 --> 00:27:44,740
+go up to the audience microphones there. Please keep your questions short and directed at
+
+238
+00:27:44,740 --> 00:27:49,740
+the speaker. If you have longer questions, you can grab them in the hallway.
+
+239
+00:27:49,740 --> 00:27:56,740
+So what is the difference from and benefit of subinterpreters versus multiprocessing?
+
+240
+00:27:59,380 --> 00:28:03,140
+You didn't really talk about that.
+
+241
+00:28:03,140 --> 00:28:10,140
+Subinterpreters are a variety of aspects to it that put more load on the system, various
+
+242
+00:28:10,980 --> 00:28:17,980
+system level resources that in a single process you're sharing those between your threads,
+
+243
+00:28:18,100 --> 00:28:24,100
+but in a multiprocess situation you have to allocate that set of resources per process.
+
+244
+00:28:24,100 --> 00:28:31,100
+At a large scale that can be a real problem. And at a small scale, not so much, but it
+
+245
+00:28:31,940 --> 00:28:37,940
+really makes it a lot easier to deal with. You don't have to deal with interprocess communication
+
+246
+00:28:37,940 --> 00:28:43,300
+and a variety of other aspects of multiprocessing. You get a lot of the benefits of threading
+
+247
+00:28:43,300 --> 00:28:49,540
+with a lot of that isolation from multiprocessing.
+
+248
+00:28:49,540 --> 00:28:53,260
+The other Python interpreters you mentioned, PyPy, IronPython, all those, the ones that
+
+249
+00:28:53,260 --> 00:28:59,100
+don't have a gill, can you explain some basics about why they don't?
+
+250
+00:28:59,100 --> 00:29:04,380
+So Jython and IronPython are both built on other runtimes. Those runtimes don't have
+
+251
+00:29:04,380 --> 00:29:09,780
+a gill. That's most of it.
+
+252
+00:29:09,780 --> 00:29:14,380
+They may have some gill-like equivalent inside them that protects their state.
+
+253
+00:29:14,380 --> 00:29:21,380
+Maybe, but the JVM and for IronPython, like the CLR, don't really.
+
+254
+00:29:22,780 --> 00:29:26,900
+Great. Thanks.
+
+255
+00:29:26,900 --> 00:29:33,540
+So the g in gill stands for global. With this proposal, it won't really be global anymore?
+
+256
+00:29:33,540 --> 00:29:38,920
+It won't be process global. It will be interpreter global, though. Yeah, we thought maybe calling
+
+257
+00:29:38,920 --> 00:29:42,420
+it lil or something, but...
+
+258
+00:29:42,420 --> 00:29:46,620
+Okay. Thank you.
+
+259
+00:29:46,620 --> 00:29:52,900
+Thanks for the PEP and all the work you're doing on gill-less Python. Will there be any
+
+260
+00:29:52,900 --> 00:29:57,580
+support in CPython for atomic variables or persistent data structures and something like
+
+261
+00:29:57,580 --> 00:30:04,580
+Java util concurrent in CPython in the library in the future?
+
+262
+00:30:05,860 --> 00:30:12,860
+I don't think there are really any serious plans for... Well, I don't know. I'm not aware
+
+263
+00:30:13,260 --> 00:30:14,740
+of anything like that.
+
+264
+00:30:14,740 --> 00:30:15,540
+Okay.
+
+265
+00:30:15,540 --> 00:30:19,940
+Everybody has all sorts of ideas, so we're always talking about stuff.
+
+266
+00:30:19,940 --> 00:30:21,620
+Cool. Thank you.
+
+267
+00:30:22,020 --> 00:30:25,020
+So please give another round of applause to Eric.
+
+268
+00:30:25,020 --> 00:30:27,020
+Thank you.
+

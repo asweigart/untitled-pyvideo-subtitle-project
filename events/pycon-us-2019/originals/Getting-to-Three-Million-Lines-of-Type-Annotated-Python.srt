@@ -1,0 +1,3796 @@
+1
+00:00:00,000 --> 00:00:02,560
+Hello, Python Insta.
+
+2
+00:00:02,560 --> 00:00:05,600
+Now we are ready for our next session,
+
+3
+00:00:05,600 --> 00:00:10,240
+getting to 3 million lines of type and audited Python.
+
+4
+00:00:10,240 --> 00:00:15,260
+And the presenter for the session is Michael Sullivan.
+
+5
+00:00:15,260 --> 00:00:19,760
+Michael is, as he says, a recovering academia.
+
+6
+00:00:19,760 --> 00:00:21,520
+Please welcome Michael.
+
+7
+00:00:21,520 --> 00:00:22,520
+Hi, everybody.
+
+8
+00:00:22,520 --> 00:00:23,520
+I'm Michael Sullivan.
+
+9
+00:00:23,520 --> 00:00:24,520
+I'm going to be talking, like she said,
+
+10
+00:00:24,520 --> 00:00:27,520
+about getting to 3 million lines of type and audited Python.
+
+11
+00:00:27,520 --> 00:00:30,520
+I'm here from Dropbox, where we're a very big user
+
+12
+00:00:30,520 --> 00:00:33,520
+of both Python and type annotations.
+
+13
+00:00:33,520 --> 00:00:35,520
+So sort of the way this is going to look
+
+14
+00:00:35,520 --> 00:00:37,520
+is I'm going to just give a lightning-fast overview
+
+15
+00:00:37,520 --> 00:00:40,520
+of Python typing and how MyPy fits into that.
+
+16
+00:00:40,520 --> 00:00:43,520
+Then I'm going to talk about how Dropbox
+
+17
+00:00:43,520 --> 00:00:45,520
+got much of our code base in Python.
+
+18
+00:00:45,520 --> 00:00:47,520
+So I'm going to start with a quick overview
+
+19
+00:00:47,520 --> 00:00:49,520
+of how Python is going to look.
+
+20
+00:00:49,520 --> 00:00:52,520
+How Dropbox got much of our code base annotated.
+
+21
+00:00:52,520 --> 00:00:54,520
+And then I'm going to talk about what we did
+
+22
+00:00:54,520 --> 00:00:56,520
+to keep up with our success and make sure
+
+23
+00:00:56,520 --> 00:00:58,520
+that performance stayed acceptable,
+
+24
+00:00:58,520 --> 00:01:02,520
+to make sure that the performance is also lightning-fast.
+
+25
+00:01:02,520 --> 00:01:04,520
+So, okay, that overview of MyPy.
+
+26
+00:01:04,520 --> 00:01:09,520
+So what MyPy is is an optional static type checker for Python
+
+27
+00:01:09,520 --> 00:01:12,520
+that allows you to write type annotations in your Python code
+
+28
+00:01:12,520 --> 00:01:15,520
+and have a tool, before you run it, check it
+
+29
+00:01:15,520 --> 00:01:17,520
+to make sure that those types make sense,
+
+30
+00:01:17,520 --> 00:01:19,520
+and it helps you prevent a lot of bugs,
+
+31
+00:01:19,520 --> 00:01:21,520
+and in a lot of cases makes it easier
+
+32
+00:01:21,520 --> 00:01:23,520
+to reason about your code.
+
+33
+00:01:23,520 --> 00:01:26,520
+So here's sort of the basic example of typing in Python
+
+34
+00:01:26,520 --> 00:01:28,520
+straight from the MyPy website,
+
+35
+00:01:28,520 --> 00:01:30,520
+which defines a function that computes
+
+36
+00:01:30,520 --> 00:01:32,520
+the first n Fibonacci numbers.
+
+37
+00:01:32,520 --> 00:01:35,520
+And so it takes in an integer for how many to compute,
+
+38
+00:01:35,520 --> 00:01:38,520
+and then returns an iterator of ints back.
+
+39
+00:01:38,520 --> 00:01:42,520
+You know, it yields all the numbers and gives integers.
+
+40
+00:01:42,520 --> 00:01:45,520
+The sort of style of typing that Python uses
+
+41
+00:01:45,520 --> 00:01:48,520
+was defined in a Python PEP called 484.
+
+42
+00:01:48,520 --> 00:01:50,520
+So if you hear that mentioned,
+
+43
+00:01:50,520 --> 00:01:52,520
+that's sort of the definition of Python typing.
+
+44
+00:01:52,520 --> 00:01:56,520
+Now, this example here is using sort of syntactic type annotations,
+
+45
+00:01:56,520 --> 00:01:58,520
+which were added in Python 3,
+
+46
+00:01:58,520 --> 00:02:01,520
+but like a lot of people,
+
+47
+00:02:01,520 --> 00:02:04,520
+Dropbox hasn't gotten rid of all of our Python 2 yet,
+
+48
+00:02:04,520 --> 00:02:06,520
+or honestly haven't gotten that close.
+
+49
+00:02:06,520 --> 00:02:10,520
+So MyPy needs to be able to support Python 2 as well,
+
+50
+00:02:10,520 --> 00:02:13,520
+and it does that through this workable,
+
+51
+00:02:13,520 --> 00:02:17,520
+but not beautiful technique of type comments,
+
+52
+00:02:17,520 --> 00:02:20,520
+where you write sort of a comment at the top of your function
+
+53
+00:02:20,520 --> 00:02:23,520
+saying what the type of the function is,
+
+54
+00:02:23,520 --> 00:02:26,520
+and the type checker will be able to figure it out from that.
+
+55
+00:02:26,520 --> 00:02:28,520
+It's not beautiful, but it works.
+
+56
+00:02:28,520 --> 00:02:30,520
+So that's what we do.
+
+57
+00:02:30,520 --> 00:02:33,520
+So what's an example of things that the type checker can do for you?
+
+58
+00:02:33,520 --> 00:02:35,520
+Here's a pretty simple one.
+
+59
+00:02:35,520 --> 00:02:37,520
+We define some function called foo,
+
+60
+00:02:37,520 --> 00:02:40,520
+and say that it takes a parameter that's a string.
+
+61
+00:02:40,520 --> 00:02:43,520
+Then we try to call a method on it called eggs,
+
+62
+00:02:43,520 --> 00:02:46,520
+but strings obviously don't have an eggs method,
+
+63
+00:02:46,520 --> 00:02:48,520
+so the type checker will complain at us.
+
+64
+00:02:48,520 --> 00:02:51,520
+It'll say, you know, stir does not have attribute eggs.
+
+65
+00:02:51,520 --> 00:02:55,520
+Or let's say we try calling that function with none.
+
+66
+00:02:55,520 --> 00:03:00,520
+We will then say, okay, but this function wants a stir,
+
+67
+00:03:00,520 --> 00:03:02,520
+and we're passing it none.
+
+68
+00:03:02,520 --> 00:03:04,520
+That doesn't work.
+
+69
+00:03:04,520 --> 00:03:07,520
+This is nice because it gives sort of a level of checking
+
+70
+00:03:07,520 --> 00:03:12,520
+that a lot of sort of more traditional statically typed languages don't have.
+
+71
+00:03:12,520 --> 00:03:17,520
+For example, in Java, basically any object you could pass a null in instead,
+
+72
+00:03:17,520 --> 00:03:19,520
+and something breaks at runtime,
+
+73
+00:03:19,520 --> 00:03:24,520
+but the sort of Python equivalent of that none will catch.
+
+74
+00:03:24,520 --> 00:03:28,520
+Importantly, all of this is done statically beforehand
+
+75
+00:03:28,520 --> 00:03:30,520
+without ever running the code.
+
+76
+00:03:30,520 --> 00:03:33,520
+MyPy does all these analyses.
+
+77
+00:03:33,520 --> 00:03:36,520
+Importantly for the sort of MyPy type checking process,
+
+78
+00:03:36,520 --> 00:03:39,520
+you don't need to type everything all at once.
+
+79
+00:03:39,520 --> 00:03:42,520
+It's very important that you be able to mix typed and untyped code,
+
+80
+00:03:42,520 --> 00:03:46,520
+which allows you to gradually add type annotations to your code base.
+
+81
+00:03:46,520 --> 00:03:49,520
+If you had to do it all at once, that would be deeply intractable,
+
+82
+00:03:49,520 --> 00:03:52,520
+because we have five million lines of Python or something.
+
+83
+00:03:52,520 --> 00:03:54,520
+We can't add types to it all at once.
+
+84
+00:03:54,520 --> 00:03:57,520
+That would be sort of one, impossible to do,
+
+85
+00:03:57,520 --> 00:04:00,520
+and two, sort of too big of a change to land all at once,
+
+86
+00:04:00,520 --> 00:04:02,520
+even if you sort of could do it.
+
+87
+00:04:02,520 --> 00:04:04,520
+So here we've got functions foo and bar,
+
+88
+00:04:04,520 --> 00:04:06,520
+and foo has a type and bar doesn't,
+
+89
+00:04:06,520 --> 00:04:08,520
+and they work together just fine.
+
+90
+00:04:08,520 --> 00:04:12,520
+So that's sort of the basics of type annotation.
+
+91
+00:04:12,520 --> 00:04:15,520
+Now I'm going to talk about what we did at Dropbox
+
+92
+00:04:15,520 --> 00:04:19,520
+to sort of advance this, to get it into our code base.
+
+93
+00:04:19,520 --> 00:04:24,520
+And so the first question about how to annotate legacy code bases is,
+
+94
+00:04:24,520 --> 00:04:25,520
+why even bother?
+
+95
+00:04:25,520 --> 00:04:27,520
+That sounds like a lot of work,
+
+96
+00:04:27,520 --> 00:04:31,520
+and it's work that we're doing maybe instead of writing new code.
+
+97
+00:04:31,520 --> 00:04:33,520
+Why not just annotate new code
+
+98
+00:04:33,520 --> 00:04:37,520
+and leave the old code that works unannotated?
+
+99
+00:04:37,520 --> 00:04:41,520
+And the main reason for that is that interactions
+
+100
+00:04:41,520 --> 00:04:43,520
+with untyped code can't be type checked.
+
+101
+00:04:43,520 --> 00:04:47,520
+If you're working with code that doesn't have type annotations,
+
+102
+00:04:47,520 --> 00:04:50,520
+MyPy just has to assume that it can be anything.
+
+103
+00:04:50,520 --> 00:04:52,520
+You sort of can't make any assumptions about it,
+
+104
+00:04:52,520 --> 00:04:54,520
+because you don't know what it is or what it does,
+
+105
+00:04:54,520 --> 00:04:56,520
+which means that any new code you write,
+
+106
+00:04:56,520 --> 00:04:59,520
+if it's interacting with old code that doesn't have type annotations,
+
+107
+00:04:59,520 --> 00:05:02,520
+you lose a lot of the benefits of typing.
+
+108
+00:05:02,520 --> 00:05:05,520
+The more of a code base has type annotations,
+
+109
+00:05:05,520 --> 00:05:07,520
+the more benefit the typing gives.
+
+110
+00:05:07,520 --> 00:05:10,520
+It's sort of a nonlinear payoff.
+
+111
+00:05:10,520 --> 00:05:12,520
+Like once you get a ton of your code base typed,
+
+112
+00:05:12,520 --> 00:05:13,520
+then it's really good,
+
+113
+00:05:13,520 --> 00:05:15,520
+whereas if you only have some of it typed,
+
+114
+00:05:15,520 --> 00:05:19,520
+it's just kind of good.
+
+115
+00:05:19,520 --> 00:05:22,520
+In MyPy itself, which is written all in Python
+
+116
+00:05:22,520 --> 00:05:23,520
+and type annotated Python,
+
+117
+00:05:23,520 --> 00:05:25,520
+we have basically 100% type coverage.
+
+118
+00:05:25,520 --> 00:05:28,520
+Every function in MyPy has a type annotation,
+
+119
+00:05:28,520 --> 00:05:30,520
+and this allows us to rely on type checking
+
+120
+00:05:30,520 --> 00:05:33,520
+to support a lot of aggressive operations in the code base.
+
+121
+00:05:33,520 --> 00:05:35,520
+We can do major refactors, renaming things,
+
+122
+00:05:35,520 --> 00:05:38,520
+changing the types of things, like large changes,
+
+123
+00:05:38,520 --> 00:05:41,520
+and when we do it, we expect that the type checker
+
+124
+00:05:41,520 --> 00:05:44,520
+will tell us most of the places you need to change.
+
+125
+00:05:44,520 --> 00:05:46,520
+If you add an argument to a function,
+
+126
+00:05:46,520 --> 00:05:48,520
+before we even run tests, the type checker can say,
+
+127
+00:05:48,520 --> 00:05:51,520
+like, okay, here are all the call sites you need to update.
+
+128
+00:05:51,520 --> 00:05:54,520
+So then what do we do to get this done?
+
+129
+00:05:54,520 --> 00:05:57,520
+How do we get old code annotated?
+
+130
+00:05:57,520 --> 00:05:59,520
+And to quote Mike Solomon,
+
+131
+00:05:59,520 --> 00:06:01,520
+a senior principal engineer at Dropbox,
+
+132
+00:06:01,520 --> 00:06:04,520
+when we asked him for some advice,
+
+133
+00:06:04,520 --> 00:06:06,520
+he said, show value, reduce friction,
+
+134
+00:06:06,520 --> 00:06:09,520
+encourage the general virtuous cycle,
+
+135
+00:06:09,520 --> 00:06:12,520
+and when all else fails, move them out in yourself.
+
+136
+00:06:12,520 --> 00:06:15,520
+Well, okay, so what are some of the ways we did that?
+
+137
+00:06:15,520 --> 00:06:17,520
+One of the first things, one of the core things
+
+138
+00:06:17,520 --> 00:06:20,520
+we've done a lot of is trying to talk to our users
+
+139
+00:06:20,520 --> 00:06:23,520
+to make sure what they want out of MyPy typing
+
+140
+00:06:23,520 --> 00:06:24,520
+and what's causing them trouble.
+
+141
+00:06:24,520 --> 00:06:27,520
+So we do about twice a year a regular MyPy survey
+
+142
+00:06:27,520 --> 00:06:29,520
+where we ask a lot of questions of our users
+
+143
+00:06:29,520 --> 00:06:31,520
+about, you know, how much do you like MyPy?
+
+144
+00:06:31,520 --> 00:06:34,520
+Would you recommend MyPy to a friend?
+
+145
+00:06:34,520 --> 00:06:36,520
+What are your biggest complaints about MyPy?
+
+146
+00:06:36,520 --> 00:06:38,520
+And sort of gratifyingly,
+
+147
+00:06:38,520 --> 00:06:40,520
+the biggest complaint that we get these days
+
+148
+00:06:40,520 --> 00:06:43,520
+is that not enough code is type annotated.
+
+149
+00:06:43,520 --> 00:06:45,520
+People want more MyPy, which is great.
+
+150
+00:06:45,520 --> 00:06:48,520
+We'd love to give them that.
+
+151
+00:06:48,520 --> 00:06:51,520
+And then something we got a lot last year
+
+152
+00:06:51,520 --> 00:06:53,520
+but stopped getting this year is performance.
+
+153
+00:06:53,520 --> 00:06:55,520
+We'd like MyPy to be faster so we can use it more
+
+154
+00:06:55,520 --> 00:06:58,520
+and have it be less invasive in our workflows.
+
+155
+00:06:58,520 --> 00:07:03,520
+So as part of trying to get more typing,
+
+156
+00:07:03,520 --> 00:07:05,520
+we've had a lot of meetings with teams
+
+157
+00:07:05,520 --> 00:07:07,520
+where we sort of try to figure out
+
+158
+00:07:07,520 --> 00:07:09,520
+what's keeping them from typing their code
+
+159
+00:07:09,520 --> 00:07:11,520
+and push them to, you know, get things working.
+
+160
+00:07:11,520 --> 00:07:13,520
+So one common thing we've heard with teams is like,
+
+161
+00:07:13,520 --> 00:07:16,520
+oh, well, you know, we'd love to use MyPy types,
+
+162
+00:07:16,520 --> 00:07:18,520
+but we don't understand how.
+
+163
+00:07:18,520 --> 00:07:20,520
+We've got some complicated library
+
+164
+00:07:20,520 --> 00:07:22,520
+that has some sort of typing behavior
+
+165
+00:07:22,520 --> 00:07:24,520
+that, like, we don't know how to express with MyPy.
+
+166
+00:07:24,520 --> 00:07:26,520
+There's just not a good way.
+
+167
+00:07:26,520 --> 00:07:28,520
+And, well, MyPy has a plugin API.
+
+168
+00:07:28,520 --> 00:07:32,520
+We can help people build plugins to make their stuff work.
+
+169
+00:07:32,520 --> 00:07:34,520
+We've built a plugin for SQL alchemy
+
+170
+00:07:34,520 --> 00:07:37,520
+and adders and data classes that are all public,
+
+171
+00:07:37,520 --> 00:07:40,520
+and then a couple for internal Dropbox libraries, too.
+
+172
+00:07:40,520 --> 00:07:43,520
+You know, even old code can sort of be worked into the model
+
+173
+00:07:43,520 --> 00:07:45,520
+with our plugin system,
+
+174
+00:07:45,520 --> 00:07:49,520
+even code that doesn't sort of naturally fit a type system.
+
+175
+00:07:49,520 --> 00:07:52,520
+Another thing we get told a lot is we're asking teams like,
+
+176
+00:07:52,520 --> 00:07:54,520
+hey, maybe you should annotate your code,
+
+177
+00:07:54,520 --> 00:07:56,520
+and they tell us, well, you know,
+
+178
+00:07:56,520 --> 00:07:58,520
+we'd like to annotate our code. We like types.
+
+179
+00:07:58,520 --> 00:08:00,520
+But the thing is, you know,
+
+180
+00:08:00,520 --> 00:08:02,520
+we have, like, our quarterly goals, our OKRs or whatever,
+
+181
+00:08:02,520 --> 00:08:04,520
+and typing code isn't on them,
+
+182
+00:08:04,520 --> 00:08:06,520
+and it's not clear that we can put,
+
+183
+00:08:06,520 --> 00:08:08,520
+get more of our code annotated,
+
+184
+00:08:08,520 --> 00:08:10,520
+because none of the teams using our libraries
+
+185
+00:08:10,520 --> 00:08:12,520
+have been asking us for it.
+
+186
+00:08:12,520 --> 00:08:14,520
+Well, we know that a lot of teams want this,
+
+187
+00:08:14,520 --> 00:08:17,520
+so, you know, we can sort of make sure
+
+188
+00:08:17,520 --> 00:08:19,520
+that their users know who to bother about it.
+
+189
+00:08:19,520 --> 00:08:22,520
+Like, if Web Platform doesn't have type annotations,
+
+190
+00:08:22,520 --> 00:08:24,520
+we can make sure that all of their consumers know,
+
+191
+00:08:24,520 --> 00:08:26,520
+like, hey, look, ask them for them.
+
+192
+00:08:26,520 --> 00:08:28,520
+They might be able to do it.
+
+193
+00:08:28,520 --> 00:08:31,520
+As part of figuring out what's worth annotating,
+
+194
+00:08:31,520 --> 00:08:34,520
+one of the big things we've sort of needed to figure out
+
+195
+00:08:34,520 --> 00:08:38,520
+how to tackle is that not all annotations are equal.
+
+196
+00:08:38,520 --> 00:08:42,520
+Not everything has the sort of same value to annotate.
+
+197
+00:08:42,520 --> 00:08:44,520
+If something is called 1,000 times,
+
+198
+00:08:44,520 --> 00:08:46,520
+it's more important to annotate than something
+
+199
+00:08:46,520 --> 00:08:48,520
+that's only used in one or two places,
+
+200
+00:08:48,520 --> 00:08:50,520
+because if it's only used in one or two places,
+
+201
+00:08:50,520 --> 00:08:52,520
+the sort of impact of not having type information
+
+202
+00:08:52,520 --> 00:08:54,520
+is very small, because there just
+
+203
+00:08:54,520 --> 00:08:56,520
+isn't that much downstream of it.
+
+204
+00:08:56,520 --> 00:08:58,520
+But if something is used 1,000 times,
+
+205
+00:08:58,520 --> 00:09:00,520
+then every single place that calls it,
+
+206
+00:09:00,520 --> 00:09:02,520
+even if all of those have type annotations,
+
+207
+00:09:02,520 --> 00:09:04,520
+they aren't getting any information.
+
+208
+00:09:04,520 --> 00:09:06,520
+They don't know what it is.
+
+209
+00:09:06,520 --> 00:09:08,520
+Whenever they operate on it,
+
+210
+00:09:08,520 --> 00:09:10,520
+we can't find any mistakes there.
+
+211
+00:09:10,520 --> 00:09:12,520
+So a missing annotation
+
+212
+00:09:12,520 --> 00:09:14,520
+reduces how useful type checking is
+
+213
+00:09:14,520 --> 00:09:16,520
+in all the code that uses it.
+
+214
+00:09:16,520 --> 00:09:18,520
+And so anything with lots of uses
+
+215
+00:09:18,520 --> 00:09:22,520
+is a big, valuable target for getting annotated.
+
+216
+00:09:22,520 --> 00:09:25,520
+But there's sort of a dark corollary to that,
+
+217
+00:09:25,520 --> 00:09:27,520
+which is that the most important functions
+
+218
+00:09:27,520 --> 00:09:29,520
+to get type checked
+
+219
+00:09:29,520 --> 00:09:31,520
+are often the hardest to type check.
+
+220
+00:09:31,520 --> 00:09:34,520
+Not because they're sort of anything fundamentally hard
+
+221
+00:09:34,520 --> 00:09:36,520
+about giving them a type,
+
+222
+00:09:36,520 --> 00:09:38,520
+but because if they have lots of uses,
+
+223
+00:09:38,520 --> 00:09:40,520
+then it's much more likely that they're going to be
+
+224
+00:09:40,520 --> 00:09:42,520
+then it's much more likely that lots of those uses
+
+225
+00:09:42,520 --> 00:09:44,520
+will have errors.
+
+226
+00:09:44,520 --> 00:09:47,520
+If something only has one or two places that call it,
+
+227
+00:09:47,520 --> 00:09:51,520
+and 20% of the call sites are wrong,
+
+228
+00:09:51,520 --> 00:09:54,520
+that's 0.2 call sites on average you need to fix.
+
+229
+00:09:54,520 --> 00:09:56,520
+That's not bad. But if it's got 1,000,
+
+230
+00:09:56,520 --> 00:09:58,520
+and now you've got to fix 200 bugs,
+
+231
+00:09:58,520 --> 00:10:00,520
+you'll very quickly decide,
+
+232
+00:10:00,520 --> 00:10:02,520
+like, oh, maybe it's not worth fixing this,
+
+233
+00:10:02,520 --> 00:10:04,520
+because it's going to be super tedious,
+
+234
+00:10:04,520 --> 00:10:06,520
+even though it would help a lot.
+
+235
+00:10:06,520 --> 00:10:08,520
+And so that's something we actually
+
+236
+00:10:08,520 --> 00:10:11,520
+still struggle to find a good trade-off for,
+
+237
+00:10:11,520 --> 00:10:13,520
+because it's hard,
+
+238
+00:10:13,520 --> 00:10:16,520
+but something worth tackling.
+
+239
+00:10:16,520 --> 00:10:20,520
+As part of the sort of getting teams to do the work for us
+
+240
+00:10:20,520 --> 00:10:22,520
+and to sort of encourage the cycle of type checking,
+
+241
+00:10:22,520 --> 00:10:27,520
+we send out weekly email reports to about 50 teams at Dropbox,
+
+242
+00:10:27,520 --> 00:10:30,520
+sort of giving them information about the state of type annotations
+
+243
+00:10:30,520 --> 00:10:34,520
+in their code bases based on sort of our notion of ownership.
+
+244
+00:10:34,520 --> 00:10:36,520
+So teams get emailed saying,
+
+245
+00:10:36,520 --> 00:10:39,520
+hey, you know, like, 40% of your code is typed.
+
+246
+00:10:39,520 --> 00:10:41,520
+Maybe you should try to type more of it.
+
+247
+00:10:41,520 --> 00:10:43,520
+Here's, you know, like, what you've gotten typed recently.
+
+248
+00:10:43,520 --> 00:10:45,520
+Here are the good things, here are the bad things,
+
+249
+00:10:45,520 --> 00:10:47,520
+and here are some functions that we think
+
+250
+00:10:47,520 --> 00:10:49,520
+are very important for you to type,
+
+251
+00:10:49,520 --> 00:10:51,520
+the ones that have lots of view sites that are typed,
+
+252
+00:10:51,520 --> 00:10:53,520
+like we were talking about before.
+
+253
+00:10:53,520 --> 00:10:57,520
+Now, unfortunately, it's sort of hard for us to tell,
+
+254
+00:10:57,520 --> 00:11:00,520
+like, how much these emails help,
+
+255
+00:11:00,520 --> 00:11:03,520
+because it's hard to track sort of a direct correlation
+
+256
+00:11:03,520 --> 00:11:05,520
+between any changes, and, you know,
+
+257
+00:11:05,520 --> 00:11:07,520
+the emails we're sending out.
+
+258
+00:11:07,520 --> 00:11:09,520
+So we don't, it's hard to, you know,
+
+259
+00:11:09,520 --> 00:11:11,520
+get an exact metric on that, but as a bit of signal,
+
+260
+00:11:11,520 --> 00:11:14,520
+shortly after we started sending out these emails,
+
+261
+00:11:14,520 --> 00:11:17,520
+we got contacted by a bunch of teams who were like,
+
+262
+00:11:17,520 --> 00:11:19,520
+hey, these emails are great,
+
+263
+00:11:19,520 --> 00:11:21,520
+and we'd really like to use this reporting information
+
+264
+00:11:21,520 --> 00:11:25,520
+to sort of directly decide how to change our code.
+
+265
+00:11:25,520 --> 00:11:27,520
+And so could you give us sort of a self-serve way to do it?
+
+266
+00:11:27,520 --> 00:11:29,520
+And so we built that, and it's become, I think,
+
+267
+00:11:29,520 --> 00:11:31,520
+popular at least in a few teams.
+
+268
+00:11:31,520 --> 00:11:34,520
+We also had sort of a very gratifying bug
+
+269
+00:11:34,520 --> 00:11:39,520
+discovered in this reporting,
+
+270
+00:11:39,520 --> 00:11:41,520
+where the first team at Dropbox
+
+271
+00:11:41,520 --> 00:11:45,520
+to reach 100% coverage on their code
+
+272
+00:11:45,520 --> 00:11:48,520
+sent us a sort of very satisfying email saying,
+
+273
+00:11:48,520 --> 00:11:51,520
+like, hey, we found a bug in your report generator
+
+274
+00:11:51,520 --> 00:11:53,520
+where it gives nonsense information
+
+275
+00:11:53,520 --> 00:11:55,520
+if you have 100% code coverage.
+
+276
+00:11:55,520 --> 00:11:57,520
+We're like, huh, yeah, we didn't think anyone
+
+277
+00:11:57,520 --> 00:11:59,520
+was gonna get there for a while.
+
+278
+00:11:59,520 --> 00:12:01,520
+We never tested that.
+
+279
+00:12:02,520 --> 00:12:04,520
+And the sort of more...
+
+280
+00:12:04,520 --> 00:12:06,520
+I've been talking a lot about sort of the social pressures
+
+281
+00:12:06,520 --> 00:12:08,520
+we do to try to get annotation done.
+
+282
+00:12:08,520 --> 00:12:10,520
+Now I want to talk about some more
+
+283
+00:12:10,520 --> 00:12:12,520
+of the technical measures we do.
+
+284
+00:12:12,520 --> 00:12:14,520
+And this is here sort of at the intersection
+
+285
+00:12:14,520 --> 00:12:16,520
+of, you know, technical measures that we're doing
+
+286
+00:12:16,520 --> 00:12:19,520
+to sort of apply the social pressure to get things working.
+
+287
+00:12:19,520 --> 00:12:21,520
+So one thing we have is we have a linter that complains
+
+288
+00:12:21,520 --> 00:12:25,520
+whenever you add a function that doesn't have an annotation.
+
+289
+00:12:25,520 --> 00:12:27,520
+And we recently sort of turned up
+
+290
+00:12:27,520 --> 00:12:29,520
+how annoying that linter is.
+
+291
+00:12:29,520 --> 00:12:32,520
+At Dropbox, we have different linter, you know,
+
+292
+00:12:32,520 --> 00:12:35,520
+complaining levels, and previously it was a notice,
+
+293
+00:12:35,520 --> 00:12:37,520
+and we've now moved it up to a warning.
+
+294
+00:12:37,520 --> 00:12:39,520
+And whenever a linter gives a warning, you have to...
+
+295
+00:12:39,520 --> 00:12:41,520
+In our system, you have to type in an excuse
+
+296
+00:12:41,520 --> 00:12:43,520
+for why you're ignoring it.
+
+297
+00:12:43,520 --> 00:12:45,520
+And so it's not hard to ignore, but it takes, you know,
+
+298
+00:12:45,520 --> 00:12:47,520
+just like an extra five seconds
+
+299
+00:12:47,520 --> 00:12:49,520
+and one more step in the process.
+
+300
+00:12:49,520 --> 00:12:51,520
+And so you do it, and you're like, oh, okay,
+
+301
+00:12:51,520 --> 00:12:53,520
+maybe I'll just fix it.
+
+302
+00:12:53,520 --> 00:12:55,520
+It'll take a little longer than, like, writing out a good excuse,
+
+303
+00:12:55,520 --> 00:12:57,520
+but not that much longer, maybe.
+
+304
+00:12:57,520 --> 00:12:59,520
+And as part of that sort of...
+
+305
+00:12:59,520 --> 00:13:01,520
+We're trying to gradually ratchet up
+
+306
+00:13:01,520 --> 00:13:03,520
+the default level of enforcement
+
+307
+00:13:03,520 --> 00:13:07,520
+by when we want to introduce some new check we do,
+
+308
+00:13:07,520 --> 00:13:09,520
+we'll make it the default,
+
+309
+00:13:09,520 --> 00:13:13,520
+and then sort of automatically opt out code that doesn't check.
+
+310
+00:13:13,520 --> 00:13:16,520
+So pretty soon we're going to be making...
+
+311
+00:13:16,520 --> 00:13:19,520
+You must annotate your code be the default,
+
+312
+00:13:19,520 --> 00:13:22,520
+and anything that doesn't, you know, will be able to opt out,
+
+313
+00:13:22,520 --> 00:13:26,520
+but setting the right defaults is a big part of this.
+
+314
+00:13:26,520 --> 00:13:31,520
+Now, sort of moving into more explicitly technical measures,
+
+315
+00:13:31,520 --> 00:13:34,520
+things that, you know, are just a technical device
+
+316
+00:13:34,520 --> 00:13:36,520
+for getting code typed,
+
+317
+00:13:36,520 --> 00:13:39,520
+sort of one kind of clear observation is, you know,
+
+318
+00:13:39,520 --> 00:13:42,520
+these types should match Python runtime types.
+
+319
+00:13:42,520 --> 00:13:44,520
+Like, if something's an int,
+
+320
+00:13:44,520 --> 00:13:47,520
+you know, that's a Python thing. At runtime it's an int.
+
+321
+00:13:47,520 --> 00:13:51,520
+And Python has pretty deep introspection facilities,
+
+322
+00:13:51,520 --> 00:13:53,520
+so you can at runtime check what types things are.
+
+323
+00:13:53,520 --> 00:13:57,520
+So you can imagine, and we did, building a library
+
+324
+00:13:57,520 --> 00:14:01,520
+that sort of dynamically at runtime records the types
+
+325
+00:14:01,520 --> 00:14:04,520
+of all the inputs and returns from a function
+
+326
+00:14:04,520 --> 00:14:06,520
+and sort of outputs that to a tool
+
+327
+00:14:06,520 --> 00:14:09,520
+that can add those annotations to the code.
+
+328
+00:14:09,520 --> 00:14:13,520
+So we built a tool called PyAnnotate to do this.
+
+329
+00:14:13,520 --> 00:14:16,520
+But honestly, it didn't help us that very much.
+
+330
+00:14:16,520 --> 00:14:18,520
+Like, we have not had a ton of luck with it.
+
+331
+00:14:18,520 --> 00:14:21,520
+This is one of our losses, maybe.
+
+332
+00:14:21,520 --> 00:14:25,520
+And a couple of the problems we had is the loads in test cases
+
+333
+00:14:25,520 --> 00:14:28,520
+are pretty unrepresentative of real types.
+
+334
+00:14:28,520 --> 00:14:31,520
+Like, instead of some real object being passed in,
+
+335
+00:14:31,520 --> 00:14:33,520
+like, probably it's a mock.
+
+336
+00:14:33,520 --> 00:14:36,520
+And so you sort of don't get the data you need.
+
+337
+00:14:36,520 --> 00:14:39,520
+And so really you need to sort of run these on, like, real loads,
+
+338
+00:14:39,520 --> 00:14:42,520
+like maybe live site loads,
+
+339
+00:14:42,520 --> 00:14:46,520
+but like some, you know, like, one out of every 100,000 requests
+
+340
+00:14:46,520 --> 00:14:49,520
+or something and sort of gather the data from that.
+
+341
+00:14:49,520 --> 00:14:52,520
+But unfortunately, our team itself sort of lacked the expertise
+
+342
+00:14:52,520 --> 00:14:57,520
+or the confidence to go insert sort of this invasive monitoring stuff
+
+343
+00:14:57,520 --> 00:15:01,520
+into, like, live Dropbox site loads.
+
+344
+00:15:01,520 --> 00:15:05,520
+And we had some troubles getting buy-in from the parties
+
+345
+00:15:05,520 --> 00:15:07,520
+that did have that expertise,
+
+346
+00:15:07,520 --> 00:15:09,520
+partially because we didn't want to push that hard.
+
+347
+00:15:09,520 --> 00:15:11,520
+But there was some nervousness about it.
+
+348
+00:15:11,520 --> 00:15:13,520
+So it sort of never got off the ground.
+
+349
+00:15:13,520 --> 00:15:19,520
+And so because we sort of never had those bulk data collections,
+
+350
+00:15:19,520 --> 00:15:21,520
+it couldn't really be done in batch.
+
+351
+00:15:21,520 --> 00:15:23,520
+It produced output that usually required tweaking,
+
+352
+00:15:23,520 --> 00:15:26,520
+and we had troubles getting engineers to do much uptake for it.
+
+353
+00:15:26,520 --> 00:15:29,520
+That said, other people have had success with this.
+
+354
+00:15:29,520 --> 00:15:31,520
+I know that there are some...
+
+355
+00:15:31,520 --> 00:15:34,520
+It's an open-source project, and we have open-source community users.
+
+356
+00:15:34,520 --> 00:15:37,520
+And Instagram has reported success with a different tool
+
+357
+00:15:37,520 --> 00:15:39,520
+that they built called MonkeyType
+
+358
+00:15:39,520 --> 00:15:42,520
+to dynamically monitor Python types
+
+359
+00:15:42,520 --> 00:15:44,520
+and generate type annotations from them.
+
+360
+00:15:44,520 --> 00:15:47,520
+And my understanding is that they did have...
+
+361
+00:15:47,520 --> 00:15:50,520
+They did set up the sort of live site type recording
+
+362
+00:15:50,520 --> 00:15:53,520
+that we never got around to.
+
+363
+00:15:53,520 --> 00:15:58,520
+So if dynamic inference of type annotations doesn't work,
+
+364
+00:15:58,520 --> 00:16:00,520
+maybe the other thing, right?
+
+365
+00:16:00,520 --> 00:16:03,520
+We've got a type checker, so we might just be able to look at the code
+
+366
+00:16:03,520 --> 00:16:08,520
+and sort of via program analysis figure out what can happen.
+
+367
+00:16:08,520 --> 00:16:11,520
+And so that actually works okay.
+
+368
+00:16:11,520 --> 00:16:13,520
+So as a really simple example,
+
+369
+00:16:13,520 --> 00:16:17,520
+here we've got a function called foo that just adds one to its argument
+
+370
+00:16:17,520 --> 00:16:20,520
+and some other module B that calls it.
+
+371
+00:16:20,520 --> 00:16:23,520
+And so we can look at the program and say, like, okay,
+
+372
+00:16:23,520 --> 00:16:26,520
+every place that calls foo is calling with an integer.
+
+373
+00:16:26,520 --> 00:16:30,520
+So I guess that probably means that the input to foo is an int.
+
+374
+00:16:30,520 --> 00:16:33,520
+And then once you've assumed the input to foo is an int,
+
+375
+00:16:33,520 --> 00:16:36,520
+you say, like, okay, x is an int and 1 is an int,
+
+376
+00:16:36,520 --> 00:16:38,520
+and if you add them together, that's also an int,
+
+377
+00:16:38,520 --> 00:16:40,520
+so the return type must be int.
+
+378
+00:16:40,520 --> 00:16:42,520
+And once you've computed that, you can sort of check to make sure it works
+
+379
+00:16:42,520 --> 00:16:44,520
+and that it doesn't produce errors and then say, like, okay,
+
+380
+00:16:44,520 --> 00:16:46,520
+I guess that's the type of the function.
+
+381
+00:16:46,520 --> 00:16:48,520
+We can write that in there.
+
+382
+00:16:48,520 --> 00:16:51,520
+And, you know, sometimes it's trickier because there might be different functions
+
+383
+00:16:51,520 --> 00:16:53,520
+getting called and you need to...
+
+384
+00:16:53,520 --> 00:16:55,520
+And there are, like, different options for how you can combine them.
+
+385
+00:16:55,520 --> 00:16:58,520
+So, you know, we'll make up a couple different possible function types,
+
+386
+00:16:58,520 --> 00:17:00,520
+see which works, pick the best.
+
+387
+00:17:00,520 --> 00:17:02,520
+But this is a reasonably productive approach.
+
+388
+00:17:02,520 --> 00:17:04,520
+And so we have just, in the last couple weeks,
+
+389
+00:17:04,520 --> 00:17:09,520
+started automatically adding statically inferred type annotations
+
+390
+00:17:09,520 --> 00:17:11,520
+to our code base.
+
+391
+00:17:11,520 --> 00:17:15,520
+It's still a process that requires somebody to sort of shepherd it through
+
+392
+00:17:15,520 --> 00:17:18,520
+to generate a diff and put it up and get approvals.
+
+393
+00:17:18,520 --> 00:17:21,520
+When I first tried this, I generated a diff that was way too big
+
+394
+00:17:21,520 --> 00:17:25,520
+that, you know, added, like, 3,000 annotations all over the code base,
+
+395
+00:17:25,520 --> 00:17:28,520
+and I put it up without thinking as hard about it as I should have,
+
+396
+00:17:28,520 --> 00:17:31,520
+and then I go look, and it's emailed half the engineers at Dropbox
+
+397
+00:17:31,520 --> 00:17:33,520
+asking for code reviews.
+
+398
+00:17:33,520 --> 00:17:36,520
+I was like, okay, well, this was a mistake.
+
+399
+00:17:36,520 --> 00:17:39,520
+Sorry about that.
+
+400
+00:17:39,520 --> 00:17:43,520
+One of the next steps, because we don't just want this to be a tool
+
+401
+00:17:43,520 --> 00:17:46,520
+for me to add type annotations, we'd like other people to be able
+
+402
+00:17:46,520 --> 00:17:50,520
+to leverage this too, is to build a user tool that fits into this,
+
+403
+00:17:50,520 --> 00:17:53,520
+maybe with some IDE integrations that'll say, like, hey,
+
+404
+00:17:53,520 --> 00:17:56,520
+here are, like, the best guesses we have for this function.
+
+405
+00:17:56,520 --> 00:17:59,520
+We haven't found anything that's perfect, but, like, here's what works well,
+
+406
+00:17:59,520 --> 00:18:02,520
+maybe here's what you have to tweak.
+
+407
+00:18:02,520 --> 00:18:06,520
+So I've talked a bunch about what we've done to get our code base annotated,
+
+408
+00:18:06,520 --> 00:18:09,520
+and so there's the question, like, how's this working?
+
+409
+00:18:09,520 --> 00:18:11,520
+Are we getting it done?
+
+410
+00:18:11,520 --> 00:18:14,520
+And the answer is, yeah, it's going great.
+
+411
+00:18:14,520 --> 00:18:17,520
+Here is a graph over time of how many lines we have annotated
+
+412
+00:18:17,520 --> 00:18:20,520
+in our server code base, and it's, you know,
+
+413
+00:18:20,520 --> 00:18:23,520
+this nice up-and-to-the-right graph, right?
+
+414
+00:18:23,520 --> 00:18:26,520
+We started off with nothing back in 2016, and now we've got, you know,
+
+415
+00:18:26,520 --> 00:18:29,520
+like, half a million lines in just that repo.
+
+416
+00:18:29,520 --> 00:18:36,520
+There's a catch to this, though, which is that here's our performance graph.
+
+417
+00:18:36,520 --> 00:18:40,520
+Here's how long we take to do a total type check of the repository,
+
+418
+00:18:40,520 --> 00:18:46,520
+and it is also this very clear up-and-to-the-right kind of graph.
+
+419
+00:18:46,520 --> 00:18:52,520
+So now I'm going to talk a bit about what we did to keep up with our success.
+
+420
+00:18:52,520 --> 00:18:56,520
+Just going back to that graph, because I just, like, love this graph.
+
+421
+00:18:56,520 --> 00:19:00,520
+I mean, I don't love it,
+
+422
+00:19:00,520 --> 00:19:04,520
+but I love just how, like, nicely clear of a linear relationship it is, right?
+
+423
+00:19:04,520 --> 00:19:06,520
+It's like, this is how much code we're checking,
+
+424
+00:19:06,520 --> 00:19:08,520
+and this is how long it takes to check,
+
+425
+00:19:08,520 --> 00:19:11,520
+and every so often you can see, like, oh, yeah, we messed up,
+
+426
+00:19:11,520 --> 00:19:14,520
+and it started getting nonlinear, and then we fixed it,
+
+427
+00:19:14,520 --> 00:19:16,520
+but it's still going up.
+
+428
+00:19:16,520 --> 00:19:18,520
+And so, I mean, this is obviously a problem,
+
+429
+00:19:18,520 --> 00:19:20,520
+and it's been a problem for this whole time,
+
+430
+00:19:20,520 --> 00:19:22,520
+doing things to mitigate it that aren't reflected in this graph
+
+431
+00:19:22,520 --> 00:19:24,520
+that I'm going to talk about a bunch.
+
+432
+00:19:24,520 --> 00:19:30,520
+So at its worst, MyPy was the long pole sometimes,
+
+433
+00:19:30,520 --> 00:19:34,520
+about 20% of the time, in our continuous integration system.
+
+434
+00:19:34,520 --> 00:19:36,520
+The long pole being the slowest part,
+
+435
+00:19:36,520 --> 00:19:39,520
+the part that, you know, when you've parallelized things,
+
+436
+00:19:39,520 --> 00:19:40,520
+you can do a bunch of things at once,
+
+437
+00:19:40,520 --> 00:19:43,520
+but there's still no way to be faster than the slowest thing.
+
+438
+00:19:43,520 --> 00:19:47,520
+So if MyPy takes 25 minutes to run
+
+439
+00:19:47,520 --> 00:19:50,520
+in order for something to get landed into our repo,
+
+440
+00:19:50,520 --> 00:19:52,520
+then nothing can land faster than 25 minutes,
+
+441
+00:19:52,520 --> 00:19:54,520
+which is real bad.
+
+442
+00:19:54,520 --> 00:19:58,520
+On top of that, this is obviously really painful to use
+
+443
+00:19:58,520 --> 00:20:00,520
+as part of interactive development.
+
+444
+00:20:00,520 --> 00:20:04,520
+Not only can you not, you know, reasonably use something interactively
+
+445
+00:20:04,520 --> 00:20:06,520
+if it takes 15 minutes, honestly, if it's at 2 minutes,
+
+446
+00:20:06,520 --> 00:20:08,520
+that's way too bad.
+
+447
+00:20:08,520 --> 00:20:12,520
+So, and on top of that, fear of making this problem worse
+
+448
+00:20:12,520 --> 00:20:15,520
+sort of limited how hard we could push on growth.
+
+449
+00:20:15,520 --> 00:20:17,520
+There was always sort of this trade-off, like, okay,
+
+450
+00:20:17,520 --> 00:20:18,520
+we could go sort of do a bunch of stuff
+
+451
+00:20:18,520 --> 00:20:20,520
+to automatically add annotations,
+
+452
+00:20:20,520 --> 00:20:23,520
+but if that makes MyPy take twice as slow,
+
+453
+00:20:23,520 --> 00:20:26,520
+maybe we need to focus on performance first,
+
+454
+00:20:26,520 --> 00:20:29,520
+which happened a bunch.
+
+455
+00:20:29,520 --> 00:20:31,520
+So I'm going to talk to them about the strategies
+
+456
+00:20:31,520 --> 00:20:34,520
+we've done to approach this.
+
+457
+00:20:34,520 --> 00:20:36,520
+And two of them are pretty straightforward,
+
+458
+00:20:36,520 --> 00:20:41,520
+doing incremental type checking and using caching.
+
+459
+00:20:41,520 --> 00:20:44,520
+And then one that's maybe a bit more off the wall,
+
+460
+00:20:44,520 --> 00:20:46,520
+which is we built a new compiler for Python
+
+461
+00:20:46,520 --> 00:20:50,520
+and for type annotated Python in particular.
+
+462
+00:20:50,520 --> 00:20:54,520
+So, okay, first the incremental type checking.
+
+463
+00:20:54,520 --> 00:20:58,520
+There's sort of a trivial idea that the easiest way
+
+464
+00:20:58,520 --> 00:21:02,520
+to compute faster is to compute less.
+
+465
+00:21:02,520 --> 00:21:06,520
+If you have less computation to do, it obviously will go faster.
+
+466
+00:21:06,520 --> 00:21:09,520
+So the idea is instead of checking the whole code base
+
+467
+00:21:09,520 --> 00:21:12,520
+whenever we run, we should only check what we have to.
+
+468
+00:21:12,520 --> 00:21:15,520
+So the idea then is we store type information to disk.
+
+469
+00:21:15,520 --> 00:21:17,520
+When we run, we store sort of a cache
+
+470
+00:21:17,520 --> 00:21:19,520
+of what all the different types we've seen
+
+471
+00:21:19,520 --> 00:21:23,520
+and what modules have what functions and all of that.
+
+472
+00:21:23,520 --> 00:21:28,520
+And when we run, we check just the files that have changed.
+
+473
+00:21:28,520 --> 00:21:30,520
+And then once we've checked the files that have changed,
+
+474
+00:21:30,520 --> 00:21:34,520
+we check any modules that depend on modules
+
+475
+00:21:34,520 --> 00:21:37,520
+that have had interface changes.
+
+476
+00:21:37,520 --> 00:21:39,520
+Here, when I say interface changes,
+
+477
+00:21:39,520 --> 00:21:44,520
+our idea of interface for this is actually kind of cute hack,
+
+478
+00:21:44,520 --> 00:21:47,520
+which is we generate these cache files saying,
+
+479
+00:21:47,520 --> 00:21:50,520
+like, okay, here is all the relevant things about a module,
+
+480
+00:21:50,520 --> 00:21:52,520
+all the functions in it, all the types of those.
+
+481
+00:21:52,520 --> 00:21:55,520
+And so the interface we check is actually just a, like,
+
+482
+00:21:55,520 --> 00:21:57,520
+hash of the cache file.
+
+483
+00:21:57,520 --> 00:21:59,520
+If the cache file we generate changes,
+
+484
+00:21:59,520 --> 00:22:01,520
+then we know the module's changed in an important way,
+
+485
+00:22:01,520 --> 00:22:05,520
+and we need to recheck anything that depends on it.
+
+486
+00:22:05,520 --> 00:22:07,520
+So this works pretty well.
+
+487
+00:22:07,520 --> 00:22:09,520
+There's an unfortunate snag,
+
+488
+00:22:09,520 --> 00:22:11,520
+which is that for annoying technical reasons,
+
+489
+00:22:11,520 --> 00:22:13,520
+if you have an import cycle,
+
+490
+00:22:13,520 --> 00:22:15,520
+like modules importing each other in a circle,
+
+491
+00:22:15,520 --> 00:22:18,520
+those need to be checked all together.
+
+492
+00:22:18,520 --> 00:22:21,520
+So if one module in an import cycle has a dependency change,
+
+493
+00:22:21,520 --> 00:22:23,520
+you have to check all of those.
+
+494
+00:22:23,520 --> 00:22:26,520
+And if you have, like, a nice, elegant, beautiful,
+
+495
+00:22:26,520 --> 00:22:29,520
+well-factored code base, this isn't a problem at all,
+
+496
+00:22:29,520 --> 00:22:31,520
+because you shouldn't have big import cycles,
+
+497
+00:22:31,520 --> 00:22:33,520
+because that's a pretty major code smell.
+
+498
+00:22:33,520 --> 00:22:36,520
+We have some pretty big import cycles.
+
+499
+00:22:36,520 --> 00:22:40,520
+Like high hundreds of modules.
+
+500
+00:22:40,520 --> 00:22:42,520
+And so whenever you had to hit anything
+
+501
+00:22:42,520 --> 00:22:46,520
+that needed to check that, it got bad.
+
+502
+00:22:46,520 --> 00:22:49,520
+Okay, so here was supposed to be a graph
+
+503
+00:22:49,520 --> 00:22:53,520
+of how incremental mode improved the typing,
+
+504
+00:22:53,520 --> 00:22:56,520
+but instead this slide is intentionally left blank,
+
+505
+00:22:56,520 --> 00:22:58,520
+because I was having troubles
+
+506
+00:22:58,520 --> 00:23:01,520
+finding our historical data for it.
+
+507
+00:23:01,520 --> 00:23:03,520
+But this helped a lot.
+
+508
+00:23:03,520 --> 00:23:06,520
+It ends up being a pretty substantial speed-up.
+
+509
+00:23:06,520 --> 00:23:10,520
+If thing like 4 or 5x for the typical case.
+
+510
+00:23:10,520 --> 00:23:13,520
+And when we were doing this incremental mode,
+
+511
+00:23:13,520 --> 00:23:16,520
+it got this sort of...
+
+512
+00:23:16,520 --> 00:23:19,520
+At the time, MyPy took about eight, nine minutes
+
+513
+00:23:19,520 --> 00:23:21,520
+to check the whole repository,
+
+514
+00:23:21,520 --> 00:23:23,520
+and with this incremental mode,
+
+515
+00:23:23,520 --> 00:23:25,520
+it would get down to one or two,
+
+516
+00:23:25,520 --> 00:23:28,520
+which was solidly usable in most, like most interactive cases,
+
+517
+00:23:28,520 --> 00:23:32,520
+just not good, but it was not as bad.
+
+518
+00:23:32,520 --> 00:23:35,520
+But it was not impossible.
+
+519
+00:23:35,520 --> 00:23:38,520
+But there are still some bad things.
+
+520
+00:23:38,520 --> 00:23:42,520
+So the thing about, like, doing stuff incrementally
+
+521
+00:23:42,520 --> 00:23:44,520
+is you still need a starting point,
+
+522
+00:23:44,520 --> 00:23:46,520
+something to increment.
+
+523
+00:23:46,520 --> 00:23:48,520
+So you need to, at some point,
+
+524
+00:23:48,520 --> 00:23:51,520
+generate that initial type information, that first cache,
+
+525
+00:23:51,520 --> 00:23:53,520
+which requires doing this full check
+
+526
+00:23:53,520 --> 00:23:55,520
+that takes maybe 10, 20 minutes.
+
+527
+00:23:55,520 --> 00:23:58,520
+And you could say, like, okay, that's fine.
+
+528
+00:23:58,520 --> 00:24:01,520
+Every developer runs that once when they start at the company,
+
+529
+00:24:01,520 --> 00:24:03,520
+and that's where you get some place to start from.
+
+530
+00:24:03,520 --> 00:24:05,520
+But that's bad, too, because the changes
+
+531
+00:24:05,520 --> 00:24:07,520
+when you switch between branches
+
+532
+00:24:07,520 --> 00:24:09,520
+or when you pull all of the changes
+
+533
+00:24:09,520 --> 00:24:12,520
+that other people have made can be pretty big.
+
+534
+00:24:12,520 --> 00:24:14,520
+And you don't want people to have to type check,
+
+535
+00:24:14,520 --> 00:24:16,520
+like, everybody else at the company's changes.
+
+536
+00:24:16,520 --> 00:24:19,520
+You really want them to only have to waste time
+
+537
+00:24:19,520 --> 00:24:22,520
+sort of checking their own code.
+
+538
+00:24:22,520 --> 00:24:25,520
+So there's sort of a joke that, like,
+
+539
+00:24:25,520 --> 00:24:28,520
+the only two systemsy ways to solve problems
+
+540
+00:24:28,520 --> 00:24:32,520
+is to either add a level of indirection or to add a cache.
+
+541
+00:24:32,520 --> 00:24:35,520
+And here the trick is to add a cache.
+
+542
+00:24:35,520 --> 00:24:38,520
+So we have our continuous integration systems.
+
+543
+00:24:38,520 --> 00:24:42,520
+Every time a commit lands in master,
+
+544
+00:24:42,520 --> 00:24:46,520
+it runs MyPy on it and generates sort of this cache
+
+545
+00:24:46,520 --> 00:24:49,520
+of all of the type information in the code base.
+
+546
+00:24:49,520 --> 00:24:52,520
+Then when users run MyPy,
+
+547
+00:24:52,520 --> 00:24:54,520
+it will download this cache information
+
+548
+00:24:54,520 --> 00:24:56,520
+sort of whenever they've done anything
+
+549
+00:24:56,520 --> 00:24:58,520
+that we think might be a big change,
+
+550
+00:24:58,520 --> 00:25:00,520
+like a branch switch or a rebase.
+
+551
+00:25:00,520 --> 00:25:02,520
+So this gives us a cache that's sort of shared
+
+552
+00:25:02,520 --> 00:25:04,520
+between all developers at Dropbox
+
+553
+00:25:04,520 --> 00:25:07,520
+that's generated with a short 10, 15-minute delay.
+
+554
+00:25:07,520 --> 00:25:09,520
+And this ends up being huge,
+
+555
+00:25:09,520 --> 00:25:11,520
+because it means that nobody ever needs to run these,
+
+556
+00:25:11,520 --> 00:25:13,520
+like, full type checks.
+
+557
+00:25:13,520 --> 00:25:15,520
+So this is great.
+
+558
+00:25:15,520 --> 00:25:17,520
+Unfortunately, it isn't sort of released.
+
+559
+00:25:17,520 --> 00:25:20,520
+Like, the infrastructure to do this isn't released,
+
+560
+00:25:20,520 --> 00:25:22,520
+because it's much too dependent on the minutia
+
+561
+00:25:22,520 --> 00:25:25,520
+of the continuous integration system
+
+562
+00:25:25,520 --> 00:25:27,520
+and the build system and source control.
+
+563
+00:25:27,520 --> 00:25:30,520
+Like, we have a homegrown continuous integration system,
+
+564
+00:25:30,520 --> 00:25:33,520
+and then we have sort of homegrown scripts
+
+565
+00:25:33,520 --> 00:25:35,520
+for running MyPy and Git.
+
+566
+00:25:35,520 --> 00:25:38,520
+And if you have any sort of different combination of those,
+
+567
+00:25:38,520 --> 00:25:41,520
+the way you'd set this up is different.
+
+568
+00:25:41,520 --> 00:25:43,520
+That said, it shouldn't be too hard,
+
+569
+00:25:43,520 --> 00:25:46,520
+and our documentation does have pretty good instructions
+
+570
+00:25:46,520 --> 00:25:49,520
+for how you might want to set this up.
+
+571
+00:25:49,520 --> 00:25:51,520
+And if anyone's done that, I'd actually be really interested
+
+572
+00:25:51,520 --> 00:25:54,520
+to chat with you to see how it's worked for you.
+
+573
+00:25:55,520 --> 00:25:57,520
+Now, this whole cache warming also,
+
+574
+00:25:57,520 --> 00:25:59,520
+there's a lot of sort of fun, very fiddly
+
+575
+00:25:59,520 --> 00:26:01,520
+performance engineering we had to do,
+
+576
+00:26:01,520 --> 00:26:05,520
+and what we were able to do to sort of improve it.
+
+577
+00:26:05,520 --> 00:26:07,520
+One of the things that was sort of an easy win
+
+578
+00:26:07,520 --> 00:26:09,520
+at one point where we were getting stressed out,
+
+579
+00:26:09,520 --> 00:26:11,520
+like, oh, man, it's taking, like, six seconds
+
+580
+00:26:11,520 --> 00:26:13,520
+to download the cache information.
+
+581
+00:26:13,520 --> 00:26:16,520
+Or, like, if you're in, you know, the Tel Aviv office,
+
+582
+00:26:16,520 --> 00:26:19,520
+it's taking, like, 25 seconds just to download the cache.
+
+583
+00:26:19,520 --> 00:26:22,520
+We were able to just switch the compression algorithm
+
+584
+00:26:22,520 --> 00:26:24,520
+and get a good speed up.
+
+585
+00:26:24,520 --> 00:26:26,520
+Another sort of dumb one was,
+
+586
+00:26:26,520 --> 00:26:29,520
+originally the cache was just a tarball of little JSON files,
+
+587
+00:26:29,520 --> 00:26:31,520
+but the Mac OS file system is very slow
+
+588
+00:26:31,520 --> 00:26:33,520
+at creating lots of little files,
+
+589
+00:26:33,520 --> 00:26:35,520
+so if you switch to it just being one file,
+
+590
+00:26:35,520 --> 00:26:37,520
+then it gets a whole lot faster again.
+
+591
+00:26:37,520 --> 00:26:39,520
+We've done a lot of investigation on that sort of thing,
+
+592
+00:26:39,520 --> 00:26:42,520
+like, how to optimize all the details of those.
+
+593
+00:26:42,520 --> 00:26:45,520
+Now, there's still some downsides
+
+594
+00:26:45,520 --> 00:26:48,520
+to this incremental type checking stuff I've talked about.
+
+595
+00:26:48,520 --> 00:26:50,520
+There's lots of data to load from the disk
+
+596
+00:26:50,520 --> 00:26:52,520
+every time you run,
+
+597
+00:26:52,520 --> 00:26:55,520
+because all this stuff is stored on disk in these caches,
+
+598
+00:26:55,520 --> 00:26:59,520
+and the module is sort of a pretty big unit of rechecking,
+
+599
+00:26:59,520 --> 00:27:01,520
+because modules can be big,
+
+600
+00:27:01,520 --> 00:27:03,520
+and there's sort of a lot of work to do with them.
+
+601
+00:27:03,520 --> 00:27:05,520
+You have to parse it, you have to, you know, reanalyze it,
+
+602
+00:27:05,520 --> 00:27:07,520
+you have to do all this type checking.
+
+603
+00:27:07,520 --> 00:27:09,520
+And so whenever something's dependency changes,
+
+604
+00:27:09,520 --> 00:27:11,520
+you need to do this full module reprocess,
+
+605
+00:27:11,520 --> 00:27:13,520
+and actually worse than that,
+
+606
+00:27:13,520 --> 00:27:16,520
+this full module reprocess of this entire cycle of modules,
+
+607
+00:27:16,520 --> 00:27:19,520
+which, at its worst, would be, like, 500 modules
+
+608
+00:27:19,520 --> 00:27:21,520
+at Dropbox, which is real bad.
+
+609
+00:27:21,520 --> 00:27:24,520
+Like, you'd hit that, and it suddenly just gets very slow.
+
+610
+00:27:24,520 --> 00:27:28,520
+So our solution to all of this is what we call
+
+611
+00:27:28,520 --> 00:27:30,520
+our, the MyPy daemon,
+
+612
+00:27:30,520 --> 00:27:32,520
+which is an incremental type checking daemon,
+
+613
+00:27:32,520 --> 00:27:34,520
+which is to say, like, a background process.
+
+614
+00:27:34,520 --> 00:27:37,520
+It runs in the background and does type checking for you.
+
+615
+00:27:37,520 --> 00:27:40,520
+So instead of needing to load all this stuff from disk
+
+616
+00:27:40,520 --> 00:27:42,520
+every time it runs,
+
+617
+00:27:42,520 --> 00:27:44,520
+it tries to keep a lot of this information in memory.
+
+618
+00:27:44,520 --> 00:27:46,520
+It stores syntax trees and the types of everything
+
+619
+00:27:46,520 --> 00:27:48,520
+it's encountered sort of in memory,
+
+620
+00:27:48,520 --> 00:27:50,520
+where you can access them quickly,
+
+621
+00:27:50,520 --> 00:27:52,520
+instead of having to wait to load them.
+
+622
+00:27:52,520 --> 00:27:55,520
+And then the way it works is, as we check the code,
+
+623
+00:27:55,520 --> 00:27:57,520
+we compute what the dependencies are
+
+624
+00:27:57,520 --> 00:28:00,520
+of every function in class that we encounter.
+
+625
+00:28:00,520 --> 00:28:03,520
+So here, in this example, we've got a function eggs
+
+626
+00:28:03,520 --> 00:28:07,520
+in module B that's calling into a function foo in module A.
+
+627
+00:28:07,520 --> 00:28:11,520
+So we track that B.eggs depends on A.foo.
+
+628
+00:28:11,520 --> 00:28:14,520
+Then, if foo changes,
+
+629
+00:28:14,520 --> 00:28:17,520
+so here the types changed from returning an int
+
+630
+00:28:17,520 --> 00:28:21,520
+to returning a stir, we know that we need to recheck B.eggs.
+
+631
+00:28:21,520 --> 00:28:24,520
+So we'll go recheck eggs, and we'll see that,
+
+632
+00:28:24,520 --> 00:28:26,520
+oh, there's an error.
+
+633
+00:28:26,520 --> 00:28:28,520
+We're trying to add a string and an integer.
+
+634
+00:28:28,520 --> 00:28:30,520
+And we can do that without needing to sort of reload
+
+635
+00:28:30,520 --> 00:28:32,520
+the rest of B.py.
+
+636
+00:28:32,520 --> 00:28:34,520
+We don't need to parse it. We don't need to check spam.
+
+637
+00:28:34,520 --> 00:28:36,520
+We can sort of just, because we already have it in memory,
+
+638
+00:28:36,520 --> 00:28:38,520
+check eggs.
+
+639
+00:28:38,520 --> 00:28:41,520
+So sort of the full story here is,
+
+640
+00:28:41,520 --> 00:28:44,520
+we compute the dependencies of every function in class.
+
+641
+00:28:44,520 --> 00:28:48,520
+Then, when run, we figure out just which files have changed.
+
+642
+00:28:48,520 --> 00:28:51,520
+We recheck those files, and we figure out
+
+643
+00:28:51,520 --> 00:28:54,520
+what functions and classes and type definitions
+
+644
+00:28:54,520 --> 00:28:56,520
+have had an important change.
+
+645
+00:28:56,520 --> 00:28:58,520
+And important basically means that the type has changed.
+
+646
+00:28:58,520 --> 00:29:01,520
+If you change something about the implementation of a method,
+
+647
+00:29:01,520 --> 00:29:04,520
+callers don't care, but if you change what type it returns,
+
+648
+00:29:04,520 --> 00:29:06,520
+it's important.
+
+649
+00:29:06,520 --> 00:29:08,520
+So from that, you then go and recheck everything
+
+650
+00:29:08,520 --> 00:29:10,520
+that sort of depends on it.
+
+651
+00:29:10,520 --> 00:29:12,520
+So anything that's changed, you recheck anything
+
+652
+00:29:12,520 --> 00:29:14,520
+that depends on that, and then sort of push that outward.
+
+653
+00:29:14,520 --> 00:29:16,520
+Like anything that those changed, you go recheck,
+
+654
+00:29:16,520 --> 00:29:20,520
+and you repeat until you hit a fixed point.
+
+655
+00:29:20,520 --> 00:29:23,520
+This involved some pretty exciting engineering,
+
+656
+00:29:23,520 --> 00:29:26,520
+because MyPy was really deeply not designed in the first place
+
+657
+00:29:26,520 --> 00:29:30,520
+to allow this sort of rechecking and reprocessing.
+
+658
+00:29:30,520 --> 00:29:33,520
+So there's some very fun, subtle code there,
+
+659
+00:29:33,520 --> 00:29:36,520
+where fun is maybe a euphemism.
+
+660
+00:29:36,520 --> 00:29:39,520
+But it works very well.
+
+661
+00:29:39,520 --> 00:29:43,520
+And it is like a pretty cool engineering achievement
+
+662
+00:29:43,520 --> 00:29:45,520
+to get it to work.
+
+663
+00:29:45,520 --> 00:29:49,520
+And then like with the coarse-grained checking,
+
+664
+00:29:49,520 --> 00:29:52,520
+we also use a remote cache so that you don't need
+
+665
+00:29:52,520 --> 00:29:54,520
+to ever do a full check of the code base.
+
+666
+00:29:54,520 --> 00:29:57,520
+Now, how well has this worked?
+
+667
+00:29:57,520 --> 00:30:02,520
+Well, when combined with what I'm going to talk about next,
+
+668
+00:30:02,520 --> 00:30:08,520
+we get on average, or sorry, 75% of the time
+
+669
+00:30:08,520 --> 00:30:12,520
+when our users run it, it takes less than 700 milliseconds.
+
+670
+00:30:12,520 --> 00:30:16,520
+This is for like a three million line code base.
+
+671
+00:30:16,520 --> 00:30:19,520
+When you need to start the daemon from the first time,
+
+672
+00:30:19,520 --> 00:30:22,520
+it usually takes 75% of the time, 50 seconds.
+
+673
+00:30:22,520 --> 00:30:25,520
+And really gratifyingly to us,
+
+674
+00:30:25,520 --> 00:30:28,520
+when we started rolling this out,
+
+675
+00:30:28,520 --> 00:30:30,520
+and in the first place it wasn't this fast,
+
+676
+00:30:30,520 --> 00:30:33,520
+it was maybe five seconds, six seconds,
+
+677
+00:30:33,520 --> 00:30:35,520
+down from a minute and a half,
+
+678
+00:30:35,520 --> 00:30:37,520
+users started using MyPy a lot more.
+
+679
+00:30:37,520 --> 00:30:40,520
+Like as soon as we had this five second type checking,
+
+680
+00:30:40,520 --> 00:30:43,520
+the amount of times people ran MyPy,
+
+681
+00:30:43,520 --> 00:30:46,520
+according to our telemetry, went up by like a factor of three.
+
+682
+00:30:46,520 --> 00:30:48,520
+So as soon as we made it cheap,
+
+683
+00:30:48,520 --> 00:30:50,520
+people started buying a lot more of it.
+
+684
+00:30:50,520 --> 00:30:52,520
+It was great to see.
+
+685
+00:30:52,520 --> 00:30:54,520
+There's a downside here though,
+
+686
+00:30:54,520 --> 00:30:56,520
+which is that it's still kind of slow
+
+687
+00:30:56,520 --> 00:30:58,520
+for non-interactive workloads.
+
+688
+00:30:58,520 --> 00:31:00,520
+It's still like full runs,
+
+689
+00:31:00,520 --> 00:31:02,520
+which we had to do to generate those caches,
+
+690
+00:31:02,520 --> 00:31:05,520
+which would still take 15 plus minutes.
+
+691
+00:31:05,520 --> 00:31:10,520
+And so it only checks about two or three thousand lines of code a second,
+
+692
+00:31:10,520 --> 00:31:14,520
+which when you're not managing to do this incremental stuff,
+
+693
+00:31:14,520 --> 00:31:16,520
+isn't great.
+
+694
+00:31:16,520 --> 00:31:19,520
+And so every so often,
+
+695
+00:31:19,520 --> 00:31:21,520
+we'd have to disable incremental mode
+
+696
+00:31:21,520 --> 00:31:23,520
+because there'd be some sort of bug.
+
+697
+00:31:23,520 --> 00:31:26,520
+We'd have generated a broken cache and needed to fix that.
+
+698
+00:31:26,520 --> 00:31:29,520
+So we'd need to temporarily turn off incremental mode.
+
+699
+00:31:29,520 --> 00:31:32,520
+And sort of our SLA ended up being for that,
+
+700
+00:31:32,520 --> 00:31:35,520
+like, okay, whenever we need to turn off this incremental mode,
+
+701
+00:31:35,520 --> 00:31:38,520
+it would usually take about one and a half to two hours
+
+702
+00:31:38,520 --> 00:31:41,520
+before the head of the developer effectiveness team
+
+703
+00:31:41,520 --> 00:31:43,520
+would come over to my desk and be like,
+
+704
+00:31:43,520 --> 00:31:47,520
+hey, Sully, when is MyPy going to stop being slow?
+
+705
+00:31:47,520 --> 00:31:49,520
+I was like, okay.
+
+706
+00:31:49,520 --> 00:31:52,520
+That was rough. We wanted to avoid that sort of thing.
+
+707
+00:31:52,520 --> 00:31:55,520
+So then the question is like, okay, well, why was MyPy so slow?
+
+708
+00:31:55,520 --> 00:31:58,520
+Why would it take, you know, 20 minutes?
+
+709
+00:31:58,520 --> 00:32:00,520
+And there are a lot of answers to this.
+
+710
+00:32:00,520 --> 00:32:02,520
+I mean, one is just it had a lot of work to do.
+
+711
+00:32:02,520 --> 00:32:05,520
+But the biggest answer is because it was written in Python.
+
+712
+00:32:05,520 --> 00:32:08,520
+And obviously everyone here, we all love Python.
+
+713
+00:32:08,520 --> 00:32:12,520
+But Python does not have a reputation as being a speed demon.
+
+714
+00:32:12,520 --> 00:32:14,520
+And that's for a bunch of different reasons.
+
+715
+00:32:14,520 --> 00:32:17,520
+One of them, though less of a big deal than you might think,
+
+716
+00:32:17,520 --> 00:32:19,520
+is just the interpreter overhead,
+
+717
+00:32:19,520 --> 00:32:23,520
+the cost of having to look up sort of what the next bytecode to run is
+
+718
+00:32:23,520 --> 00:32:26,520
+and dispatch it and sort of go through this interpreter loop.
+
+719
+00:32:26,520 --> 00:32:28,520
+But that's definitely part of it.
+
+720
+00:32:28,520 --> 00:32:31,520
+One of the biggest things is that attribute and method access
+
+721
+00:32:31,520 --> 00:32:35,520
+is multiple hash table lookups, at least two, sometimes more,
+
+722
+00:32:35,520 --> 00:32:39,520
+like lookups in a hash table, just to access an attribute on an object.
+
+723
+00:32:39,520 --> 00:32:45,520
+And that's rough because accessing attributes on objects is very common.
+
+724
+00:32:45,520 --> 00:32:49,520
+And Python has like a very well implemented hash table,
+
+725
+00:32:49,520 --> 00:32:52,520
+but it's still not super fast.
+
+726
+00:32:52,520 --> 00:32:54,520
+So why is this?
+
+727
+00:32:54,520 --> 00:32:57,520
+And why do we need to do all these hash table lookups and indirections
+
+728
+00:32:57,520 --> 00:32:58,520
+to do everything?
+
+729
+00:32:58,520 --> 00:33:02,520
+And the answer to that is sort of because Python doesn't have types.
+
+730
+00:33:02,520 --> 00:33:05,520
+And so as maybe a history lesson of sorts,
+
+731
+00:33:05,520 --> 00:33:09,520
+in sort of back in the 70s or 80s when languages like C were built,
+
+732
+00:33:09,520 --> 00:33:10,520
+they're statically typed,
+
+733
+00:33:10,520 --> 00:33:14,520
+but the static types in C were basically all about helping the compiler.
+
+734
+00:33:14,520 --> 00:33:17,520
+They weren't really there to catch bugs or provide safety.
+
+735
+00:33:17,520 --> 00:33:21,520
+They were just there to tell the compiler how to lay out data in memory
+
+736
+00:33:21,520 --> 00:33:23,520
+and what operations to generate.
+
+737
+00:33:23,520 --> 00:33:26,520
+It was really about helping the compiler and not about the programmer.
+
+738
+00:33:26,520 --> 00:33:29,520
+So as an example of that, if you have some C structure
+
+739
+00:33:29,520 --> 00:33:30,520
+with a tag in the data field,
+
+740
+00:33:30,520 --> 00:33:34,520
+the C compiler just turns that into a structure in memory that has a tag,
+
+741
+00:33:34,520 --> 00:33:37,520
+and then eight bytes later it has a pointer.
+
+742
+00:33:37,520 --> 00:33:41,520
+And then on an Intel processor at least, if you write, you know,
+
+743
+00:33:41,520 --> 00:33:44,520
+P arrow data and try to access that field,
+
+744
+00:33:44,520 --> 00:33:48,520
+that compiles into one instruction, just one MOV instruction.
+
+745
+00:33:48,520 --> 00:33:52,520
+And now instruction count isn't a direct proxy for performance
+
+746
+00:33:52,520 --> 00:33:56,520
+because modern performance is very complicated,
+
+747
+00:33:56,520 --> 00:34:00,520
+but an attribute access in Python takes over 200 instructions on my laptop.
+
+748
+00:34:00,520 --> 00:34:05,520
+And so, again, that's not a direct proxy for performance,
+
+749
+00:34:05,520 --> 00:34:07,520
+but it's still quite a lot slower.
+
+750
+00:34:07,520 --> 00:34:10,520
+And so there are lots of things that are sort of conspiring to make it slower,
+
+751
+00:34:10,520 --> 00:34:13,520
+but this is really one of the big ones.
+
+752
+00:34:13,520 --> 00:34:17,520
+So C types were designed just to help the compiler,
+
+753
+00:34:17,520 --> 00:34:21,520
+and the types in Python as envisioned by PEP44
+
+754
+00:34:21,520 --> 00:34:23,520
+were mostly not about helping the compiler.
+
+755
+00:34:23,520 --> 00:34:28,520
+They're basically just designed to help safety checking.
+
+756
+00:34:28,520 --> 00:34:30,520
+But that doesn't really need to be true.
+
+757
+00:34:30,520 --> 00:34:32,520
+There's nothing fundamental about that.
+
+758
+00:34:32,520 --> 00:34:35,520
+And in fact, PEP44 actually specifically says,
+
+759
+00:34:35,520 --> 00:34:40,520
+using type hints for performance optimizations is left as an exercise to the reader.
+
+760
+00:34:40,520 --> 00:34:43,520
+And I'm like, okay, well, I'm a reader.
+
+761
+00:34:43,520 --> 00:34:45,520
+We can try this.
+
+762
+00:34:45,520 --> 00:34:49,520
+So MyPy itself is, like I said earlier, basically 100% typed,
+
+763
+00:34:49,520 --> 00:34:53,520
+which means we have all this type information that we could use to try to do this.
+
+764
+00:34:53,520 --> 00:34:56,520
+And so the idea then is maybe we could write a new compiler for Python
+
+765
+00:34:56,520 --> 00:34:59,520
+that takes advantage of all this type information.
+
+766
+00:34:59,520 --> 00:35:01,520
+And now there's sort of this question of, like, okay, wait,
+
+767
+00:35:01,520 --> 00:35:04,520
+you're like a bunch of language and compilers people,
+
+768
+00:35:04,520 --> 00:35:07,520
+and you think that the only way to solve a problem is by writing a new compiler.
+
+769
+00:35:07,520 --> 00:35:09,520
+Like, should we trust you?
+
+770
+00:35:09,520 --> 00:35:12,520
+And well, I mean, yeah, yes, I think so.
+
+771
+00:35:12,520 --> 00:35:16,520
+Because just because all you have is a hammer
+
+772
+00:35:16,520 --> 00:35:19,520
+doesn't mean that the problem isn't a nail.
+
+773
+00:35:19,520 --> 00:35:22,520
+And it turns out this one was.
+
+774
+00:35:22,520 --> 00:35:26,520
+So this was started by Yuka, the tech lead of MyPy,
+
+775
+00:35:26,520 --> 00:35:28,520
+sort of as a side project, as a hack week project,
+
+776
+00:35:28,520 --> 00:35:31,520
+that was essentially unfinished business from his PhD thesis,
+
+777
+00:35:31,520 --> 00:35:33,520
+which was designing a Python-like language
+
+778
+00:35:33,520 --> 00:35:36,520
+that was going to sort of compile to native code,
+
+779
+00:35:36,520 --> 00:35:40,520
+but eventually Guido convinced him to turn it into a type checker for Python.
+
+780
+00:35:40,520 --> 00:35:45,520
+But so the solution here then is we've built a compiler called MyPyC.
+
+781
+00:35:45,520 --> 00:35:48,520
+It compiles a subset of Python with what we call strict semantics,
+
+782
+00:35:48,520 --> 00:35:51,520
+which means that the type annotations need to be accurate,
+
+783
+00:35:51,520 --> 00:35:54,520
+and we can report runtime errors when they're not.
+
+784
+00:35:54,520 --> 00:35:57,520
+So this ends up being basically a Python language variant,
+
+785
+00:35:57,520 --> 00:36:00,520
+because it doesn't run exactly the same, but it's very similar.
+
+786
+00:36:00,520 --> 00:36:04,520
+And it uses MyPy itself sort of as a front end to do type inference
+
+787
+00:36:04,520 --> 00:36:07,520
+and to generate the sort of input to the compiler.
+
+788
+00:36:07,520 --> 00:36:12,520
+We then compile specifically to CPython extension modules,
+
+789
+00:36:12,520 --> 00:36:18,520
+which are C programs or C libraries that get dynamically loaded by CPython
+
+790
+00:36:18,520 --> 00:36:23,520
+to provide code that interoperates with Python but is written in C.
+
+791
+00:36:23,520 --> 00:36:26,520
+And this is sort of the standard way to write Python libraries in C
+
+792
+00:36:26,520 --> 00:36:29,520
+for either performance or to talk to system libraries.
+
+793
+00:36:29,520 --> 00:36:32,520
+And one of the things is this sort of interoperates very cleanly
+
+794
+00:36:32,520 --> 00:36:35,520
+with regular Python code.
+
+795
+00:36:35,520 --> 00:36:38,520
+And so some people might notice, like,
+
+796
+00:36:38,520 --> 00:36:40,520
+hey, this isn't the first time I've heard about this sort of thing.
+
+797
+00:36:40,520 --> 00:36:42,520
+So what makes this different?
+
+798
+00:36:42,520 --> 00:36:46,520
+Or to put it more colorfully, what about all the bodies
+
+799
+00:36:46,520 --> 00:36:50,520
+of all the projects that have tried to do this and either failed
+
+800
+00:36:50,520 --> 00:36:54,520
+or maybe not had as much of an impact as you might hope?
+
+801
+00:36:54,520 --> 00:36:58,520
+And so Cython works pretty well, but to get really good speedups,
+
+802
+00:36:58,520 --> 00:37:01,520
+you sort of need to translate into their dialect and type system,
+
+803
+00:37:01,520 --> 00:37:04,520
+which sort of thinks more about C types than it does about Python types.
+
+804
+00:37:04,520 --> 00:37:07,520
+And we wanted to think in terms of Python types.
+
+805
+00:37:07,520 --> 00:37:11,520
+PyPy is a tracing JIT that works very well for some programs,
+
+806
+00:37:11,520 --> 00:37:14,520
+but the sort of program that MyPy is, it didn't fit very well.
+
+807
+00:37:14,520 --> 00:37:16,520
+It doesn't have any sort of tight loops.
+
+808
+00:37:16,520 --> 00:37:18,520
+It's sort of big, branching, very large.
+
+809
+00:37:18,520 --> 00:37:21,520
+And we never had that much luck with it.
+
+810
+00:37:21,520 --> 00:37:24,520
+Sort of more traditional JITs like Piston and Unladen Swallow
+
+811
+00:37:24,520 --> 00:37:27,520
+sort of chose the full language support hill to die on,
+
+812
+00:37:27,520 --> 00:37:31,520
+which is they wanted to be basically fully compatible with Python.
+
+813
+00:37:31,520 --> 00:37:34,520
+And so then you spend all of your time trying to be fully compatible with Python
+
+814
+00:37:34,520 --> 00:37:36,520
+and not enough of your time making it fast,
+
+815
+00:37:36,520 --> 00:37:39,520
+and then your employer stopped paying you to work on it.
+
+816
+00:37:39,520 --> 00:37:41,520
+So we're not aiming for exact compatibility,
+
+817
+00:37:41,520 --> 00:37:44,520
+though some of our gaps right now are kind of embarrassing
+
+818
+00:37:44,520 --> 00:37:46,520
+and we're working on fixing them.
+
+819
+00:37:46,520 --> 00:37:49,520
+But so sort of as an example of what kind of code we generate,
+
+820
+00:37:49,520 --> 00:37:52,520
+the big thing we do is try to provide good data representations.
+
+821
+00:37:52,520 --> 00:37:55,520
+So if we have this class foo that, like our C example earlier,
+
+822
+00:37:55,520 --> 00:38:00,520
+had a tag that's an integer and a data that's a string,
+
+823
+00:38:00,520 --> 00:38:04,520
+we'll turn that right into sort of a C object that's a Python object
+
+824
+00:38:04,520 --> 00:38:08,520
+and has sort of just laid out in the structure as C attributes,
+
+825
+00:38:08,520 --> 00:38:11,520
+a tag and data field.
+
+826
+00:38:11,520 --> 00:38:15,520
+And then sort of as a, like in the traditional compiler technique
+
+827
+00:38:15,520 --> 00:38:18,520
+for doing method calls, we sort of also include a virtual table
+
+828
+00:38:18,520 --> 00:38:22,520
+of function pointers that includes all the methods on the function.
+
+829
+00:38:22,520 --> 00:38:24,520
+So you can call those without doing dictionary lookups
+
+830
+00:38:24,520 --> 00:38:27,520
+just by indexing into that.
+
+831
+00:38:27,520 --> 00:38:32,520
+To avoid sort of the trap of having every integer object
+
+832
+00:38:32,520 --> 00:38:35,520
+be sort of allocated on the heap and require lots of operations,
+
+833
+00:38:35,520 --> 00:38:40,520
+we try to store integers unboxed without an allocation of a pointer
+
+834
+00:38:40,520 --> 00:38:43,520
+using sort of the traditional language runtime hack
+
+835
+00:38:43,520 --> 00:38:46,520
+of using the lower order bit of a pointer
+
+836
+00:38:46,520 --> 00:38:48,520
+to indicate whether it's really a pointer.
+
+837
+00:38:48,520 --> 00:38:50,520
+And that works pretty well.
+
+838
+00:38:50,520 --> 00:38:53,520
+So then the question is, how well did this work?
+
+839
+00:38:53,520 --> 00:38:59,520
+And sort of if you go look at this MyPy runtime graph we made,
+
+840
+00:38:59,520 --> 00:39:02,520
+it worked pretty well.
+
+841
+00:39:02,520 --> 00:39:05,520
+It was pretty slow and then it got real fast.
+
+842
+00:39:05,520 --> 00:39:07,520
+So this was a big success.
+
+843
+00:39:07,520 --> 00:39:11,520
+Here in this graph, this shows this happening in April,
+
+844
+00:39:11,520 --> 00:39:15,520
+we actually turned on MyPyC for most of the stuff we do
+
+845
+00:39:15,520 --> 00:39:20,520
+about six months ago, but not this particular report generator.
+
+846
+00:39:20,520 --> 00:39:23,520
+So really this crater was back in October.
+
+847
+00:39:23,520 --> 00:39:26,520
+So what's the future of MyPyC?
+
+848
+00:39:26,520 --> 00:39:31,520
+It was sort of originally built to be a pretty narrow accelerator for MyPy.
+
+849
+00:39:31,520 --> 00:39:34,520
+And when we were designing it, we really wanted to make sure
+
+850
+00:39:34,520 --> 00:39:37,520
+that building it would be justified just by the wins
+
+851
+00:39:37,520 --> 00:39:41,520
+that we would get from MyPy, that just the speedup we're going to get from MyPy
+
+852
+00:39:41,520 --> 00:39:44,520
+is worth building this.
+
+853
+00:39:44,520 --> 00:39:49,520
+But it doesn't really need to always be just a MyPy accelerator.
+
+854
+00:39:49,520 --> 00:39:52,520
+So we definitely imagined a lot of other typed Python programs
+
+855
+00:39:52,520 --> 00:39:55,520
+that would maybe like a 4x speedup.
+
+856
+00:39:55,520 --> 00:39:58,520
+So sort of the next thing on our roadmap is we'd like to try to get black
+
+857
+00:39:58,520 --> 00:40:03,520
+working under MyPyC, and I think that's what I'm going to have my intern do this summer.
+
+858
+00:40:03,520 --> 00:40:07,520
+We're also going to be working on MyPyC during sprints on Monday and Tuesday.
+
+859
+00:40:07,520 --> 00:40:11,520
+So if anyone is interested in hacking on code or documentation
+
+860
+00:40:11,520 --> 00:40:15,520
+or trying to get their own stuff to compile with a typed Python compiler,
+
+861
+00:40:15,520 --> 00:40:18,520
+come chat with me on Monday or Tuesday.
+
+862
+00:40:18,520 --> 00:40:21,520
+And MyPy is also going to be working on sort of usability error messages
+
+863
+00:40:21,520 --> 00:40:24,520
+documentation those same days.
+
+864
+00:40:24,520 --> 00:40:27,520
+So as the sort of TLDR for this talk, I've talked about how we've gotten
+
+865
+00:40:27,520 --> 00:40:33,520
+to checking 3 million lines of annotated Python code in a few hundred milliseconds.
+
+866
+00:40:33,520 --> 00:40:35,520
+Thank you.
+
+867
+00:40:35,520 --> 00:40:37,520
+Thank you.
+
+868
+00:40:45,520 --> 00:40:47,520
+Questions?
+
+869
+00:40:51,520 --> 00:40:53,520
+We actually have five minutes.
+
+870
+00:40:53,520 --> 00:40:59,520
+I'm sure people might want to ask something about MyPyC to Michael.
+
+871
+00:40:59,520 --> 00:41:01,520
+Great talk. Thank you very much.
+
+872
+00:41:01,520 --> 00:41:04,520
+My question is on the adoption side of things.
+
+873
+00:41:04,520 --> 00:41:06,520
+Have you had any luck?
+
+874
+00:41:06,520 --> 00:41:10,520
+So at Instagram, we occasionally, we have a lot of developers
+
+875
+00:41:10,520 --> 00:41:13,520
+very happy about type annotations subjectively.
+
+876
+00:41:13,520 --> 00:41:18,520
+Occasionally someone asks, so can you demonstrate to me using some data
+
+877
+00:41:18,520 --> 00:41:22,520
+that adding all of these type annotations has improved something?
+
+878
+00:41:22,520 --> 00:41:26,520
+And I'm wondering if we usually respond with an awkward silence.
+
+879
+00:41:26,520 --> 00:41:28,520
+I'm wondering if you've got anything better.
+
+880
+00:41:28,520 --> 00:41:30,520
+No, that's exactly what we do.
+
+881
+00:41:30,520 --> 00:41:32,520
+We have anecdotes.
+
+882
+00:41:32,520 --> 00:41:37,520
+But the thing is it's very hard to prove anything about the site outages
+
+883
+00:41:37,520 --> 00:41:39,520
+that didn't happen.
+
+884
+00:41:39,520 --> 00:41:42,520
+But every so often we have a great example of there's a site outage
+
+885
+00:41:42,520 --> 00:41:46,520
+that wouldn't have happened if that function had had a type annotation.
+
+886
+00:41:46,520 --> 00:41:49,520
+If this had been type checked, this bug would have been caught.
+
+887
+00:41:49,520 --> 00:41:53,520
+And so we can sort of point to those anecdotes, but we don't really have data.
+
+888
+00:41:53,520 --> 00:41:56,520
+And if you figure out how to do that data, let us know.
+
+889
+00:41:56,520 --> 00:41:58,520
+And if I do, I'll give you a call too.
+
+890
+00:41:58,520 --> 00:42:02,520
+Yeah, well, we have the survey, but that's just that we can prove
+
+891
+00:42:02,520 --> 00:42:05,520
+that our developers subjectively like it.
+
+892
+00:42:05,520 --> 00:42:09,520
+But we don't know how to prove that it prevents outages or something.
+
+893
+00:42:11,520 --> 00:42:12,520
+Thanks, Michael.
+
+894
+00:42:12,520 --> 00:42:15,520
+When you talked about static type inference, is that part of MyPy
+
+895
+00:42:15,520 --> 00:42:17,520
+or is that a separate project?
+
+896
+00:42:17,520 --> 00:42:24,520
+Yeah, so it's sort of a tool integrated with the MyPy daemon.
+
+897
+00:42:24,520 --> 00:42:29,520
+Then also in practice, when we use it, it's sort of like a bad shell script
+
+898
+00:42:29,520 --> 00:42:32,520
+I wrote and some daemon code.
+
+899
+00:42:32,520 --> 00:42:34,520
+So the code is there for other people to try,
+
+900
+00:42:34,520 --> 00:42:37,520
+but it's not quite a push button solution yet.
+
+901
+00:42:37,520 --> 00:42:41,520
+And kind of a follow-up, do you have a sense of at what percentage
+
+902
+00:42:41,520 --> 00:42:47,520
+of annotations something like that becomes practical or productive?
+
+903
+00:42:47,520 --> 00:42:50,520
+That's a good question.
+
+904
+00:42:50,520 --> 00:42:55,520
+I'd say just guessing, you probably want at least 30 or 40 percent
+
+905
+00:42:55,520 --> 00:42:59,520
+or there's just not going to be enough to start with.
+
+906
+00:43:01,520 --> 00:43:03,520
+Starting from an empty code base, you won't get a lot
+
+907
+00:43:03,520 --> 00:43:06,520
+because it won't know where to start with for most things.
+
+908
+00:43:08,520 --> 00:43:10,520
+Very interesting talk, thank you.
+
+909
+00:43:10,520 --> 00:43:12,520
+I have a related question to the type inference.
+
+910
+00:43:12,520 --> 00:43:16,520
+So if I understood correctly, then I would say that the type inference
+
+911
+00:43:16,520 --> 00:43:18,520
+is a very important part of the process.
+
+912
+00:43:18,520 --> 00:43:22,520
+So if I understood correctly, then you run the inference process
+
+913
+00:43:22,520 --> 00:43:24,520
+to then annotate the source code.
+
+914
+00:43:24,520 --> 00:43:28,520
+I'm kind of wondering why if you can infer statically,
+
+915
+00:43:28,520 --> 00:43:30,520
+then just keep that knowledge in the type checker
+
+916
+00:43:30,520 --> 00:43:32,520
+and you won't need the annotations in the first place.
+
+917
+00:43:32,520 --> 00:43:37,520
+Yeah, so one, the inference system we're doing is this big,
+
+918
+00:43:37,520 --> 00:43:42,520
+bulky whole program inference that's slow and sort of requires
+
+919
+00:43:42,520 --> 00:43:44,520
+looking at everything.
+
+920
+00:43:44,520 --> 00:43:48,520
+So it isn't really something that we can plug well into the type checker
+
+921
+00:43:48,520 --> 00:43:51,520
+because it's not like a traditional, like,
+
+922
+00:43:51,520 --> 00:43:53,520
+it's not the traditional type inference algorithm
+
+923
+00:43:53,520 --> 00:43:56,520
+that you'd use in like a functional programming language or something.
+
+924
+00:43:56,520 --> 00:44:00,520
+It's much more sort of let's look at all the call sites to a function
+
+925
+00:44:00,520 --> 00:44:03,520
+and figure out like, okay, here are the things it's calling it with,
+
+926
+00:44:03,520 --> 00:44:06,520
+let's just call it that and stuff like that.
+
+927
+00:44:08,520 --> 00:44:11,520
+So it's not sort of built in a way where it could really integrate with that
+
+928
+00:44:11,520 --> 00:44:14,520
+and if it was, it would probably be too slow.
+
+929
+00:44:17,520 --> 00:44:22,520
+So if I wanted to use MyPyC for like the typical,
+
+930
+00:44:22,520 --> 00:44:26,520
+your code has one hotspot, so write that module in C,
+
+931
+00:44:26,520 --> 00:44:28,520
+like how well does the tooling support that?
+
+932
+00:44:28,520 --> 00:44:35,520
+Reasonably well as long as right now the big thing is that you can't
+
+933
+00:44:35,520 --> 00:44:40,520
+subclass compiled classes from interpreted ones.
+
+934
+00:44:40,520 --> 00:44:44,520
+And so if you've got some class that you need to subclass from other code,
+
+935
+00:44:44,520 --> 00:44:46,520
+you're out of luck right now.
+
+936
+00:44:46,520 --> 00:44:49,520
+But we definitely support that. You don't need to compile everything.
+
+937
+00:44:49,520 --> 00:44:54,520
+In fact, there's parts of MyPyC that aren't, or of MyPy that aren't.
+
+938
+00:44:58,520 --> 00:45:05,520
+Given your experience with MyPyC, given a 100% type coverage code base,
+
+939
+00:45:05,520 --> 00:45:10,520
+how difficult do you think it would be to target something like LLVM?
+
+940
+00:45:10,520 --> 00:45:13,520
+You mean instead of generating C?
+
+941
+00:45:13,520 --> 00:45:14,520
+Yeah.
+
+942
+00:45:14,520 --> 00:45:18,520
+The answer is that it wouldn't be that hard, it would just be work.
+
+943
+00:45:20,520 --> 00:45:23,520
+Like if you told me that it was important and it needed to be done,
+
+944
+00:45:23,520 --> 00:45:25,520
+I could have it done in a month or something.
+
+945
+00:45:25,520 --> 00:45:28,520
+But we sort of don't think it is.
+
+946
+00:45:28,520 --> 00:45:31,520
+There's sort of nothing fundamental, it's just work.
+
+947
+00:45:31,520 --> 00:45:33,520
+I see, thanks.
+
+948
+00:45:35,520 --> 00:45:37,520
+All right.
+
+949
+00:45:40,520 --> 00:45:42,520
+Thank you, Michael.
+

@@ -1,0 +1,4112 @@
+1
+00:00:00,000 --> 00:00:03,800
+This is Hanim, and I1ed as a transparency praise pitch.
+
+2
+00:00:17,540 --> 00:00:21,540
+Fraktion SPF, оказsın segend k~!!
+
+3
+00:00:25,140 --> 00:00:27,140
+Thank you.
+
+4
+00:00:30,000 --> 00:00:31,680
+to Python 2 to Python 3.
+
+5
+00:00:31,680 --> 00:00:35,160
+So please give it up for Jordan Adler and Joe Gordon.
+
+6
+00:00:35,160 --> 00:00:35,680
+And
+
+7
+00:00:35,680 --> 00:00:44,760
+How's everyone doing today?
+
+8
+00:00:44,760 --> 00:00:45,400
+Good afternoon.
+
+9
+00:00:45,400 --> 00:00:45,880
+All right.
+
+10
+00:00:45,880 --> 00:00:47,880
+That's what I like to hear.
+
+11
+00:00:47,880 --> 00:00:50,600
+Joe and I had a lovely flight coming here
+
+12
+00:00:50,600 --> 00:00:51,400
+with a bit of delay.
+
+13
+00:00:51,400 --> 00:00:54,680
+So if we are groggy and stumble a bit, bear with us.
+
+14
+00:00:57,600 --> 00:00:59,280
+My name is Jordan Adler.
+
+15
+00:00:59,280 --> 00:01:02,200
+I'm a software engineer on the API platform team at Pinterest.
+
+16
+00:01:02,200 --> 00:01:02,760
+And I am Joe.
+
+17
+00:01:02,760 --> 00:01:06,120
+I'm an SRE on the same team.
+
+18
+00:01:06,120 --> 00:01:07,880
+And we're from Pinterest, as I said.
+
+19
+00:01:07,880 --> 00:01:10,440
+Our mission at Pinterest is to bring everyone the inspiration
+
+20
+00:01:10,440 --> 00:01:12,280
+to create a life they love.
+
+21
+00:01:12,280 --> 00:01:14,720
+Who here has heard of Pinterest?
+
+22
+00:01:14,720 --> 00:01:15,720
+OK, most people.
+
+23
+00:01:15,720 --> 00:01:17,600
+For those who don't know, this is essentially
+
+24
+00:01:17,600 --> 00:01:18,400
+what we aim to do.
+
+25
+00:01:18,400 --> 00:01:22,040
+And for me, a life that I love looks something like that.
+
+26
+00:01:22,040 --> 00:01:23,440
+There are cats available too.
+
+27
+00:01:23,440 --> 00:01:26,200
+So please, no.
+
+28
+00:01:26,200 --> 00:01:28,480
+No flame wars.
+
+29
+00:01:28,480 --> 00:01:30,760
+We're going to talk a bit about our Python 3 migration
+
+30
+00:01:30,760 --> 00:01:34,240
+project, the approach that we took, and some of the pitfalls
+
+31
+00:01:34,240 --> 00:01:36,200
+that we discovered along the way.
+
+32
+00:01:39,120 --> 00:01:41,480
+So when Pinterest started, it was one giant Django app.
+
+33
+00:01:41,480 --> 00:01:44,320
+I think this is our testament to Django, how well it worked.
+
+34
+00:01:44,320 --> 00:01:46,640
+Since then, we've sort of migrated to a much bigger and more
+
+35
+00:01:46,640 --> 00:01:48,280
+complex system.
+
+36
+00:01:48,280 --> 00:01:50,600
+And now we still use Python as a really essential part
+
+37
+00:01:50,600 --> 00:01:51,680
+of our system today.
+
+38
+00:01:51,680 --> 00:01:53,100
+And it serves every single request
+
+39
+00:01:53,100 --> 00:01:55,880
+for every single over 250 monthly active users.
+
+40
+00:01:55,880 --> 00:01:57,320
+And Python's speed and flexibility
+
+41
+00:01:57,320 --> 00:01:59,840
+is really essential to enabling quick experimentation
+
+42
+00:01:59,840 --> 00:02:00,880
+iteration for Pinterest.
+
+43
+00:02:06,160 --> 00:02:07,520
+So our problem statement here is essentially
+
+44
+00:02:07,520 --> 00:02:10,120
+that we needed to migrate this large code base from Python 2
+
+45
+00:02:10,120 --> 00:02:11,600
+to Python 3.
+
+46
+00:02:11,600 --> 00:02:13,600
+I don't want to go into the motivation for that.
+
+47
+00:02:13,600 --> 00:02:15,960
+I think we're all pretty clear at that at this point.
+
+48
+00:02:15,960 --> 00:02:17,460
+And hopefully, that's not something
+
+49
+00:02:17,460 --> 00:02:19,680
+we have to continue to discuss.
+
+50
+00:02:19,680 --> 00:02:21,640
+But as we look forward to moving to,
+
+51
+00:02:21,640 --> 00:02:23,720
+as we start to think about this problem,
+
+52
+00:02:23,720 --> 00:02:26,160
+it's kind of difficult at our scale.
+
+53
+00:02:26,160 --> 00:02:29,480
+We have a very large code base, 2.6 million lines of codes,
+
+54
+00:02:29,480 --> 00:02:31,200
+excluding dependencies.
+
+55
+00:02:31,200 --> 00:02:34,200
+For context, the Linux kernel, with all its modules,
+
+56
+00:02:34,200 --> 00:02:36,680
+has around 24 million lines of code.
+
+57
+00:02:36,680 --> 00:02:40,160
+CPython only has around 1 million lines of code.
+
+58
+00:02:40,160 --> 00:02:43,880
+So we had a very large code base that's about twice as large
+
+59
+00:02:43,880 --> 00:02:45,520
+as CPython itself.
+
+60
+00:02:45,520 --> 00:02:47,980
+Complicating this further was also the age of the code base.
+
+61
+00:02:47,980 --> 00:02:51,220
+We had over 10 years of many authors focusing
+
+62
+00:02:51,220 --> 00:02:53,880
+on their problems and making incremental changes
+
+63
+00:02:53,880 --> 00:02:55,600
+towards that.
+
+64
+00:02:56,560 --> 00:02:58,520
+Pinterest is a growing company, and we still
+
+65
+00:02:58,520 --> 00:03:02,360
+have many, many folks editing our code base every day.
+
+66
+00:03:02,360 --> 00:03:05,600
+And in fact, we have more now than we've ever had before.
+
+67
+00:03:05,600 --> 00:03:07,640
+Additionally, this is a multi-stakeholder effort.
+
+68
+00:03:07,640 --> 00:03:10,080
+We have a shared code base with dozens of teams,
+
+69
+00:03:10,080 --> 00:03:11,680
+different goals and objectives.
+
+70
+00:03:11,680 --> 00:03:16,320
+And we have abstractions for which
+
+71
+00:03:16,320 --> 00:03:18,720
+we've grown beyond the need in our code base,
+
+72
+00:03:18,720 --> 00:03:20,840
+and they haven't necessarily been actively managed.
+
+73
+00:03:20,840 --> 00:03:22,440
+So the coupling situation our code base
+
+74
+00:03:22,440 --> 00:03:26,040
+is suboptimal for this kind of problem.
+
+75
+00:03:26,040 --> 00:03:28,520
+And when we thought about how to solve it,
+
+76
+00:03:28,520 --> 00:03:31,000
+we considered Pinterest engineering principles.
+
+77
+00:03:31,000 --> 00:03:34,400
+These are our guiding principles, the facets
+
+78
+00:03:34,400 --> 00:03:38,480
+and characteristics that we use to consider our approach
+
+79
+00:03:38,480 --> 00:03:40,440
+to solving problems at Pinterest.
+
+80
+00:03:40,440 --> 00:03:41,840
+And based on these principles, we
+
+81
+00:03:41,840 --> 00:03:43,640
+decided to take an incremental approach,
+
+82
+00:03:43,640 --> 00:03:46,200
+wherein essentially we incrementally
+
+83
+00:03:46,200 --> 00:03:47,920
+de-risk the migration until we could
+
+84
+00:03:47,920 --> 00:03:52,240
+run code under both 2 and 3.
+
+85
+00:03:52,320 --> 00:03:55,320
+So the rollout plan was long and complicated.
+
+86
+00:03:55,320 --> 00:03:57,160
+This is a multi-year project, actually.
+
+87
+00:03:57,160 --> 00:03:59,200
+The first step is to make sure Python 3 is available
+
+88
+00:03:59,200 --> 00:04:01,960
+in all our development systems and production systems.
+
+89
+00:04:01,960 --> 00:04:04,280
+The next step is to start to upgrade all our dependencies,
+
+90
+00:04:04,280 --> 00:04:06,320
+all our requirements.
+
+91
+00:04:06,320 --> 00:04:09,080
+We audit everything and upgrade our internal and external
+
+92
+00:04:09,080 --> 00:04:09,640
+dependencies.
+
+93
+00:04:09,640 --> 00:04:11,400
+Then we decided to featurize our code base,
+
+94
+00:04:11,400 --> 00:04:13,560
+and we'll talk about that in a minute.
+
+95
+00:04:13,560 --> 00:04:16,080
+And we want to do a test-driven iterative process here.
+
+96
+00:04:16,080 --> 00:04:17,040
+And so we actually want to make sure,
+
+97
+00:04:17,040 --> 00:04:19,200
+as we do this migration, code works under Python 2
+
+98
+00:04:19,200 --> 00:04:20,400
+and Python 3.
+
+99
+00:04:20,400 --> 00:04:22,360
+And to do that, we're using unit tests.
+
+100
+00:04:22,360 --> 00:04:25,040
+Once all the unit tests work under Python 2 and 3,
+
+101
+00:04:25,040 --> 00:04:27,440
+we switch everything over to Python 3 in production slowly,
+
+102
+00:04:27,440 --> 00:04:28,880
+very, very slowly.
+
+103
+00:04:28,880 --> 00:04:30,400
+And only at that point can we actually
+
+104
+00:04:30,400 --> 00:04:32,040
+start dropping Python 2 support.
+
+105
+00:04:32,040 --> 00:04:33,720
+And then once we drop Python 2 support,
+
+106
+00:04:33,720 --> 00:04:35,120
+then we can actually take advantage
+
+107
+00:04:35,120 --> 00:04:37,880
+of all the really great new Python 3 only features.
+
+108
+00:04:46,880 --> 00:04:48,240
+To upgrade requirements, we sort of
+
+109
+00:04:48,280 --> 00:04:50,520
+want to start at the bottom of the dependency graph.
+
+110
+00:04:50,520 --> 00:04:51,960
+This is because, as I said before,
+
+111
+00:04:51,960 --> 00:04:54,800
+we're actually trying to do it based on test-driven.
+
+112
+00:04:54,800 --> 00:04:56,840
+And we can't actually test a piece of code
+
+113
+00:04:56,840 --> 00:04:59,000
+that has hundreds of dependencies that don't support
+
+114
+00:04:59,000 --> 00:04:59,680
+Python 3 yet.
+
+115
+00:04:59,680 --> 00:05:02,260
+And to do this, we've been using a tool, can I use Python 3?
+
+116
+00:05:02,260 --> 00:05:04,400
+Anybody here heard of it?
+
+117
+00:05:04,400 --> 00:05:05,360
+OK, a few people.
+
+118
+00:05:05,360 --> 00:05:07,120
+So hopefully this is a big takeaway.
+
+119
+00:05:07,120 --> 00:05:08,800
+This works.
+
+120
+00:05:08,800 --> 00:05:12,880
+This uses the version classifiers under the Cheesep,
+
+121
+00:05:12,880 --> 00:05:17,600
+so essentially, any time you go to pypi.org,
+
+122
+00:05:17,600 --> 00:05:19,720
+you actually see it says Python 2, Python 3,
+
+123
+00:05:19,720 --> 00:05:21,720
+or something like that, or the license.
+
+124
+00:05:21,720 --> 00:05:25,200
+We actually use that metadata to tell something's Python 2
+
+125
+00:05:25,200 --> 00:05:26,200
+or 3 compatible.
+
+126
+00:05:26,200 --> 00:05:28,440
+It's a bit of a side that we actually had to fork it
+
+127
+00:05:28,440 --> 00:05:29,960
+and add a few features to it.
+
+128
+00:05:29,960 --> 00:05:32,040
+It didn't work for our use cases, too.
+
+129
+00:05:32,040 --> 00:05:34,620
+Specifically, internal dependencies and dependencies
+
+130
+00:05:34,620 --> 00:05:36,480
+where we haven't upgraded it.
+
+131
+00:05:36,480 --> 00:05:38,840
+But the newer versions of the package
+
+132
+00:05:38,840 --> 00:05:40,020
+actually support Python 3.
+
+133
+00:05:40,020 --> 00:05:41,680
+I think the upstream maintainer thought
+
+134
+00:05:41,680 --> 00:05:43,000
+we shouldn't do that in general.
+
+135
+00:05:43,000 --> 00:05:43,840
+And I agree with them.
+
+136
+00:05:43,840 --> 00:05:45,520
+But we were a bit of a funny point
+
+137
+00:05:45,520 --> 00:05:48,000
+that we couldn't change that.
+
+138
+00:05:48,000 --> 00:05:50,920
+Related to that, we have a lot of unmaintained dependencies.
+
+139
+00:05:50,920 --> 00:05:52,840
+Many of these packages were over eight years old
+
+140
+00:05:52,840 --> 00:05:54,400
+and had to be upgraded slowly.
+
+141
+00:05:54,400 --> 00:05:58,000
+Eight years of changes from some big thing like Flask
+
+142
+00:05:58,000 --> 00:06:00,040
+over a period of a few weeks.
+
+143
+00:06:00,040 --> 00:06:02,240
+And to make sure people don't add new dependencies that
+
+144
+00:06:02,240 --> 00:06:04,560
+are not Python 3 compatible, I've been using,
+
+145
+00:06:04,560 --> 00:06:08,160
+can I use Python 3 as a CI test for our requirements file
+
+146
+00:06:08,160 --> 00:06:10,880
+to make sure nobody adds new things that don't support it?
+
+147
+00:06:10,880 --> 00:06:12,700
+And lastly, one of the ways we got around some of these edge
+
+148
+00:06:12,700 --> 00:06:14,660
+cases is if they've been using a version class,
+
+149
+00:06:14,660 --> 00:06:18,340
+environment markers to say, only install this code under Python 2
+
+150
+00:06:18,340 --> 00:06:20,180
+or only install it on Python 3.
+
+151
+00:06:20,180 --> 00:06:22,600
+Only install under Python 2, maybe it's not 3 compatible yet
+
+152
+00:06:22,600 --> 00:06:23,640
+and we don't want to deal with that yet.
+
+153
+00:06:23,640 --> 00:06:27,420
+Or we're going to delay that work to a different point.
+
+154
+00:06:27,420 --> 00:06:29,740
+Or it's a code that's been backported from Python 3
+
+155
+00:06:29,740 --> 00:06:30,260
+to Python 2.
+
+156
+00:06:30,260 --> 00:06:31,720
+And there's a few of those as well.
+
+157
+00:06:35,380 --> 00:06:37,100
+When it came to migrating our own code base,
+
+158
+00:06:37,100 --> 00:06:39,060
+there were two approaches that we considered.
+
+159
+00:06:39,060 --> 00:06:40,820
+Two tools out there in the ecosystem.
+
+160
+00:06:40,820 --> 00:06:42,480
+The first one is Modernize, which
+
+161
+00:06:42,480 --> 00:06:46,200
+is a set of fixers, code transformation tools built
+
+162
+00:06:46,200 --> 00:06:48,120
+around the sixth module.
+
+163
+00:06:48,120 --> 00:06:52,120
+As well as Futurize, which is built along the future package.
+
+164
+00:06:52,120 --> 00:06:54,080
+And they both take different approaches
+
+165
+00:06:54,080 --> 00:06:55,900
+to solving the same problem, which
+
+166
+00:06:55,900 --> 00:06:59,640
+is writing code that can run under Python 2 and Python 3
+
+167
+00:06:59,640 --> 00:07:00,640
+equally well.
+
+168
+00:07:00,640 --> 00:07:02,880
+For our use cases, we decided that Futurize
+
+169
+00:07:02,880 --> 00:07:04,040
+was a better fit for us.
+
+170
+00:07:08,360 --> 00:07:10,000
+By the way, for those who aren't familiar,
+
+171
+00:07:10,000 --> 00:07:11,940
+Python Future is a great library.
+
+172
+00:07:11,980 --> 00:07:12,340
+It's out there.
+
+173
+00:07:12,340 --> 00:07:13,300
+It includes a lot of fixers.
+
+174
+00:07:13,300 --> 00:07:15,220
+We'll go into some of that detail later.
+
+175
+00:07:15,220 --> 00:07:16,340
+There is a code sprint.
+
+176
+00:07:16,340 --> 00:07:18,420
+If you're staying for the code sprints,
+
+177
+00:07:18,420 --> 00:07:21,220
+we'll be taking some time to iterate on it and back,
+
+178
+00:07:21,220 --> 00:07:22,860
+sorry, upstream a lot of the things
+
+179
+00:07:22,860 --> 00:07:24,460
+that we discovered at Pinterest.
+
+180
+00:07:24,460 --> 00:07:26,040
+And hopefully iterate on it to the point
+
+181
+00:07:26,040 --> 00:07:30,140
+that we can give it a 1.0 final release.
+
+182
+00:07:30,140 --> 00:07:32,020
+So if you're here next week, please definitely
+
+183
+00:07:32,020 --> 00:07:33,900
+drop by the development sprints and join us
+
+184
+00:07:33,900 --> 00:07:37,020
+to get Futurize at 1.0.
+
+185
+00:07:37,020 --> 00:07:39,460
+So Futurize has a set of fixers.
+
+186
+00:07:39,460 --> 00:07:41,780
+They are organized into two stages.
+
+187
+00:07:42,700 --> 00:07:44,140
+There's many fixers in each stage.
+
+188
+00:07:44,140 --> 00:07:46,260
+The first ones tend to be low risk
+
+189
+00:07:46,260 --> 00:07:50,340
+and require less effort to manual adjustment
+
+190
+00:07:50,340 --> 00:07:52,060
+after applying the fixer.
+
+191
+00:07:52,060 --> 00:07:54,060
+The second stage includes more nuance
+
+192
+00:07:54,060 --> 00:07:55,620
+and complicated changes.
+
+193
+00:07:55,620 --> 00:07:57,780
+There's also a number of things that Python Future
+
+194
+00:07:57,780 --> 00:07:58,340
+doesn't cover.
+
+195
+00:07:58,340 --> 00:08:01,220
+For example, the bytes and strings
+
+196
+00:08:01,220 --> 00:08:03,500
+teasing out whether something should be a byte or strings
+
+197
+00:08:03,500 --> 00:08:07,500
+is not something you can programmatically do.
+
+198
+00:08:07,500 --> 00:08:09,860
+And I mentioned before that this uses fixers.
+
+199
+00:08:09,860 --> 00:08:11,820
+And I'm giving actually a talk tomorrow on the details
+
+200
+00:08:11,820 --> 00:08:13,900
+that if you're interested in more on how that works,
+
+201
+00:08:13,900 --> 00:08:16,300
+come to my talk tomorrow on syntax trees in Python
+
+202
+00:08:16,300 --> 00:08:17,780
+automated code transformations.
+
+203
+00:08:21,980 --> 00:08:24,340
+So as we futurize our code base, the process
+
+204
+00:08:24,340 --> 00:08:27,540
+that we use essentially to apply each fix individually
+
+205
+00:08:27,540 --> 00:08:30,820
+with linters and continuous integration tools
+
+206
+00:08:30,820 --> 00:08:31,860
+to prevent regression.
+
+207
+00:08:31,860 --> 00:08:34,860
+So if we had a package that's migrated over to Python 3,
+
+208
+00:08:34,860 --> 00:08:38,500
+we required that it continue to run as expected under Python 3
+
+209
+00:08:38,500 --> 00:08:40,740
+with our unit tests.
+
+210
+00:08:40,740 --> 00:08:42,140
+By applying each fix individually,
+
+211
+00:08:42,140 --> 00:08:45,340
+we simplify the cognitive overhead of the change
+
+212
+00:08:45,340 --> 00:08:48,100
+by logically grouping by each fix.
+
+213
+00:08:48,100 --> 00:08:50,180
+This makes code review faster.
+
+214
+00:08:50,180 --> 00:08:52,420
+It also enables us to deploy incrementally,
+
+215
+00:08:52,420 --> 00:08:56,180
+which reduces the entropy per push, which is nice,
+
+216
+00:08:56,180 --> 00:08:57,900
+because essentially some of the risk here
+
+217
+00:08:57,900 --> 00:09:01,500
+is discovering issues as we deploy.
+
+218
+00:09:01,500 --> 00:09:04,220
+There are also the fixers aren't style aware.
+
+219
+00:09:04,220 --> 00:09:06,620
+And we don't have any automated enforcement of style
+
+220
+00:09:06,620 --> 00:09:07,500
+for things like black.
+
+221
+00:09:07,980 --> 00:09:09,900
+After running the fixer, some manual effort
+
+222
+00:09:09,900 --> 00:09:11,780
+was required to ensure that some of the fixers
+
+223
+00:09:11,780 --> 00:09:13,700
+passed under Flake 8.
+
+224
+00:09:13,700 --> 00:09:15,180
+And unfortunately, part of the process
+
+225
+00:09:15,180 --> 00:09:17,340
+is also discovering what your unit test code
+
+226
+00:09:17,340 --> 00:09:18,580
+coverage looks like.
+
+227
+00:09:18,580 --> 00:09:20,900
+Ours was relatively good, thankfully.
+
+228
+00:09:20,900 --> 00:09:23,420
+And if that's not the case for you,
+
+229
+00:09:23,420 --> 00:09:25,500
+I would strongly recommend that as the first step
+
+230
+00:09:25,500 --> 00:09:28,340
+before proceeding with any major refactoring, certainly
+
+231
+00:09:28,340 --> 00:09:30,620
+one of the scale.
+
+232
+00:09:30,620 --> 00:09:32,580
+One of the challenge we face is where do we
+
+233
+00:09:32,580 --> 00:09:33,420
+start with this whole thing?
+
+234
+00:09:33,420 --> 00:09:35,220
+So we could start with some external dependencies.
+
+235
+00:09:35,220 --> 00:09:37,580
+We actually wanted to start working on the code itself.
+
+236
+00:09:37,580 --> 00:09:39,580
+We can actually featurize large parts of the code.
+
+237
+00:09:39,580 --> 00:09:41,900
+But we actually want to now see what code actually passes
+
+238
+00:09:41,900 --> 00:09:44,060
+into Python 3 itself.
+
+239
+00:09:44,060 --> 00:09:45,820
+And so to that, we had to introspect
+
+240
+00:09:45,820 --> 00:09:47,020
+through the internal dependency graph.
+
+241
+00:09:47,020 --> 00:09:49,740
+So our graph is actually really complex and confusing.
+
+242
+00:09:49,740 --> 00:09:52,260
+With two million lines of codes and not ideal abstractions,
+
+243
+00:09:52,260 --> 00:09:56,580
+you get this spaghetti ball of chaos and confusion.
+
+244
+00:09:56,580 --> 00:09:59,140
+And so we couldn't actually just say, hey, start with this module.
+
+245
+00:09:59,140 --> 00:10:01,320
+This module has no dependencies besides third party
+
+246
+00:10:01,320 --> 00:10:02,020
+dependencies.
+
+247
+00:10:02,020 --> 00:10:03,620
+So we actually had to introspect that.
+
+248
+00:10:03,620 --> 00:10:05,820
+To do that, we did something that is generally
+
+249
+00:10:05,820 --> 00:10:08,500
+weird to do, I think, which is monkey patching import.
+
+250
+00:10:08,500 --> 00:10:10,140
+It worked pretty well, surprisingly.
+
+251
+00:10:10,140 --> 00:10:11,300
+And so the way we did this is we actually
+
+252
+00:10:11,300 --> 00:10:13,220
+built a list of modules that runs our Python 3.
+
+253
+00:10:13,220 --> 00:10:14,020
+So we take the tests.
+
+254
+00:10:14,020 --> 00:10:15,580
+We know they work under Python 3.
+
+255
+00:10:15,580 --> 00:10:16,580
+We see where they import.
+
+256
+00:10:16,580 --> 00:10:18,300
+We get the dependency graph from that.
+
+257
+00:10:18,300 --> 00:10:20,620
+Then we apply the same tool, the same monkey patching
+
+258
+00:10:20,620 --> 00:10:23,500
+of import, onto all the tests run under Python 2.
+
+259
+00:10:23,500 --> 00:10:26,100
+And then we see which tests have what dependencies.
+
+260
+00:10:26,100 --> 00:10:28,580
+And we take that and we find the Python 2 only
+
+261
+00:10:28,580 --> 00:10:30,620
+tests that have the fewest dependencies that are not
+
+262
+00:10:30,620 --> 00:10:31,980
+ported to Python 3.
+
+263
+00:10:31,980 --> 00:10:33,260
+And then we started with those.
+
+264
+00:10:33,260 --> 00:10:34,660
+This was a really great way for us
+
+265
+00:10:34,660 --> 00:10:37,260
+to solve this bootstrapping problem and allow
+
+266
+00:10:37,260 --> 00:10:39,780
+us to iteratively build up and start at the bottom
+
+267
+00:10:39,780 --> 00:10:40,700
+and work our way up.
+
+268
+00:10:43,580 --> 00:10:45,860
+The next step is we actually want to run our tests under Python
+
+269
+00:10:45,860 --> 00:10:47,580
+2 and Python 3.
+
+270
+00:10:47,580 --> 00:10:50,220
+Most people's test runners, hopefully, are very clean and simple.
+
+271
+00:10:50,220 --> 00:10:51,220
+Ours was not that.
+
+272
+00:10:51,220 --> 00:10:54,380
+Ours was actually pretty terrible in every way.
+
+273
+00:10:54,380 --> 00:10:57,700
+Our test runner actually imports most of the code in the repo.
+
+274
+00:10:57,700 --> 00:10:58,900
+So what that means is that we actually,
+
+275
+00:10:58,900 --> 00:11:01,020
+to get the test runner to work under Python 3,
+
+276
+00:11:01,020 --> 00:11:03,780
+you have to do most of the work to get the whole repo
+
+277
+00:11:03,780 --> 00:11:06,620
+to be Python 3 compatible and to work under Python 3.
+
+278
+00:11:06,620 --> 00:11:09,180
+And so to solve that problem, we actually
+
+279
+00:11:09,180 --> 00:11:10,680
+pulled out a smaller test runner that
+
+280
+00:11:10,680 --> 00:11:13,220
+didn't import the whole world effectively
+
+281
+00:11:13,220 --> 00:11:15,300
+and a smaller test-based case that solved that.
+
+282
+00:11:18,500 --> 00:11:21,020
+Yeah, I think one of the things to note here
+
+283
+00:11:21,020 --> 00:11:22,500
+is that the fail paths can change
+
+284
+00:11:22,500 --> 00:11:23,420
+depending on the fixer.
+
+285
+00:11:23,420 --> 00:11:27,980
+As I said before, some things are observable only at runtime
+
+286
+00:11:27,980 --> 00:11:30,100
+when you actually run the thing in production.
+
+287
+00:11:30,140 --> 00:11:32,460
+But there are different classes of errors
+
+288
+00:11:32,460 --> 00:11:35,140
+that have different classes of potential errors that
+
+289
+00:11:35,140 --> 00:11:37,620
+have different classes of fail paths.
+
+290
+00:11:37,620 --> 00:11:40,860
+So syntax errors generally are detectable by Flake 8.
+
+291
+00:11:40,860 --> 00:11:42,740
+Flake 8 also, some of the scoping changes
+
+292
+00:11:42,740 --> 00:11:43,700
+are detectable by Flake 8.
+
+293
+00:11:43,700 --> 00:11:44,860
+And there's a handful of other things
+
+294
+00:11:44,860 --> 00:11:46,540
+that can be easily picked up.
+
+295
+00:11:46,540 --> 00:11:48,420
+Some things are detectable at import time.
+
+296
+00:11:48,420 --> 00:11:51,060
+So for example, any bad dependencies or code
+
+297
+00:11:51,060 --> 00:11:52,780
+that's evaluated on import, statements
+
+298
+00:11:52,780 --> 00:11:54,780
+at the top level of the module.
+
+299
+00:11:54,780 --> 00:11:58,380
+When you import that code into your production code,
+
+300
+00:11:58,380 --> 00:12:01,700
+or sorry, into your test code as you run the unit test,
+
+301
+00:12:01,700 --> 00:12:05,260
+it will fail upon import at the import stage, which
+
+302
+00:12:05,260 --> 00:12:06,820
+is great because you don't actually
+
+303
+00:12:06,820 --> 00:12:09,140
+need to have unit tests for the exercise path.
+
+304
+00:12:09,140 --> 00:12:11,860
+You just need to actually make sure it compiles.
+
+305
+00:12:11,860 --> 00:12:13,580
+And then there's another class of errors,
+
+306
+00:12:13,580 --> 00:12:15,380
+which are only detectable at runtime,
+
+307
+00:12:15,380 --> 00:12:19,420
+either via unit tests that exercise those code paths
+
+308
+00:12:19,420 --> 00:12:21,900
+and enable you to discover the failures.
+
+309
+00:12:21,900 --> 00:12:24,460
+Or unfortunately, if there's not good unit test code coverage,
+
+310
+00:12:24,460 --> 00:12:26,940
+you're going to have to detect some of these in production
+
+311
+00:12:26,940 --> 00:12:28,540
+changes.
+
+312
+00:12:28,540 --> 00:12:33,500
+And so with that in mind, complicating that further,
+
+313
+00:12:33,500 --> 00:12:35,620
+so that's one set of characteristics
+
+314
+00:12:35,620 --> 00:12:38,940
+that makes some of these fixes more complicated than others.
+
+315
+00:12:38,940 --> 00:12:42,020
+Another is that we just have a large and complex code base.
+
+316
+00:12:42,020 --> 00:12:45,900
+If you spot test a code transformation
+
+317
+00:12:45,900 --> 00:12:51,180
+on a portion of our code base, given its large and complex
+
+318
+00:12:51,180 --> 00:12:53,780
+size, it could potentially have effects
+
+319
+00:12:53,780 --> 00:12:56,340
+on another part of the code base that, quite frankly, you didn't
+
+320
+00:12:56,340 --> 00:12:57,420
+know existed.
+
+321
+00:12:57,420 --> 00:13:00,700
+It's not possible to have 2.6 millions of lines of code
+
+322
+00:13:00,700 --> 00:13:03,460
+in your head, especially when they change this rapidly.
+
+323
+00:13:03,460 --> 00:13:05,700
+And so some amount of stochastic thinking
+
+324
+00:13:05,700 --> 00:13:08,980
+is required to really understand how to do a code migration
+
+325
+00:13:08,980 --> 00:13:10,580
+at this scale.
+
+326
+00:13:10,580 --> 00:13:12,540
+Test coverage is part of the challenge here, too.
+
+327
+00:13:12,540 --> 00:13:15,700
+If a particular change to a particular portion of the code
+
+328
+00:13:15,700 --> 00:13:20,380
+base does not have test covering for that path
+
+329
+00:13:20,380 --> 00:13:23,540
+or that particular branch, or even, quite frankly,
+
+330
+00:13:23,540 --> 00:13:26,140
+if the test that's being done is of low quality,
+
+331
+00:13:26,140 --> 00:13:29,060
+if it doesn't check that the actual responses are
+
+332
+00:13:29,060 --> 00:13:32,580
+as expected, and even if you have good coverage,
+
+333
+00:13:32,580 --> 00:13:35,380
+it doesn't mean your coverage is high quality coverage.
+
+334
+00:13:35,380 --> 00:13:37,220
+And so that can be a challenge as well.
+
+335
+00:13:37,220 --> 00:13:41,540
+Additionally, some of the fixers simply cannot.
+
+336
+00:13:41,540 --> 00:13:44,100
+There's limitations in the fixers themselves.
+
+337
+00:13:44,100 --> 00:13:46,660
+For example, all div safe and fix dict.
+
+338
+00:13:46,660 --> 00:13:49,900
+These use approaches that were a little more conservative.
+
+339
+00:13:49,900 --> 00:13:51,420
+The fixers are more conservative,
+
+340
+00:13:51,420 --> 00:13:53,460
+which is perfectly reasonable and exactly what
+
+341
+00:13:53,460 --> 00:13:55,100
+you want to do, but not necessarily
+
+342
+00:13:55,100 --> 00:13:56,940
+what we want to commit to our code base.
+
+343
+00:13:56,940 --> 00:13:59,180
+And so those required some manual adjustments
+
+344
+00:13:59,180 --> 00:14:01,020
+after having run the fixer.
+
+345
+00:14:01,020 --> 00:14:03,180
+And there are some things for which there is no fixer.
+
+346
+00:14:03,180 --> 00:14:04,820
+For example, the string and bytes difference
+
+347
+00:14:04,820 --> 00:14:07,460
+is something that you kind of have to go variable by variable
+
+348
+00:14:07,460 --> 00:14:09,620
+and decide what the correct approach is there.
+
+349
+00:14:12,340 --> 00:14:13,140
+So the good.
+
+350
+00:14:13,140 --> 00:14:14,820
+A lot of things actually worked really well.
+
+351
+00:14:14,820 --> 00:14:15,620
+I think the rest of the talk is going
+
+352
+00:14:15,620 --> 00:14:17,580
+to be about terrible things, bad and ugly.
+
+353
+00:14:17,580 --> 00:14:19,340
+But I want to stress that a lot of things actually
+
+354
+00:14:19,340 --> 00:14:19,980
+worked really well.
+
+355
+00:14:19,980 --> 00:14:22,300
+In fact, most of the hard work has been done for us.
+
+356
+00:14:22,300 --> 00:14:23,220
+It's a bit of a side note.
+
+357
+00:14:23,220 --> 00:14:24,660
+Python 3 is actually 10 years old.
+
+358
+00:14:24,660 --> 00:14:26,380
+I think it's 11 years old now.
+
+359
+00:14:26,380 --> 00:14:28,260
+So we're not actually talking about migrating to a new thing.
+
+360
+00:14:28,260 --> 00:14:30,540
+We're talking about migrating to an old thing.
+
+361
+00:14:30,540 --> 00:14:32,100
+As a bit of reference, our code base
+
+362
+00:14:32,100 --> 00:14:33,740
+is roughly the same age as Python 3,
+
+363
+00:14:33,740 --> 00:14:37,580
+which is, I think, a side note.
+
+364
+00:14:37,580 --> 00:14:39,740
+So often the only changes required for a lot of these
+
+365
+00:14:39,740 --> 00:14:42,820
+changes was actually making sure we passed Flake 8.
+
+366
+00:14:42,820 --> 00:14:44,220
+Everything else is done for us.
+
+367
+00:14:44,220 --> 00:14:46,340
+So I think the really good things here are our Futurize
+
+368
+00:14:46,340 --> 00:14:50,300
+worked really, really well as a lib 2 to 3.
+
+369
+00:14:50,300 --> 00:14:51,060
+So a few examples.
+
+370
+00:14:51,060 --> 00:14:52,580
+Here's one print with import.
+
+371
+00:14:52,620 --> 00:14:55,020
+Hopefully everybody here knows about this Python 3 change.
+
+372
+00:14:55,020 --> 00:14:57,100
+Anybody be surprised by this one?
+
+373
+00:14:57,100 --> 00:14:58,220
+OK, nobody raised their hand.
+
+374
+00:14:58,220 --> 00:14:59,020
+That's good.
+
+375
+00:14:59,020 --> 00:15:01,100
+Right in Python 3, we have print.
+
+376
+00:15:01,100 --> 00:15:03,300
+You have to pass in parentheses to it.
+
+377
+00:15:03,300 --> 00:15:04,820
+And so if you have on one side here,
+
+378
+00:15:04,820 --> 00:15:06,700
+we have the Python 2 style.
+
+379
+00:15:06,700 --> 00:15:08,340
+We have the result of the fixer.
+
+380
+00:15:08,340 --> 00:15:10,380
+And it sort of handles all the cases perfectly.
+
+381
+00:15:10,380 --> 00:15:11,540
+You have bare print.
+
+382
+00:15:11,540 --> 00:15:12,540
+You have print with high.
+
+383
+00:15:12,540 --> 00:15:15,220
+You have Python 2 style and Python 3 style print.
+
+384
+00:15:15,220 --> 00:15:15,860
+That all works.
+
+385
+00:15:15,860 --> 00:15:17,860
+You have rerouting to standard error.
+
+386
+00:15:17,860 --> 00:15:19,940
+Everything works great.
+
+387
+00:15:19,940 --> 00:15:21,940
+Another one worked really well is accept.
+
+388
+00:15:21,980 --> 00:15:24,500
+Python 2 has this really tricky notation
+
+389
+00:15:24,500 --> 00:15:27,260
+that actually has caused multiple problems in the past
+
+390
+00:15:27,260 --> 00:15:28,380
+for us.
+
+391
+00:15:28,380 --> 00:15:30,180
+If you want to do accept exception, comma, e,
+
+392
+00:15:30,180 --> 00:15:31,700
+e is the variable for the exception
+
+393
+00:15:31,700 --> 00:15:33,220
+that you caught all exceptions here.
+
+394
+00:15:33,220 --> 00:15:35,260
+But the other thing you may want to do in this case,
+
+395
+00:15:35,260 --> 00:15:36,700
+if you want to catch several exceptions,
+
+396
+00:15:36,700 --> 00:15:38,060
+the notation you're supposed to use
+
+397
+00:15:38,060 --> 00:15:41,420
+is accept parentheses, exception 1, exception 2,
+
+398
+00:15:41,420 --> 00:15:43,540
+close parentheses, comma, e.
+
+399
+00:15:43,540 --> 00:15:45,580
+But a lot of people just do accept exception 1, comma,
+
+400
+00:15:45,580 --> 00:15:48,340
+exception 2, in which case you catch an exception
+
+401
+00:15:48,340 --> 00:15:50,940
+and you store it in the value for exception 2.
+
+402
+00:15:50,940 --> 00:15:53,180
+Then you cause all kinds of weird problems
+
+403
+00:15:53,180 --> 00:15:54,900
+because you essentially are monkey patching something
+
+404
+00:15:54,900 --> 00:15:56,980
+at runtime and it gets really confusing.
+
+405
+00:15:56,980 --> 00:15:59,660
+So Python 3 decided to say, no, we don't want to do that.
+
+406
+00:15:59,660 --> 00:16:01,860
+And it turns out the fixer works great for that.
+
+407
+00:16:01,860 --> 00:16:05,340
+It also works in this less clear notation here,
+
+408
+00:16:05,340 --> 00:16:07,060
+except exception bracket a.
+
+409
+00:16:07,060 --> 00:16:09,620
+And you can see here on the other side in the results here,
+
+410
+00:16:09,620 --> 00:16:11,700
+it actually takes the arguments passed into the exception.
+
+411
+00:16:11,700 --> 00:16:13,820
+So this case, it would actually be b.
+
+412
+00:16:13,820 --> 00:16:15,900
+a would be b in this case.
+
+413
+00:16:15,900 --> 00:16:18,280
+But this is sort of one of the limitations of fixers here.
+
+414
+00:16:18,280 --> 00:16:19,780
+It doesn't know what variable to use.
+
+415
+00:16:19,780 --> 00:16:23,420
+It's a nice simple variable xxx to do change me.
+
+416
+00:16:23,420 --> 00:16:24,820
+And so presumably you should be changing that
+
+417
+00:16:24,820 --> 00:16:27,220
+and not sprinkling it all over your code base.
+
+418
+00:16:29,980 --> 00:16:31,460
+Another one here is meta class.
+
+419
+00:16:31,460 --> 00:16:32,620
+Under Python 2 and Python 3,
+
+420
+00:16:32,620 --> 00:16:34,860
+the meta class notation changed significantly.
+
+421
+00:16:34,860 --> 00:16:38,540
+Python 2, you do double underscore meta class equals meta.
+
+422
+00:16:38,540 --> 00:16:42,820
+But in Python 3, you do class foo meta class equals meta.
+
+423
+00:16:42,820 --> 00:16:44,340
+The problem with that is you can't have a code base
+
+424
+00:16:44,340 --> 00:16:45,460
+that supports both of them.
+
+425
+00:16:45,460 --> 00:16:47,500
+And so this is a good example of where Python future
+
+426
+00:16:47,500 --> 00:16:48,500
+has a shim to use.
+
+427
+00:16:48,500 --> 00:16:51,980
+You do from future utils import with meta class.
+
+428
+00:16:51,980 --> 00:16:55,580
+And in this case, the fixer does it all for you right away.
+
+429
+00:16:58,940 --> 00:17:00,780
+Another one is absolute imports.
+
+430
+00:17:00,780 --> 00:17:03,020
+So under Python 2, this is concept of doing
+
+431
+00:17:03,020 --> 00:17:04,500
+implicit relative import.
+
+432
+00:17:04,500 --> 00:17:05,860
+So you can see here we have import foo.
+
+433
+00:17:05,860 --> 00:17:08,060
+Foo is a module in this directory I'm in.
+
+434
+00:17:08,060 --> 00:17:11,240
+And I'm accessing this variable, this constant x.
+
+435
+00:17:12,220 --> 00:17:14,340
+The confusing thing about this is that it could be
+
+436
+00:17:14,340 --> 00:17:16,660
+if foo happened to be named os, let's say,
+
+437
+00:17:16,660 --> 00:17:18,900
+then you could actually be unclear what you should import.
+
+438
+00:17:18,900 --> 00:17:20,620
+Are you importing the os in the directory
+
+439
+00:17:20,620 --> 00:17:22,900
+or importing the standard library os?
+
+440
+00:17:22,900 --> 00:17:25,300
+And this has caused multiple problems for us over the years
+
+441
+00:17:25,300 --> 00:17:26,620
+as we refactor code.
+
+442
+00:17:26,620 --> 00:17:28,980
+And the implicit import caused all kinds of problems.
+
+443
+00:17:28,980 --> 00:17:30,980
+So Python 3 has absolute imports.
+
+444
+00:17:30,980 --> 00:17:32,620
+So you have to do explicit relative imports.
+
+445
+00:17:32,620 --> 00:17:35,020
+And once again, the fixer does it in most cases,
+
+446
+00:17:35,020 --> 00:17:37,300
+but there are ambiguous cases in your code base.
+
+447
+00:17:37,300 --> 00:17:39,900
+And in that case, sometimes future will break
+
+448
+00:17:39,900 --> 00:17:41,820
+and you'll have to fix a few of them by hand.
+
+449
+00:17:41,820 --> 00:17:43,960
+But it fixed 90% of the issues right away.
+
+450
+00:17:44,960 --> 00:17:46,960
+Others were surprising.
+
+451
+00:17:46,960 --> 00:17:49,960
+You know, a large code base means we have lots of edge cases.
+
+452
+00:17:49,960 --> 00:17:52,960
+Here are some of the issues that we hit along the way.
+
+453
+00:17:55,960 --> 00:17:57,560
+So this is a nice, simple example here.
+
+454
+00:17:57,560 --> 00:17:59,120
+We have 1 divided by 2.
+
+455
+00:17:59,120 --> 00:18:01,520
+Under Python 2, we get 0, right?
+
+456
+00:18:01,520 --> 00:18:02,960
+This is an integer.
+
+457
+00:18:02,960 --> 00:18:04,200
+Anybody know what it should be in Python 3?
+
+458
+00:18:04,200 --> 00:18:06,760
+Just shout out the answer.
+
+459
+00:18:06,760 --> 00:18:07,240
+That's right.
+
+460
+00:18:07,240 --> 00:18:08,960
+OK, so this is a nice, simple one.
+
+461
+00:18:08,960 --> 00:18:10,520
+In this case, Python 3 makes sort of behavior
+
+462
+00:18:10,520 --> 00:18:12,040
+sort of more expected.
+
+463
+00:18:12,040 --> 00:18:13,440
+I know many of you say, but it's not.
+
+464
+00:18:13,440 --> 00:18:15,720
+These are two integers, and that's not how division works.
+
+465
+00:18:15,720 --> 00:18:17,680
+But this is how I think humans think of division,
+
+466
+00:18:17,680 --> 00:18:20,680
+and so it's a nice change to reflect how people really
+
+467
+00:18:20,680 --> 00:18:21,800
+think about it.
+
+468
+00:18:21,800 --> 00:18:22,800
+Here's another interesting one.
+
+469
+00:18:22,800 --> 00:18:25,400
+We have rounding, round 9 comma 1.
+
+470
+00:18:25,400 --> 00:18:27,960
+Under Python 2, we get a float, 9.0.
+
+471
+00:18:27,960 --> 00:18:31,440
+Anybody guess we get a Python 3?
+
+472
+00:18:31,440 --> 00:18:32,880
+We get 9, not a float.
+
+473
+00:18:32,880 --> 00:18:34,400
+So we get an integer now.
+
+474
+00:18:34,400 --> 00:18:36,160
+Once again, I think this makes more sense.
+
+475
+00:18:36,160 --> 00:18:37,600
+It sort of reflects what we put in.
+
+476
+00:18:37,600 --> 00:18:38,560
+We get out.
+
+477
+00:18:38,560 --> 00:18:39,940
+Here's an interesting one we have.
+
+478
+00:18:39,940 --> 00:18:42,400
+This is the one I thought was really fascinating myself.
+
+479
+00:18:42,400 --> 00:18:43,840
+We get round 2.5.
+
+480
+00:18:43,840 --> 00:18:45,800
+Under Python 2, we get 2.
+
+481
+00:18:45,800 --> 00:18:46,760
+We round to a number.
+
+482
+00:18:46,760 --> 00:18:49,600
+What do we get in Python 3?
+
+483
+00:18:49,600 --> 00:18:52,440
+Anybody know why?
+
+484
+00:18:52,440 --> 00:18:52,920
+That's right.
+
+485
+00:18:52,920 --> 00:18:54,280
+Bankers rounding, very impressive.
+
+486
+00:18:54,280 --> 00:18:56,200
+So the idea here, previously, you
+
+487
+00:18:56,200 --> 00:18:57,800
+would round down to 0 every time.
+
+488
+00:18:57,800 --> 00:19:00,000
+And the problem with that is if you're a banker, let's say,
+
+489
+00:19:00,000 --> 00:19:02,360
+and you have a bunch of numbers, the error from rounding
+
+490
+00:19:02,360 --> 00:19:03,200
+adds up over time.
+
+491
+00:19:03,200 --> 00:19:04,880
+But if you round to the closest odd,
+
+492
+00:19:04,880 --> 00:19:06,520
+it'll hopefully balance out over time,
+
+493
+00:19:06,520 --> 00:19:09,840
+because you're assuming your numbers are randomly
+
+494
+00:19:09,840 --> 00:19:13,800
+distributed with regard to where they are in the float.
+
+495
+00:19:13,800 --> 00:19:15,920
+And so once again, this actually makes the numbers
+
+496
+00:19:15,920 --> 00:19:17,640
+sort of work better in a better way.
+
+497
+00:19:17,640 --> 00:19:21,120
+Although technically, these are both completely valid answers.
+
+498
+00:19:21,120 --> 00:19:23,800
+Rounding 2.5 has two correct answers, not one.
+
+499
+00:19:23,800 --> 00:19:27,160
+And so this is sort of a weird case here.
+
+500
+00:19:27,160 --> 00:19:28,160
+Here's another one.
+
+501
+00:19:28,160 --> 00:19:29,040
+You have x equals none.
+
+502
+00:19:29,040 --> 00:19:30,720
+Maybe it's a fallback from a function
+
+503
+00:19:30,720 --> 00:19:33,280
+that it returns a value, but in some cases, it returns none.
+
+504
+00:19:33,280 --> 00:19:35,200
+And we're trying to compare x to some constant,
+
+505
+00:19:35,200 --> 00:19:36,400
+in this case, 1.
+
+506
+00:19:36,400 --> 00:19:37,880
+Under Python 2, we get false.
+
+507
+00:19:37,880 --> 00:19:39,400
+None is not greater than false.
+
+508
+00:19:39,400 --> 00:19:42,560
+Python 3, any guesses?
+
+509
+00:19:42,560 --> 00:19:43,920
+Yep, we get a type error here.
+
+510
+00:19:43,920 --> 00:19:45,500
+It turns out you can't compare none and int.
+
+511
+00:19:45,500 --> 00:19:46,920
+That doesn't make any sense.
+
+512
+00:19:46,920 --> 00:19:48,840
+I don't know why we could have done it before.
+
+513
+00:19:48,840 --> 00:19:50,840
+This is a case where we found in our code base
+
+514
+00:19:50,840 --> 00:19:54,200
+that lots of people sort of assumed this behavior worked,
+
+515
+00:19:54,200 --> 00:19:58,600
+and we have lots of edge cases that hit this.
+
+516
+00:19:58,600 --> 00:19:59,760
+Here's another one we have.
+
+517
+00:19:59,760 --> 00:20:00,680
+Month equals 0, 1.
+
+518
+00:20:00,680 --> 00:20:01,180
+Right?
+
+519
+00:20:01,180 --> 00:20:01,880
+It's January.
+
+520
+00:20:01,880 --> 00:20:03,460
+We're going to try to print the month.
+
+521
+00:20:03,460 --> 00:20:05,200
+Python 2, we get 1.
+
+522
+00:20:05,200 --> 00:20:06,160
+Makes sense.
+
+523
+00:20:06,160 --> 00:20:07,400
+Python 3, anybody?
+
+524
+00:20:10,320 --> 00:20:11,240
+Nobody?
+
+525
+00:20:11,240 --> 00:20:11,880
+OK.
+
+526
+00:20:11,880 --> 00:20:13,120
+We actually get invalid token.
+
+527
+00:20:13,120 --> 00:20:15,400
+It turns out this notation is not correct.
+
+528
+00:20:15,400 --> 00:20:19,320
+The reason is because under Python 2, 0, 1 is not base 10.
+
+529
+00:20:19,320 --> 00:20:20,120
+That is base 8.
+
+530
+00:20:20,120 --> 00:20:20,920
+It is octal.
+
+531
+00:20:20,920 --> 00:20:23,200
+The 0 is for octal here.
+
+532
+00:20:23,200 --> 00:20:25,600
+And so you can't actually do, for example, 0, 9.
+
+533
+00:20:25,600 --> 00:20:28,280
+And in Python 3, they say, hey, that's not a great idea.
+
+534
+00:20:28,280 --> 00:20:29,680
+This is super confusing.
+
+535
+00:20:29,680 --> 00:20:32,200
+It turns out it is super confusing in our code base.
+
+536
+00:20:32,200 --> 00:20:37,360
+And so the actual correct notation is 0, 0, 1.
+
+537
+00:20:37,360 --> 00:20:39,600
+And that'll work in both cases.
+
+538
+00:20:39,600 --> 00:20:43,720
+But in most cases, you could actually just drop the 0
+
+539
+00:20:43,720 --> 00:20:46,200
+and then make it just be 1 and then don't use octal,
+
+540
+00:20:46,200 --> 00:20:50,760
+because using octal in most code bases is a bit unusual.
+
+541
+00:20:50,760 --> 00:20:53,520
+All these changes are sort of making the numbers align more
+
+542
+00:20:53,520 --> 00:20:55,680
+consistently with people, sort of expect them to do.
+
+543
+00:20:55,680 --> 00:20:59,240
+The rounding, the comparisons, everything else.
+
+544
+00:20:59,240 --> 00:21:02,520
+And these are all part of a big PEP 3141.
+
+545
+00:21:02,520 --> 00:21:04,160
+And there was a numeric tower.
+
+546
+00:21:04,160 --> 00:21:05,960
+And it sort of simplified the whole process
+
+547
+00:21:05,960 --> 00:21:08,280
+and made it much more aligned with reality.
+
+548
+00:21:08,280 --> 00:21:10,400
+This is one of the things that big surprises for us
+
+549
+00:21:10,400 --> 00:21:13,000
+in this migration was how many edge cases there were here
+
+550
+00:21:13,000 --> 00:21:13,840
+that we actually hit.
+
+551
+00:21:16,120 --> 00:21:17,600
+So we also had a number of issues
+
+552
+00:21:17,600 --> 00:21:19,000
+you can imagine around bytes and string.
+
+553
+00:21:19,000 --> 00:21:20,440
+So here we have some example code.
+
+554
+00:21:20,440 --> 00:21:23,080
+We get a user ID integer from some part of our code base.
+
+555
+00:21:23,080 --> 00:21:25,040
+We cast it to a string under Python 2
+
+556
+00:21:25,040 --> 00:21:26,600
+by passing it to bytes.
+
+557
+00:21:26,600 --> 00:21:29,880
+Any guesses what happens in Python 2?
+
+558
+00:21:29,880 --> 00:21:30,840
+It's a string.
+
+559
+00:21:30,840 --> 00:21:31,800
+What about Python 3?
+
+560
+00:21:31,800 --> 00:21:32,300
+Here.
+
+561
+00:21:36,960 --> 00:21:37,480
+Yeah.
+
+562
+00:21:37,480 --> 00:21:38,980
+Essentially, we get a memory error.
+
+563
+00:21:38,980 --> 00:21:42,240
+Because in Python 3, when you pass a value to bytes,
+
+564
+00:21:42,240 --> 00:21:43,900
+it assumes that that's the number of bytes
+
+565
+00:21:43,900 --> 00:21:45,720
+that you wish to allocate.
+
+566
+00:21:45,720 --> 00:21:49,080
+So you can imagine our very large user IDs
+
+567
+00:21:49,080 --> 00:21:51,320
+resulted in us allocating more bytes
+
+568
+00:21:51,320 --> 00:21:53,320
+than we had available in memory.
+
+569
+00:21:53,320 --> 00:21:55,440
+Not fun.
+
+570
+00:21:55,440 --> 00:21:59,960
+We have this case here where we iterate over a byte string.
+
+571
+00:22:00,120 --> 00:22:02,120
+Any ideas what this might produce under Python 2?
+
+572
+00:22:06,800 --> 00:22:08,760
+So it'll produce 1, 2, 3.
+
+573
+00:22:08,760 --> 00:22:09,560
+What about Python 3?
+
+574
+00:22:13,640 --> 00:22:15,400
+The ASCII code points.
+
+575
+00:22:15,400 --> 00:22:21,200
+So essentially, in Python 2, the byte string
+
+576
+00:22:21,200 --> 00:22:25,800
+is treated as a byte sequence.
+
+577
+00:22:25,800 --> 00:22:28,480
+And so under Python 2, it's treated as a character sequence.
+
+578
+00:22:28,480 --> 00:22:30,000
+And so each thing is interpreted essentially
+
+579
+00:22:30,000 --> 00:22:32,240
+as a character that was passed into the byte literal.
+
+580
+00:22:32,240 --> 00:22:37,160
+And under Python 3, no encoding is applied to it.
+
+581
+00:22:37,160 --> 00:22:39,600
+And so the byte string literal is
+
+582
+00:22:39,600 --> 00:22:41,880
+interpreted as the ASCII code points that
+
+583
+00:22:41,880 --> 00:22:44,720
+correspond to those characters.
+
+584
+00:22:44,720 --> 00:22:45,680
+Here's another example.
+
+585
+00:22:45,680 --> 00:22:48,320
+So we have string.letters and string.ascii letters.
+
+586
+00:22:48,320 --> 00:22:51,160
+We use those in our code base.
+
+587
+00:22:51,160 --> 00:22:53,120
+Under Python 2, they return the same thing.
+
+588
+00:22:53,120 --> 00:22:56,840
+And in reality, string.letters is locale-specific.
+
+589
+00:22:56,840 --> 00:22:58,640
+Under Python 3, it's gone.
+
+590
+00:22:58,640 --> 00:23:00,140
+And so part of the reason that it's
+
+591
+00:23:00,140 --> 00:23:02,280
+going is because it is locale-specific,
+
+592
+00:23:02,280 --> 00:23:05,200
+and it was dropped as part of going Unicode Native.
+
+593
+00:23:05,200 --> 00:23:09,120
+The locale-specificity made it kind of difficult to debug.
+
+594
+00:23:09,120 --> 00:23:11,480
+And so this is generally, I think, a good change,
+
+595
+00:23:11,480 --> 00:23:13,680
+as most of these are.
+
+596
+00:23:13,680 --> 00:23:14,720
+Here's another example.
+
+597
+00:23:14,720 --> 00:23:19,040
+We have a bit of Unicode code in our code base.
+
+598
+00:23:19,040 --> 00:23:23,760
+We pass in our encoding UTF-8 signal into the compiler.
+
+599
+00:23:23,760 --> 00:23:27,160
+We create a new exception with some value
+
+600
+00:23:27,160 --> 00:23:29,880
+that we get passed in from elsewhere in the code
+
+601
+00:23:29,880 --> 00:23:33,440
+with some emoji characters in it, perhaps user-inputted text
+
+602
+00:23:33,440 --> 00:23:35,600
+in Python 2.
+
+603
+00:23:35,600 --> 00:23:36,400
+This is not allowed.
+
+604
+00:23:36,400 --> 00:23:38,920
+Essentially, the exception expects
+
+605
+00:23:38,920 --> 00:23:41,480
+an ASCII-encoded character in Python 3.
+
+606
+00:23:41,480 --> 00:23:44,560
+This works just fine.
+
+607
+00:23:44,560 --> 00:23:46,080
+And so the root cause of much of this
+
+608
+00:23:46,080 --> 00:23:49,640
+is essentially reorganizing the containers, the sequence
+
+609
+00:23:50,320 --> 00:23:55,520
+the sequences for Unicode's strings and bytes.
+
+610
+00:23:55,520 --> 00:23:57,400
+So in Python 2, string and Unicode
+
+611
+00:23:57,400 --> 00:23:59,600
+are sequence types along with list and tuple,
+
+612
+00:23:59,600 --> 00:24:01,360
+and there's a couple others.
+
+613
+00:24:01,360 --> 00:24:04,040
+The decision of which one you use as a programmer
+
+614
+00:24:04,040 --> 00:24:07,200
+was decided whether you wanted an 8-bit interpretation
+
+615
+00:24:07,200 --> 00:24:08,920
+or a Unicode interpretation.
+
+616
+00:24:08,920 --> 00:24:12,080
+So typically, the 8-bit was ASCII by default.
+
+617
+00:24:12,080 --> 00:24:14,480
+In Python 3, this distinction was removed.
+
+618
+00:24:14,480 --> 00:24:16,160
+A new type, bytes, was introduced
+
+619
+00:24:16,160 --> 00:24:18,040
+for representing raw binary sequences
+
+620
+00:24:18,040 --> 00:24:20,320
+with no application of any code map.
+
+621
+00:24:20,320 --> 00:24:22,680
+And then the string type was intended
+
+622
+00:24:22,680 --> 00:24:27,720
+to present an encoded overview of the bytes,
+
+623
+00:24:27,720 --> 00:24:33,040
+or an encoded representation of a sequence of bytes.
+
+624
+00:24:33,040 --> 00:24:34,520
+So let's talk about scoping here.
+
+625
+00:24:34,520 --> 00:24:36,720
+This is what I think a lot of you have probably seen.
+
+626
+00:24:36,720 --> 00:24:40,240
+Under Python 2, we have a list comprehension.
+
+627
+00:24:40,240 --> 00:24:43,600
+Anybody guess what should be in Python 2?
+
+628
+00:24:43,600 --> 00:24:43,920
+Nine.
+
+629
+00:24:43,920 --> 00:24:45,600
+Anybody actually use this kind of code in their code base?
+
+630
+00:24:45,600 --> 00:24:46,960
+I'm curious.
+
+631
+00:24:46,960 --> 00:24:47,480
+A few people?
+
+632
+00:24:47,480 --> 00:24:47,680
+OK.
+
+633
+00:24:47,680 --> 00:24:49,320
+We use it a lot too, surprisingly.
+
+634
+00:24:49,320 --> 00:24:51,600
+Under Python 3, I think this is a weird thing.
+
+635
+00:24:51,600 --> 00:24:52,520
+There's no scope here.
+
+636
+00:24:52,520 --> 00:24:53,400
+You leak variables.
+
+637
+00:24:53,400 --> 00:24:54,480
+Python 3 fixes that.
+
+638
+00:24:54,480 --> 00:24:56,120
+It says i is not defined.
+
+639
+00:24:56,120 --> 00:24:58,120
+That makes a lot of sense here.
+
+640
+00:24:58,120 --> 00:25:00,080
+Although it is a nice behavior you could use before,
+
+641
+00:25:00,080 --> 00:25:01,360
+so you have to refactor some code.
+
+642
+00:25:01,360 --> 00:25:03,200
+This is actually a good example where
+
+643
+00:25:03,200 --> 00:25:06,320
+this is really easy to spot with actually flake8 will spot this.
+
+644
+00:25:06,320 --> 00:25:08,360
+But it's not always easy to refactor the code
+
+645
+00:25:08,360 --> 00:25:10,600
+programmatically, so you have to get in and actually
+
+646
+00:25:10,600 --> 00:25:12,800
+manually modify the code.
+
+647
+00:25:12,800 --> 00:25:14,300
+Here's a bit more complicated one.
+
+648
+00:25:14,300 --> 00:25:15,760
+We have another interesting scope
+
+649
+00:25:15,760 --> 00:25:17,200
+on our list comprehensions.
+
+650
+00:25:17,200 --> 00:25:20,280
+Anybody guess what this should be under Python 2?
+
+651
+00:25:20,280 --> 00:25:21,480
+It's a little confusing code.
+
+652
+00:25:21,480 --> 00:25:24,160
+We have a variable i, I mean a and b.
+
+653
+00:25:24,160 --> 00:25:26,880
+It turns out b should actually be 2.
+
+654
+00:25:26,880 --> 00:25:29,120
+We're just going over b is using a.
+
+655
+00:25:29,120 --> 00:25:30,080
+Python 3, any guesses?
+
+656
+00:25:36,000 --> 00:25:36,840
+No.
+
+657
+00:25:36,840 --> 00:25:38,240
+It gives you an error, a name error.
+
+658
+00:25:38,240 --> 00:25:42,480
+It turns out a is not actually defined here.
+
+659
+00:25:42,480 --> 00:25:44,680
+So it turns out this is a quote from a bug I found.
+
+660
+00:25:44,680 --> 00:25:46,400
+I'm not sure who the author was, but if you're in the room,
+
+661
+00:25:46,400 --> 00:25:48,160
+thank you very much for writing this.
+
+662
+00:25:48,160 --> 00:25:49,600
+This is because list comprehensions are now
+
+663
+00:25:49,600 --> 00:25:51,320
+implemented with their own function object,
+
+664
+00:25:51,320 --> 00:25:53,120
+like generator expressions always have.
+
+665
+00:25:53,120 --> 00:25:55,240
+Effectively, what this is saying is this code should
+
+666
+00:25:55,240 --> 00:25:56,440
+have never worked.
+
+667
+00:25:56,440 --> 00:25:58,520
+Under Python 3, they fixed that, and it doesn't work.
+
+668
+00:25:58,520 --> 00:26:00,320
+Under Python 2, it does work.
+
+669
+00:26:00,320 --> 00:26:02,280
+As a bit of a side note, if you do this outside
+
+670
+00:26:02,280 --> 00:26:04,400
+of a class as a top level, it does work.
+
+671
+00:26:04,400 --> 00:26:07,240
+So this is sort of a weird edge case I think we saw once,
+
+672
+00:26:07,240 --> 00:26:09,240
+and we're just blown away by it.
+
+673
+00:26:09,240 --> 00:26:13,360
+And then it turns out it never should have been there.
+
+674
+00:26:13,360 --> 00:26:14,600
+Here's another one for scope.
+
+675
+00:26:14,600 --> 00:26:16,280
+Anybody guess what this does on Python 3?
+
+676
+00:26:16,280 --> 00:26:18,680
+Print out the locals inside of a class.
+
+677
+00:26:21,560 --> 00:26:23,320
+Any guesses?
+
+678
+00:26:23,320 --> 00:26:24,480
+We get one local here.
+
+679
+00:26:24,480 --> 00:26:26,440
+In this case, it is self.
+
+680
+00:26:26,440 --> 00:26:28,600
+Under Python 3, we actually get two,
+
+681
+00:26:28,600 --> 00:26:29,960
+which is now we have class.
+
+682
+00:26:29,960 --> 00:26:31,760
+It turns out you hit this if you do anything
+
+683
+00:26:31,760 --> 00:26:34,220
+in your code with locals, and you're iterating over locals
+
+684
+00:26:34,220 --> 00:26:36,600
+and expecting certain values to be there in locals,
+
+685
+00:26:36,600 --> 00:26:37,960
+certain ones not to.
+
+686
+00:26:37,960 --> 00:26:40,460
+And this is actually a fairly easy one to fix in most cases,
+
+687
+00:26:40,460 --> 00:26:42,360
+but it required manual changes every time.
+
+688
+00:26:44,640 --> 00:26:45,800
+Here's another one about dictionaries.
+
+689
+00:26:45,800 --> 00:26:47,300
+Dictionaries are big things that change
+
+690
+00:26:47,300 --> 00:26:49,560
+under Python 2 and Python 3.
+
+691
+00:26:49,560 --> 00:26:50,840
+Here we have a function foo.
+
+692
+00:26:50,840 --> 00:26:53,240
+We're passing in b equals 1 and a equals 2,
+
+693
+00:26:53,240 --> 00:26:55,000
+and we're printing out the keyword arguments.
+
+694
+00:26:55,000 --> 00:26:57,600
+Under Python 2, we get a equals 2 and b equals 1.
+
+695
+00:26:57,600 --> 00:26:59,840
+They're actually switched around here.
+
+696
+00:26:59,840 --> 00:27:01,240
+Under Python 3, any guesses?
+
+697
+00:27:04,600 --> 00:27:07,400
+It's actually a trick question, as you'd imagine by now.
+
+698
+00:27:07,400 --> 00:27:09,120
+It actually depends on when you run it
+
+699
+00:27:09,120 --> 00:27:10,900
+and what version of Python you're running.
+
+700
+00:27:10,900 --> 00:27:14,120
+So if you run it on Python 3 to 3.5,
+
+701
+00:27:14,120 --> 00:27:16,560
+the ordering depends on when you run it.
+
+702
+00:27:16,560 --> 00:27:18,480
+If you run it twice in the same code base,
+
+703
+00:27:18,480 --> 00:27:19,240
+it'll always be the same.
+
+704
+00:27:19,240 --> 00:27:22,320
+But if you run it twice in the same instance of Python,
+
+705
+00:27:22,320 --> 00:27:22,840
+it'd be the same.
+
+706
+00:27:22,840 --> 00:27:25,660
+But in different instances of Python, it'll be different.
+
+707
+00:27:25,660 --> 00:27:27,720
+And then under Python 3.6 and above,
+
+708
+00:27:27,720 --> 00:27:29,440
+it actually changes to the ordering.
+
+709
+00:27:29,440 --> 00:27:33,320
+It's always b1, a2.
+
+710
+00:27:33,320 --> 00:27:36,040
+And this is because there's two major changes to dictionaries
+
+711
+00:27:36,040 --> 00:27:37,560
+under Python 3.
+
+712
+00:27:37,560 --> 00:27:39,560
+The first one is hash randomization was added.
+
+713
+00:27:39,560 --> 00:27:42,020
+It's intended to protect against denial of service attacks
+
+714
+00:27:42,020 --> 00:27:44,340
+with big O of n squared complexity.
+
+715
+00:27:44,340 --> 00:27:47,900
+And this was true for Python's 3, I think, through 3.5.
+
+716
+00:27:47,900 --> 00:27:48,940
+And this is true beyond.
+
+717
+00:27:48,940 --> 00:27:50,340
+There's randomization in there.
+
+718
+00:27:50,340 --> 00:27:52,180
+And so that's why we get random ordering when
+
+719
+00:27:52,180 --> 00:27:54,520
+you run it different times.
+
+720
+00:27:54,520 --> 00:27:56,740
+We are using Python 3.5 in a few instances.
+
+721
+00:27:56,740 --> 00:27:59,100
+So we actually decided to hard code a random seed
+
+722
+00:27:59,100 --> 00:28:00,140
+for our test environments.
+
+723
+00:28:00,140 --> 00:28:02,420
+I think we picked some number.
+
+724
+00:28:02,420 --> 00:28:03,700
+So it's the same every time.
+
+725
+00:28:03,700 --> 00:28:05,340
+And this actually made it much easier for us to test
+
+726
+00:28:05,340 --> 00:28:07,000
+and sort of isolate these problems
+
+727
+00:28:07,000 --> 00:28:07,740
+and deal with them later.
+
+728
+00:28:07,740 --> 00:28:09,900
+And part of the problem we're not dealing with now
+
+729
+00:28:09,900 --> 00:28:12,180
+is because there's another part, which is under Python 3.6
+
+730
+00:28:12,180 --> 00:28:15,620
+and above, there is a new dictionary that is more compact.
+
+731
+00:28:15,620 --> 00:28:17,700
+It's, I think, 20% to 30% more compact.
+
+732
+00:28:17,700 --> 00:28:19,420
+It was done.
+
+733
+00:28:19,420 --> 00:28:21,820
+The main motivation for it is to use less memory.
+
+734
+00:28:21,820 --> 00:28:23,740
+But one of the interesting side effects
+
+735
+00:28:23,740 --> 00:28:25,500
+is now order preserving.
+
+736
+00:28:25,500 --> 00:28:27,500
+But as you see here in the release notes,
+
+737
+00:28:27,500 --> 00:28:29,780
+the order preserving aspect of this new implementation
+
+738
+00:28:29,780 --> 00:28:31,740
+is considered an implementation detail
+
+739
+00:28:31,740 --> 00:28:33,500
+that should not be relied upon.
+
+740
+00:28:33,500 --> 00:28:34,980
+It turns out that under Python 2,
+
+741
+00:28:34,980 --> 00:28:36,240
+we had a deterministic order.
+
+742
+00:28:36,240 --> 00:28:38,760
+In Python 3.6, we have deterministic order.
+
+743
+00:28:38,760 --> 00:28:40,160
+And a lot of people made assumptions
+
+744
+00:28:40,160 --> 00:28:42,840
+about the ordering of dictionaries under Python 2.
+
+745
+00:28:42,840 --> 00:28:45,160
+And so not relying on this has been really hard for us,
+
+746
+00:28:45,160 --> 00:28:47,800
+especially when you have hundreds of developers working
+
+747
+00:28:47,800 --> 00:28:49,080
+on code independently.
+
+748
+00:28:49,080 --> 00:28:51,240
+Sort of a common case of this is maybe you're printing out
+
+749
+00:28:51,240 --> 00:28:55,120
+a dictionary and an exception, and you're
+
+750
+00:28:55,120 --> 00:28:57,720
+sort of assuming the ordering of the representation of it
+
+751
+00:28:57,720 --> 00:29:00,560
+is always the same.
+
+752
+00:29:00,560 --> 00:29:03,480
+Another case of Python 3, here we have a dictionary.
+
+753
+00:29:03,480 --> 00:29:04,680
+We're printing out the keys.
+
+754
+00:29:04,680 --> 00:29:08,280
+Python 2, we get 1, 2, 3, as expected.
+
+755
+00:29:08,280 --> 00:29:11,880
+Anybody guess this is Python 3?
+
+756
+00:29:11,880 --> 00:29:13,000
+We get an error.
+
+757
+00:29:13,000 --> 00:29:14,120
+We get a type error here.
+
+758
+00:29:14,120 --> 00:29:16,220
+Actually, it's Dick, keys, and list.
+
+759
+00:29:16,220 --> 00:29:19,120
+It turns out there's a huge change of Python 2 to Python 3
+
+760
+00:29:19,120 --> 00:29:20,580
+in dictionaries.
+
+761
+00:29:20,580 --> 00:29:24,920
+Now we return dictionary views for keys, values, and items.
+
+762
+00:29:24,920 --> 00:29:28,680
+And iter items, iter, et cetera, are all gone.
+
+763
+00:29:28,680 --> 00:29:32,840
+And one of the things is this is more of a set-like component
+
+764
+00:29:32,840 --> 00:29:34,120
+instead of a list-like thing.
+
+765
+00:29:34,120 --> 00:29:36,080
+And in this case, you cannot add them together.
+
+766
+00:29:36,080 --> 00:29:38,680
+You cannot pass it into sort because you
+
+767
+00:29:38,680 --> 00:29:41,080
+can't sort this thing that's only an iterable and not
+
+768
+00:29:41,080 --> 00:29:42,520
+actually a list.
+
+769
+00:29:42,520 --> 00:29:44,760
+In this case, this is actually a fairly easy one to fix.
+
+770
+00:29:44,760 --> 00:29:51,120
+And there's some good fixers for it under a futurize.
+
+771
+00:29:51,120 --> 00:29:53,000
+So also some changes around exceptions.
+
+772
+00:29:53,000 --> 00:29:56,240
+So here we have a bit of code that raises an exception
+
+773
+00:29:56,240 --> 00:29:59,040
+and then takes the sys.exe info to get information
+
+774
+00:29:59,040 --> 00:30:00,320
+about the caller.
+
+775
+00:30:00,320 --> 00:30:02,440
+Any ideas what this might produce under Python 2?
+
+776
+00:30:02,440 --> 00:30:07,640
+I think we've scared you guys.
+
+777
+00:30:07,640 --> 00:30:10,080
+As you might expect, it returns two exceptions.
+
+778
+00:30:10,080 --> 00:30:11,000
+What about Python 3?
+
+779
+00:30:14,120 --> 00:30:16,720
+So it returns one exception and then none.
+
+780
+00:30:16,720 --> 00:30:17,760
+Any idea why that might be?
+
+781
+00:30:21,480 --> 00:30:22,320
+Yeah, that's right.
+
+782
+00:30:22,320 --> 00:30:25,040
+So essentially, the thing that changed
+
+783
+00:30:25,040 --> 00:30:29,680
+was the definition of the phrase handling an exception.
+
+784
+00:30:29,680 --> 00:30:31,480
+Under Python 2, handling an exception
+
+785
+00:30:31,480 --> 00:30:34,200
+is defined as executing or having
+
+786
+00:30:34,200 --> 00:30:36,240
+executed an accept clause.
+
+787
+00:30:36,240 --> 00:30:37,880
+Whereas in Python 3, it's defined
+
+788
+00:30:37,880 --> 00:30:40,920
+as executing an accept clause.
+
+789
+00:30:40,920 --> 00:30:43,280
+So the distinction here is that you can no longer expect
+
+790
+00:30:43,280 --> 00:30:46,040
+sys.exe info to be available outside
+
+791
+00:30:46,040 --> 00:30:48,320
+of the context of the accept clause.
+
+792
+00:30:48,320 --> 00:30:50,520
+And much of our code base is dependent on this behavior
+
+793
+00:30:50,520 --> 00:30:53,600
+and it's difficult to discover.
+
+794
+00:30:53,600 --> 00:30:56,840
+Here's another exception issue from exceptions in Port Keyer.
+
+795
+00:30:56,840 --> 00:30:58,520
+Any idea what this might do in Python 2?
+
+796
+00:31:01,840 --> 00:31:02,520
+Nothing.
+
+797
+00:31:02,520 --> 00:31:04,040
+It does literally nothing.
+
+798
+00:31:04,040 --> 00:31:06,600
+Not just because it's not doing anything,
+
+799
+00:31:06,600 --> 00:31:09,720
+but also because the from exceptions import foo
+
+800
+00:31:09,720 --> 00:31:11,320
+processes in no op.
+
+801
+00:31:11,320 --> 00:31:14,840
+In Python 2, the exceptions were pulled
+
+802
+00:31:14,840 --> 00:31:16,840
+into the built-in namespace and so this line
+
+803
+00:31:16,840 --> 00:31:18,240
+was basically ignored.
+
+804
+00:31:18,240 --> 00:31:19,040
+What about Python 3?
+
+805
+00:31:22,680 --> 00:31:26,440
+In Python 3, the deprecated exceptions module was removed.
+
+806
+00:31:26,440 --> 00:31:28,840
+And so essentially, this is a vestigial holdover
+
+807
+00:31:28,840 --> 00:31:31,400
+from Python 1 where the exceptions were in 1
+
+808
+00:31:32,360 --> 00:31:35,400
+and were in the exceptions package in Python 2.
+
+809
+00:31:35,400 --> 00:31:37,480
+It was deprecated and so it's available in the built-in
+
+810
+00:31:37,480 --> 00:31:38,480
+namespace.
+
+811
+00:31:38,480 --> 00:31:40,680
+In Python 3, it was removed.
+
+812
+00:31:40,680 --> 00:31:42,880
+And so this no op became an error in a way
+
+813
+00:31:42,880 --> 00:31:46,720
+that we would not have predicted.
+
+814
+00:31:46,720 --> 00:31:50,360
+Some things were painful.
+
+815
+00:31:50,360 --> 00:31:52,160
+So this is a really interesting one for us.
+
+816
+00:31:52,160 --> 00:31:54,560
+This is actually something that's near and dear to a few
+
+817
+00:31:54,560 --> 00:31:55,520
+of my colleagues right now.
+
+818
+00:31:55,520 --> 00:31:56,120
+Hashability.
+
+819
+00:31:56,120 --> 00:31:58,200
+We have this class here, MyString,
+
+820
+00:31:58,200 --> 00:32:01,000
+and MyString defines EQ for equality.
+
+821
+00:32:01,000 --> 00:32:02,960
+In this case, it's not doing anything special.
+
+822
+00:32:02,960 --> 00:32:05,560
+Let me try to print out the hash of MyString PyCon.
+
+823
+00:32:05,560 --> 00:32:06,760
+Anybody guess what that'll be?
+
+824
+00:32:09,240 --> 00:32:10,120
+A big number, right?
+
+825
+00:32:10,120 --> 00:32:11,320
+Positive or negative number?
+
+826
+00:32:11,320 --> 00:32:12,200
+It's a really big number.
+
+827
+00:32:12,200 --> 00:32:12,880
+Python 3.
+
+828
+00:32:12,880 --> 00:32:13,560
+Any guesses?
+
+829
+00:32:16,800 --> 00:32:17,240
+Type error.
+
+830
+00:32:17,240 --> 00:32:17,720
+That's correct.
+
+831
+00:32:17,720 --> 00:32:18,240
+Yeah.
+
+832
+00:32:18,240 --> 00:32:19,480
+So it's unhashable type.
+
+833
+00:32:19,480 --> 00:32:21,320
+Specifically, in Python, you should always
+
+834
+00:32:21,320 --> 00:32:24,400
+have if two objects are equal, then their hashes
+
+835
+00:32:24,400 --> 00:32:25,280
+should be equal.
+
+836
+00:32:25,280 --> 00:32:26,560
+And that should always be true.
+
+837
+00:32:26,560 --> 00:32:28,760
+And if you define your own equality operator,
+
+838
+00:32:29,720 --> 00:32:32,240
+you're probably breaking that explicit contract that
+
+839
+00:32:32,240 --> 00:32:33,440
+should always be done.
+
+840
+00:32:33,440 --> 00:32:35,680
+Under Python 2, it lets you shoot yourself in the foot
+
+841
+00:32:35,680 --> 00:32:37,280
+and have a happy day.
+
+842
+00:32:37,280 --> 00:32:38,960
+Python 3, they actually said, no, this
+
+843
+00:32:38,960 --> 00:32:40,280
+isn't a good default behavior.
+
+844
+00:32:40,280 --> 00:32:41,720
+And they actually fixed it.
+
+845
+00:32:41,720 --> 00:32:45,320
+So if you define EQ, you have to define hash as well.
+
+846
+00:32:45,320 --> 00:32:47,440
+And this turns out to be a fairly easy thing to fix.
+
+847
+00:32:47,440 --> 00:32:50,000
+But it's also very subtle and very confusing.
+
+848
+00:32:50,000 --> 00:32:51,920
+And the edge cases under Python 2
+
+849
+00:32:51,920 --> 00:32:54,360
+actually are the scarier part, that this could cause
+
+850
+00:32:54,360 --> 00:32:55,880
+all kinds of weird problems.
+
+851
+00:32:59,280 --> 00:33:02,320
+So one interesting case here is we
+
+852
+00:33:02,320 --> 00:33:06,720
+had a string that was coming in from a user-generated content
+
+853
+00:33:06,720 --> 00:33:09,720
+that contained ASCII and Unicode.
+
+854
+00:33:09,720 --> 00:33:12,240
+Or not ASCII and Unicode, but it contained essentially Unicode
+
+855
+00:33:12,240 --> 00:33:14,360
+characters, including emojis.
+
+856
+00:33:14,360 --> 00:33:16,920
+So we were iterating over each character in that sequence
+
+857
+00:33:16,920 --> 00:33:19,480
+and printing out some information about that character.
+
+858
+00:33:19,480 --> 00:33:21,240
+Here, we've converted to ord and hex
+
+859
+00:33:21,240 --> 00:33:22,920
+so we can look at the code points.
+
+860
+00:33:22,920 --> 00:33:25,240
+What do you might expect this look like under Python 2?
+
+861
+00:33:29,000 --> 00:33:30,480
+Well, your first character is going
+
+862
+00:33:30,480 --> 00:33:33,360
+to be your code point for the ASCII letter A.
+
+863
+00:33:33,360 --> 00:33:37,000
+The second character, 20, is the code point for space in ASCII.
+
+864
+00:33:37,000 --> 00:33:39,760
+And the next two characters are the code points
+
+865
+00:33:39,760 --> 00:33:42,720
+that represent bytes that combined,
+
+866
+00:33:42,720 --> 00:33:47,160
+refer to the lovely emoji that we have here.
+
+867
+00:33:47,160 --> 00:33:50,520
+Any idea what this might look like under Python 3?
+
+868
+00:33:50,520 --> 00:33:55,200
+How many prints do you expect to see?
+
+869
+00:33:55,200 --> 00:33:56,480
+Three.
+
+870
+00:33:56,480 --> 00:34:00,840
+So in Python 3, we logically group the Unicode characters
+
+871
+00:34:00,840 --> 00:34:03,200
+and we treat them logically as characters, which is correct.
+
+872
+00:34:03,200 --> 00:34:08,000
+This is no longer exposed to the Python developer.
+
+873
+00:34:08,000 --> 00:34:10,560
+Essentially, this is an implementation detail
+
+874
+00:34:10,560 --> 00:34:14,440
+under the surface because we're encoding in the Unicode
+
+875
+00:34:14,440 --> 00:34:16,280
+character sets.
+
+876
+00:34:16,280 --> 00:34:18,440
+However, when we were debugging this,
+
+877
+00:34:18,440 --> 00:34:20,560
+we had some inconsistencies because in some
+
+878
+00:34:20,560 --> 00:34:23,120
+of our environments, we were seeing the Python 3 behavior
+
+879
+00:34:23,120 --> 00:34:25,960
+under Python 2 as well.
+
+880
+00:34:26,000 --> 00:34:27,200
+Any idea where that might be?
+
+881
+00:34:30,200 --> 00:34:31,840
+Not quite.
+
+882
+00:34:31,840 --> 00:34:34,800
+So in Python, below a certain version,
+
+883
+00:34:34,800 --> 00:34:38,760
+you could compile what's called a wide or narrow build.
+
+884
+00:34:38,760 --> 00:34:40,840
+And essentially, that would change the internal
+
+885
+00:34:40,840 --> 00:34:45,200
+representation for characters to be UCS2 or 4.
+
+886
+00:34:45,200 --> 00:34:47,880
+The gist of it is that it would either use two bytes
+
+887
+00:34:47,880 --> 00:34:50,080
+per Unicode character or four bytes.
+
+888
+00:34:50,080 --> 00:34:52,280
+If you have two bytes, then what happens is,
+
+889
+00:34:52,280 --> 00:34:55,920
+or so-called narrow build, then multi-byte characters
+
+890
+00:34:55,920 --> 00:34:59,000
+that refer to a code point that cannot be encapsulated
+
+891
+00:34:59,000 --> 00:35:02,400
+in that number of bytes, you get essentially
+
+892
+00:35:02,400 --> 00:35:04,960
+two separate characters that combined refer to
+
+893
+00:35:04,960 --> 00:35:07,360
+the actual glyph that you care about.
+
+894
+00:35:07,360 --> 00:35:10,720
+In Python 2, you can also do a wide build,
+
+895
+00:35:10,720 --> 00:35:12,520
+which is what we had in some of our environments.
+
+896
+00:35:12,520 --> 00:35:16,280
+And so the challenge here is that the compile time flags
+
+897
+00:35:16,280 --> 00:35:17,880
+that we were using to override the behavior here
+
+898
+00:35:17,880 --> 00:35:19,600
+was not consistent in all of our environments,
+
+899
+00:35:19,600 --> 00:35:22,560
+which was something we did not think to have to expect.
+
+900
+00:35:23,560 --> 00:35:26,400
+So here's another really fun one.
+
+901
+00:35:26,400 --> 00:35:29,320
+We have from C string import string I-O.
+
+902
+00:35:29,320 --> 00:35:30,360
+And we have two things.
+
+903
+00:35:30,360 --> 00:35:33,760
+We have some image data as bytes and some text as Unicode.
+
+904
+00:35:33,760 --> 00:35:35,600
+Anybody guess what happens to Python 2?
+
+905
+00:35:37,760 --> 00:35:39,320
+It just sort of works, right?
+
+906
+00:35:39,320 --> 00:35:40,160
+Nothing actually happens.
+
+907
+00:35:40,160 --> 00:35:41,000
+We actually get no result.
+
+908
+00:35:41,000 --> 00:35:42,520
+We're not printing anything out.
+
+909
+00:35:42,520 --> 00:35:44,560
+Under Python 3, any guesses what we get?
+
+910
+00:35:47,800 --> 00:35:48,760
+We get an error here, actually.
+
+911
+00:35:48,760 --> 00:35:50,320
+We get module not found error.
+
+912
+00:35:50,360 --> 00:35:53,920
+Turns out C string I-O is deprecated and removed
+
+913
+00:35:53,920 --> 00:35:56,120
+in favor of I-O, bytes I-O, and string I-O.
+
+914
+00:35:56,120 --> 00:35:59,080
+And those are in Python 2, actually, as well.
+
+915
+00:35:59,080 --> 00:36:00,440
+So let's try this code again.
+
+916
+00:36:00,440 --> 00:36:02,760
+From I-O import string I-O, we have string I-O,
+
+917
+00:36:02,760 --> 00:36:04,280
+the bytes, and the Unicode.
+
+918
+00:36:04,280 --> 00:36:06,640
+Under Python 2, we actually get a type error.
+
+919
+00:36:06,640 --> 00:36:08,680
+It turns out for string I-O, it requires Unicode,
+
+920
+00:36:08,680 --> 00:36:11,040
+and bytes I-O requires bytes.
+
+921
+00:36:11,040 --> 00:36:12,240
+And actually, thankfully, in Python 3,
+
+922
+00:36:12,240 --> 00:36:13,760
+we get the same behavior.
+
+923
+00:36:13,760 --> 00:36:15,720
+But here, the catches we've been using
+
+924
+00:36:15,720 --> 00:36:18,960
+from C string I-O import string I-O to handle both cases.
+
+925
+00:36:18,960 --> 00:36:20,920
+Now we actually have to go through and manually sort out
+
+926
+00:36:20,920 --> 00:36:21,920
+each case.
+
+927
+00:36:21,920 --> 00:36:25,400
+And there's some particularly ugly complications around this.
+
+928
+00:36:25,400 --> 00:36:29,320
+Under Python 2, opening a file by default opens it in binary.
+
+929
+00:36:29,320 --> 00:36:31,960
+Under Python 3, it opens as Unicode.
+
+930
+00:36:31,960 --> 00:36:34,520
+The CSV module changed some behaviors in a similar way,
+
+931
+00:36:34,520 --> 00:36:35,320
+as well.
+
+932
+00:36:35,320 --> 00:36:37,520
+So you combine all these three things together,
+
+933
+00:36:37,520 --> 00:36:39,040
+you get this really sort of hairy knot
+
+934
+00:36:39,040 --> 00:36:42,840
+of these weird binary Unicode problems to handle.
+
+935
+00:36:42,840 --> 00:36:45,520
+One of the fun things about a migration of this size
+
+936
+00:36:45,520 --> 00:36:48,720
+and a code base of this size is that your Python code does not
+
+937
+00:36:48,720 --> 00:36:50,040
+run in isolation.
+
+938
+00:36:50,040 --> 00:36:52,440
+It integrates with other components and other systems
+
+939
+00:36:52,440 --> 00:36:55,760
+that are not necessarily built with the same technology stack.
+
+940
+00:36:55,760 --> 00:36:59,200
+In this case, we have some Node.js services,
+
+941
+00:36:59,200 --> 00:37:01,600
+or some JavaScript environments that communicate
+
+942
+00:37:01,600 --> 00:37:02,880
+with our Python stack.
+
+943
+00:37:02,880 --> 00:37:05,720
+And so we're going to drift quickly over
+
+944
+00:37:05,720 --> 00:37:07,800
+into the JavaScript world and look at how
+
+945
+00:37:07,800 --> 00:37:08,720
+we can do that.
+
+946
+00:37:08,720 --> 00:37:11,040
+So we're going to go ahead and do a quick run
+
+947
+00:37:11,080 --> 00:37:13,600
+quickly over into the JavaScript world.
+
+948
+00:37:13,600 --> 00:37:17,600
+And we're going to run these two statements in the Node.js
+
+949
+00:37:17,600 --> 00:37:18,440
+REPL.
+
+950
+00:37:18,440 --> 00:37:20,760
+What do you expect might return from this
+
+951
+00:37:20,760 --> 00:37:25,480
+based on your understanding of computer science in general?
+
+952
+00:37:25,480 --> 00:37:31,680
+Yeah, so essentially, in JavaScript,
+
+953
+00:37:31,680 --> 00:37:34,800
+numbers are always 64-bit floating points.
+
+954
+00:37:34,800 --> 00:37:37,960
+Because both of these numbers are outside the threshold
+
+955
+00:37:37,960 --> 00:37:39,920
+of precision for doubles, you get
+
+956
+00:37:39,920 --> 00:37:42,920
+capped at the functional equivalent of max int,
+
+957
+00:37:42,920 --> 00:37:44,560
+or max double.
+
+958
+00:37:44,560 --> 00:37:47,280
+This is defined in IEEE 754, which
+
+959
+00:37:47,280 --> 00:37:48,840
+you're curious to learn more about.
+
+960
+00:37:48,840 --> 00:37:51,080
+David Wolver will talk about it tomorrow
+
+961
+00:37:51,080 --> 00:37:55,880
+in a lovely talk entitled IEEE 704.00.
+
+962
+00:37:55,880 --> 00:37:56,520
+Oh, zero.
+
+963
+00:37:56,520 --> 00:37:58,520
+Zero.
+
+964
+00:37:58,520 --> 00:38:01,840
+So the fun thing about how IEEE 74 numbers are implemented
+
+965
+00:38:01,840 --> 00:38:04,280
+is they're not necessarily accurate.
+
+966
+00:38:04,280 --> 00:38:05,280
+They're accurate enough.
+
+967
+00:38:05,280 --> 00:38:09,160
+They're sort of like scientific notation.
+
+968
+00:38:09,200 --> 00:38:11,880
+So to work around this in our current base, what we did
+
+969
+00:38:11,880 --> 00:38:14,920
+was we converted longs to strings
+
+970
+00:38:14,920 --> 00:38:17,440
+when passing to JavaScript.
+
+971
+00:38:17,440 --> 00:38:20,720
+Unfortunately, our isInstance test for longs
+
+972
+00:38:20,720 --> 00:38:24,440
+doesn't work under Python 3, because in Python 3,
+
+973
+00:38:24,440 --> 00:38:28,360
+as well as to some extent, int and longs
+
+974
+00:38:28,360 --> 00:38:32,840
+are effectively the same type.
+
+975
+00:38:32,840 --> 00:38:36,960
+And so our test to see if it's long did not pass.
+
+976
+00:38:36,960 --> 00:38:39,080
+And so it was not coerced into a string.
+
+977
+00:38:39,080 --> 00:38:41,520
+It was passed to the JavaScript system
+
+978
+00:38:41,520 --> 00:38:44,720
+directly as a numeric literal, which
+
+979
+00:38:44,720 --> 00:38:47,840
+it was not able to interpret.
+
+980
+00:38:47,840 --> 00:38:49,680
+That means it no longer works as Python 3.
+
+981
+00:38:49,680 --> 00:38:51,200
+We had to go back to the drawing board
+
+982
+00:38:51,200 --> 00:38:54,160
+to figure out how to solve that problem.
+
+983
+00:38:54,160 --> 00:38:56,240
+Another challenge we dealt with is mocks.
+
+984
+00:38:56,240 --> 00:38:58,240
+A lot of the fixtures we use actually
+
+985
+00:38:58,240 --> 00:38:59,920
+do a lot of things great for us.
+
+986
+00:38:59,920 --> 00:39:02,520
+But I don't think any of them actually handle changing mocks.
+
+987
+00:39:02,520 --> 00:39:03,760
+So here we actually have a mock.
+
+988
+00:39:03,760 --> 00:39:06,720
+We're mocking built-in open and Python 2 with open,
+
+989
+00:39:06,720 --> 00:39:07,920
+not a file here.
+
+990
+00:39:07,960 --> 00:39:09,280
+There's a hint this is not actually a file.
+
+991
+00:39:09,280 --> 00:39:11,320
+So if you weren't mocking it, it will throw an exception.
+
+992
+00:39:11,320 --> 00:39:13,000
+But in this case, nothing actually
+
+993
+00:39:13,000 --> 00:39:14,540
+should happen because we're mocking open.
+
+994
+00:39:14,540 --> 00:39:16,800
+And open will just do nothing, and it'll be fine.
+
+995
+00:39:16,800 --> 00:39:19,200
+It'd be a magic mock, and we get nothing under Python 2.
+
+996
+00:39:19,200 --> 00:39:20,560
+Any guess you get under Python 3?
+
+997
+00:39:26,440 --> 00:39:27,360
+So let's actually see.
+
+998
+00:39:27,360 --> 00:39:29,080
+It turns out module not found.
+
+999
+00:39:29,080 --> 00:39:32,040
+It turns out double underscore built-ins
+
+1000
+00:39:32,040 --> 00:39:34,440
+is renamed to built-ins.
+
+1001
+00:39:34,440 --> 00:39:36,680
+And that means actually the mock is no longer valid.
+
+1002
+00:39:36,680 --> 00:39:38,440
+So we're actually not mocking the thing,
+
+1003
+00:39:38,440 --> 00:39:40,520
+but we're trying to mock a thing that doesn't exist.
+
+1004
+00:39:40,520 --> 00:39:43,040
+And so we actually get mock throwing the exception.
+
+1005
+00:39:43,040 --> 00:39:45,600
+It turns out we have lots of code now where it says,
+
+1006
+00:39:45,600 --> 00:39:49,160
+if Python 2 mock this, if Python 3 mock that.
+
+1007
+00:39:49,160 --> 00:39:51,640
+This is something we showed how to manually find in each case.
+
+1008
+00:39:51,640 --> 00:39:54,040
+It turns out these are fairly easy to find.
+
+1009
+00:39:54,040 --> 00:39:56,600
+This is true for essentially all the standard library
+
+1010
+00:39:56,600 --> 00:39:58,600
+changes that are made under Python,
+
+1011
+00:39:58,600 --> 00:40:01,840
+including things like built-in.
+
+1012
+00:40:01,840 --> 00:40:03,880
+So these are some of the most interesting edge cases
+
+1013
+00:40:03,880 --> 00:40:05,880
+we discovered along the way.
+
+1014
+00:40:05,880 --> 00:40:07,480
+We're still in this process, and if you're
+
+1015
+00:40:07,480 --> 00:40:09,960
+curious to learn more about some of the things we expect,
+
+1016
+00:40:09,960 --> 00:40:13,000
+or we will discover as we continue,
+
+1017
+00:40:13,000 --> 00:40:14,840
+we expect to update the Pinterest engineering
+
+1018
+00:40:14,840 --> 00:40:18,520
+blog with information about the Python 3 migration project
+
+1019
+00:40:18,520 --> 00:40:20,560
+as we come closer to a close on that.
+
+1020
+00:40:20,560 --> 00:40:21,600
+Hopefully we'll have some information
+
+1021
+00:40:21,600 --> 00:40:24,920
+about the impact of that, which we expect to be significant.
+
+1022
+00:40:24,920 --> 00:40:26,360
+Thanks for coming to the talk.
+
+1023
+00:40:26,360 --> 00:40:28,320
+Since we're kind of short on time here
+
+1024
+00:40:28,320 --> 00:40:31,080
+and we're the only thing between you and lunch,
+
+1025
+00:40:31,080 --> 00:40:34,040
+we'll take questions at the Pinterest booth on the expo
+
+1026
+00:40:34,040 --> 00:40:37,040
+on the fourth floor at 4 o'clock.
+
+1027
+00:40:37,040 --> 00:40:37,540
+Cool.
+
+1028
+00:40:37,540 --> 00:40:39,040
+Thank you so much.
+

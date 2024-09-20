@@ -1,0 +1,3324 @@
+1
+00:00:00,000 --> 00:00:11,000
+Good morning, everyone. Or afternoon. It's still morning. I live in California, so my
+
+2
+00:00:11,000 --> 00:00:17,440
+brain still thinks it's morning. Hi, I'm Jacinda Shelley. If you're not completely
+
+3
+00:00:17,440 --> 00:00:23,440
+set up with Slack or anything like that yet, don't worry. We can take care of any logistical
+
+4
+00:00:23,440 --> 00:00:28,720
+issues when we get to the practical portion. The first part of the tutorial is me blathering
+
+5
+00:00:28,720 --> 00:00:33,880
+on at you for a little bit to give you some background on security. I'm really excited
+
+6
+00:00:33,880 --> 00:00:39,360
+that you're all here. This is the second time that I've been the instructor for this
+
+7
+00:00:39,360 --> 00:00:43,840
+tutorial and I was an assistant for it the first time it was presented. Talk a little
+
+8
+00:00:43,840 --> 00:00:49,440
+bit about that later. As I mentioned, I think a few of you were confused why I actually
+
+9
+00:00:49,440 --> 00:00:54,760
+had to ask for your email. It's because PyCon takes your privacy very seriously, so I can't
+
+10
+00:00:54,760 --> 00:01:01,080
+actually, well, I can see a list of the names of everyone who is attending and I can check
+
+11
+00:01:01,080 --> 00:01:07,200
+a box to send an email via a form. I can't actually invite you to Slack unless I request
+
+12
+00:01:07,200 --> 00:01:13,000
+your email. If that seemed a little confusing because PyCon has your email, then that's
+
+13
+00:01:13,000 --> 00:01:20,520
+why. So as I mentioned, the history of this tutorial, it was originally given in PyCon
+
+14
+00:01:20,600 --> 00:01:27,600
+2015 and it was titled Getting Comfy with Web Security. I was asked if I would be interested
+
+15
+00:01:27,600 --> 00:01:33,400
+in assisting with the tutorial because I was giving a tutorial on a different topic at
+
+16
+00:01:33,400 --> 00:01:39,760
+the same conference and he wanted some extra help. I was actually giving a tutorial on
+
+17
+00:01:39,760 --> 00:01:45,480
+the Django admin and I randomly emailed him last year because I thought the tutorial was
+
+18
+00:01:45,480 --> 00:01:51,200
+so cool and he hadn't updated it and I wanted to give it again. Last year he was like, oh,
+
+19
+00:01:51,200 --> 00:01:54,400
+sure, it's all under Creative Commons and I was like, you sure? I'm going to take all
+
+20
+00:01:54,400 --> 00:02:00,640
+you did and update it. It took a lot of updating. Thankfully I did most of that last year when
+
+21
+00:02:00,640 --> 00:02:10,320
+I presented it at DjangoCon 2018, but going from Django 1.4 to Django 2.1 was a lot and
+
+22
+00:02:10,320 --> 00:02:17,120
+in fact some of the exploits became a lot more difficult to pull off with that update.
+
+23
+00:02:17,120 --> 00:02:24,320
+So that's good news on the Django front. They're getting more secure all the time. So a little
+
+24
+00:02:24,320 --> 00:02:30,040
+bit about me. I was the first engineer at Doctor On Demand. I was promoted to CTO a
+
+25
+00:02:30,040 --> 00:02:36,080
+couple of years ago. We are a sponsor. You can come find us at the expo. They do pay
+
+26
+00:02:36,080 --> 00:02:40,920
+for me to come to the conference. I feel okay giving a little bit of a plug and we're
+
+27
+00:02:40,920 --> 00:02:45,720
+hiring. I also have an adorable little two and a half year old who you might see running
+
+28
+00:02:45,720 --> 00:02:52,360
+around at the conference because PyCon is very family friendly. And she's come to this
+
+29
+00:02:52,360 --> 00:03:02,640
+is her third PyCon. So a little bit about what this tutorial is and isn't. I like to
+
+30
+00:03:02,640 --> 00:03:08,600
+start this off with a quote from James Mickens who I don't know, it doesn't matter if you've
+
+31
+00:03:08,600 --> 00:03:15,840
+heard of him or not, if you are at all interested in extremely nerdy humor, I recommend reading
+
+32
+00:03:15,840 --> 00:03:23,000
+anything he's written or watching any of his talks. But he has a small paper called This
+
+33
+00:03:23,000 --> 00:03:27,780
+World of Ours that says, sometimes when I check my work email, I'll find a message that
+
+34
+00:03:27,780 --> 00:03:34,220
+says talk announcement, vertex based elliptic cryptography on in-way bojangle spaces. And
+
+35
+00:03:34,220 --> 00:03:43,020
+the thrust of this paper is that essentially if you're relying on really, really advanced
+
+36
+00:03:43,020 --> 00:03:51,660
+security to keep your website secure and you're only concerned about simultaneously shared
+
+37
+00:03:51,660 --> 00:03:57,180
+party, that's not actually how attacks happen in the real world unless you are getting hacked
+
+38
+00:03:57,180 --> 00:04:02,380
+by the NSA or another nation state. In which case you might as well just throw up your
+
+39
+00:04:02,380 --> 00:04:09,820
+hands because they're going to get in. But this is about protecting your website from
+
+40
+00:04:09,820 --> 00:04:14,780
+the most common attacks, the ones that are most easily scripted and that are most practical
+
+41
+00:04:14,780 --> 00:04:22,900
+and they're also, in Django they're not as easy to mess up but they are pretty, they're
+
+42
+00:04:22,900 --> 00:04:32,180
+pretty common. So order of operations, I talk a little bit about example attacks in the
+
+43
+00:04:32,180 --> 00:04:40,300
+real world and you get to see examples of some big names who have gotten this wrong.
+
+44
+00:04:40,300 --> 00:04:46,420
+We do a little bit of what used to be called Google dorking. They now call it like Google
+
+45
+00:04:46,420 --> 00:04:52,300
+hacking or something. We have a little bit of a group discussion which you may have already
+
+46
+00:04:52,300 --> 00:04:57,940
+initiated about what you're trying to protect. Lab time break is at 3 p.m. and I've been
+
+47
+00:04:57,940 --> 00:05:06,140
+instructed to let you out right on time because the snacks go quickly. We do more lab time
+
+48
+00:05:06,340 --> 00:05:11,900
+and then we do a wrap up lecture where I walk through all of the exploits that we did during
+
+49
+00:05:11,900 --> 00:05:17,540
+the lab. And then I give you a survey link so you can tell PyCon whether you loved or
+
+50
+00:05:17,540 --> 00:05:24,540
+hated the tutorial where I can improve and all of that good stuff. So getting to know
+
+51
+00:05:24,540 --> 00:05:31,020
+you, obviously there are too many people in this tutorial to have everyone go around and
+
+52
+00:05:31,020 --> 00:05:36,020
+introduce themselves, but if we have a few brave volunteers who want to stand up and
+
+53
+00:05:36,020 --> 00:05:43,020
+share why they're here at this tutorial, that would be great. All right.
+
+54
+00:06:01,020 --> 00:06:08,020
+Thank you. Anyone else want to share? All right.
+
+55
+00:06:31,020 --> 00:06:52,020
+All right. Anyone else? That's fine. You'll all get to know each other in your groups.
+
+56
+00:06:55,620 --> 00:07:00,460
+From the survey you completed, you might be interested to know there were questions about
+
+57
+00:07:00,460 --> 00:07:05,380
+familiarity with web security, Python and Django. The average in the group is about
+
+58
+00:07:05,380 --> 00:07:12,380
+2.5 for Django and for web security. So if you feel like you don't know that much, then
+
+59
+00:07:13,900 --> 00:07:18,100
+you're in good company. And then it was about a 3.5 for Python, which made sense to me given
+
+60
+00:07:18,100 --> 00:07:23,980
+that we're all at a Python conference. The next step, this is some examples of real world
+
+61
+00:07:23,980 --> 00:07:29,300
+exploits where we talk through and these mirror the exploits that you'll be doing in the lab
+
+62
+00:07:29,300 --> 00:07:36,300
+exercises. So it's good to pay attention. Some of these may look a little dated because
+
+63
+00:07:36,580 --> 00:07:43,580
+the websites and the examples are from a few years ago, but the attacks are still relevant.
+
+64
+00:07:47,740 --> 00:07:52,660
+So I don't know how many of you are familiar with TweetDeck. This is the first example
+
+65
+00:07:52,660 --> 00:07:59,260
+that we're going to talk about, which is cross-site scripting. TweetDeck is a kind
+
+66
+00:07:59,260 --> 00:08:06,260
+of if you are a pro-expert user of Twitter, like a celebrity or you're managing a Twitter
+
+67
+00:08:06,460 --> 00:08:12,980
+account on behalf of someone else, then you might be a user of TweetDeck. It used to be
+
+68
+00:08:12,980 --> 00:08:19,980
+quite popular. So one day someone went and they wrote this test. And that says in German
+
+69
+00:08:20,460 --> 00:08:27,460
+that this shouldn't work. And this was the raw tweet. But what got displayed was this
+
+70
+00:08:28,500 --> 00:08:35,500
+message down here in TweetDeck. Now, just offhand, for those of you who are more familiar
+
+71
+00:08:36,820 --> 00:08:43,820
+with cross-site scripting, this is who are less familiar with cross-site scripting, this
+
+72
+00:08:43,980 --> 00:08:50,980
+means that instead of displaying the raw HTML, it means that TweetDeck was actually interpreted
+
+73
+00:08:52,340 --> 00:08:59,340
+in the HTML. So the next thing that someone did not too long after this tweet went out
+
+74
+00:08:59,420 --> 00:09:06,420
+was they wrote this little script. Because what happens generally speaking on a website,
+
+75
+00:09:07,420 --> 00:09:14,420
+if you write HTML and input it in your client, and then another site that's interpreting
+
+76
+00:09:19,300 --> 00:09:26,300
+the HTML doesn't escape it properly and actually executes that HTML, then you can script basically
+
+77
+00:09:26,460 --> 00:09:33,460
+anything you want. We'll walk through exactly what this tweet does in a minute. And then
+
+78
+00:09:34,100 --> 00:09:38,500
+TweetDeck tweeted out this. We've taken down TweetDeck temporarily while we investigate
+
+79
+00:09:38,500 --> 00:09:45,500
+the security issue. And as we will walk through each thing. So the first part of this is it's
+
+80
+00:09:46,820 --> 00:09:51,740
+embedded in a script tag, which means it's JavaScript. It's throwing up an alert that
+
+81
+00:09:51,740 --> 00:09:57,160
+there's a cross-site scripting vulnerability in TweetDeck. The next line in there is clicking
+
+82
+00:09:57,160 --> 00:10:03,180
+the retweet button. So if you opened this up, all of a sudden you would retweet this
+
+83
+00:10:03,180 --> 00:10:10,180
+to all of your followers without actually hitting the retweet button yourself. Set the
+
+84
+00:10:11,340 --> 00:10:18,340
+class to XSS. And what this kind of obscure line is doing is it's finding the heart button
+
+85
+00:10:20,220 --> 00:10:27,220
+and also favoriting this tweet for you. So this tweet rapidly garnered 83,500 retweets
+
+86
+00:10:28,220 --> 00:10:35,220
+and almost 10,000 favorites. I think because in some of the clients, the clicking the favorite
+
+87
+00:10:39,180 --> 00:10:46,180
+action didn't actually work correctly. So what else could this exploit have done? Like
+
+88
+00:10:47,500 --> 00:10:51,200
+if someone hadn't wanted to do just something funny, what else might they have been able
+
+89
+00:10:51,200 --> 00:10:58,200
+to do? Yes? Yeah, potentially. Other things they might have been able to delete all your
+
+90
+00:11:09,360 --> 00:11:13,920
+tweets depending on what authorization is required to do that. Essentially anything
+
+91
+00:11:13,920 --> 00:11:19,020
+that the user is authorized to do that can be executed by JavaScript, your attacker can
+
+92
+00:11:19,020 --> 00:11:25,840
+now do to you. Now what can't they have done? Yeah? Probably not. Although it's possible
+
+93
+00:11:35,740 --> 00:11:42,740
+that that would require another vulnerability in terms of best practice. Right. Also anything
+
+94
+00:11:42,740 --> 00:11:49,740
+that that particular user wouldn't have access to. This doesn't change who you are authenticated
+
+95
+00:11:50,700 --> 00:11:57,700
+as. This just performs actions on your behalf. So if you opened up this tweet, like I could
+
+96
+00:11:58,160 --> 00:12:04,240
+potentially delete all your tweets. If other security measures weren't in place, I might
+
+97
+00:12:04,240 --> 00:12:08,880
+be able to change your password, take over your account. I could upload any of your user
+
+98
+00:12:08,920 --> 00:12:14,200
+data but I couldn't do things like access what's on Twitter's servers that doesn't belong
+
+99
+00:12:14,200 --> 00:12:21,200
+to me. That would require another vulnerability to be in place. So we can pause there if anyone
+
+100
+00:12:22,560 --> 00:12:29,560
+has any questions about cross site scripting. Okay. The next example is around why defaults
+
+101
+00:12:29,560 --> 00:12:36,560
+are not always good. So this, as I mentioned, Ashish was the original presenter of this
+
+102
+00:12:37,600 --> 00:12:44,600
+particular tutorial. He was doing a different talk about setting up Django and was using
+
+103
+00:12:45,960 --> 00:12:51,360
+a particular person's version of the Django tutorials app that had the database built
+
+104
+00:12:51,360 --> 00:12:57,360
+in and the user was able to use it to create a new user. So this is a very interesting
+
+105
+00:12:57,360 --> 00:13:01,400
+tutorials app that had the database built in. So all you had to do was clone the repository
+
+106
+00:13:01,400 --> 00:13:08,400
+and it would run and lots of things were set up for you. So he had this up during his talk
+
+107
+00:13:08,680 --> 00:13:15,680
+and he was asking what is the most awesome. It was Django, Chewbacca, and caffeine here.
+
+108
+00:13:19,120 --> 00:13:26,120
+He then, the next part of the slide was LOL Chewbacca caffeine. He quickly realized that
+
+109
+00:13:28,240 --> 00:13:35,240
+someone, instead of voting on his poll, had hacked his website. Any guesses how they might
+
+110
+00:13:37,480 --> 00:13:44,480
+have done this? It requires access to not necessarily the database itself but a way
+
+111
+00:13:44,880 --> 00:13:47,880
+to access the database. Yes?
+
+112
+00:13:47,880 --> 00:13:54,880
+Maybe, but not in this case. This was in 2014 but you could still do it this year.
+
+113
+00:14:08,880 --> 00:14:11,880
+Yeah.
+
+114
+00:14:11,880 --> 00:14:18,880
+Exactly. So it was forward slash admin and the default was set by the particular repository
+
+115
+00:14:29,480 --> 00:14:33,640
+that he was using. So he was using someone else's repository that already had the database
+
+116
+00:14:33,640 --> 00:14:40,640
+set up that said the password for the admin account is admin. So someone went in and they
+
+117
+00:14:42,200 --> 00:14:49,200
+changed the model. This was the actual tutorial that he was using and you notice in the readme
+
+118
+00:14:49,680 --> 00:14:56,680
+that this is the mysite.polls tutorial. The database has a super user with name admin,
+
+119
+00:14:56,960 --> 00:15:01,600
+password admin. So they could have done something much worse than just change the poll. But
+
+120
+00:15:01,600 --> 00:15:08,600
+because it was a Django talk and Ashish is a security engineer, it was pretty hilarious.
+
+121
+00:15:09,600 --> 00:15:14,820
+So default passwords and URLs. He also did not change the slash admin which is something
+
+122
+00:15:14,820 --> 00:15:20,520
+that I recommend is a best practice. It's really easy to change the URL from being slash
+
+123
+00:15:20,520 --> 00:15:27,280
+admin to slash something random or something easy to remember that is not admin because
+
+124
+00:15:27,280 --> 00:15:34,280
+it's just one fewer attack vector. I'll talk more about that after the lab exercises.
+
+125
+00:15:39,040 --> 00:15:44,620
+The next exploit that we're going to talk about is one that often I think confuses people
+
+126
+00:15:44,620 --> 00:15:51,620
+the most and it's cross site request forgery. So if you've ever tried to think about cross
+
+127
+00:15:52,140 --> 00:15:57,040
+site request forgery before and your head exploded a little bit, don't worry, that's
+
+128
+00:15:57,040 --> 00:16:02,500
+not uncommon. If we break it down a little bit, cross site means that you are making
+
+129
+00:16:02,500 --> 00:16:09,500
+a request from another website. This is becoming increasingly common in a world of additional
+
+130
+00:16:14,180 --> 00:16:21,180
+REST APIs and there are often valid reasons for doing this. But if you're using strictly
+
+131
+00:16:21,460 --> 00:16:27,360
+a model view template relationship within Django or in Flask you're just using standard
+
+132
+00:16:27,360 --> 00:16:32,840
+routing, there is no reason that you should turn off any of the security defaults in terms
+
+133
+00:16:32,840 --> 00:16:39,760
+of same origin because Django has good defaults for those and you should use them. In fact,
+
+134
+00:16:39,760 --> 00:16:45,560
+one of the things that you'll take away from this tutorial is that most, the vast majority
+
+135
+00:16:45,560 --> 00:16:50,540
+of the security related defaults for Django are sane and you should not change them unless
+
+136
+00:16:50,700 --> 00:16:57,700
+you know exactly what you are doing and why. Another note on that is that I saw in some
+
+137
+00:16:57,940 --> 00:17:03,980
+of the responses that people were looking for API specific security recommendations.
+
+138
+00:17:03,980 --> 00:17:08,960
+It's not something that we'll do hands on in this tutorial but if you talk to me afterwards
+
+139
+00:17:08,960 --> 00:17:15,960
+I can point you at resources and things like that. So Google Web Accelerator is really
+
+140
+00:17:16,960 --> 00:17:23,960
+old. It was one of the early things that Google shut down in 2008. It was back in the days
+
+141
+00:17:24,880 --> 00:17:31,880
+when a lot of people still had dial up, the internet was slow and Google Accelerator was
+
+142
+00:17:32,880 --> 00:17:38,840
+a product that was around I think from about 2005 to 2008 and they were trying to make
+
+143
+00:17:38,840 --> 00:17:42,840
+the web faster. That was the goal of this project. It was a client that often ran on
+
+144
+00:17:42,960 --> 00:17:49,360
+Windows machines and things like that. One of the things that it could do to make your
+
+145
+00:17:49,360 --> 00:17:54,520
+web browsing experience faster was click on all the links in your search results for you
+
+146
+00:17:54,520 --> 00:18:01,520
+ahead of time. So this is a screenshot of Basecamp which was built by the same people
+
+147
+00:18:07,240 --> 00:18:12,400
+who created Ruby on Rails. One of the things that you could do in this admin interface
+
+148
+00:18:12,800 --> 00:18:19,800
+was there's that little trash can. What do you think it does? Deletes the user and it
+
+149
+00:18:20,280 --> 00:18:25,960
+deletes the user with a get request. So in general get requests should not change server
+
+150
+00:18:25,960 --> 00:18:32,960
+side state for this reason because if I am authenticated as this user and I send a request
+
+151
+00:18:33,960 --> 00:18:40,960
+to this website that says get slash delete slash one for user one then bye bye Jeremy.
+
+152
+00:18:46,160 --> 00:18:52,640
+So this would come up in Google search results. You were logged in. It would try and click
+
+153
+00:18:52,640 --> 00:18:56,920
+on all of these links and all of a sudden you lost all of the users except for yourself
+
+154
+00:18:56,920 --> 00:19:03,920
+because there's no delete button next to you thankfully and this caused heartache. So anytime
+
+155
+00:19:07,080 --> 00:19:14,080
+that you have a get request that is modifying server state that isn't just returning information
+
+156
+00:19:14,680 --> 00:19:19,280
+this is an opening for the easiest form of cross site request forgery. There are also
+
+157
+00:19:19,280 --> 00:19:24,360
+ways to do cross site request forgery over post. Those are more complicated and as long
+
+158
+00:19:24,360 --> 00:19:31,360
+as you're using Django's defaults and don't add like at CSRF exempt to your views you
+
+159
+00:19:31,560 --> 00:19:38,560
+are protected from those but don't do it over get. Pause there before we go to the final
+
+160
+00:19:41,040 --> 00:19:47,800
+example of our me talking through some of these exploits and see if you have any questions
+
+161
+00:19:47,800 --> 00:19:54,800
+about that. All right. The last example exploit that we're talking about is directory traversal
+
+162
+00:19:58,560 --> 00:20:05,560
+and this is a subset of improper authorization checking. So moin moin was a very popular
+
+163
+00:20:07,120 --> 00:20:14,120
+wiki engine at one point. Wiki.debian ran it. So did wiki.python and it allowed you
+
+164
+00:20:15,120 --> 00:20:19,120
+to put in a lot of plug ins. This is an example of one of the plug ins where you could draw
+
+165
+00:20:19,120 --> 00:20:23,120
+diagrams and then they would be populated within the wiki and people liked this plug
+
+166
+00:20:23,120 --> 00:20:31,120
+in a lot. We'll talk through exactly what that plug in did. So we have this get request
+
+167
+00:20:31,120 --> 00:20:38,120
+here. The action that's happening is you're using the plug in to draw something. You're
+
+168
+00:20:38,280 --> 00:20:45,280
+modifying the requests or you're modifying the diagram and you have a target which is
+
+169
+00:20:45,440 --> 00:20:52,440
+just the name of the file that is the drawing. The response is you get an authorization ticket
+
+170
+00:20:53,640 --> 00:20:59,760
+saying this is your authorization ticket for this particular, pardon me, for this particular
+
+171
+00:20:59,760 --> 00:21:06,760
+file. Then what you do is you post. So in the first request you're not modifying any
+
+172
+00:21:07,600 --> 00:21:13,680
+server state. It's just giving you an authorization token to perform an action on this drawing.
+
+173
+00:21:13,680 --> 00:21:18,760
+Then in the post you actually save the file with the auth ticket that you were given in
+
+174
+00:21:18,760 --> 00:21:25,760
+the first request. So here we see get where the target looks a little odd. And then the
+
+175
+00:21:25,760 --> 00:21:32,760
+post here lets you, so what this is doing is it's going up a few directories and actually
+
+176
+00:21:35,760 --> 00:21:42,760
+accessing the plug in directory for moinmoin and the moinexec.py and replacing it with
+
+177
+00:21:44,760 --> 00:21:51,760
+whatever moinexec.py file you wanted to load. So this is the post. So this is the post.
+
+178
+00:21:55,920 --> 00:22:02,920
+So what would you do if you could put arbitrary code on someone's server? I won't, to spare
+
+179
+00:22:10,080 --> 00:22:17,080
+anyone future criminal allegations, I won't have anyone volunteer. So to briefly go through,
+
+180
+00:22:17,420 --> 00:22:24,420
+we have the get action is whatever. These are some examples. Delete the entire server.
+
+181
+00:22:25,760 --> 00:22:32,760
+That's one example. And this happened because this actually did happen. And the people working
+
+182
+00:22:34,800 --> 00:22:41,800
+on the Python wiki and the Debian wiki had a fun, I forget if it was a couple of days,
+
+183
+00:22:41,880 --> 00:22:48,160
+going back to backups and rebuilding everything. So that's another important component of security.
+
+184
+00:22:48,160 --> 00:22:53,560
+It doesn't seem obvious as a security measure, but unless, until you think about it a little
+
+185
+00:22:53,560 --> 00:22:57,720
+bit more, but make sure you have backups and that your backups are stored somewhere
+
+186
+00:22:57,720 --> 00:23:04,720
+that your primary application server does not have access to. Because if your backups
+
+187
+00:23:05,960 --> 00:23:11,920
+have the same kind of authentication that your server does, anyone who accesses your
+
+188
+00:23:11,920 --> 00:23:18,920
+server can then also access your backups and delete them. So best practice is to put your
+
+189
+00:23:19,400 --> 00:23:26,400
+backups somewhere that is under an entirely separate account or in an entirely separate
+
+190
+00:23:26,560 --> 00:23:31,960
+place within your account that has extremely restricted permissions. Also, as a side note,
+
+191
+00:23:31,960 --> 00:23:36,420
+make sure that you practice restoring your backups periodically because if you don't
+
+192
+00:23:36,420 --> 00:23:43,240
+practice restoring your backups, what you have is not a backup. You have a potentially,
+
+193
+00:23:43,240 --> 00:23:49,280
+you just have a file. You have no idea if it actually does what you think it does. Case
+
+194
+00:23:49,280 --> 00:23:56,440
+and point, GitLab, last year or the year before, they have an excellent writeup that you can
+
+195
+00:23:56,440 --> 00:24:03,440
+go look at in terms of they were doing backups, but they had never tried restoring from those
+
+196
+00:24:03,640 --> 00:24:10,400
+backups or hadn't in a while, and then when they actually needed to, it didn't work. So
+
+197
+00:24:10,480 --> 00:24:16,120
+in summary, the exploits that we've covered are cross-site scripting, and we walked through
+
+198
+00:24:16,120 --> 00:24:23,120
+TweetDeck and what that looks like. Looked at security misconfiguration, so default passwords.
+
+199
+00:24:24,680 --> 00:24:30,600
+Cross-site request forgery, so using get to delete on another site. And then code injection
+
+200
+00:24:30,600 --> 00:24:36,440
+and directory traversal. And these are all within the lab exercises that we're going
+
+201
+00:24:36,440 --> 00:24:42,320
+to be doing. So the next piece that we're going to go through is a little bit of a warmup
+
+202
+00:24:42,320 --> 00:24:46,400
+where it just starts, we just want to be thinking in the security mindset because a big part
+
+203
+00:24:46,400 --> 00:24:52,800
+of defending your website is thinking like an attacker. So I'd like everyone to go to
+
+204
+00:24:52,800 --> 00:24:59,800
+this URL up here and give everyone a minute to type that in and take a look at what you see.
+
+205
+00:25:06,440 --> 00:25:13,440
+I'll pull it up here as well. So this used to be called Google dorks, they changed it
+
+206
+00:25:19,800 --> 00:25:26,800
+to Google hacking database because it sounds nicer. I have a little slide about the history
+
+207
+00:25:27,080 --> 00:25:34,080
+of why they're called Google dorks. There's an original page that is no longer up, but
+
+208
+00:25:34,320 --> 00:25:41,320
+you can find some information on Wikipedia and this is in the way back machine because
+
+209
+00:25:41,840 --> 00:25:48,840
+Johnny I hack stuff took it down, but he had definitions of various things that people
+
+210
+00:25:50,680 --> 00:25:56,640
+would do and find on Google dorks. So what these are, and they're put in here in terms
+
+211
+00:25:56,640 --> 00:26:03,640
+of categories, these are all Google searches. So if you click on this, it shows you the
+
+212
+00:26:04,080 --> 00:26:11,080
+way to do how you would actually do the Google search. And oh, it's a good thing this is
+
+213
+00:26:14,760 --> 00:26:21,760
+not accredited for processing or storing classified information. And what I want people to do
+
+214
+00:26:21,960 --> 00:26:28,300
+within your groups as a way to get to know each other is look around these. So this for
+
+215
+00:26:28,300 --> 00:26:34,620
+example is a login portal files that you might find, advisories, and these are ones
+
+216
+00:26:34,620 --> 00:26:39,340
+that people have recently posted. So take a look around at these, talk within your groups
+
+217
+00:26:39,340 --> 00:26:43,940
+for about five minutes and we'll circle back and talk about what people found and what
+
+218
+00:26:43,940 --> 00:26:50,940
+they thought were the most interesting. Yes. Right there.
+
+219
+00:26:58,300 --> 00:27:00,300
+Doom
+
+220
+00:27:28,300 --> 00:27:33,300
+Oh, you're employers are preventing it?
+
+221
+00:27:33,300 --> 00:27:34,300
+Yeah.
+
+222
+00:27:34,300 --> 00:27:37,300
+Can't provide us, oh.
+
+223
+00:27:37,300 --> 00:27:40,300
+Yeah, my employer is blocking the exposure.
+
+224
+00:27:40,300 --> 00:27:42,300
+Oh, you should definitely share that.
+
+225
+00:27:42,300 --> 00:27:44,300
+You should definitely share that.
+
+226
+00:27:44,300 --> 00:27:48,300
+That's hilarious.
+
+227
+00:27:48,300 --> 00:27:51,300
+I don't know which group I am, so I don't think I just...
+
+228
+00:27:51,300 --> 00:27:54,300
+Uh, yeah, we'll figure it all out later.
+
+229
+00:27:54,300 --> 00:27:56,300
+And you can hang out with them.
+
+230
+00:27:56,300 --> 00:27:58,300
+And maybe you're short, I don't know.
+
+231
+00:27:58,300 --> 00:28:00,300
+So you could just hang out in the group.
+
+232
+00:28:00,300 --> 00:28:03,300
+I think group two was a little short.
+
+233
+00:28:03,300 --> 00:28:08,300
+I'm sorry, I didn't really follow exactly what this is showing us.
+
+234
+00:28:08,300 --> 00:28:11,300
+So these are like advanced Google search terms.
+
+235
+00:28:11,300 --> 00:28:14,300
+And so if you click on that, it'll actually pull up Google.
+
+236
+00:28:14,300 --> 00:28:18,300
+And so this is telling it like...
+
+237
+00:28:18,300 --> 00:28:27,300
+This one is showing if there are publicly exposed profiles for Garmin Connect.
+
+238
+00:28:27,300 --> 00:28:30,300
+So for example, you were trying to target like where...
+
+239
+00:28:30,300 --> 00:28:33,300
+So if you click on one of those, I think that one's going to show you
+
+240
+00:28:33,300 --> 00:28:35,300
+like where people have been running.
+
+241
+00:28:35,300 --> 00:28:39,300
+There was an interesting security vulnerability disclosed where
+
+242
+00:28:39,300 --> 00:28:43,300
+one of Garmin's competitors, another big running firm,
+
+243
+00:28:43,300 --> 00:28:51,300
+was by default publicly showing all of the lat-long information
+
+244
+00:28:51,300 --> 00:28:53,300
+for runs people had done.
+
+245
+00:28:53,300 --> 00:28:57,300
+And someone went and looked at this map and they found...
+
+246
+00:28:57,300 --> 00:29:01,300
+There's nothing here on the map, but there are all of these people running around.
+
+247
+00:29:01,300 --> 00:29:08,300
+And you can imagine that was actually a military base that was classified.
+
+248
+00:29:08,300 --> 00:29:12,300
+So that would be a good one to share with the group.
+
+249
+00:29:12,300 --> 00:29:17,300
+Nice. Yeah.
+
+250
+00:29:42,300 --> 00:29:44,300
+Thanks.
+
+251
+00:30:12,300 --> 00:30:14,300
+Thanks.
+
+252
+00:30:42,300 --> 00:30:45,300
+Thanks.
+
+253
+00:31:12,300 --> 00:31:15,300
+Thanks.
+
+254
+00:31:42,300 --> 00:31:45,300
+Thanks.
+
+255
+00:32:12,300 --> 00:32:14,300
+Thanks.
+
+256
+00:32:42,300 --> 00:32:44,300
+Thanks.
+
+257
+00:32:44,300 --> 00:32:46,300
+Thanks.
+
+258
+00:32:46,300 --> 00:32:48,300
+Thanks.
+
+259
+00:33:09,300 --> 00:33:11,300
+All right.
+
+260
+00:33:11,300 --> 00:33:13,300
+We...
+
+261
+00:33:13,300 --> 00:33:15,300
+So I talked to a few of you.
+
+262
+00:33:15,300 --> 00:33:18,300
+Some of you had some relatively interesting finds.
+
+263
+00:33:18,300 --> 00:33:20,300
+I clarified with a few.
+
+264
+00:33:20,300 --> 00:33:25,300
+So a few people asked about what this is doing in more detail.
+
+265
+00:33:25,300 --> 00:33:30,300
+And what it's doing is using advanced Google search terms
+
+266
+00:33:30,300 --> 00:33:35,300
+to find websites that may have vulnerabilities.
+
+267
+00:33:35,300 --> 00:33:41,300
+So hackers will often use this as a springboard to things that have known vulnerabilities.
+
+268
+00:33:41,300 --> 00:33:43,300
+So one of the things that...
+
+269
+00:33:43,300 --> 00:33:46,300
+The first link we clicked on when I was going through the example
+
+270
+00:33:46,300 --> 00:33:49,300
+was looking for cold fusion login pages.
+
+271
+00:33:49,300 --> 00:33:55,300
+If a cold fusion zero day had been discovered yesterday,
+
+272
+00:33:55,300 --> 00:33:59,300
+that search would be really useful to an attacker
+
+273
+00:33:59,300 --> 00:34:04,300
+trying to see if they hadn't updated their cold fusion site yet.
+
+274
+00:34:05,300 --> 00:34:11,300
+So we'd love to hear some of the funny things that people found.
+
+275
+00:34:11,300 --> 00:34:14,300
+Or interesting or concerning.
+
+276
+00:34:20,300 --> 00:34:24,300
+So he found someone's Steam game library.
+
+277
+00:34:24,300 --> 00:34:26,300
+Yes.
+
+278
+00:34:29,300 --> 00:34:31,300
+Yes, someone's running history in Japan.
+
+279
+00:34:31,300 --> 00:34:33,300
+Someone else mentioned that they'd found that as well.
+
+280
+00:34:33,300 --> 00:34:38,300
+And that's actually really interesting from an exploit perspective
+
+281
+00:34:38,300 --> 00:34:41,300
+in terms of accidental information disclosure.
+
+282
+00:34:41,300 --> 00:34:43,300
+I forget if it was last year or the year before,
+
+283
+00:34:43,300 --> 00:34:45,300
+but there was another one of these running companies
+
+284
+00:34:45,300 --> 00:34:52,300
+that by default published all of your running maps to be public.
+
+285
+00:34:52,300 --> 00:34:55,300
+And as you might imagine, there are a lot of people in the military
+
+286
+00:34:55,300 --> 00:35:00,300
+who are pretty fit and like to use these tracking devices.
+
+287
+00:35:00,300 --> 00:35:09,300
+All of a sudden someone goes to the map of all of these trails
+
+288
+00:35:09,300 --> 00:35:13,300
+that people have taken and finds that there are an awful lot of people
+
+289
+00:35:13,300 --> 00:35:17,300
+running in this place that doesn't have any buildings on the map.
+
+290
+00:35:17,300 --> 00:35:22,300
+And there was a base that was accidentally disclosed
+
+291
+00:35:22,300 --> 00:35:27,300
+because of information that was made public by default.
+
+292
+00:35:27,300 --> 00:35:29,300
+All right, what's another example?
+
+293
+00:35:29,300 --> 00:35:30,300
+One more thing by the way.
+
+294
+00:35:30,300 --> 00:35:33,300
+So Garmin, if you try to log in,
+
+295
+00:35:33,300 --> 00:35:37,300
+you're using Tor to access them, it'll just block you.
+
+296
+00:35:37,300 --> 00:35:40,300
+But if you're not using Tor, it won't block you.
+
+297
+00:35:40,300 --> 00:35:43,300
+So I don't know if it's just optimization I think.
+
+298
+00:35:43,300 --> 00:35:44,300
+Interesting.
+
+299
+00:35:44,300 --> 00:35:48,300
+So he said that if you're using Tor to access the profile,
+
+300
+00:35:48,300 --> 00:35:49,300
+it will block you.
+
+301
+00:35:49,300 --> 00:35:52,300
+But if not, then it won't block you.
+
+302
+00:35:52,300 --> 00:35:56,300
+Which I would imagine is probably a default firewall setting.
+
+303
+00:35:56,300 --> 00:35:58,300
+Might be something else.
+
+304
+00:35:58,300 --> 00:36:00,300
+Who else?
+
+305
+00:36:00,300 --> 00:36:03,300
+Yes, or actually in the back.
+
+306
+00:36:03,300 --> 00:36:04,300
+Yes?
+
+307
+00:36:04,300 --> 00:36:06,300
+We have a printer controller in China.
+
+308
+00:36:06,300 --> 00:36:12,300
+Oh, so are you going to start printing off random pages for them?
+
+309
+00:36:12,300 --> 00:36:15,300
+Say hello.
+
+310
+00:36:15,300 --> 00:36:17,300
+Yes.
+
+311
+00:36:17,300 --> 00:36:23,300
+In URL is very common.
+
+312
+00:36:23,300 --> 00:36:25,300
+And then I know there were at least two people
+
+313
+00:36:25,300 --> 00:36:31,300
+whose employer laptop configurations were blocking them from accessing this site,
+
+314
+00:36:31,300 --> 00:36:34,300
+which I also find quite funny.
+
+315
+00:36:34,300 --> 00:36:38,300
+I'm not sure if that's actually improving the security or not.
+
+316
+00:36:38,300 --> 00:36:39,300
+All right.
+
+317
+00:36:39,300 --> 00:36:42,300
+So moving on.
+
+318
+00:36:42,300 --> 00:36:47,300
+So what was the point of going through all of that?
+
+319
+00:36:47,300 --> 00:36:52,300
+Mostly to have you start thinking like attackers think,
+
+320
+00:36:52,300 --> 00:36:54,300
+which is like, what kind of exploits do I know about?
+
+321
+00:36:54,300 --> 00:36:56,300
+How can I find them?
+
+322
+00:36:56,300 --> 00:36:57,300
+What are the most common?
+
+323
+00:36:57,300 --> 00:37:03,300
+They're generally not, again, unless they're employed to do this full time,
+
+324
+00:37:03,300 --> 00:37:09,300
+they're not looking for something that's going to be really difficult to attack.
+
+325
+00:37:09,300 --> 00:37:15,300
+They're looking for things that were misconfigured or you didn't follow the checklist.
+
+326
+00:37:15,300 --> 00:37:24,300
+So doing 80, well, the 80-20 rule sort of applies here in that if you do the most basic things,
+
+327
+00:37:24,300 --> 00:37:31,300
+like 20% of the security work, you will get 80% of the results.
+
+328
+00:37:31,300 --> 00:37:35,300
+Another aside that we won't really go into in detail,
+
+329
+00:37:35,300 --> 00:37:42,300
+but what Google is to port 80 and 443, Shodan is for all of the other ports.
+
+330
+00:37:42,300 --> 00:37:47,300
+So if you ever want to get into the wonderful world of IOT hacking,
+
+331
+00:37:47,300 --> 00:37:53,300
+Shodan is your friend because it will show you how to search for webcams,
+
+332
+00:37:53,300 --> 00:38:04,300
+Ufinet, we'll leave that one off, Netgear routers, lots of Cisco stuff, FTP servers,
+
+333
+00:38:04,300 --> 00:38:19,300
+everything that operates that's not on web ports or HTP or HTPS ports, Shodan will help you find.
+
+334
+00:38:19,300 --> 00:38:21,300
+So what is at risk for you?
+
+335
+00:38:21,300 --> 00:38:24,300
+Normally I do a small group discussion here.
+
+336
+00:38:24,300 --> 00:38:33,300
+I think that we've talked a bit in your groups beforehand enough that you don't necessarily need to do this in here
+
+337
+00:38:33,300 --> 00:38:36,300
+or you can do it in line with some of the exercises.
+
+338
+00:38:36,300 --> 00:38:40,300
+I really want to give you more time for the exercises.
+
+339
+00:38:40,300 --> 00:38:49,300
+So I'll pause here and ask if there are any other questions before we go to the practical portion of the tutorial.
+
+340
+00:38:49,300 --> 00:38:51,300
+Nope. All right. Great.
+
+341
+00:38:51,300 --> 00:38:54,300
+I'm going to go break some websites.
+
+342
+00:38:54,300 --> 00:39:00,300
+And I will be talking a little bit more before we break the websites.
+
+343
+00:39:00,300 --> 00:39:05,300
+It's part of my job here.
+
+344
+00:39:05,300 --> 00:39:08,300
+And then for any of you who haven't gotten on the Slack workspace yet,
+
+345
+00:39:08,300 --> 00:39:14,300
+once I'm finished talking through the first part of the lab material,
+
+346
+00:39:14,300 --> 00:39:21,300
+then I'll go around and make sure that everyone has access to everything you need and answer any individual questions you might have.
+
+347
+00:39:21,300 --> 00:39:25,300
+So we're going to look at the lab material here.
+
+348
+00:39:25,300 --> 00:39:30,300
+This is the student handout that you need to go through all of the exercises.
+
+349
+00:39:30,300 --> 00:39:32,300
+I'll go back to the...
+
+350
+00:39:32,300 --> 00:39:38,300
+This is the website that you can go to for this, PetTwitter.com.
+
+351
+00:39:38,300 --> 00:39:43,300
+There is no association between PetTwitter and RealTwitter.
+
+352
+00:39:43,300 --> 00:39:50,300
+To be clear, please don't sue me.
+
+353
+00:39:50,300 --> 00:39:53,300
+To a certain extent, you can work at your own pace,
+
+354
+00:39:53,300 --> 00:39:58,300
+but the tutorial is designed for you to be social and talk amongst your groups and learn from each other,
+
+355
+00:39:58,300 --> 00:40:03,300
+which is why I set up the Slack channels.
+
+356
+00:40:03,300 --> 00:40:07,300
+I'll be stopping around the groups to see how everyone is doing,
+
+357
+00:40:07,300 --> 00:40:10,300
+and I'll be monitoring the Slack channels and helping everyone out.
+
+358
+00:40:10,300 --> 00:40:18,300
+So you can either flag me down or at me on Slack, and I'll come by.
+
+359
+00:40:18,300 --> 00:40:21,300
+So we want to make the most of lab time.
+
+360
+00:40:21,300 --> 00:40:27,300
+You have 90 minutes to get some hands-on practice.
+
+361
+00:40:27,300 --> 00:40:32,300
+Most of you already went there.
+
+362
+00:40:32,300 --> 00:40:38,300
+The attacks are structured such that when you complete an attack,
+
+363
+00:40:38,300 --> 00:40:44,300
+if you are the first person in your group to complete the attack and you want to confirm that you did,
+
+364
+00:40:44,300 --> 00:40:52,300
+send me a direct message with a link to your work and the number from the slide heading or the type of vulnerability it is.
+
+365
+00:40:52,300 --> 00:40:57,300
+So like, attack one is a cross-site scripting vulnerability.
+
+366
+00:40:57,300 --> 00:41:02,300
+And once I say, yes, you got it right, you can announce this in your group's channel,
+
+367
+00:41:02,300 --> 00:41:10,300
+and then other people in your group will then send their links to you to make sure that they found the correct vulnerability.
+
+368
+00:41:10,300 --> 00:41:16,300
+And if you find other vulnerabilities, like this is supposed to be fun, so attack things.
+
+369
+00:41:16,300 --> 00:41:22,300
+If other people don't know something, don't treat it like a failing.
+
+370
+00:41:22,300 --> 00:41:29,300
+I feel like this is generally obvious to most people, but I like to state it explicitly because it's part of,
+
+371
+00:41:29,300 --> 00:41:33,300
+it's in line with PyCon's code of conduct.
+
+372
+00:41:33,300 --> 00:41:36,300
+So too long, didn't read. Be kind.
+
+373
+00:41:36,300 --> 00:41:38,300
+This is one of my favorite XK CDs.
+
+374
+00:41:38,300 --> 00:41:46,300
+I try not to make fun of people for admitting they don't know things because for everything that everyone knows by the time they're adults,
+
+375
+00:41:46,300 --> 00:41:51,300
+every day there are on average about 10,000 people in the US hearing about it for the first time.
+
+376
+00:41:51,300 --> 00:41:57,300
+So if I make fun of people, I train them not to tell me when they have those moments,
+
+377
+00:41:57,300 --> 00:42:02,300
+and I miss out on all the fun of having someone share a discovery of something new.
+
+378
+00:42:02,300 --> 00:42:07,300
+So in the comic, it's diet coke and Mentos thing? What's that?
+
+379
+00:42:07,300 --> 00:42:10,300
+And the response is not, oh, I can't believe you never saw that.
+
+380
+00:42:10,300 --> 00:42:15,300
+It's, oh man, come on, we're going to go to the grocery store.
+
+381
+00:42:15,300 --> 00:42:21,300
+Why? You're one of today's lucky 10,000.
+
+382
+00:42:21,300 --> 00:42:30,300
+Each slide in this student handout has a category of web app vulnerability that we covered in the initial lecture portion.
+
+383
+00:42:30,300 --> 00:42:36,300
+Each slide has hints, which you can access by hitting S on the keyboard.
+
+384
+00:42:36,300 --> 00:42:42,300
+And you can look at the progress bar on the bottom, although it may not show up in all browsers or it may be kind of hard to see.
+
+385
+00:42:42,300 --> 00:42:45,300
+You can see it here just at the bottom, this purple.
+
+386
+00:42:45,300 --> 00:42:50,300
+So it'll show you about how far along you are in the handout.
+
+387
+00:42:50,300 --> 00:42:53,300
+And we already talked about being social.
+
+388
+00:42:53,300 --> 00:42:56,300
+Do fun things, but don't be malicious.
+
+389
+00:42:56,300 --> 00:43:02,300
+This is mostly you can treat this as black box testing if you want more of a challenge.
+
+390
+00:43:02,300 --> 00:43:09,300
+So if you are more advanced, then feel free to treat it as though you are black box testing.
+
+391
+00:43:09,300 --> 00:43:19,300
+The GitHub URL for the source code to this is both on the website, pettwitter.com, and shared in Slack.
+
+392
+00:43:19,300 --> 00:43:28,300
+So you can also do white box testing, which would simulate being an engineer at pettwitter.com and looking for vulnerabilities.
+
+393
+00:43:28,300 --> 00:43:32,300
+At this point, I will leave you all to your own devices.
+
+394
+00:43:32,300 --> 00:43:36,300
+I'll make an announcement just before 3 p.m. when we'll have a break.
+
+395
+00:43:36,300 --> 00:43:42,300
+And you can all step out and get some snacks, coffee, tea, whatever you fancy.
+
+396
+00:43:42,300 --> 00:43:46,300
+And with that, I'll leave you to it.
+
+397
+00:43:46,300 --> 00:43:53,300
+One minor note in this slide.
+
+398
+00:43:53,300 --> 00:43:57,300
+There is a space between script and slash script.
+
+399
+00:43:57,300 --> 00:44:06,300
+That's just because of the formatting in reveal.js that it did weird things if I didn't put the space there.
+
+400
+00:44:06,300 --> 00:44:14,300
+So it won't work if you leave the spaces there when you're using that sample attack code.
+
+401
+00:44:14,300 --> 00:44:16,300
+So keep that in mind.
+
+402
+00:44:16,300 --> 00:44:19,300
+All right.
+
+403
+00:44:19,300 --> 00:44:21,300
+Have fun.
+
+404
+00:44:21,300 --> 00:44:28,300
+And I'll go around and find anyone who, if for whatever reason you're not in a group or on Slack, raise your hand,
+
+405
+00:44:28,300 --> 00:44:32,300
+and I'll come around and we'll get all of those things fixed.
+
+406
+00:44:32,300 --> 00:44:34,300
+Yes.
+
+407
+00:44:34,300 --> 00:44:48,300
+Please only attack your own group's environment.
+
+408
+00:44:48,300 --> 00:44:49,300
+You were.
+
+409
+00:44:49,300 --> 00:44:55,300
+If everyone should be part of a group channel, a private channel for your group, if you are not,
+
+410
+00:44:55,300 --> 00:45:01,300
+it's because of Slack oddities and when I could add people.
+
+411
+00:45:01,300 --> 00:45:10,300
+And so depending on when you were invited, you might not be in the channel yet.
+
+412
+00:45:10,300 --> 00:45:15,300
+All right.
+
+413
+00:45:15,300 --> 00:45:20,300
+It's just about time for us to wrap up and talk through all of vulnerabilities.
+
+414
+00:45:20,300 --> 00:45:25,300
+I had a great time seeing what everyone did.
+
+415
+00:45:25,300 --> 00:45:32,300
+I heard a few comments about people saying that they had never actually performed real exploits against a website,
+
+416
+00:45:32,300 --> 00:45:34,300
+which was the whole point of this.
+
+417
+00:45:34,300 --> 00:45:38,300
+So I hope that was worthwhile.
+
+418
+00:45:38,300 --> 00:45:48,300
+I would love to take a few minutes and do a share like we did before of things that you found particularly clever
+
+419
+00:45:48,300 --> 00:45:52,300
+or anything that surprised you or that you learned.
+
+420
+00:45:52,300 --> 00:46:02,300
+So if a few people want to volunteer something that they found interesting, I would love to hear it.
+
+421
+00:46:02,300 --> 00:46:04,300
+Yes.
+
+422
+00:46:04,300 --> 00:46:16,300
+Yes.
+
+423
+00:46:16,300 --> 00:46:20,300
+CSRF exempt is not your friend.
+
+424
+00:46:20,300 --> 00:46:31,300
+Now, I did have some people come up and ask me about cases in terms of APIs where there are cases where you legitimately need to turn it off.
+
+425
+00:46:31,300 --> 00:46:38,300
+But if you find yourself just turning off CSRF for your whole site and you don't have a primarily API-based site,
+
+426
+00:46:38,300 --> 00:46:46,300
+and even if you do have an API-based site, there are generally ways to leave it on.
+
+427
+00:46:46,300 --> 00:46:54,300
+And there's articles that you can find where if you're using a REST API, sometimes it's debatable how much that keeps you secure.
+
+428
+00:46:54,300 --> 00:46:56,300
+You should have other factors in place.
+
+429
+00:46:56,300 --> 00:47:02,300
+Like I said at the beginning, this is not an API-based security tutorial.
+
+430
+00:47:02,300 --> 00:47:07,300
+But it sounds like there would be an opportunity for one.
+
+431
+00:47:07,300 --> 00:47:14,300
+So if anyone would like to come up with that, please submit a proposal.
+
+432
+00:47:14,300 --> 00:47:17,300
+Anything else anyone found?
+
+433
+00:47:17,300 --> 00:47:21,300
+Yes.
+
+434
+00:47:21,300 --> 00:47:22,300
+Yep.
+
+435
+00:47:22,300 --> 00:47:24,300
+We'll get to that in more detail.
+
+436
+00:47:24,300 --> 00:47:33,300
+And that is actually particular to the way that this site was set up.
+
+437
+00:47:33,300 --> 00:47:36,300
+One more person?
+
+438
+00:47:36,300 --> 00:47:39,300
+Did someone do something that was particularly funny?
+
+439
+00:47:39,300 --> 00:47:43,300
+Well, besides the David Hasselhoff thing.
+
+440
+00:47:43,300 --> 00:47:45,300
+No, that's fine.
+
+441
+00:47:45,300 --> 00:47:46,300
+All right.
+
+442
+00:47:46,300 --> 00:47:48,300
+Let's talk through each of these.
+
+443
+00:47:48,300 --> 00:47:50,300
+So cross-site scripting.
+
+444
+00:47:50,300 --> 00:47:57,300
+In a previous version of this tutorial, someone made the astute comment that safe is not very safe,
+
+445
+00:47:57,300 --> 00:48:00,300
+and that it should perhaps be renamed.
+
+446
+00:48:00,300 --> 00:48:03,300
+I have not seen that pull request against Django.
+
+447
+00:48:03,300 --> 00:48:08,300
+I think there would be backwards compatibility issues, but really safe should be named unsafe.
+
+448
+00:48:08,300 --> 00:48:13,300
+If you're putting safe into your code, probably not a good idea.
+
+449
+00:48:13,300 --> 00:48:25,300
+So if you looked in the templates, anywhere you found safe was a place where you could perform a cross-site scripting attack.
+
+450
+00:48:25,300 --> 00:48:27,300
+Oops. Apologies.
+
+451
+00:48:27,300 --> 00:48:31,300
+So the theory is to escape content in a context-appropriate way.
+
+452
+00:48:31,300 --> 00:48:39,300
+So there are cases where you want to show italicized text and bolded text and allow people to do formatting,
+
+453
+00:48:39,300 --> 00:48:43,300
+but you don't want them to write scripts.
+
+454
+00:48:43,300 --> 00:48:48,300
+This is really hard to use, so use Django templates.
+
+455
+00:48:48,300 --> 00:48:54,300
+And there's a library called Bleach where if you are taking user data in
+
+456
+00:48:54,300 --> 00:49:02,300
+and you want to make sure that absolutely everything is stripped out of it, Bleach is a good way to do that.
+
+457
+00:49:02,300 --> 00:49:04,300
+We talked about defaults.
+
+458
+00:49:04,300 --> 00:49:12,300
+So clearly the default password on the super user account was not particularly secure.
+
+459
+00:49:12,300 --> 00:49:19,300
+Other things that we mentioned earlier were that it would also be good to change the default admin URL.
+
+460
+00:49:19,300 --> 00:49:21,300
+So that's an easy thing on your sites.
+
+461
+00:49:21,300 --> 00:49:29,300
+Just go in, change that from slash admin to something else that is specific to your site.
+
+462
+00:49:29,300 --> 00:49:36,300
+Security through obscurity by changing URLs is not a defense in and of itself,
+
+463
+00:49:36,300 --> 00:49:42,300
+but there is also no reason to make it easy for attackers to find your admin site.
+
+464
+00:49:42,300 --> 00:49:51,300
+If you are able to, in fact, putting it behind a VPN or some other form of security
+
+465
+00:49:51,300 --> 00:49:56,300
+so that only authorized users can get to the login pages is useful as well.
+
+466
+00:49:56,300 --> 00:49:58,300
+Two-factor authentication.
+
+467
+00:49:58,300 --> 00:50:04,300
+There are libraries that will help you add two-factor authentication, and it's configurable.
+
+468
+00:50:04,300 --> 00:50:12,300
+There's one called Django two-factor auth that adds a nice set of views,
+
+469
+00:50:12,300 --> 00:50:19,300
+and it supports YubiKey and Google Authenticator and SMS, which is not particularly secure.
+
+470
+00:50:19,300 --> 00:50:24,300
+So don't use SMS unless you have to for some reason.
+
+471
+00:50:24,300 --> 00:50:29,300
+And there are other talks about why that is.
+
+472
+00:50:29,300 --> 00:50:33,300
+But that is another relatively easy piece to put in.
+
+473
+00:50:33,300 --> 00:50:36,300
+So the next one was authorization checking.
+
+474
+00:50:36,300 --> 00:50:46,300
+So what's wrong with this bit of code here?
+
+475
+00:50:46,300 --> 00:50:50,300
+Why were you able to modify other people's pets in certain views?
+
+476
+00:50:50,300 --> 00:50:54,300
+Correct.
+
+477
+00:50:54,300 --> 00:50:58,300
+So it's not enough to just have a login be required.
+
+478
+00:50:58,300 --> 00:51:05,300
+You also need to check that someone actually has access to the thing that they are requesting.
+
+479
+00:51:05,300 --> 00:51:12,300
+There are a variety of sort of built-in methods in the Django documentation for how to do that,
+
+480
+00:51:12,300 --> 00:51:19,300
+such as get model for owner that will do some of that checking for you.
+
+481
+00:51:19,300 --> 00:51:34,300
+This is the other one that we had where we got a question of whether it should be a 403 versus a 404.
+
+482
+00:51:34,300 --> 00:51:40,300
+At this point, here you're checking that they're actually the owner.
+
+483
+00:51:40,300 --> 00:51:41,300
+So this is another way.
+
+484
+00:51:41,300 --> 00:51:44,300
+It's not the way that I would necessarily recommend,
+
+485
+00:51:44,300 --> 00:51:49,300
+but it is one way where the user has to be the same as the requesting user.
+
+486
+00:51:49,300 --> 00:51:53,300
+If it's not, then it will fail to find it.
+
+487
+00:51:53,300 --> 00:51:56,300
+404 versus 403 is kind of debatable here.
+
+488
+00:51:56,300 --> 00:51:59,300
+So 404 would mean that the pet doesn't exist.
+
+489
+00:51:59,300 --> 00:52:04,300
+403 means you're not authorized for that pet.
+
+490
+00:52:04,300 --> 00:52:09,300
+What would people argue either way in this case?
+
+491
+00:52:09,300 --> 00:52:10,300
+Yeah.
+
+492
+00:52:10,300 --> 00:52:13,300
+I would say 404 is more technically correct,
+
+493
+00:52:13,300 --> 00:52:18,300
+but it would mean that 403 would correct the leaked information.
+
+494
+00:52:18,300 --> 00:52:21,300
+So then, oh, this pet does exist, but you can't access it.
+
+495
+00:52:21,300 --> 00:52:23,300
+That's what I would say as well.
+
+496
+00:52:23,300 --> 00:52:27,300
+So in security, and that's a great answer,
+
+497
+00:52:27,300 --> 00:52:32,300
+there's a principle where you want to leak as little information as possible,
+
+498
+00:52:32,300 --> 00:52:38,300
+which is often why when you're going to websites and you do a password reset email,
+
+499
+00:52:38,300 --> 00:52:43,300
+they don't tell you whether or not that user exists on the system.
+
+500
+00:52:43,300 --> 00:52:48,300
+They just say, if this user exists on the system, an email was sent,
+
+501
+00:52:48,300 --> 00:52:51,300
+because they don't want you to go through and be able to enumerate
+
+502
+00:52:51,300 --> 00:52:53,300
+the email address of everyone on the system.
+
+503
+00:52:53,300 --> 00:52:58,300
+So I would say in this case, a 404 is more appropriate
+
+504
+00:52:58,300 --> 00:53:03,300
+because a 403 leaks information.
+
+505
+00:53:04,300 --> 00:53:05,300
+Yes.
+
+506
+00:53:22,300 --> 00:53:26,300
+It might depend on your particular use case.
+
+507
+00:53:26,300 --> 00:53:32,300
+If your user base generally always has access to things.
+
+508
+00:53:32,300 --> 00:53:36,300
+It's also somewhat accurate in this case to say that it is a 404
+
+509
+00:53:36,300 --> 00:53:39,300
+because there's no pet that belongs to that user.
+
+510
+00:53:39,300 --> 00:53:42,300
+And in this case, the query is more specific.
+
+511
+00:53:42,300 --> 00:53:46,300
+Where previously it was only checking that that pet ID existed,
+
+512
+00:53:46,300 --> 00:53:51,300
+in this case, the query is now checking that the pet ID with that user exists.
+
+513
+00:53:53,300 --> 00:53:55,300
+And this is what I mentioned.
+
+514
+00:53:55,300 --> 00:53:58,300
+Previously, there's an at-login required decorator
+
+515
+00:53:58,300 --> 00:54:01,300
+that is typically not enough on your views
+
+516
+00:54:01,300 --> 00:54:04,300
+if they're actually fetching any type of data.
+
+517
+00:54:05,300 --> 00:54:08,300
+There is a model.objects.filter.
+
+518
+00:54:08,300 --> 00:54:11,300
+Just check that the user is the request user.
+
+519
+00:54:11,300 --> 00:54:19,300
+And Django has a little helper here that makes it just a little bit shorter.
+
+520
+00:54:21,300 --> 00:54:26,300
+So on the next one, we have our SQL injection.
+
+521
+00:54:26,300 --> 00:54:29,300
+So what's wrong with this picture?
+
+522
+00:54:31,300 --> 00:54:34,300
+Yes.
+
+523
+00:54:46,300 --> 00:54:53,300
+So in a sense, well, I think ID in this case, yes,
+
+524
+00:54:53,300 --> 00:54:57,300
+that could be more specific as an integer.
+
+525
+00:54:57,300 --> 00:55:01,300
+That still is quite vulnerable to an injection. Yes.
+
+526
+00:55:13,300 --> 00:55:15,300
+Correct.
+
+527
+00:55:15,300 --> 00:55:21,300
+If you ever see a case where the SQL query is just constructed out of a string,
+
+528
+00:55:21,300 --> 00:55:24,300
+like massive alarm bells should go off in the SQL query,
+
+529
+00:55:24,300 --> 00:55:29,300
+and you should probably, depending on the exact circumstances,
+
+530
+00:55:29,300 --> 00:55:34,300
+consider educating the responsible party,
+
+531
+00:55:34,300 --> 00:55:38,300
+alerting your security officer if your company has one.
+
+532
+00:55:38,300 --> 00:55:42,300
+I hesitate to say resign because there could be extenuating circumstances,
+
+533
+00:55:42,300 --> 00:55:47,300
+but maybe update your resume and fix it.
+
+534
+00:55:47,300 --> 00:55:51,300
+So I think that's a good example of how to do that.
+
+535
+00:55:51,300 --> 00:55:53,300
+And fix it.
+
+536
+00:55:53,300 --> 00:56:02,300
+So the difference here, this is one way that this could have been avoided.
+
+537
+00:56:02,300 --> 00:56:05,300
+Where here the query string is constructed,
+
+538
+00:56:05,300 --> 00:56:10,300
+and instead of passing actual strings and constructing the whole string,
+
+539
+00:56:10,300 --> 00:56:13,300
+this is performed by the library itself,
+
+540
+00:56:13,300 --> 00:56:18,300
+and you pass in pet ID and user ID, and then the library parameterizes those.
+
+541
+00:56:18,300 --> 00:56:23,300
+That is not actually my preferred method of avoiding this.
+
+542
+00:56:23,300 --> 00:56:31,300
+My preferred method, and this is an older slide.
+
+543
+00:56:31,300 --> 00:56:34,300
+My preferred method is to just use the ORM.
+
+544
+00:56:34,300 --> 00:56:37,300
+This is by far the safest solution.
+
+545
+00:56:37,300 --> 00:56:41,300
+The bottom line is don't use raw SQL.
+
+546
+00:56:41,300 --> 00:56:43,300
+Use an ORM.
+
+547
+00:56:43,300 --> 00:56:48,300
+Jango's ORM is actually really, really good as of 2.0.
+
+548
+00:56:48,300 --> 00:56:54,300
+It supports subqueries and all sorts of fancy filtering.
+
+549
+00:56:54,300 --> 00:57:00,300
+James Bennett gave a tutorial at this past JangoCon,
+
+550
+00:57:00,300 --> 00:57:03,300
+which unfortunately wasn't recorded on video,
+
+551
+00:57:03,300 --> 00:57:08,300
+but it basically talks through why if you're using especially Jango 2.1, 2.2,
+
+552
+00:57:08,300 --> 00:57:15,300
+you would have to try really hard to need to go down to raw SQL.
+
+553
+00:57:15,300 --> 00:57:21,300
+If for some reason you must use something outside of the ORM,
+
+554
+00:57:21,300 --> 00:57:23,300
+which I acknowledge there are cases,
+
+555
+00:57:23,300 --> 00:57:30,300
+maybe you're using Jango and your database has tables that aren't part of Jango,
+
+556
+00:57:30,300 --> 00:57:33,300
+and you have to interface between those, there are cases where it's valid.
+
+557
+00:57:33,300 --> 00:57:35,300
+But use parameterized queries.
+
+558
+00:57:35,300 --> 00:57:43,300
+But read all of the ORM documentation before you think you have to use parameterized queries even,
+
+559
+00:57:43,300 --> 00:57:45,300
+or especially raw SQL.
+
+560
+00:57:45,300 --> 00:57:55,300
+The next kind of note is a lot of Jango is secure by default,
+
+561
+00:57:55,300 --> 00:58:02,300
+where most of the settings will keep you safe,
+
+562
+00:58:02,300 --> 00:58:07,300
+as long as you don't actively try and override them.
+
+563
+00:58:07,300 --> 00:58:10,300
+I think that actually got out of order.
+
+564
+00:58:10,300 --> 00:58:13,300
+This is talking about CSRF tokens.
+
+565
+00:58:13,300 --> 00:58:17,300
+I'm going to skip this diagram because I don't find it very helpful.
+
+566
+00:58:17,300 --> 00:58:23,300
+If you find it helpful, you have links to all of the items.
+
+567
+00:58:23,300 --> 00:58:25,300
+So in here you can, I'll just go through it anyway,
+
+568
+00:58:25,300 --> 00:58:31,300
+You have action delete, user ID, and a CSRF token, which is set on the cookie.
+
+569
+00:58:31,300 --> 00:58:37,300
+If you don't have CSRF protection set up correctly,
+
+570
+00:58:37,300 --> 00:58:41,300
+then it won't pass the CSRF token and the server should not accept it,
+
+571
+00:58:41,300 --> 00:58:45,300
+but if you mark something as CSRF exempt, it will instead.
+
+572
+00:58:45,300 --> 00:58:51,300
+We talked about why you should use post to change data,
+
+573
+00:58:51,300 --> 00:58:55,300
+and you want something that only a user on that site can have.
+
+574
+00:58:55,300 --> 00:59:00,300
+So cookies, unless you override a lot of settings,
+
+575
+00:59:00,300 --> 00:59:07,300
+the cookie will only be possessed by a user on that site within the browser.
+
+576
+00:59:07,300 --> 00:59:12,300
+That means that you can then take that cookie and pass it back to the server,
+
+577
+00:59:12,300 --> 00:59:15,300
+and the server will be like, oh, okay, you have that.
+
+578
+00:59:15,300 --> 00:59:21,300
+This is what the CSRF templating is what you should put at the top of every Django form
+
+579
+00:59:21,300 --> 00:59:30,300
+that you create in a template, and this will automatically set that cookie and bring it back.
+
+580
+00:59:30,300 --> 00:59:35,300
+The next one we went through was session data stealing.
+
+581
+00:59:35,300 --> 00:59:43,300
+If you looked in the settings, many of you noticed that the secret key was in the GitHub repository itself.
+
+582
+00:59:43,300 --> 00:59:49,300
+So to start with, what is wrong with that?
+
+583
+00:59:49,300 --> 00:59:53,300
+Any takers?
+
+584
+00:59:53,300 --> 00:59:56,300
+Yep, and it's supposed to be private.
+
+585
+00:59:56,300 --> 01:00:01,300
+Even if it's in a private repository, you should consider it to be a public key.
+
+586
+01:00:01,300 --> 01:00:12,300
+Why do you think that it's not okay to put this in the settings file even if your repository is private?
+
+587
+01:00:12,300 --> 01:00:18,300
+Yeah, if someone removes it, it's still in history.
+
+588
+01:00:18,300 --> 01:00:22,300
+But say I have a private repository on GitHub and I'm being lazy,
+
+589
+01:00:22,300 --> 01:00:29,300
+and my company has all of the security settings locked down on GitHub.
+
+590
+01:00:29,300 --> 01:00:33,300
+Why shouldn't I put it in the code even in that case?
+
+591
+01:00:33,300 --> 01:00:35,300
+Or why is it less than that? Yes?
+
+592
+01:00:35,300 --> 01:00:43,300
+Yes, because people don't stay in organizations forever,
+
+593
+01:00:43,300 --> 01:00:51,300
+and you probably don't want to be rotating that every time you have someone leave the company.
+
+594
+01:00:51,300 --> 01:00:53,300
+That's not really scalable.
+
+595
+01:00:53,300 --> 01:00:57,300
+There are better ways of storing secret keys.
+
+596
+01:00:57,300 --> 01:01:00,300
+You can set environment variables.
+
+597
+01:01:00,300 --> 01:01:06,300
+There are some newer vault-based methods that are even better than setting environment variables.
+
+598
+01:01:06,300 --> 01:01:12,300
+We can talk more about that in detail at some point.
+
+599
+01:01:12,300 --> 01:01:19,300
+The method that Heroku still basically uses if you're using that by default is it sets an environment variable.
+
+600
+01:01:19,300 --> 01:01:23,300
+But if you're setting up something internally, you want to use a vault to store all of your secrets
+
+601
+01:01:23,300 --> 01:01:30,300
+and have those only be accessible at runtime.
+
+602
+01:01:30,300 --> 01:01:36,300
+Yes? Was there a question?
+
+603
+01:01:36,300 --> 01:01:42,300
+Oh, okay.
+
+604
+01:01:42,300 --> 01:01:48,300
+I will not ask you to divulge any organization-specific secrets as funny as they may be.
+
+605
+01:01:48,300 --> 01:01:58,300
+Session data stealing. Don't use pickle. Just don't.
+
+606
+01:01:58,300 --> 01:02:04,300
+Pickles are for delis, not for software.
+
+607
+01:02:04,300 --> 01:02:09,300
+Session stealing.
+
+608
+01:02:09,300 --> 01:02:17,300
+If you got this far, you can have Session Cookie be on the same site.
+
+609
+01:02:17,300 --> 01:02:24,300
+This is the warning in the Django docs about using cookie-based sessions,
+
+610
+01:02:24,300 --> 01:02:32,300
+which the reason that you would want to is a performance reason,
+
+611
+01:02:32,300 --> 01:02:38,300
+where if you don't want to be checking your database every time to check for sessions,
+
+612
+01:02:38,300 --> 01:02:42,300
+then maybe a cookie-based session makes sense.
+
+613
+01:02:42,300 --> 01:02:47,300
+I would say start with a database-backed and then put caching on top of it,
+
+614
+01:02:47,300 --> 01:02:51,300
+both of which Django has first-class support for.
+
+615
+01:02:51,300 --> 01:02:55,300
+You probably don't need to use cookie-based sessions.
+
+616
+01:02:55,300 --> 01:02:58,300
+It goes through all of the things that we talked about here.
+
+617
+01:02:58,300 --> 01:03:02,300
+The secret key is not kept secret, and you are using the pickle serializer.
+
+618
+01:03:02,300 --> 01:03:05,300
+This can lead to arbitrary remote code execution on your server.
+
+619
+01:03:05,300 --> 01:03:07,300
+So, one, don't use pickle.
+
+620
+01:03:07,300 --> 01:03:14,300
+Anyone in possession of the secret key can generate falsified session data,
+
+621
+01:03:14,300 --> 01:03:17,300
+which your site will trust.
+
+622
+01:03:17,300 --> 01:03:21,300
+And the session data is signed but not encrypted.
+
+623
+01:03:21,300 --> 01:03:25,300
+So the session data can be read by the client.
+
+624
+01:03:25,300 --> 01:03:29,300
+So if you had, for instance, a rootkit or something,
+
+625
+01:03:29,300 --> 01:03:33,300
+then they would be able to read that data.
+
+626
+01:03:33,300 --> 01:03:39,300
+And as many of you saw, the vulnerability got trickier in Django 2.2.
+
+627
+01:03:39,300 --> 01:03:42,300
+If you didn't get this far, that happens a lot.
+
+628
+01:03:42,300 --> 01:03:45,300
+This was one of the more challenging vulnerabilities.
+
+629
+01:03:45,300 --> 01:03:50,300
+It was also the vulnerability that when I was updating this tutorial from Django 1.4
+
+630
+01:03:50,300 --> 01:03:53,300
+to Django 2.1 last year and then Django...
+
+631
+01:03:53,300 --> 01:03:56,300
+I didn't have to do anything going from 2.1 to 2.2, thankfully.
+
+632
+01:03:56,300 --> 01:04:01,300
+But one of the things that changed was in Django 1.7, or prior to Django 1.7,
+
+633
+01:04:01,300 --> 01:04:04,300
+all you needed was the user ID and the secret key,
+
+634
+01:04:04,300 --> 01:04:07,300
+and you could sign whatever you wanted.
+
+635
+01:04:07,300 --> 01:04:09,300
+And you would believe it.
+
+636
+01:04:09,300 --> 01:04:14,300
+Now you need additionally the hashed password of that user
+
+637
+01:04:14,300 --> 01:04:19,300
+in order to masquerade as someone else.
+
+638
+01:04:19,300 --> 01:04:23,300
+But as I was explaining to a few of you one-on-one,
+
+639
+01:04:23,300 --> 01:04:28,300
+we can get that if we have a dump of the database.
+
+640
+01:04:28,300 --> 01:04:33,300
+So if they've somehow acquired even the hashed password,
+
+641
+01:04:33,300 --> 01:04:38,300
+which is normally not going to help you as an attacker,
+
+642
+01:04:38,300 --> 01:04:44,300
+but you're also using signed cookie-based sessions,
+
+643
+01:04:44,300 --> 01:04:48,300
+you're not going to have a great day.
+
+644
+01:04:48,300 --> 01:04:50,300
+Oh.
+
+645
+01:04:52,300 --> 01:04:57,300
+And that's just what I was showing right there.
+
+646
+01:04:57,300 --> 01:05:00,300
+Testing.
+
+647
+01:05:00,300 --> 01:05:04,300
+How many tests did this project have?
+
+648
+01:05:04,300 --> 01:05:10,300
+None. None is the correct answer.
+
+649
+01:05:10,300 --> 01:05:15,300
+How many tests should it probably have had?
+
+650
+01:05:15,300 --> 01:05:18,300
+I hear one or two.
+
+651
+01:05:18,300 --> 01:05:22,300
+Presumably at least as many as security assertions
+
+652
+01:05:22,300 --> 01:05:24,300
+as I was making in the comments in the code.
+
+653
+01:05:24,300 --> 01:05:26,300
+So the comments in the code that said
+
+654
+01:05:26,300 --> 01:05:29,300
+users such and such shouldn't be able to access that.
+
+655
+01:05:29,300 --> 01:05:31,300
+Testing.
+
+656
+01:05:31,300 --> 01:05:36,300
+There are limits to how much you can test.
+
+657
+01:05:36,300 --> 01:05:43,300
+You should also assert that you get a 404 or particular response status codes.
+
+658
+01:05:44,300 --> 01:05:48,300
+You want to make sure that both you cover the happy path
+
+659
+01:05:48,300 --> 01:05:54,300
+and that the unhappy path is unhappy in the way that you expect it to be unhappy.
+
+660
+01:05:54,300 --> 01:05:58,300
+For example, when we were...
+
+661
+01:05:58,300 --> 01:06:02,300
+And then, sorry, to continue with that, when we found bugs,
+
+662
+01:06:02,300 --> 01:06:08,300
+so for example, when we found that another user could modify someone else's pet
+
+663
+01:06:08,300 --> 01:06:10,300
+just by being logged in,
+
+664
+01:06:10,300 --> 01:06:15,300
+it would have been good to create a test that first failed
+
+665
+01:06:15,300 --> 01:06:20,300
+and then fix it so that at least from that point forward you're covered.
+
+666
+01:06:20,300 --> 01:06:26,300
+So keeping security in your testing and in your continuous integration pipeline
+
+667
+01:06:26,300 --> 01:06:31,300
+as much as possible is another good first step.
+
+668
+01:06:31,300 --> 01:06:39,300
+The last kind of note that I'll touch on in terms of best practices
+
+669
+01:06:39,300 --> 01:06:42,300
+is remember that libraries run with full privilege.
+
+670
+01:06:42,300 --> 01:06:46,300
+So if you're using a dependency from PyPI,
+
+671
+01:06:46,300 --> 01:06:49,300
+make sure you're only using trusted sources,
+
+672
+01:06:49,300 --> 01:06:53,300
+pin your dependencies, get up-to-date versions,
+
+673
+01:06:53,300 --> 01:06:57,300
+read the diff, subscribe to appropriate security newsletters,
+
+674
+01:06:57,300 --> 01:07:00,300
+and turn on GitHub security vulnerabilities.
+
+675
+01:07:00,300 --> 01:07:02,300
+These are super useful,
+
+676
+01:07:02,300 --> 01:07:05,300
+and they are turned on by default for any open source project.
+
+677
+01:07:05,300 --> 01:07:10,300
+You do have to go in and manually turn them on for private repositories
+
+678
+01:07:10,300 --> 01:07:12,300
+or organization repositories,
+
+679
+01:07:12,300 --> 01:07:18,300
+but for example, when I went to go update this repository,
+
+680
+01:07:18,300 --> 01:07:23,300
+it said I had potential security vulnerabilities in my dependencies.
+
+681
+01:07:23,300 --> 01:07:31,300
+And I was using a...
+
+682
+01:07:31,300 --> 01:07:35,300
+I think it was on 2.1.2 for Django,
+
+683
+01:07:35,300 --> 01:07:40,300
+and there had been a security vulnerability that was patched in 2.1.6.
+
+684
+01:07:40,300 --> 01:07:47,300
+And GitHub helpfully links to the actual description of the vulnerabilities
+
+685
+01:07:47,300 --> 01:07:53,300
+and makes it really easy for me to see why it was vulnerable.
+
+686
+01:07:53,300 --> 01:07:57,300
+It will also send you an email every week,
+
+687
+01:07:57,300 --> 01:08:01,300
+so it's a great way to keep up-to-date on all of your dependencies,
+
+688
+01:08:01,300 --> 01:08:03,300
+at least at a very basic level.
+
+689
+01:08:03,300 --> 01:08:06,300
+It also works for Ruby and NPM,
+
+690
+01:08:06,300 --> 01:08:12,300
+and GitHub is doing the community a great service by having this available.
+
+691
+01:08:12,300 --> 01:08:15,300
+A couple of other resources like pyup and requires.io
+
+692
+01:08:15,300 --> 01:08:17,300
+are services that you can...
+
+693
+01:08:17,300 --> 01:08:19,300
+I think they have free versions.
+
+694
+01:08:19,300 --> 01:08:21,300
+You can also pay them a small amount of money,
+
+695
+01:08:21,300 --> 01:08:25,300
+and they will look at your requirements file
+
+696
+01:08:25,300 --> 01:08:28,300
+or wherever you're defining requirements,
+
+697
+01:08:28,300 --> 01:08:31,300
+and whenever there are updated versions,
+
+698
+01:08:31,300 --> 01:08:36,300
+they will even submit a pull request to your site if you configure them that way,
+
+699
+01:08:36,300 --> 01:08:41,300
+so it's a pretty easy way to keep track of what dependencies are
+
+700
+01:08:41,300 --> 01:08:46,300
+and aren't out of date, at least for your Python dependencies.
+
+701
+01:08:46,300 --> 01:08:49,300
+Resources.
+
+702
+01:08:49,300 --> 01:08:56,300
+This is a laundry list of various resources that are related to security,
+
+703
+01:08:56,300 --> 01:08:58,300
+and I mentioned most of them earlier.
+
+704
+01:08:58,300 --> 01:09:02,300
+You'll have a copy of these slides.
+
+705
+01:09:02,300 --> 01:09:04,300
+They're actually in a hidden URL on the website.
+
+706
+01:09:04,300 --> 01:09:06,300
+You had access to them the whole time.
+
+707
+01:09:06,300 --> 01:09:08,300
+You just didn't realize it.
+
+708
+01:09:09,300 --> 01:09:13,300
+Are there any other resources that people have found
+
+709
+01:09:13,300 --> 01:09:16,300
+that they'd like to recommend or call out?
+
+710
+01:09:16,300 --> 01:09:17,300
+Yes.
+
+711
+01:09:17,300 --> 01:09:20,300
+A lot of them open source, both on ZetAttackProxy
+
+712
+01:09:20,300 --> 01:09:22,300
+and the other ones on WebM.
+
+713
+01:09:22,300 --> 01:09:24,300
+Yes, that is absolutely true.
+
+714
+01:09:24,300 --> 01:09:26,300
+ZetAttackProxy.
+
+715
+01:09:30,300 --> 01:09:35,300
+There's also a checklist that Django helpfully provides.
+
+716
+01:09:35,300 --> 01:09:37,300
+For those of you who are asking,
+
+717
+01:09:37,300 --> 01:09:44,300
+what are some things that I should know in terms of basics
+
+718
+01:09:44,300 --> 01:09:48,300
+when I'm deploying my web app with Django?
+
+719
+01:09:48,300 --> 01:09:52,300
+Django has great documentation and has been very helpful in terms of...
+
+720
+01:09:52,300 --> 01:09:56,300
+This is a list of things that you can go through
+
+721
+01:09:56,300 --> 01:10:00,300
+to make sure that you're setting things up for best practices.
+
+722
+01:10:00,300 --> 01:10:04,300
+It'll tell you about check, dash, dash, deploy.
+
+723
+01:10:04,300 --> 01:10:08,300
+It tells you about certain critical settings, like secret key and debug.
+
+724
+01:10:08,300 --> 01:10:15,300
+A few of you noted that our web app had debug set to true,
+
+725
+01:10:15,300 --> 01:10:20,300
+which in older versions of Django would actually dump everything
+
+726
+01:10:20,300 --> 01:10:23,300
+in your settings file at one point, even including the secret key.
+
+727
+01:10:23,300 --> 01:10:27,300
+It used to be even easier to exploit websites.
+
+728
+01:10:27,300 --> 01:10:35,300
+In 2.2, debug equal true will not dump all of your settings necessarily.
+
+729
+01:10:35,300 --> 01:10:39,300
+It definitely doesn't output your secret key.
+
+730
+01:10:39,300 --> 01:10:41,300
+It knows to redact that now.
+
+731
+01:10:41,300 --> 01:10:44,300
+They've done a lot of things to help protect people from themselves.
+
+732
+01:10:44,300 --> 01:10:48,300
+There used to be crawlers out there that would go looking for sites
+
+733
+01:10:48,300 --> 01:10:50,300
+with debug equal true.
+
+734
+01:10:50,300 --> 01:10:53,300
+I'm sure there are still old versions, deployed apps out there
+
+735
+01:10:53,300 --> 01:10:55,300
+using old versions of Django,
+
+736
+01:10:55,300 --> 01:10:58,300
+where if you left debug equal true turned on,
+
+737
+01:10:58,300 --> 01:11:02,300
+you probably had been hacked and didn't know it.
+
+738
+01:11:02,300 --> 01:11:06,300
+This also goes through a number of other settings.
+
+739
+01:11:06,300 --> 01:11:09,300
+It's quite useful from just a,
+
+740
+01:11:09,300 --> 01:11:14,300
+am I doing the bare minimum to make sure my site is up and running?
+
+741
+01:11:14,300 --> 01:11:20,300
+A few other resources that you can run yourself against your own site.
+
+742
+01:11:20,300 --> 01:11:24,300
+We talked about GitHub security vulnerabilities.
+
+743
+01:11:24,300 --> 01:11:31,300
+Metasploit and burp suite are both in the vein of the attack suite
+
+744
+01:11:31,300 --> 01:11:35,300
+that someone in the audience mentioned that OAS provides.
+
+745
+01:11:35,300 --> 01:11:41,300
+Google dorking, make sure that your site doesn't show up in those queries.
+
+746
+01:11:41,300 --> 01:11:48,300
+InMap is a way to check to see which ports are open on your site.
+
+747
+01:11:48,300 --> 01:11:51,300
+Unless you're doing something really fancy,
+
+748
+01:11:51,300 --> 01:11:54,300
+it should probably just be 443 and 80.
+
+749
+01:11:54,300 --> 01:11:58,300
+80 should just redirect to your 443 site.
+
+750
+01:11:58,300 --> 01:12:04,300
+Jack the Ripper is a tool that will run through common passwords
+
+751
+01:12:04,300 --> 01:12:10,300
+and attempt to crack passwords in your database.
+
+752
+01:12:10,300 --> 01:12:15,300
+This is the GitHub link, which is poorly formatted.
+
+753
+01:12:15,300 --> 01:12:18,300
+But you already have this.
+
+754
+01:12:18,300 --> 01:12:22,300
+Finally, I just want to give thanks to all of the following people
+
+755
+01:12:22,300 --> 01:12:25,300
+who contributed to this tutorial in one way or another.
+
+756
+01:12:25,300 --> 01:12:28,300
+It wouldn't be here without the work of a lot of people.
+
+757
+01:12:28,300 --> 01:12:31,300
+I really appreciate you all coming today.
+
+758
+01:12:31,300 --> 01:12:35,300
+I'm happy to pause at this point and answer any questions
+
+759
+01:12:35,300 --> 01:12:37,300
+that may not have been answered thus far.
+
+760
+01:12:37,300 --> 01:12:39,300
+Yes?
+
+761
+01:12:39,300 --> 01:12:41,300
+Yes?
+
+762
+01:12:54,300 --> 01:12:57,300
+I did. I had to change the same site.
+
+763
+01:12:57,300 --> 01:13:00,300
+I think I glossed over that.
+
+764
+01:13:10,300 --> 01:13:13,300
+Yes, the overarching middleware is still on.
+
+765
+01:13:13,300 --> 01:13:18,300
+I did have to change this setting.
+
+766
+01:13:22,300 --> 01:13:28,300
+The default of lax still makes it more difficult to perform CSRF queries.
+
+767
+01:13:28,300 --> 01:13:31,300
+I think I changed it to none. I'd have to go back and check the code.
+
+768
+01:13:31,300 --> 01:13:33,300
+Yes?
+
+769
+01:13:39,300 --> 01:13:58,300
+How do you check that no one can do a post from an iframe?
+
+770
+01:13:58,300 --> 01:14:04,300
+How do you know if your website is not vulnerable?
+
+771
+01:14:04,300 --> 01:14:11,300
+The very short answer is it's really, really tricky to know
+
+772
+01:14:11,300 --> 01:14:17,300
+that your site absolutely isn't vulnerable
+
+773
+01:14:17,300 --> 01:14:20,300
+because it's a cat and mouse game.
+
+774
+01:14:20,300 --> 01:14:22,300
+What you can do...
+
+775
+01:14:22,300 --> 01:14:25,300
+One, you can get penetration testing done,
+
+776
+01:14:25,300 --> 01:14:29,300
+which I recommend if your company doesn't do penetration.
+
+777
+01:14:29,300 --> 01:14:34,300
+That will give you a little bit more assurance.
+
+778
+01:14:34,300 --> 01:14:41,300
+The second is to be wary of changing defaults
+
+779
+01:14:41,300 --> 01:14:46,300
+unless you understand why you're changing them or what the need is.
+
+780
+01:14:46,300 --> 01:14:48,300
+Yes?
+
+781
+01:14:48,300 --> 01:14:50,300
+Yes.
+
+782
+01:14:50,300 --> 01:14:55,300
+Is this the CSRF token?
+
+783
+01:14:55,300 --> 01:14:57,300
+Oh, okay. Let me see.
+
+784
+01:14:57,300 --> 01:15:00,300
+The question was, is there something in the code
+
+785
+01:15:00,300 --> 01:15:03,300
+that tells you about the CSRF token?
+
+786
+01:15:03,300 --> 01:15:07,300
+How do you turn it off?
+
+787
+01:15:07,300 --> 01:15:13,300
+The CSRF middleware is activated by default in settings.
+
+788
+01:15:13,300 --> 01:15:15,300
+It's one of the things that's turned on.
+
+789
+01:15:15,300 --> 01:15:17,300
+The first thing is that by default,
+
+790
+01:15:17,300 --> 01:15:22,300
+all of your views will use Django's CSRF protection.
+
+791
+01:15:22,300 --> 01:15:26,300
+The second thing is you would want to check
+
+792
+01:15:26,300 --> 01:15:33,300
+that any forms in your templates have that CSRF token tag.
+
+793
+01:15:33,300 --> 01:15:37,300
+Then the last thing you would want to check
+
+794
+01:15:37,300 --> 01:15:41,300
+is to disable CSRF explicitly.
+
+795
+01:15:41,300 --> 01:15:45,300
+You would use that at CSRF exempt decorator on your view.
+
+796
+01:15:45,300 --> 01:15:48,300
+If you're not using that and you have CSRF middleware turned on
+
+797
+01:15:48,300 --> 01:15:53,300
+and you're using the CSRF token tag,
+
+798
+01:15:53,300 --> 01:16:00,300
+then you'll be using the default for Django security.
+
+799
+01:16:00,300 --> 01:16:03,300
+You can also set, if you wanted to,
+
+800
+01:16:03,300 --> 01:16:06,300
+you could set the same site session cookie to strict,
+
+801
+01:16:06,300 --> 01:16:08,300
+and there are a bunch of other cookie settings
+
+802
+01:16:08,300 --> 01:16:12,300
+that you can set in Django.
+
+803
+01:16:12,300 --> 01:16:24,300
+The deleting, so how could you delete everything?
+
+804
+01:16:24,300 --> 01:16:28,300
+There was not a, because that view for deleting everything
+
+805
+01:16:28,300 --> 01:16:32,300
+had the at CSRF exempt decorator on it,
+
+806
+01:16:32,300 --> 01:16:35,300
+so it was not doing CSRF checking.
+
+807
+01:16:35,300 --> 01:16:38,300
+Okay, yes?
+
+808
+01:16:38,300 --> 01:16:42,300
+Is there a way that your framework can default
+
+809
+01:16:42,300 --> 01:16:45,300
+requiring the CSRF token?
+
+810
+01:16:45,300 --> 01:16:50,300
+Not that I know of, which I find annoying as well.
+
+811
+01:16:50,300 --> 01:16:53,300
+If you find it, please message the entire group and let me know,
+
+812
+01:16:53,300 --> 01:16:56,300
+because I don't think there is.
+
+813
+01:16:56,300 --> 01:16:57,300
+Yes?
+
+814
+01:16:57,300 --> 01:17:06,300
+Yes, that is great.
+
+815
+01:17:06,300 --> 01:17:09,300
+I should have added that.
+
+816
+01:17:09,300 --> 01:17:11,300
+Ponycheckup.com.
+
+817
+01:17:11,300 --> 01:17:15,300
+I will add a note to send that out after the tutorial.
+
+818
+01:17:15,300 --> 01:17:19,300
+And the last thing that I've been asked to do
+
+819
+01:17:19,300 --> 01:17:24,300
+is give you the survey link.
+
+820
+01:17:24,300 --> 01:17:27,300
+So this is a survey that, as far as I know,
+
+821
+01:17:27,300 --> 01:17:29,300
+I don't see the results of.
+
+822
+01:17:29,300 --> 01:17:31,300
+This is purely for the PyCon organizers,
+
+823
+01:17:31,300 --> 01:17:34,300
+so they know what people got out of the tutorials
+
+824
+01:17:34,300 --> 01:17:37,300
+that they went to and ways that they can improve.
+
+825
+01:17:37,300 --> 01:17:40,300
+I think they may send me, like, in the past,
+
+826
+01:17:40,300 --> 01:17:44,300
+they have not shared any of the results with instructors.
+
+827
+01:17:44,300 --> 01:17:48,300
+I think they may send, like, rolled up results to help us improve,
+
+828
+01:17:48,300 --> 01:17:51,300
+but all of this is entirely anonymous.
+
+829
+01:17:51,300 --> 01:17:57,300
+It won't be associated with you in any way that I can see it.
+
+830
+01:17:57,300 --> 01:18:01,300
+So I know this would help out PyCon's organizers
+
+831
+01:18:01,300 --> 01:18:04,300
+and would definitely appreciate if you have the time to complete it.
+

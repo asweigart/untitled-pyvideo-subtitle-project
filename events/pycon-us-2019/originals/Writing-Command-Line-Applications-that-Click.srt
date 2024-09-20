@@ -1,0 +1,6916 @@
+1
+00:00:00,000 --> 00:00:05,000
+Yes, yeah, so I sent a second message.
+
+2
+00:00:08,900 --> 00:00:11,660
+That's when the last update's happened.
+
+3
+00:00:11,660 --> 00:00:14,860
+So if you got that, when we get to the tutorial step,
+
+4
+00:00:14,860 --> 00:00:17,920
+there's a way to check that we have the latest.
+
+5
+00:00:22,660 --> 00:00:27,660
+But a git pull and then a pip install, again, doesn't hurt.
+
+6
+00:00:31,000 --> 00:00:32,920
+Okay, I think most people are here,
+
+7
+00:00:32,920 --> 00:00:34,560
+so we're gonna get started.
+
+8
+00:00:34,560 --> 00:00:35,400
+We good?
+
+9
+00:00:48,960 --> 00:00:52,640
+Cool, so welcome to writing command line applications
+
+10
+00:00:52,640 --> 00:00:53,460
+that click.
+
+11
+00:00:54,760 --> 00:00:56,620
+I'm really excited to have you here.
+
+12
+00:00:57,620 --> 00:01:01,300
+So let me be the first to say welcome to Cleveland.
+
+13
+00:01:01,300 --> 00:01:06,300
+This is so cool to have all of you come to my hometown,
+
+14
+00:01:06,480 --> 00:01:08,940
+and thank you for coming to the first session
+
+15
+00:01:08,940 --> 00:01:10,620
+and listening to me.
+
+16
+00:01:10,620 --> 00:01:11,900
+This is gonna be some fun.
+
+17
+00:01:12,820 --> 00:01:16,420
+So the goal today is to write
+
+18
+00:01:16,420 --> 00:01:19,980
+well-behaved command line applications
+
+19
+00:01:19,980 --> 00:01:23,480
+using Python, using a package called click.
+
+20
+00:01:24,480 --> 00:01:27,160
+So let's talk about what does a well-behaved
+
+21
+00:01:27,160 --> 00:01:28,920
+command line application look like.
+
+22
+00:01:30,480 --> 00:01:33,200
+So there's this idea of the Unix philosophy,
+
+23
+00:01:33,200 --> 00:01:36,760
+and this is that you should write programs
+
+24
+00:01:36,760 --> 00:01:39,240
+that do one thing and do one thing well.
+
+25
+00:01:40,080 --> 00:01:44,440
+They should work together, and the way they work together
+
+26
+00:01:44,440 --> 00:01:48,480
+is using text streams to send the output of one
+
+27
+00:01:48,480 --> 00:01:51,220
+to the input of another.
+
+28
+00:01:52,220 --> 00:01:56,060
+And this gives you the ability to put together
+
+29
+00:01:56,060 --> 00:01:59,820
+all these tools in this ecosystem into a nice tool chain,
+
+30
+00:01:59,820 --> 00:02:02,920
+and so you get the benefits of all the little pieces.
+
+31
+00:02:04,560 --> 00:02:09,100
+So do one thing means your program should be self-contained.
+
+32
+00:02:10,180 --> 00:02:14,280
+This allows the piece to be a well-understood
+
+33
+00:02:14,280 --> 00:02:18,660
+and well-tested unit, and allows you to piece them together.
+
+34
+00:02:18,740 --> 00:02:23,620
+Now, if you have a collection of commands
+
+35
+00:02:23,620 --> 00:02:28,620
+that all do separate but related things,
+
+36
+00:02:29,180 --> 00:02:33,340
+then you can compose them into a command line
+
+37
+00:02:33,340 --> 00:02:35,380
+with a command and then subcommands,
+
+38
+00:02:35,380 --> 00:02:38,340
+but then each one of those subcommands still does one thing.
+
+39
+00:02:39,860 --> 00:02:42,360
+They should work together using standard interfaces.
+
+40
+00:02:42,360 --> 00:02:46,060
+This means you're able to use a pipe
+
+41
+00:02:46,060 --> 00:02:50,340
+to connect the output of one to the input of another,
+
+42
+00:02:51,260 --> 00:02:53,900
+and so your program should read from standard in
+
+43
+00:02:53,900 --> 00:02:57,160
+and write to standard out, at least as options.
+
+44
+00:02:58,860 --> 00:03:00,580
+And then they should handle text streams.
+
+45
+00:03:00,580 --> 00:03:03,940
+If you're producing data and you wanna be able
+
+46
+00:03:03,940 --> 00:03:07,880
+to use the application in this context,
+
+47
+00:03:07,880 --> 00:03:10,300
+it should be able to emit a text stream
+
+48
+00:03:10,300 --> 00:03:13,980
+so that the next application in the chain can pick it up
+
+49
+00:03:13,980 --> 00:03:15,360
+and do something with it.
+
+50
+00:03:15,360 --> 00:03:18,520
+This allows you to do things like generate content
+
+51
+00:03:18,520 --> 00:03:21,720
+and then pipe it to grip to search for a specific string
+
+52
+00:03:21,720 --> 00:03:25,000
+and then pipe it to less so you can page through the data.
+
+53
+00:03:25,840 --> 00:03:27,000
+If you're not using text streams,
+
+54
+00:03:27,000 --> 00:03:29,760
+you can't take advantage of those other pieces.
+
+55
+00:03:32,080 --> 00:03:35,600
+And so if we do this, we're going to gain the power
+
+56
+00:03:35,600 --> 00:03:38,440
+of the entire ecosystem instead of just having
+
+57
+00:03:38,440 --> 00:03:41,240
+our little self-contained application that does its thing.
+
+58
+00:03:42,240 --> 00:03:46,200
+And this is really powerful because it can allow people
+
+59
+00:03:46,200 --> 00:03:49,200
+to use your application in ways you didn't expect
+
+60
+00:03:49,200 --> 00:03:51,960
+when they can use it in combination with other things.
+
+61
+00:03:54,360 --> 00:03:56,500
+So obviously there's alternatives
+
+62
+00:03:56,500 --> 00:03:58,040
+to writing command line applications.
+
+63
+00:03:58,040 --> 00:04:00,440
+We could make a graphical interface.
+
+64
+00:04:00,440 --> 00:04:02,120
+We could have web interfaces.
+
+65
+00:04:02,120 --> 00:04:05,120
+But CLIs are really good for specific things,
+
+66
+00:04:06,120 --> 00:04:11,120
+you know, especially tasks that need to be automated
+
+67
+00:04:12,480 --> 00:04:14,880
+or things that can be scripted,
+
+68
+00:04:14,880 --> 00:04:18,200
+something that has to be like run on a schedule
+
+69
+00:04:18,200 --> 00:04:20,760
+really lends itself to a command line application.
+
+70
+00:04:21,680 --> 00:04:26,680
+And then they're also used to as management interfaces
+
+71
+00:04:27,360 --> 00:04:28,960
+for like bigger applications.
+
+72
+00:04:28,960 --> 00:04:32,920
+A common example of that is Django's manage.py
+
+73
+00:04:32,960 --> 00:04:36,100
+allows you to work with your Django application.
+
+74
+00:04:37,080 --> 00:04:40,480
+And so we're going to be able to do that type of thing
+
+75
+00:04:40,480 --> 00:04:41,320
+using CLIQ.
+
+76
+00:04:44,400 --> 00:04:48,120
+And there are a few reasons you'd want to do this in Python.
+
+77
+00:04:48,120 --> 00:04:50,960
+Obviously we're at a Python conference,
+
+78
+00:04:50,960 --> 00:04:53,000
+so people are interested in Python or know Python.
+
+79
+00:04:53,000 --> 00:04:56,580
+And so that's one good reason is if you are already
+
+80
+00:04:56,580 --> 00:04:58,800
+good at using Python, that makes sense.
+
+81
+00:04:58,800 --> 00:05:02,500
+Python has a ton of libraries available on PyPI.
+
+82
+00:05:03,720 --> 00:05:07,920
+And another reason that I have found I use Python
+
+83
+00:05:07,920 --> 00:05:11,020
+is in this case is because a lot of vendors
+
+84
+00:05:11,020 --> 00:05:13,400
+have SDKs in Python.
+
+85
+00:05:13,400 --> 00:05:15,440
+So if you want to interact with some service,
+
+86
+00:05:15,440 --> 00:05:18,080
+you can use their SDK really nicely
+
+87
+00:05:18,080 --> 00:05:21,680
+and wrap it up in a Python command line interface.
+
+88
+00:05:24,040 --> 00:05:26,000
+And then it also makes sense if you're again,
+
+89
+00:05:26,000 --> 00:05:27,560
+making like a management interface
+
+90
+00:05:27,560 --> 00:05:30,400
+for your already existing Python app.
+
+91
+00:05:31,240 --> 00:05:34,400
+So if you're going to be writing command line applications
+
+92
+00:05:34,400 --> 00:05:39,400
+in Python, there are a ton of libraries for doing that.
+
+93
+00:05:40,240 --> 00:05:42,640
+So why are we choosing to use CLIQ
+
+94
+00:05:42,640 --> 00:05:44,040
+instead of one of the others?
+
+95
+00:05:45,200 --> 00:05:47,320
+So on the documentation page, they have,
+
+96
+00:05:47,320 --> 00:05:49,260
+or on their documentation, they have a great page
+
+97
+00:05:49,260 --> 00:05:51,040
+explaining why you should use CLIQ
+
+98
+00:05:51,940 --> 00:05:52,800
+as opposed to the others.
+
+99
+00:05:52,800 --> 00:05:57,800
+But for me, the reasons that I always lean towards CLIQ
+
+100
+00:05:58,080 --> 00:06:02,840
+is because I found it encourages me to kind of follow
+
+101
+00:06:02,840 --> 00:06:05,480
+the standards or the norms that you'd expect
+
+102
+00:06:05,480 --> 00:06:07,640
+and you make these well-behaved applications
+
+103
+00:06:07,640 --> 00:06:10,920
+that work well with the other tools.
+
+104
+00:06:10,920 --> 00:06:13,200
+And then it also has some really nice helper features
+
+105
+00:06:13,200 --> 00:06:16,320
+that you would otherwise have to implement
+
+106
+00:06:16,320 --> 00:06:19,120
+or import yourself from somewhere else.
+
+107
+00:06:19,120 --> 00:06:23,920
+Things like input validation and like color output support,
+
+108
+00:06:23,920 --> 00:06:26,100
+confirmation prompts, progress bars,
+
+109
+00:06:26,100 --> 00:06:28,500
+like some of those just nicer to have things.
+
+110
+00:06:30,180 --> 00:06:33,860
+Okay, so we're gonna talk a little bit about
+
+111
+00:06:33,860 --> 00:06:38,860
+what the interface to a well-behaved command line looks like.
+
+112
+00:06:39,140 --> 00:06:42,420
+And then we'll get into the lessons in a couple of minutes.
+
+113
+00:06:43,300 --> 00:06:46,420
+So your applications that you're writing today
+
+114
+00:06:46,420 --> 00:06:49,820
+are going to have arguments and options.
+
+115
+00:06:49,820 --> 00:06:54,020
+So arguments are positional values that are passed
+
+116
+00:06:54,020 --> 00:06:57,560
+to the application and they're usually required.
+
+117
+00:06:59,260 --> 00:07:04,260
+They can be like just one or in some cases,
+
+118
+00:07:04,500 --> 00:07:08,620
+you can accept like an arbitrary number of arguments.
+
+119
+00:07:09,860 --> 00:07:13,160
+And then there's options and as the name implies,
+
+120
+00:07:13,160 --> 00:07:14,440
+they're optional.
+
+121
+00:07:14,440 --> 00:07:16,140
+So there's some sort of default behavior,
+
+122
+00:07:16,140 --> 00:07:17,920
+but if you wanna change that default,
+
+123
+00:07:17,920 --> 00:07:19,140
+you can pass the option.
+
+124
+00:07:20,140 --> 00:07:22,380
+And then there's a couple different types of options.
+
+125
+00:07:22,380 --> 00:07:24,180
+There's options that take values.
+
+126
+00:07:24,180 --> 00:07:27,460
+So like the dash dash count three,
+
+127
+00:07:27,460 --> 00:07:29,140
+but then there's options that are flags.
+
+128
+00:07:29,140 --> 00:07:32,940
+And so those are just the option name itself.
+
+129
+00:07:34,500 --> 00:07:37,540
+And then you can use them together in combination
+
+130
+00:07:37,540 --> 00:07:39,700
+to get the application to do what you want.
+
+131
+00:07:42,220 --> 00:07:47,140
+Our applications are going to write to standard out
+
+132
+00:07:47,140 --> 00:07:49,340
+and they're gonna read from standard in.
+
+133
+00:07:49,860 --> 00:07:52,140
+And this will allow us to do things
+
+134
+00:07:52,140 --> 00:07:55,100
+like we can echo some text.
+
+135
+00:07:55,100 --> 00:07:57,300
+I mean, that's a kind of a contrived example,
+
+136
+00:07:57,300 --> 00:08:01,120
+but we can take an output from any other program,
+
+137
+00:08:01,120 --> 00:08:02,980
+type it to our program,
+
+138
+00:08:02,980 --> 00:08:06,060
+and then ours is gonna be able to do something with it.
+
+139
+00:08:06,060 --> 00:08:07,540
+That it writes to standard out.
+
+140
+00:08:07,540 --> 00:08:10,060
+So if you redirect the output to a file,
+
+141
+00:08:10,060 --> 00:08:14,020
+the product of the application is written to that file.
+
+142
+00:08:15,160 --> 00:08:18,180
+But then any like meta information or debugging information
+
+143
+00:08:18,180 --> 00:08:20,020
+is going to print to standard error.
+
+144
+00:08:20,020 --> 00:08:21,840
+And the reason that's important
+
+145
+00:08:21,840 --> 00:08:25,340
+is so that you can separate the output of the application,
+
+146
+00:08:25,340 --> 00:08:28,620
+like the result that you want from meta information
+
+147
+00:08:28,620 --> 00:08:31,500
+or information about how that was produced.
+
+148
+00:08:31,500 --> 00:08:35,260
+And that allows you to do the bottom example on the slide,
+
+149
+00:08:35,260 --> 00:08:38,340
+which is redirect the output to an output file,
+
+150
+00:08:38,340 --> 00:08:41,080
+but redirect the like logging or meta information
+
+151
+00:08:41,080 --> 00:08:42,660
+to an error file.
+
+152
+00:08:43,260 --> 00:08:44,100
+So,
+
+153
+00:08:46,180 --> 00:08:49,540
+applications should exit with a meaningful status code.
+
+154
+00:08:49,540 --> 00:08:53,060
+And at the minimum, this means exit with a zero
+
+155
+00:08:53,060 --> 00:08:56,020
+upon success and a non-zero upon failure.
+
+156
+00:08:56,880 --> 00:08:58,580
+There's kind of some different conventions
+
+157
+00:08:58,580 --> 00:09:01,180
+for what those non-zero codes can mean,
+
+158
+00:09:01,180 --> 00:09:03,300
+but really it just needs to be non-zero.
+
+159
+00:09:03,300 --> 00:09:06,980
+And this allows you to then take the application
+
+160
+00:09:06,980 --> 00:09:08,940
+and use it in other scripts.
+
+161
+00:09:08,940 --> 00:09:10,860
+So you can put it in a conditional
+
+162
+00:09:10,860 --> 00:09:12,820
+and you can do the thing that's in this example,
+
+163
+00:09:12,820 --> 00:09:15,980
+which is if the application runs with success,
+
+164
+00:09:16,940 --> 00:09:20,100
+then it's okay, but if it exits with an error,
+
+165
+00:09:20,100 --> 00:09:24,060
+then we're gonna print an error or do some other behavior,
+
+166
+00:09:24,060 --> 00:09:26,500
+maybe clean up some files or whatever.
+
+167
+00:09:26,500 --> 00:09:27,940
+If your application doesn't exit
+
+168
+00:09:27,940 --> 00:09:29,380
+with a meaningful status code,
+
+169
+00:09:29,380 --> 00:09:31,740
+you're not gonna be able to use it like this.
+
+170
+00:09:33,780 --> 00:09:38,780
+Long running applications should handle signals.
+
+171
+00:09:39,060 --> 00:09:41,900
+The most common is a keyboard interrupt,
+
+172
+00:09:41,900 --> 00:09:44,300
+which if you're running something,
+
+173
+00:09:44,300 --> 00:09:46,260
+let's say it's manipulating a ton of files
+
+174
+00:09:46,260 --> 00:09:48,660
+or downloading a bunch of things
+
+175
+00:09:48,660 --> 00:09:50,940
+or running database updates,
+
+176
+00:09:50,940 --> 00:09:52,540
+if you do a Control C in the middle of that
+
+177
+00:09:52,540 --> 00:09:54,620
+and you're not handling that,
+
+178
+00:09:57,060 --> 00:09:58,540
+your data could be in a bad state.
+
+179
+00:09:58,540 --> 00:10:01,260
+And so what you wanna do is maybe roll back
+
+180
+00:10:01,260 --> 00:10:03,040
+the database transaction at that point,
+
+181
+00:10:03,040 --> 00:10:07,340
+or if you cancel in the middle of a long process,
+
+182
+00:10:07,340 --> 00:10:10,700
+you can output what step you were at in the process
+
+183
+00:10:10,700 --> 00:10:14,780
+so that if you want to resume later, you can do that.
+
+184
+00:10:14,780 --> 00:10:16,020
+Where if you don't handle the signal,
+
+185
+00:10:16,020 --> 00:10:17,380
+you're just gonna get a keyboard interrupt
+
+186
+00:10:17,380 --> 00:10:19,500
+and the program will crash.
+
+187
+00:10:22,400 --> 00:10:26,820
+Your applications might need to store data,
+
+188
+00:10:26,820 --> 00:10:31,820
+like either working data or like state information.
+
+189
+00:10:32,020 --> 00:10:34,100
+And the place they should do that is gonna be different
+
+190
+00:10:34,100 --> 00:10:36,400
+based on the system that you're running on.
+
+191
+00:10:36,400 --> 00:10:38,240
+So I know like just in this room,
+
+192
+00:10:38,240 --> 00:10:41,320
+there's people running a bunch of different
+
+193
+00:10:41,320 --> 00:10:42,160
+operating systems.
+
+194
+00:10:42,160 --> 00:10:44,320
+We definitely have Macs, we have Windows,
+
+195
+00:10:44,320 --> 00:10:45,640
+so a couple of Linux.
+
+196
+00:10:46,720 --> 00:10:50,760
+And then in the Linux world, there's a couple varieties.
+
+197
+00:10:50,760 --> 00:10:55,760
+So you should store your data in the right place
+
+198
+00:10:55,800 --> 00:10:57,920
+that people expect on that system.
+
+199
+00:10:57,920 --> 00:11:00,320
+And so this is one of the little helpers
+
+200
+00:11:00,320 --> 00:11:03,000
+that Click gives you is it can tell you
+
+201
+00:11:03,000 --> 00:11:05,800
+where that appropriate place is for the system you're on.
+
+202
+00:11:06,480 --> 00:11:07,900
+If you didn't have a tool like this,
+
+203
+00:11:07,900 --> 00:11:10,920
+you'd have to either just store it in the wrong place
+
+204
+00:11:10,920 --> 00:11:12,640
+or handle this yourself.
+
+205
+00:11:15,040 --> 00:11:18,320
+If your application uses colors,
+
+206
+00:11:18,320 --> 00:11:21,480
+that can be really helpful because it kinda highlights
+
+207
+00:11:21,480 --> 00:11:23,320
+the output, it shows what's going on,
+
+208
+00:11:23,320 --> 00:11:25,260
+maybe draws attention to an error.
+
+209
+00:11:26,200 --> 00:11:29,480
+But if they're done poorly, you're gonna get results
+
+210
+00:11:29,480 --> 00:11:33,340
+like a bunch of garbled looking escape sequences
+
+211
+00:11:33,340 --> 00:11:34,780
+in your result data.
+
+212
+00:11:36,520 --> 00:11:38,600
+So it's really important for your application
+
+213
+00:11:38,600 --> 00:11:42,600
+to know whether it's being run in an interactive fashion
+
+214
+00:11:42,600 --> 00:11:46,040
+at a terminal by a person where color is meaningful,
+
+215
+00:11:46,040 --> 00:11:49,160
+or it's being run where the output is being piped
+
+216
+00:11:49,160 --> 00:11:51,160
+to another program, or it's being run by a cron,
+
+217
+00:11:51,160 --> 00:11:54,320
+or something like that, where the color
+
+218
+00:11:54,320 --> 00:11:55,520
+isn't helping you at all.
+
+219
+00:11:56,640 --> 00:12:00,140
+And so this is another thing that Click's gonna give us
+
+220
+00:12:00,140 --> 00:12:04,800
+that we'll see later, where it uses another package
+
+221
+00:12:04,800 --> 00:12:07,000
+called Colorama to handle this,
+
+222
+00:12:07,000 --> 00:12:09,640
+but it detects whether it's being run interactively.
+
+223
+00:12:09,640 --> 00:12:11,280
+If it is, and you're using colors,
+
+224
+00:12:11,280 --> 00:12:13,160
+it's gonna show you the colors.
+
+225
+00:12:13,160 --> 00:12:15,720
+But if you're taking the output
+
+226
+00:12:15,720 --> 00:12:17,640
+and sending it somewhere else,
+
+227
+00:12:17,640 --> 00:12:19,680
+it's gonna know that it's not going to emit
+
+228
+00:12:19,680 --> 00:12:22,440
+the color escape sequences and then you won't see them.
+
+229
+00:12:24,280 --> 00:12:28,600
+Okay, so now I'm gonna do just a little intro
+
+230
+00:12:28,600 --> 00:12:32,120
+to the way a Click application is structured
+
+231
+00:12:32,120 --> 00:12:33,680
+and the way it works.
+
+232
+00:12:33,680 --> 00:12:36,580
+And then we'll get going on the tutorial.
+
+233
+00:12:41,320 --> 00:12:43,400
+So Click's documentation is pretty good.
+
+234
+00:12:43,400 --> 00:12:46,080
+It's available at this URL.
+
+235
+00:12:46,080 --> 00:12:47,680
+And during the tutorial, there's gonna be links
+
+236
+00:12:47,680 --> 00:12:49,440
+to specific parts of the documentation
+
+237
+00:12:49,440 --> 00:12:51,640
+that will help you with the steps.
+
+238
+00:12:53,920 --> 00:12:57,720
+So Click makes heavy use of decorators.
+
+239
+00:12:58,560 --> 00:13:03,240
+So if you've used Flask especially,
+
+240
+00:13:03,240 --> 00:13:04,620
+this will be really familiar to you,
+
+241
+00:13:04,620 --> 00:13:08,040
+where you're using decorators to kind of add behavior.
+
+242
+00:13:08,860 --> 00:13:10,720
+If you're not familiar with decorators,
+
+243
+00:13:10,720 --> 00:13:14,380
+though, the kind of minimum you need to know,
+
+244
+00:13:14,380 --> 00:13:18,040
+they use this syntax where it is the at sign
+
+245
+00:13:18,040 --> 00:13:19,840
+and then the decorator name.
+
+246
+00:13:19,840 --> 00:13:23,880
+And these are used either on functions or classes.
+
+247
+00:13:23,880 --> 00:13:26,200
+And they're really just a piece of code
+
+248
+00:13:26,200 --> 00:13:30,720
+that wraps the other code and adds behavior to it.
+
+249
+00:13:30,720 --> 00:13:33,600
+So in this case, we're importing Click,
+
+250
+00:13:34,640 --> 00:13:38,880
+and then we use this decorator at click.command.
+
+251
+00:13:38,880 --> 00:13:41,280
+And so what that's doing is it is saying
+
+252
+00:13:41,280 --> 00:13:44,120
+that the function that's being wrapped by this decorator
+
+253
+00:13:44,120 --> 00:13:46,160
+is being turned from a normal function
+
+254
+00:13:46,160 --> 00:13:48,020
+into a Click command.
+
+255
+00:13:49,240 --> 00:13:52,160
+And then when you're adding arguments
+
+256
+00:13:52,160 --> 00:13:55,160
+or options to the command,
+
+257
+00:13:55,160 --> 00:13:57,440
+those are added as additional decorators.
+
+258
+00:13:57,440 --> 00:14:01,360
+So in this case, this kind of hello world
+
+259
+00:14:01,360 --> 00:14:03,560
+has a couple options.
+
+260
+00:14:03,560 --> 00:14:07,700
+One is the count and the other is the name.
+
+261
+00:14:09,240 --> 00:14:11,640
+And then it's using some of the a little more
+
+262
+00:14:11,640 --> 00:14:13,600
+advanced features with the option
+
+263
+00:14:13,600 --> 00:14:14,940
+where it's gonna prompt you for the name
+
+264
+00:14:14,940 --> 00:14:16,440
+if you don't pass that option.
+
+265
+00:14:18,100 --> 00:14:23,100
+So those decorators then collect data from the command line
+
+266
+00:14:23,620 --> 00:14:25,620
+when you type it in.
+
+267
+00:14:25,620 --> 00:14:27,860
+And the data is put into variables
+
+268
+00:14:27,860 --> 00:14:32,860
+that are automatically named based on the name
+
+269
+00:14:33,180 --> 00:14:36,180
+of the option or the name of the argument that you passed.
+
+270
+00:14:36,180 --> 00:14:38,940
+So in this hello world example,
+
+271
+00:14:38,940 --> 00:14:42,420
+the click.option dash dash count
+
+272
+00:14:42,420 --> 00:14:46,420
+automatically populates a variable called count.
+
+273
+00:14:46,420 --> 00:14:49,900
+And the dash dash name populates a variable called name.
+
+274
+00:14:49,900 --> 00:14:51,580
+And those are passed into variables
+
+275
+00:14:51,580 --> 00:14:52,660
+called name.
+
+276
+00:14:52,660 --> 00:14:54,660
+And those are passed as keyword arguments
+
+277
+00:14:54,660 --> 00:14:56,740
+to the wrapped function.
+
+278
+00:14:56,740 --> 00:15:01,740
+So in this example, the count defaults to one.
+
+279
+00:15:02,140 --> 00:15:05,800
+And so count with the value one is passed to hello.
+
+280
+00:15:05,800 --> 00:15:09,540
+And then name is an option that if you don't pass it,
+
+281
+00:15:09,540 --> 00:15:11,580
+you're gonna be prompted for on the command line.
+
+282
+00:15:11,580 --> 00:15:15,780
+And that gets passed into the variable named name
+
+283
+00:15:15,780 --> 00:15:17,300
+into that function.
+
+284
+00:15:17,300 --> 00:15:20,300
+And then those variables are available inside the function.
+
+285
+00:15:21,820 --> 00:15:24,740
+And that's kind of the gist of how click works.
+
+286
+00:15:24,740 --> 00:15:26,940
+So the rest of this tutorial is just bonus.
+
+287
+00:15:30,220 --> 00:15:32,940
+The last part to note here though,
+
+288
+00:15:32,940 --> 00:15:34,580
+if you haven't seen it before,
+
+289
+00:15:34,580 --> 00:15:37,540
+this if double underscore name
+
+290
+00:15:37,540 --> 00:15:39,700
+equals equals double underscore main.
+
+291
+00:15:41,260 --> 00:15:46,100
+What this is doing is if this Python module
+
+292
+00:15:47,880 --> 00:15:49,700
+is imported directly,
+
+293
+00:15:49,700 --> 00:15:52,020
+so it is the first thing that you're invoking,
+
+294
+00:15:52,020 --> 00:15:55,220
+it's going to have the special name of main
+
+295
+00:15:55,220 --> 00:15:57,260
+because it's the entry point of the application.
+
+296
+00:15:57,260 --> 00:16:01,100
+And so it's saying if you're using this module directly,
+
+297
+00:16:01,100 --> 00:16:03,860
+then execute the hello function.
+
+298
+00:16:03,860 --> 00:16:07,820
+And this allows you to run the Python script
+
+299
+00:16:07,820 --> 00:16:12,940
+on the command line directly.
+
+300
+00:16:12,940 --> 00:16:16,260
+But if this module gets imported somewhere else,
+
+301
+00:16:16,260 --> 00:16:19,040
+it's gonna be imported with its file name.
+
+302
+00:16:19,040 --> 00:16:21,600
+And so name will not equal main.
+
+303
+00:16:21,600 --> 00:16:23,960
+And so the hello function will not run.
+
+304
+00:16:23,960 --> 00:16:28,960
+And that allows you to take this command line interface
+
+305
+00:16:29,480 --> 00:16:31,160
+stored in a Python module.
+
+306
+00:16:31,160 --> 00:16:34,080
+It can be used directly on the command line,
+
+307
+00:16:34,080 --> 00:16:36,340
+which is kind of the expected way to do it.
+
+308
+00:16:36,340 --> 00:16:38,060
+But if someone else wants to,
+
+309
+00:16:38,060 --> 00:16:39,740
+they could import your module
+
+310
+00:16:39,740 --> 00:16:42,440
+and invoke the functions directly
+
+311
+00:16:42,440 --> 00:16:44,680
+from another piece of Python code.
+
+312
+00:16:44,680 --> 00:16:47,080
+So if you didn't have that and you just ran it directly,
+
+313
+00:16:47,080 --> 00:16:51,180
+it would run on import and would cause unexpected behavior.
+
+314
+00:16:51,180 --> 00:16:53,020
+But that was a source of confusion
+
+315
+00:16:53,020 --> 00:16:55,480
+when I did a couple trial runs of this,
+
+316
+00:16:55,480 --> 00:16:57,600
+so I wanted to point that part out.
+
+317
+00:16:57,600 --> 00:16:59,240
+So in the examples,
+
+318
+00:16:59,240 --> 00:17:01,240
+like the stub files that we're gonna start with,
+
+319
+00:17:01,240 --> 00:17:05,080
+you're gonna see the if name equals equals main there.
+
+320
+00:17:07,140 --> 00:17:12,080
+And so click is going to from that code
+
+321
+00:17:12,080 --> 00:17:12,920
+in the hello world,
+
+322
+00:17:12,920 --> 00:17:15,920
+it's gonna generate help output for us.
+
+323
+00:17:15,960 --> 00:17:20,000
+And so if you run that script dash dash help,
+
+324
+00:17:20,000 --> 00:17:24,160
+you're going to get this generated usage information already.
+
+325
+00:17:24,160 --> 00:17:28,400
+And this is based on the description there
+
+326
+00:17:28,400 --> 00:17:32,200
+is based on the docstring of the command function.
+
+327
+00:17:32,200 --> 00:17:35,240
+And then the help for the individual options
+
+328
+00:17:35,240 --> 00:17:37,000
+are based on the help parameter
+
+329
+00:17:37,000 --> 00:17:40,040
+that was passed to the decorator functions.
+
+330
+00:17:40,040 --> 00:17:42,960
+And so you can see the docstring
+
+331
+00:17:42,960 --> 00:17:44,700
+gets turned into the description
+
+332
+00:17:44,700 --> 00:17:48,720
+and the help equals gets turned into the help lines below.
+
+333
+00:17:51,260 --> 00:17:54,740
+Okay, so that was the intro.
+
+334
+00:17:54,740 --> 00:17:57,300
+Now we're gonna start with the actual
+
+335
+00:17:57,300 --> 00:17:59,420
+doing stuff part of the tutorial.
+
+336
+00:18:00,740 --> 00:18:02,940
+So hopefully at this point,
+
+337
+00:18:02,940 --> 00:18:06,060
+everybody has gotten stuff installed.
+
+338
+00:18:06,060 --> 00:18:09,340
+I know there were a few people who were having problems.
+
+339
+00:18:09,340 --> 00:18:13,560
+If you're still continuing to have problems getting set up,
+
+340
+00:18:13,560 --> 00:18:17,160
+you can follow along by looking at the code.
+
+341
+00:18:17,160 --> 00:18:19,360
+Obviously you're not gonna be able to run it yet,
+
+342
+00:18:19,360 --> 00:18:22,240
+but I'd recommend at this point now
+
+343
+00:18:22,240 --> 00:18:24,720
+that the wifi has died down a little bit hopefully
+
+344
+00:18:25,840 --> 00:18:28,680
+that you try getting reinstalled right now,
+
+345
+00:18:28,680 --> 00:18:31,820
+just try to do a fresh download and get things set up.
+
+346
+00:18:31,820 --> 00:18:34,000
+If you have trouble once we get started,
+
+347
+00:18:34,000 --> 00:18:36,880
+I can come around and try to help a little more
+
+348
+00:18:38,680 --> 00:18:39,520
+getting set up.
+
+349
+00:18:40,480 --> 00:18:45,000
+The repository itself, the thing that you started with,
+
+350
+00:18:45,000 --> 00:18:46,880
+is itself a Python package.
+
+351
+00:18:48,000 --> 00:18:51,940
+And it has some commands built in,
+
+352
+00:18:51,940 --> 00:18:56,000
+that PyCon command that was one of the PyCon verify,
+
+353
+00:18:56,000 --> 00:18:57,420
+that was one of the installation steps,
+
+354
+00:18:57,420 --> 00:19:00,080
+that was installed as part of this package.
+
+355
+00:19:01,000 --> 00:19:05,320
+And the lesson parts have command line interfaces
+
+356
+00:19:05,320 --> 00:19:07,060
+that were installed as part of this package.
+
+357
+00:19:07,060 --> 00:19:08,300
+Those are all just stubs right now
+
+358
+00:19:08,300 --> 00:19:10,300
+that we're gonna fill in.
+
+359
+00:19:10,300 --> 00:19:13,260
+It also installed a dependency called tutorial runner
+
+360
+00:19:13,260 --> 00:19:16,460
+that gives you a command called tutorial.
+
+361
+00:19:16,460 --> 00:19:19,140
+And tutorial is what you're gonna be using
+
+362
+00:19:19,140 --> 00:19:21,880
+to view information about the lessons,
+
+363
+00:19:21,880 --> 00:19:24,540
+run tests, and things like that.
+
+364
+00:19:24,540 --> 00:19:28,180
+And it also installed PyTest and CookieCutter.
+
+365
+00:19:28,180 --> 00:19:30,800
+PyTest is being used to run the test
+
+366
+00:19:30,800 --> 00:19:33,540
+to verify that we've completed each step.
+
+367
+00:19:33,540 --> 00:19:36,220
+And then CookieCutter we're gonna use later.
+
+368
+00:19:36,220 --> 00:19:39,260
+It's a wonderful application
+
+369
+00:19:39,260 --> 00:19:44,060
+for making new Python projects from templates.
+
+370
+00:19:44,060 --> 00:19:48,220
+So this is how I start every Python project now.
+
+371
+00:19:48,220 --> 00:19:50,200
+And so we'll look at how to do that.
+
+372
+00:19:51,140 --> 00:19:53,220
+So if you have everything installed
+
+373
+00:19:53,220 --> 00:19:56,620
+and you were able to run PyCon verify,
+
+374
+00:19:56,620 --> 00:19:59,660
+and it ran with success, could you raise your hand?
+
+375
+00:20:01,820 --> 00:20:04,020
+Okay, that's pretty good.
+
+376
+00:20:04,020 --> 00:20:04,860
+I'm happy.
+
+377
+00:20:05,660 --> 00:20:09,520
+We'll try to get the people who didn't get set up working.
+
+378
+00:20:09,520 --> 00:20:12,520
+If not, at the beginning, definitely by the break.
+
+379
+00:20:14,540 --> 00:20:19,540
+So, and actually the one thing was the last email
+
+380
+00:20:20,260 --> 00:20:24,820
+that I sent a couple days ago was after I made some changes
+
+381
+00:20:24,820 --> 00:20:27,780
+based on some feedback when I did a trial run.
+
+382
+00:20:27,780 --> 00:20:32,780
+If you have it installed, where'd my thing go?
+
+383
+00:20:35,740 --> 00:20:37,420
+Oops.
+
+384
+00:20:54,300 --> 00:20:57,260
+If you run tutorial space version,
+
+385
+00:20:57,260 --> 00:21:02,260
+you should see that you have 0.2.7 installed.
+
+386
+00:21:02,460 --> 00:21:05,380
+If you have 0.2.7, everything's up to date
+
+387
+00:21:05,380 --> 00:21:08,300
+and everything's gonna match what I'm showing you.
+
+388
+00:21:08,300 --> 00:21:10,700
+If you have an older version, it'll work,
+
+389
+00:21:10,700 --> 00:21:12,940
+but it might not match up with what I'm showing you.
+
+390
+00:21:12,940 --> 00:21:16,940
+So if you have that older version in the repository,
+
+391
+00:21:16,940 --> 00:21:20,460
+do a get pull, which will get the latest updates.
+
+392
+00:21:20,460 --> 00:21:23,340
+And then with your virtualenv activated,
+
+393
+00:21:23,340 --> 00:21:27,140
+pip install dash E space dot,
+
+394
+00:21:27,140 --> 00:21:30,500
+which will reinstall the package
+
+395
+00:21:30,500 --> 00:21:32,740
+that is in that directory.
+
+396
+00:21:32,740 --> 00:21:35,160
+And that should get your new version of tutorial runner
+
+397
+00:21:35,160 --> 00:21:38,980
+and all the lesson files.
+
+398
+00:21:38,980 --> 00:21:39,820
+So.
+
+399
+00:22:00,500 --> 00:22:05,500
+Yeah, so you should see 0.2.7.
+
+400
+00:22:11,540 --> 00:22:12,380
+Now.
+
+401
+00:22:16,820 --> 00:22:17,660
+There we go.
+
+402
+00:22:23,380 --> 00:22:26,380
+So with the tutorial runner installed,
+
+403
+00:22:26,380 --> 00:22:27,700
+if you just type tutorial,
+
+404
+00:22:27,700 --> 00:22:30,280
+you're gonna get help output like this.
+
+405
+00:22:30,280 --> 00:22:32,120
+So let's make sure you can see that.
+
+406
+00:22:38,000 --> 00:22:40,000
+And then if that is good,
+
+407
+00:22:41,760 --> 00:22:42,600
+no, no.
+
+408
+00:22:44,520 --> 00:22:45,360
+There we go.
+
+409
+00:22:45,360 --> 00:22:48,520
+You should be able to run tutorial space init
+
+410
+00:22:48,520 --> 00:22:51,000
+in the root directory of the project.
+
+411
+00:22:51,000 --> 00:22:53,280
+And it should say tutorial initialized,
+
+412
+00:22:53,280 --> 00:22:54,880
+time to start your first lesson.
+
+413
+00:22:57,440 --> 00:22:58,280
+Okay.
+
+414
+00:22:58,280 --> 00:23:02,880
+So my TA for the day fell through.
+
+415
+00:23:02,880 --> 00:23:05,000
+So I'm kind of solo here.
+
+416
+00:23:05,000 --> 00:23:07,720
+So I'm not gonna be able to get to everybody
+
+417
+00:23:07,720 --> 00:23:08,740
+with every issue.
+
+418
+00:23:09,800 --> 00:23:13,560
+But what I wanna do is pass out some post-its
+
+419
+00:23:13,560 --> 00:23:14,520
+that you can use.
+
+420
+00:23:15,640 --> 00:23:17,440
+When you are done with a lesson,
+
+421
+00:23:17,440 --> 00:23:20,800
+I want you to put up this kind of blue-ish post-it
+
+422
+00:23:20,800 --> 00:23:21,880
+on your laptop.
+
+423
+00:23:21,880 --> 00:23:23,780
+So I can just survey the room
+
+424
+00:23:23,780 --> 00:23:25,680
+and see that you're done with a lesson.
+
+425
+00:23:25,680 --> 00:23:29,320
+If you need help, put up the pink post-it.
+
+426
+00:23:29,320 --> 00:23:31,360
+I will try to come help you.
+
+427
+00:23:31,360 --> 00:23:33,920
+But I'm going to encourage other people in the class
+
+428
+00:23:33,920 --> 00:23:37,020
+if you feel you have a good grasp of this
+
+429
+00:23:37,020 --> 00:23:40,680
+to help people around you that have the flag up.
+
+430
+00:23:40,680 --> 00:23:42,980
+Because that'll help me stay on time
+
+431
+00:23:42,980 --> 00:23:45,480
+and we'll get through the tutorial.
+
+432
+00:23:45,480 --> 00:23:47,840
+If for some reason you don't want someone else's help
+
+433
+00:23:47,840 --> 00:23:49,320
+and you just want me to come over
+
+434
+00:23:49,320 --> 00:23:51,060
+and help with something or you have a question for me,
+
+435
+00:23:51,060 --> 00:23:53,000
+raise your hand and I'll come over.
+
+436
+00:23:53,000 --> 00:23:53,860
+So I'm gonna pass these out,
+
+437
+00:23:53,860 --> 00:23:55,500
+take one of each and pass them down
+
+438
+00:23:55,500 --> 00:23:56,860
+to the next person, please.
+
+439
+00:24:23,860 --> 00:24:24,700
+Hi.
+
+440
+00:24:26,700 --> 00:24:29,020
+How do you pronounce your name?
+
+441
+00:24:29,020 --> 00:24:30,420
+The question was how do I pronounce my name?
+
+442
+00:24:30,420 --> 00:24:32,420
+It's Dave Forjak.
+
+443
+00:24:32,420 --> 00:24:33,260
+Thanks.
+
+444
+00:24:40,740 --> 00:24:43,040
+Okay, so while those are going around,
+
+445
+00:24:43,040 --> 00:24:44,980
+we're gonna just take a look at the rest
+
+446
+00:24:44,980 --> 00:24:46,880
+of that tutorial runner command
+
+447
+00:24:46,880 --> 00:24:49,060
+so we can see how it works.
+
+448
+00:24:49,060 --> 00:24:53,120
+So it itself is a click command line interface.
+
+449
+00:24:54,860 --> 00:24:57,780
+So if you run tutorial space lesson,
+
+450
+00:24:58,880 --> 00:25:03,040
+it's gonna show you what lesson you're currently on.
+
+451
+00:25:03,040 --> 00:25:05,580
+It's going to explain the,
+
+452
+00:25:05,580 --> 00:25:08,780
+the tutorial is divided into parts.
+
+453
+00:25:08,780 --> 00:25:11,980
+So there's part one which is gonna start
+
+454
+00:25:11,980 --> 00:25:14,980
+with a hello world and you're gonna build on top of that.
+
+455
+00:25:14,980 --> 00:25:18,140
+And then there's gonna be a part two where we start over
+
+456
+00:25:18,140 --> 00:25:19,520
+and we add a couple things.
+
+457
+00:25:19,520 --> 00:25:21,680
+And there's gonna be a part three where we start over
+
+458
+00:25:21,680 --> 00:25:24,440
+and we add a couple different things.
+
+459
+00:25:24,440 --> 00:25:26,560
+And then part four, we're gonna switch gears
+
+460
+00:25:26,560 --> 00:25:28,960
+and create our own project.
+
+461
+00:25:28,960 --> 00:25:30,360
+And then there's a bonus part five
+
+462
+00:25:30,360 --> 00:25:31,840
+that we're not gonna get to today,
+
+463
+00:25:31,840 --> 00:25:34,000
+but it's in this repository that you can take a look
+
+464
+00:25:34,000 --> 00:25:37,740
+at yourself that has some like extra demo stuff.
+
+465
+00:25:39,200 --> 00:25:41,200
+But for each lesson, if you type tutorial lesson,
+
+466
+00:25:41,200 --> 00:25:43,560
+it's gonna show where you are right now.
+
+467
+00:25:43,560 --> 00:25:47,300
+It's gonna tell you what file you're going to be editing.
+
+468
+00:25:47,300 --> 00:25:50,880
+And so that's where the click command line tool
+
+469
+00:25:50,880 --> 00:25:52,960
+that you're writing is going to live.
+
+470
+00:25:52,960 --> 00:25:54,840
+It's gonna show you where the tests
+
+471
+00:25:54,840 --> 00:25:57,920
+that are gonna be run against this live.
+
+472
+00:25:59,200 --> 00:26:01,460
+And then it shows the command that you can use.
+
+473
+00:26:01,460 --> 00:26:05,320
+And so, and then any related documentation.
+
+474
+00:26:05,320 --> 00:26:07,120
+And so let's take a look.
+
+475
+00:26:07,120 --> 00:26:12,120
+If you do tutorial lesson on the first one.
+
+476
+00:26:18,540 --> 00:26:20,480
+Actually, I'm on the wrong lesson.
+
+477
+00:26:20,880 --> 00:26:21,720
+Okay.
+
+478
+00:26:28,200 --> 00:26:30,000
+You can also skip around lessons.
+
+479
+00:26:30,000 --> 00:26:31,160
+I'll show you that in a minute.
+
+480
+00:26:31,160 --> 00:26:34,880
+But if you do tutorial lesson, after you get started,
+
+481
+00:26:34,880 --> 00:26:38,380
+it's gonna show you you're working on part one, lesson one.
+
+482
+00:26:38,380 --> 00:26:40,860
+So it's gonna tell you that the command you're using here
+
+483
+00:26:40,860 --> 00:26:41,700
+is part01.
+
+484
+00:26:43,360 --> 00:26:46,620
+And so that command is available.
+
+485
+00:26:46,620 --> 00:26:50,400
+And as you make changes to it, you should see the results.
+
+486
+00:26:50,400 --> 00:26:51,340
+If you try to run it.
+
+487
+00:26:51,340 --> 00:26:55,680
+So you can interact with this command line tool
+
+488
+00:26:55,680 --> 00:26:57,480
+that you're building.
+
+489
+00:26:57,480 --> 00:26:59,240
+It's gonna show you where the tests live.
+
+490
+00:26:59,240 --> 00:27:04,240
+So if you're not sure about why the tests are failing
+
+491
+00:27:05,160 --> 00:27:07,580
+from the messages that it's generating,
+
+492
+00:27:07,580 --> 00:27:09,440
+you can go look at the test itself.
+
+493
+00:27:11,560 --> 00:27:15,880
+So then, yeah, let's go back.
+
+494
+00:27:20,720 --> 00:27:22,920
+Okay, so yeah, tutorial lesson shows you where you are
+
+495
+00:27:22,920 --> 00:27:25,440
+and the instructions for the step.
+
+496
+00:27:25,440 --> 00:27:27,020
+Like I said, you can run the command.
+
+497
+00:27:27,020 --> 00:27:29,600
+You could run the part01, dash, dash help.
+
+498
+00:27:29,600 --> 00:27:31,100
+And you can see the help output
+
+499
+00:27:31,100 --> 00:27:33,000
+that's already being generated for it.
+
+500
+00:27:35,720 --> 00:27:39,800
+And then when you are ready to start,
+
+501
+00:27:39,800 --> 00:27:42,720
+we're gonna do this in kind of a TDD fashion.
+
+502
+00:27:42,720 --> 00:27:44,640
+So you're gonna start with failing tests.
+
+503
+00:27:44,640 --> 00:27:47,320
+And so if you run tutorial check under the hood,
+
+504
+00:27:47,360 --> 00:27:50,880
+it is running PyTest with some options
+
+505
+00:27:50,880 --> 00:27:53,700
+to make the output hopefully a little clearer.
+
+506
+00:27:53,700 --> 00:27:55,380
+And so if you do tutorial check,
+
+507
+00:27:55,380 --> 00:27:57,900
+it's gonna tell you what's wrong.
+
+508
+00:28:03,200 --> 00:28:07,300
+And so we're gonna walk through the first example together
+
+509
+00:28:07,300 --> 00:28:08,840
+as kind of a lesson.
+
+510
+00:28:08,840 --> 00:28:11,540
+So we ran tutorial check.
+
+511
+00:28:11,540 --> 00:28:13,920
+It's telling us we have a test failure.
+
+512
+00:28:13,920 --> 00:28:18,920
+And if we look, the assertion has the,
+
+513
+00:28:20,000 --> 00:28:23,040
+it's gonna point at the line where the assertion failed.
+
+514
+00:28:23,040 --> 00:28:28,040
+So it's saying assert result.output is equal to hello,
+
+515
+00:28:28,440 --> 00:28:31,140
+exclamation and a new line.
+
+516
+00:28:31,140 --> 00:28:34,880
+So it's expecting that the output of our program
+
+517
+00:28:34,880 --> 00:28:37,860
+is hello in an excited fashion.
+
+518
+00:28:39,120 --> 00:28:43,080
+But the problem here is that the hello is just hello period.
+
+519
+00:28:43,080 --> 00:28:48,080
+And so it's showing that the data on the left
+
+520
+00:28:48,200 --> 00:28:50,440
+is hello period, the data on the right is hello,
+
+521
+00:28:50,440 --> 00:28:54,000
+exclamation, and we wanna make that right.
+
+522
+00:28:55,320 --> 00:28:57,580
+So in order to fix this,
+
+523
+00:28:57,580 --> 00:29:02,580
+we're going to edit the working file for this lesson.
+
+524
+00:29:02,720 --> 00:29:04,960
+If you forget which file that is again,
+
+525
+00:29:06,780 --> 00:29:08,960
+we can type tutorial lesson and get the reminder.
+
+526
+00:29:08,960 --> 00:29:11,500
+So we're gonna look at,
+
+527
+00:29:14,080 --> 00:29:18,240
+lessons part 01, cli.py.
+
+528
+00:29:21,200 --> 00:29:23,100
+And we're gonna see,
+
+529
+00:29:25,060 --> 00:29:30,060
+we have a really basic click hello command.
+
+530
+00:29:30,360 --> 00:29:33,760
+And it has a period instead of an exclamation mark.
+
+531
+00:29:33,760 --> 00:29:34,960
+So we're gonna fix that.
+
+532
+00:29:39,600 --> 00:29:42,460
+And you save that and run tutorial check again.
+
+533
+00:29:43,720 --> 00:29:48,720
+You should see that the test pass
+
+534
+00:29:48,720 --> 00:29:52,300
+and it says you're ready to proceed to part one, lesson two.
+
+535
+00:29:58,040 --> 00:30:00,880
+Now let's practice with the post-it flags.
+
+536
+00:30:00,880 --> 00:30:02,480
+When you're done with this one,
+
+537
+00:30:02,480 --> 00:30:04,780
+put up your blue post-it flag.
+
+538
+00:30:10,000 --> 00:30:12,100
+And if you need help, put up the pink one.
+
+539
+00:30:13,080 --> 00:30:13,920
+So,
+
+540
+00:30:19,760 --> 00:30:22,840
+if at any point you're stuck on a lesson,
+
+541
+00:30:22,840 --> 00:30:27,840
+the related docs that's in that lesson output should help.
+
+542
+00:30:28,760 --> 00:30:31,240
+But if you're still stuck and you want a hint,
+
+543
+00:30:32,240 --> 00:30:37,240
+you can always do tutorial peak,
+
+544
+00:30:37,520 --> 00:30:39,720
+and it's gonna show you the solution,
+
+545
+00:30:39,720 --> 00:30:41,400
+but not copy it into place.
+
+546
+00:30:41,400 --> 00:30:43,880
+If you're really stuck and you just wanna get it over with,
+
+547
+00:30:43,880 --> 00:30:47,300
+you can do tutorial solve,
+
+548
+00:30:47,300 --> 00:30:49,960
+and it's gonna make a backup of where you were
+
+549
+00:30:49,960 --> 00:30:52,260
+and overwrite it with the solution.
+
+550
+00:30:52,260 --> 00:30:56,360
+So if you wanna cheat, that's cool, you can do that.
+
+551
+00:30:56,360 --> 00:30:59,080
+So I'm gonna come around and try to figure out
+
+552
+00:30:59,080 --> 00:31:02,100
+the couple of problems that people are having right now.
+
+553
+00:31:02,100 --> 00:31:05,980
+And in the meantime, let's see here,
+
+554
+00:31:08,860 --> 00:31:11,060
+everybody else can proceed.
+
+555
+00:31:12,400 --> 00:31:14,400
+Oh yeah, the other part was just,
+
+556
+00:31:14,400 --> 00:31:15,560
+you can type tutorial status,
+
+557
+00:31:15,560 --> 00:31:17,360
+you can see where you are overall.
+
+558
+00:31:25,720 --> 00:31:27,440
+Okay, so we're on this lesson,
+
+559
+00:31:27,440 --> 00:31:30,420
+we're making the hello work.
+
+560
+00:31:30,420 --> 00:31:32,520
+So I'm gonna come around and try to help.
+
+561
+00:31:41,680 --> 00:31:44,760
+Oh yeah, I mean, you can use India for a while,
+
+562
+00:31:44,760 --> 00:31:46,340
+so that's not a problem, but.
+
+563
+00:31:50,040 --> 00:31:52,880
+So you can get a high,
+
+564
+00:31:52,880 --> 00:31:54,480
+and what I'm gonna do is,
+
+565
+00:31:54,480 --> 00:31:57,960
+I'm gonna set up an I in the interval.
+
+566
+00:31:59,960 --> 00:32:02,440
+And then you can change it,
+
+567
+00:32:02,440 --> 00:32:05,520
+and then you can escape over it,
+
+568
+00:32:05,520 --> 00:32:08,720
+and then colon WQ to write over it.
+
+569
+00:32:08,720 --> 00:32:10,760
+So yeah, I recommend using whatever editor
+
+570
+00:32:10,920 --> 00:32:12,420
+you're comfortable with.
+
+571
+00:32:12,420 --> 00:32:14,420
+Right, so it's in here.
+
+572
+00:32:19,660 --> 00:32:23,160
+So it's just individual, so just colon WQ.
+
+573
+00:32:31,480 --> 00:32:33,480
+Oh yeah, that's not a problem.
+
+574
+00:32:33,480 --> 00:32:38,480
+And then WQ, oh, so you're right, we have to move that.
+
+575
+00:32:38,480 --> 00:32:43,320
+I recommend using any editor you're happy with.
+
+576
+00:36:38,800 --> 00:36:42,280
+Okay, so for lesson one,
+
+577
+00:36:42,280 --> 00:36:47,280
+we just fixed the thing that the test was complaining about.
+
+578
+00:36:48,320 --> 00:36:51,800
+We ran the check, and we saw it passed,
+
+579
+00:36:51,800 --> 00:36:54,680
+and it said we were ready to go to lesson two.
+
+580
+00:36:54,680 --> 00:36:58,680
+So for lesson two, we're gonna add an argument
+
+581
+00:36:58,680 --> 00:37:00,840
+to the command.
+
+582
+00:37:00,840 --> 00:37:02,960
+And so the way you add arguments
+
+583
+00:37:02,960 --> 00:37:07,760
+is by adding a new decorator, click.argument,
+
+584
+00:37:07,800 --> 00:37:10,640
+and whatever you name that argument
+
+585
+00:37:10,640 --> 00:37:13,840
+is where the argument that's being passed
+
+586
+00:37:13,840 --> 00:37:17,800
+is gonna be collected into and passed to your function.
+
+587
+00:37:17,800 --> 00:37:20,640
+So in this case, I actually have a typo,
+
+588
+00:37:20,640 --> 00:37:22,840
+because the argument is names in the thing,
+
+589
+00:37:22,840 --> 00:37:25,700
+but it's passing names, so that example is wrong.
+
+590
+00:37:27,440 --> 00:37:32,320
+But in this example, the argument would be names,
+
+591
+00:37:32,320 --> 00:37:35,240
+and so it would be passed in a variable called names
+
+592
+00:37:35,240 --> 00:37:37,620
+to the function, and then that names would be available
+
+593
+00:37:37,620 --> 00:37:38,700
+inside the function.
+
+594
+00:37:39,740 --> 00:37:44,740
+And arguments, by default, require one value,
+
+595
+00:37:45,820 --> 00:37:50,600
+but you can specify multiple values
+
+596
+00:37:50,600 --> 00:37:54,460
+with the nargs parameter,
+
+597
+00:37:55,720 --> 00:37:58,820
+and if you want unlimited arguments
+
+598
+00:37:58,820 --> 00:38:01,680
+or a variable number of arguments,
+
+599
+00:38:01,680 --> 00:38:04,380
+you can use a negative one as the special case.
+
+600
+00:38:04,380 --> 00:38:06,180
+And so that's in the documentation.
+
+601
+00:38:07,180 --> 00:38:10,940
+So the goal of lesson two is to make a command
+
+602
+00:38:10,940 --> 00:38:15,940
+that has a name argument and accepts any number of names,
+
+603
+00:38:18,120 --> 00:38:20,700
+and then prints hello, comma, name,
+
+604
+00:38:22,900 --> 00:38:24,860
+on a new line for each name given.
+
+605
+00:38:24,860 --> 00:38:26,940
+And that's what the tests are going to verify.
+
+606
+00:38:26,940 --> 00:38:31,080
+They're going to run against your implementation.
+
+607
+00:38:31,080 --> 00:38:33,900
+They're gonna see that it accepts the name argument
+
+608
+00:38:33,900 --> 00:38:37,800
+and that it prints each name that was passed in,
+
+609
+00:38:39,380 --> 00:38:41,900
+and then it's gonna make sure that if no arguments are passed
+
+610
+00:38:41,900 --> 00:38:43,280
+that nothing happens.
+
+611
+00:39:03,900 --> 00:39:04,740
+Okay.
+
+612
+00:40:03,900 --> 00:40:08,900
+So, in a part, I successfully ran the test in the past,
+
+613
+00:40:11,740 --> 00:40:13,340
+but it was oriented toward the last sentence.
+
+614
+00:40:13,340 --> 00:40:14,180
+Yeah, exactly.
+
+615
+00:40:14,180 --> 00:40:15,020
+So that's what had to be in the past.
+
+616
+00:40:15,020 --> 00:40:18,060
+But now you can edit that to the live app body
+
+617
+00:40:18,060 --> 00:40:21,260
+to do the test pass to see why it's really in the wrong.
+
+618
+00:40:21,260 --> 00:40:22,100
+Yes.
+
+619
+00:40:22,100 --> 00:40:24,140
+Well, it's still the same or the checkbox, but more.
+
+620
+00:40:24,140 --> 00:40:25,820
+So it's gonna check your current stuff.
+
+621
+00:40:25,820 --> 00:40:27,140
+You see how it's having two test passes,
+
+622
+00:40:27,140 --> 00:40:27,980
+it's gonna say your comment,
+
+623
+00:40:27,980 --> 00:40:29,660
+then you have to edit the test pass.
+
+624
+00:40:29,660 --> 00:40:32,260
+Well, that's one of your conversations.
+
+625
+00:40:33,260 --> 00:40:36,260
+Yeah, so it'll point to the right comment.
+
+626
+00:40:36,260 --> 00:40:37,100
+Correct.
+
+627
+00:41:02,260 --> 00:41:04,100
+Okay.
+
+628
+00:41:32,260 --> 00:41:33,100
+Okay.
+
+629
+00:42:32,260 --> 00:42:33,100
+Okay.
+
+630
+00:43:02,260 --> 00:43:03,100
+Okay.
+
+631
+00:43:32,260 --> 00:43:33,100
+Okay.
+
+632
+00:44:02,260 --> 00:44:03,100
+Okay.
+
+633
+00:44:32,260 --> 00:44:33,100
+Okay.
+
+634
+00:45:02,260 --> 00:45:03,100
+Okay.
+
+635
+00:45:32,260 --> 00:45:33,100
+Yeah.
+
+636
+00:46:02,260 --> 00:46:03,100
+Okay.
+
+637
+00:46:32,260 --> 00:46:33,100
+Okay.
+
+638
+00:47:02,260 --> 00:47:03,100
+Okay.
+
+639
+00:47:32,260 --> 00:47:33,100
+Yeah.
+
+640
+00:47:37,740 --> 00:47:40,140
+Yeah, and remember if at any time you're really stuck,
+
+641
+00:47:40,140 --> 00:47:44,740
+you can do the tutorial peak to look at the solution file
+
+642
+00:47:44,740 --> 00:47:48,100
+and you can do tutorial solve to put it in a place
+
+643
+00:47:48,100 --> 00:47:49,500
+and just move on.
+
+644
+00:48:02,260 --> 00:48:03,100
+Okay.
+
+645
+00:48:32,260 --> 00:48:33,100
+Okay.
+
+646
+00:49:02,260 --> 00:49:03,100
+Okay.
+
+647
+00:49:32,260 --> 00:49:33,100
+Yeah.
+
+648
+00:50:02,260 --> 00:50:03,100
+Okay.
+
+649
+00:50:32,260 --> 00:50:33,100
+Yeah, we do.
+
+650
+00:50:33,100 --> 00:50:33,940
+I can explain.
+
+651
+00:50:33,940 --> 00:50:35,940
+We use one of those specifics.
+
+652
+00:50:35,940 --> 00:50:37,940
+You know, right there.
+
+653
+00:50:39,740 --> 00:50:41,740
+But yeah, that's possible.
+
+654
+00:50:41,740 --> 00:50:42,580
+Okay.
+
+655
+00:50:50,980 --> 00:50:51,980
+Oh, is that?
+
+656
+00:50:52,980 --> 00:50:55,980
+Just as you type in the tutorial list.
+
+657
+00:50:55,980 --> 00:50:56,820
+Okay.
+
+658
+00:51:25,980 --> 00:51:26,820
+Okay.
+
+659
+00:51:33,580 --> 00:51:36,860
+Okay, we're gonna move ahead to the arguments lesson,
+
+660
+00:51:36,860 --> 00:51:39,060
+or sorry, to the options lesson.
+
+661
+00:51:40,300 --> 00:51:44,340
+So if you didn't get the arguments done,
+
+662
+00:51:44,340 --> 00:51:46,540
+you can just solve it for now
+
+663
+00:51:46,540 --> 00:51:49,700
+and then you can go back and work on it later.
+
+664
+00:51:49,700 --> 00:51:52,420
+You can also at any point, if you wanna skip to a lesson,
+
+665
+00:51:52,420 --> 00:51:55,020
+you can type tutorial lesson
+
+666
+00:51:55,020 --> 00:51:59,780
+and then space dash P for which part
+
+667
+00:51:59,780 --> 00:52:01,340
+and dash L for which lessons.
+
+668
+00:52:01,340 --> 00:52:05,940
+You could do tutorial lesson P1L3
+
+669
+00:52:05,940 --> 00:52:07,500
+and you can go to lesson three.
+
+670
+00:52:09,860 --> 00:52:14,860
+So click, we saw we can add an argument for name
+
+671
+00:52:15,700 --> 00:52:17,620
+or names that gets passed through.
+
+672
+00:52:18,620 --> 00:52:22,660
+And those are then something that the command line
+
+673
+00:52:22,660 --> 00:52:25,300
+expects to have if it's gonna do anything.
+
+674
+00:52:25,300 --> 00:52:26,500
+But then there's also options
+
+675
+00:52:26,500 --> 00:52:30,420
+where you can have default behavior,
+
+676
+00:52:30,420 --> 00:52:33,420
+but then if you pass the option, you change that behavior.
+
+677
+00:52:34,700 --> 00:52:38,700
+And so the way these work is the value
+
+678
+00:52:40,860 --> 00:52:43,620
+that's parsed out of that option is passed through
+
+679
+00:52:43,620 --> 00:52:46,780
+with the name that you give the option.
+
+680
+00:52:46,780 --> 00:52:50,260
+So dash dash count gets turned into a variable
+
+681
+00:52:50,260 --> 00:52:51,940
+called just count.
+
+682
+00:52:51,940 --> 00:52:54,340
+If your options have dashes in them,
+
+683
+00:52:55,220 --> 00:53:00,220
+so like the no debug or like if another one had dashes,
+
+684
+00:53:01,380 --> 00:53:02,900
+they'd be converted to underscores
+
+685
+00:53:02,900 --> 00:53:04,900
+so that it's a valid Python variable.
+
+686
+00:53:06,140 --> 00:53:08,300
+You can also add short aliases
+
+687
+00:53:08,300 --> 00:53:09,820
+for your really common options.
+
+688
+00:53:09,820 --> 00:53:11,740
+If it's gonna be something that you expect people
+
+689
+00:53:11,740 --> 00:53:15,180
+to use a lot, it's easier to have the short one letter.
+
+690
+00:53:15,180 --> 00:53:18,340
+So let's say we expect people to use C pretty often,
+
+691
+00:53:18,340 --> 00:53:20,420
+you can do dash dash count, and then after it,
+
+692
+00:53:20,420 --> 00:53:22,940
+you do dash C, and then that's a short alias
+
+693
+00:53:22,940 --> 00:53:24,380
+for the same thing.
+
+694
+00:53:24,380 --> 00:53:25,980
+It's gonna have a default value.
+
+695
+00:53:27,180 --> 00:53:29,740
+And click also does some input validation.
+
+696
+00:53:29,740 --> 00:53:31,820
+If you provide a default value,
+
+697
+00:53:31,820 --> 00:53:36,260
+it's going to verify that whatever is passed in
+
+698
+00:53:36,260 --> 00:53:37,900
+as an argument is of the same type.
+
+699
+00:53:37,900 --> 00:53:40,460
+So since the default one here, it's gonna verify
+
+700
+00:53:40,460 --> 00:53:42,700
+that whatever gets passed in is an integer.
+
+701
+00:53:43,540 --> 00:53:46,620
+There's also then the flag options,
+
+702
+00:53:46,620 --> 00:53:48,300
+and you can do that in one of two ways.
+
+703
+00:53:48,300 --> 00:53:51,140
+You can either say is flag,
+
+704
+00:53:51,140 --> 00:53:53,020
+and then that turns it into a flag
+
+705
+00:53:53,020 --> 00:53:56,260
+that doesn't expect any arguments after it,
+
+706
+00:53:56,260 --> 00:53:59,620
+or you can do dash dash the flag name
+
+707
+00:53:59,620 --> 00:54:02,300
+and then slash the opposite.
+
+708
+00:54:02,300 --> 00:54:05,540
+And so what that would do is if debug is passed,
+
+709
+00:54:05,540 --> 00:54:06,780
+debug would be true.
+
+710
+00:54:06,780 --> 00:54:10,340
+If no debug is passed, debug would be false,
+
+711
+00:54:10,340 --> 00:54:12,060
+and then get passed into the CLI.
+
+712
+00:54:13,460 --> 00:54:16,660
+So for this lesson, you're gonna add a couple options.
+
+713
+00:54:16,660 --> 00:54:19,820
+You're gonna add a dash dash greeting to specify the text.
+
+714
+00:54:19,820 --> 00:54:21,940
+So by default, it's gonna say hello,
+
+715
+00:54:22,860 --> 00:54:26,620
+but if you pass a greeting and say goodbye,
+
+716
+00:54:26,620 --> 00:54:29,140
+or ahoy, I think is in the test,
+
+717
+00:54:29,140 --> 00:54:32,540
+it's going to use that and print it.
+
+718
+00:54:32,540 --> 00:54:36,140
+And it's gonna have a short alias of dash G
+
+719
+00:54:37,260 --> 00:54:39,020
+that will also work the same way.
+
+720
+00:54:39,060 --> 00:54:43,260
+And then you're gonna add a dash dash question flag
+
+721
+00:54:43,260 --> 00:54:45,300
+that will cause it to print the output
+
+722
+00:54:45,300 --> 00:54:47,900
+with a question mark instead of the exclamation.
+
+723
+00:55:39,020 --> 00:55:39,860
+Okay.
+
+724
+00:56:09,020 --> 00:56:09,860
+Okay.
+
+725
+00:56:39,020 --> 00:56:39,860
+Okay.
+
+726
+00:57:09,020 --> 00:57:11,020
+I don't know about the test.
+
+727
+00:57:11,020 --> 00:57:11,860
+Okay.
+
+728
+00:57:11,860 --> 00:57:12,680
+So.
+
+729
+00:57:12,680 --> 00:57:13,520
+Okay.
+
+730
+00:57:13,520 --> 00:57:14,360
+I'm sorry.
+
+731
+00:57:14,360 --> 00:57:15,200
+I'm sorry.
+
+732
+00:57:15,200 --> 00:57:16,040
+I'm sorry.
+
+733
+00:57:16,040 --> 00:57:16,880
+I'm sorry.
+
+734
+00:57:16,880 --> 00:57:17,700
+I'm sorry.
+
+735
+00:57:17,700 --> 00:57:18,540
+I'm sorry.
+
+736
+00:57:18,540 --> 00:57:19,380
+I'm sorry.
+
+737
+00:57:19,380 --> 00:57:20,200
+I'm sorry.
+
+738
+00:57:20,200 --> 00:57:24,240
+So, so, for the one is running the code.
+
+739
+00:57:24,240 --> 00:57:27,240
+So we can have a question for the flag.
+
+740
+00:57:27,240 --> 00:57:28,740
+It was very quick.
+
+741
+00:57:28,740 --> 00:57:29,580
+Okay.
+
+742
+00:57:29,580 --> 00:57:30,420
+Okay.
+
+743
+00:57:30,420 --> 00:57:31,240
+Okay.
+
+744
+00:57:31,240 --> 00:57:32,080
+Okay.
+
+745
+00:57:32,080 --> 00:57:32,920
+Okay.
+
+746
+00:57:32,920 --> 00:57:33,760
+First check.
+
+747
+00:57:33,760 --> 00:57:34,600
+Okay.
+
+748
+00:57:34,600 --> 00:57:35,440
+Okay.
+
+749
+00:57:35,440 --> 00:57:36,280
+So the flag is true.
+
+750
+00:57:36,280 --> 00:57:37,120
+Okay.
+
+751
+00:57:37,120 --> 00:57:37,960
+Okay.
+
+752
+00:57:37,960 --> 00:57:38,800
+Okay.
+
+753
+00:58:07,960 --> 00:58:08,800
+Okay.
+
+754
+00:58:37,960 --> 00:58:38,800
+Okay.
+
+755
+00:59:07,960 --> 00:59:08,800
+Okay.
+
+756
+00:59:37,960 --> 00:59:38,800
+Okay.
+
+757
+01:00:07,960 --> 01:00:08,800
+There we go.
+
+758
+01:00:08,800 --> 01:00:10,800
+Now the decorators are attached to that function.
+
+759
+01:00:10,800 --> 01:00:11,800
+There we go.
+
+760
+01:00:17,160 --> 01:00:18,160
+There you go.
+
+761
+01:00:18,160 --> 01:00:19,000
+Okay.
+
+762
+01:00:37,360 --> 01:00:38,200
+Okay.
+
+763
+01:00:38,200 --> 01:00:40,040
+And there is a break at 10, 15,
+
+764
+01:00:40,040 --> 01:00:42,540
+and I don't want you to miss out on snacks or coffee.
+
+765
+01:00:42,540 --> 01:00:45,820
+So what I'm gonna do is in a couple minutes,
+
+766
+01:00:45,820 --> 01:00:48,200
+I'm just gonna explain the next lesson.
+
+767
+01:00:49,660 --> 01:00:51,940
+We'll have the break and then we'll take a little bit
+
+768
+01:00:51,940 --> 01:00:54,660
+of time after the break to finish that lesson.
+
+769
+01:00:54,660 --> 01:00:56,660
+And then we'll see where everybody is.
+
+770
+01:01:15,820 --> 01:01:16,660
+Okay.
+
+771
+01:01:45,820 --> 01:01:46,660
+Okay.
+
+772
+01:02:15,820 --> 01:02:16,660
+Okay.
+
+773
+01:02:33,000 --> 01:02:33,840
+Okay.
+
+774
+01:02:33,840 --> 01:02:35,360
+I know some people are still working on that last lesson,
+
+775
+01:02:35,360 --> 01:02:38,680
+but I wanna just kind of preface this next one
+
+776
+01:02:38,680 --> 01:02:40,560
+and then we can do the break.
+
+777
+01:02:40,560 --> 01:02:45,240
+So we already saw if you run your command
+
+778
+01:02:45,260 --> 01:02:47,520
+like the part01 dash dash help,
+
+779
+01:02:47,520 --> 01:02:50,060
+you're going to start to see the help output
+
+780
+01:02:50,060 --> 01:02:52,340
+that it's generating already for you.
+
+781
+01:02:53,260 --> 01:02:55,440
+But you probably wanna be more descriptive
+
+782
+01:02:55,440 --> 01:02:58,020
+than the stuff it's automatically generating for you.
+
+783
+01:02:58,020 --> 01:03:03,020
+And you can do this by documenting the script.
+
+784
+01:03:04,140 --> 01:03:05,820
+And the way we do the documentation
+
+785
+01:03:05,820 --> 01:03:09,900
+is the general usage information about how the thing works
+
+786
+01:03:10,800 --> 01:03:15,800
+is derived from the docstring of the command function.
+
+787
+01:03:16,520 --> 01:03:21,520
+So in this case, if we want the help to say print a greeting,
+
+788
+01:03:22,080 --> 01:03:24,080
+then the docstring needs to be printed greeting
+
+789
+01:03:24,080 --> 01:03:26,000
+and that's what's going to be printed out
+
+790
+01:03:26,000 --> 01:03:28,840
+with the dash dash help output.
+
+791
+01:03:28,840 --> 01:03:33,840
+And then all of the options have a help parameter
+
+792
+01:03:34,520 --> 01:03:35,520
+that can be passed.
+
+793
+01:03:35,520 --> 01:03:39,520
+And then that will get turned into help for those options
+
+794
+01:03:39,520 --> 01:03:40,860
+when you run dash dash help.
+
+795
+01:03:42,340 --> 01:03:47,000
+So for lesson four of part one,
+
+796
+01:03:48,260 --> 01:03:51,260
+you're gonna add documentation to the script
+
+797
+01:03:51,260 --> 01:03:53,580
+and the tests, you're gonna see they're looking
+
+798
+01:03:53,580 --> 01:03:55,320
+for specific wording for things.
+
+799
+01:03:55,320 --> 01:03:59,420
+And so you need to put that specific wording into the CLI
+
+800
+01:03:59,420 --> 01:04:00,980
+in order to make the test pass.
+
+801
+01:04:02,980 --> 01:04:05,060
+And it is 1014.
+
+802
+01:04:05,060 --> 01:04:06,980
+And so I wanna make sure that, like I said,
+
+803
+01:04:06,980 --> 01:04:09,080
+you get snacks if you want them.
+
+804
+01:04:09,620 --> 01:04:11,860
+So we have a 20 minute break.
+
+805
+01:04:11,860 --> 01:04:13,300
+And then when we get back,
+
+806
+01:04:13,300 --> 01:04:15,300
+we're gonna have another few minutes
+
+807
+01:04:15,300 --> 01:04:16,680
+to complete this lesson.
+
+808
+01:04:17,540 --> 01:04:21,140
+So you're free to go to the break right now.
+
+809
+01:04:22,140 --> 01:04:23,700
+If you wanna keep working, that's cool too.
+
+810
+01:04:23,700 --> 01:04:25,460
+I'm gonna go grab myself something.
+
+811
+01:04:26,420 --> 01:04:27,420
+And then if you have any questions,
+
+812
+01:04:27,420 --> 01:04:28,780
+let me know in the meantime.
+
+813
+01:04:31,740 --> 01:04:33,420
+But yeah, we're back at 1035.
+
+814
+01:06:39,920 --> 01:06:40,760
+Check back.
+
+815
+01:06:40,760 --> 01:06:41,760
+Let me switch.
+
+816
+01:06:41,760 --> 01:06:43,760
+I'm gonna change to this one.
+
+817
+01:06:43,760 --> 01:06:46,020
+This is what we are right now.
+
+818
+01:06:46,020 --> 01:06:48,020
+So it's C, Python, it's a very nice Python.
+
+819
+01:06:48,020 --> 01:06:50,020
+And then it's a course.
+
+820
+01:06:50,020 --> 01:06:53,020
+Oh, yeah, that was the correct word.
+
+821
+01:06:53,020 --> 01:06:54,020
+It's a page.
+
+822
+01:06:54,020 --> 01:06:57,020
+And so you can do the tour of checking.
+
+823
+01:06:57,020 --> 01:06:58,020
+Can you show that?
+
+824
+01:06:58,020 --> 01:07:01,020
+Where you talk to the students?
+
+825
+01:07:01,020 --> 01:07:03,020
+Can you do this?
+
+826
+01:07:03,020 --> 01:07:05,020
+Yeah, you know, that's missing the three chips there.
+
+827
+01:07:05,020 --> 01:07:06,020
+That's my false value.
+
+828
+01:07:06,020 --> 01:07:07,020
+I know that.
+
+829
+01:07:07,960 --> 01:07:09,960
+So if you take tutorial,
+
+830
+01:07:11,960 --> 01:07:14,960
+the lesson is showing you where you are.
+
+831
+01:07:17,960 --> 01:07:19,960
+Okay, let's try this.
+
+832
+01:07:19,960 --> 01:07:22,960
+So we're gonna talk for a lesson again.
+
+833
+01:07:22,960 --> 01:07:24,960
+Which test is during the test?
+
+834
+01:07:24,960 --> 01:07:26,960
+I think it's during the test.
+
+835
+01:07:26,960 --> 01:07:28,960
+I wanna make that one happen.
+
+836
+01:07:28,960 --> 01:07:29,960
+Okay.
+
+837
+01:07:29,960 --> 01:07:32,960
+And then you just talk to the campus.
+
+838
+01:07:32,960 --> 01:07:33,960
+Oh, okay.
+
+839
+01:07:34,900 --> 01:07:35,900
+Yeah.
+
+840
+01:07:35,900 --> 01:07:36,900
+Yeah, I did.
+
+841
+01:07:38,900 --> 01:07:40,900
+Okay, that's our problem.
+
+842
+01:07:40,900 --> 01:07:42,900
+So what would you do?
+
+843
+01:07:42,900 --> 01:07:44,900
+So there's no test now in that file.
+
+844
+01:07:44,900 --> 01:07:46,900
+So we need to take this.
+
+845
+01:07:46,900 --> 01:07:48,900
+So that looks like a great solution.
+
+846
+01:07:48,900 --> 01:07:51,900
+So we need to copy that to the CLI.
+
+847
+01:07:51,900 --> 01:07:53,900
+That's in the share.
+
+848
+01:07:53,900 --> 01:07:55,900
+Yeah, it's in the part.
+
+849
+01:07:55,900 --> 01:07:57,900
+Copy it to there.
+
+850
+01:07:57,900 --> 01:08:01,900
+And then we'll just check out the test file.
+
+851
+01:08:02,840 --> 01:08:05,840
+So that we can put it back in the chat.
+
+852
+01:08:11,840 --> 01:08:13,840
+Yeah, so the thing was we're in high-pass
+
+853
+01:08:13,840 --> 01:08:15,840
+and we're trying to open the thing
+
+854
+01:08:15,840 --> 01:08:17,840
+and saying there's no test in this file.
+
+855
+01:08:17,840 --> 01:08:19,840
+So that's what I was doing.
+
+856
+01:08:19,840 --> 01:08:22,840
+So we'll need to do the gillet steps.
+
+857
+01:08:22,840 --> 01:08:26,840
+I think we're gonna need to do the gillet steps.
+
+858
+01:08:26,840 --> 01:08:27,840
+Yeah.
+
+859
+01:08:27,840 --> 01:08:28,840
+Yeah.
+
+860
+01:08:29,780 --> 01:08:33,780
+We need to check out some of that lesson.
+
+861
+01:08:33,780 --> 01:08:35,780
+It's part of the one.
+
+862
+01:08:35,780 --> 01:08:36,780
+Yes.
+
+863
+01:08:38,780 --> 01:08:40,780
+That'll be set in fact.
+
+864
+01:08:40,780 --> 01:08:41,780
+I noticed it was.
+
+865
+01:08:41,780 --> 01:08:43,780
+No, it's not that.
+
+866
+01:08:43,780 --> 01:08:45,780
+Those ones don't care about it.
+
+867
+01:08:45,780 --> 01:08:47,780
+They're temporary files.
+
+868
+01:08:49,780 --> 01:08:53,780
+So that puts the test back in that piece of portal chat.
+
+869
+01:08:59,780 --> 01:09:01,780
+So now it is...
+
+870
+01:09:05,780 --> 01:09:08,780
+Oh, I think that's the solution for...
+
+871
+01:09:16,780 --> 01:09:18,780
+I like that.
+
+872
+01:09:18,780 --> 01:09:20,780
+Yeah.
+
+873
+01:09:20,780 --> 01:09:22,780
+Try to turn it on.
+
+874
+01:09:22,780 --> 01:09:24,780
+It's there.
+
+875
+01:09:24,780 --> 01:09:26,780
+It's just in the part.
+
+876
+01:09:27,720 --> 01:09:29,720
+So I'm gonna turn it on.
+
+877
+01:09:29,720 --> 01:09:31,720
+It's there.
+
+878
+01:09:31,720 --> 01:09:33,720
+It's there.
+
+879
+01:09:33,720 --> 01:09:35,720
+It's there.
+
+880
+01:09:35,720 --> 01:09:37,720
+It's there.
+
+881
+01:09:37,720 --> 01:09:39,720
+It's there.
+
+882
+01:09:39,720 --> 01:09:41,720
+It's there.
+
+883
+01:09:41,720 --> 01:09:43,720
+It's there.
+
+884
+01:09:43,720 --> 01:09:45,720
+It's there.
+
+885
+01:09:45,720 --> 01:09:47,720
+It's there.
+
+886
+01:09:47,720 --> 01:09:49,720
+It's there.
+
+887
+01:09:49,720 --> 01:09:51,720
+It's there.
+
+888
+01:09:51,720 --> 01:09:53,720
+It's there.
+
+889
+01:09:53,720 --> 01:09:55,720
+It's there.
+
+890
+01:09:56,660 --> 01:09:58,660
+Yeah.
+
+891
+01:09:58,660 --> 01:10:00,660
+Okay.
+
+892
+01:10:00,660 --> 01:10:02,660
+In that part.
+
+893
+01:10:02,660 --> 01:10:04,660
+It's doing what we think it's doing.
+
+894
+01:10:04,660 --> 01:10:06,660
+Just based on the type of text.
+
+895
+01:10:10,660 --> 01:10:12,660
+Okay.
+
+896
+01:10:12,660 --> 01:10:14,660
+Now I think we're probably...
+
+897
+01:10:19,660 --> 01:10:21,660
+Oh.
+
+898
+01:10:21,660 --> 01:10:23,660
+Thank you.
+
+899
+01:10:23,660 --> 01:10:25,660
+Yeah.
+
+900
+01:10:26,660 --> 01:10:28,660
+Yeah.
+
+901
+01:10:28,660 --> 01:10:30,660
+Yeah.
+
+902
+01:10:30,660 --> 01:10:32,660
+Yeah.
+
+903
+01:10:32,660 --> 01:10:34,660
+Yeah.
+
+904
+01:10:34,660 --> 01:10:36,660
+Yeah.
+
+905
+01:10:36,660 --> 01:10:38,660
+Yeah.
+
+906
+01:10:38,660 --> 01:10:40,660
+Yeah.
+
+907
+01:10:40,660 --> 01:10:42,660
+Yeah.
+
+908
+01:10:42,660 --> 01:10:44,660
+Yeah.
+
+909
+01:10:44,660 --> 01:10:46,660
+Yeah.
+
+910
+01:10:46,660 --> 01:10:48,660
+Yeah.
+
+911
+01:10:48,660 --> 01:10:50,660
+Yeah.
+
+912
+01:10:50,660 --> 01:10:52,660
+Yeah.
+
+913
+01:10:52,660 --> 01:10:54,660
+Yeah.
+
+914
+01:10:55,600 --> 01:10:57,600
+Seriously.
+
+915
+01:10:57,600 --> 01:10:59,600
+That's...
+
+916
+01:10:59,600 --> 01:11:01,600
+That's...
+
+917
+01:11:01,600 --> 01:11:03,600
+So short-sighted.
+
+918
+01:11:03,600 --> 01:11:05,600
+Okay.
+
+919
+01:11:05,600 --> 01:11:07,600
+Yeah.
+
+920
+01:11:07,600 --> 01:11:09,600
+Yeah.
+
+921
+01:11:09,600 --> 01:11:11,600
+Yeah.
+
+922
+01:11:11,600 --> 01:11:13,600
+Yeah.
+
+923
+01:11:13,600 --> 01:11:15,600
+Yeah.
+
+924
+01:11:15,600 --> 01:11:17,600
+Yeah.
+
+925
+01:11:17,600 --> 01:11:19,600
+Everyone at the same time.
+
+926
+01:11:19,600 --> 01:11:21,600
+Yeah.
+
+927
+01:11:21,600 --> 01:11:23,600
+Yeah.
+
+928
+01:11:24,540 --> 01:11:26,540
+But actually...
+
+929
+01:11:26,540 --> 01:11:28,540
+Yeah.
+
+930
+01:11:28,540 --> 01:11:30,540
+Cool.
+
+931
+01:11:30,540 --> 01:11:32,540
+Yeah.
+
+932
+01:11:32,540 --> 01:11:34,540
+Okay.
+
+933
+01:11:34,540 --> 01:11:36,540
+Great.
+
+934
+01:11:36,540 --> 01:11:38,540
+That's awesome.
+
+935
+01:11:38,540 --> 01:11:40,540
+I got inspired by that.
+
+936
+01:11:40,540 --> 01:11:42,540
+I'm really excited.
+
+937
+01:11:42,540 --> 01:11:44,540
+It's like...
+
+938
+01:11:44,540 --> 01:11:46,540
+It's like...
+
+939
+01:11:46,540 --> 01:11:48,540
+It's like...
+
+940
+01:11:48,540 --> 01:11:50,540
+It's like...
+
+941
+01:11:50,540 --> 01:11:52,540
+It's like...
+
+942
+01:11:52,560 --> 01:11:54,560
+It's like...
+
+943
+01:11:54,560 --> 01:11:56,560
+Oh.
+
+944
+01:11:56,560 --> 01:11:58,560
+Oh.
+
+945
+01:11:58,560 --> 01:12:00,560
+It's like...
+
+946
+01:12:00,560 --> 01:12:02,560
+It's like...
+
+947
+01:12:02,560 --> 01:12:04,560
+It's like...
+
+948
+01:12:04,560 --> 01:12:06,560
+Oh.
+
+949
+01:12:06,560 --> 01:12:08,560
+Yeah.
+
+950
+01:12:08,560 --> 01:12:10,560
+Okay.
+
+951
+01:12:10,560 --> 01:12:12,560
+Yeah.
+
+952
+01:12:12,560 --> 01:12:14,560
+Yeah.
+
+953
+01:12:14,560 --> 01:12:16,560
+Yeah.
+
+954
+01:12:16,560 --> 01:12:18,560
+So we need the,
+
+955
+01:12:18,560 --> 01:12:20,560
+we need the pass,
+
+956
+01:22:20,560 --> 01:22:48,980
+What's that?
+
+957
+01:22:48,980 --> 01:22:59,860
+Which one?
+
+958
+01:22:59,860 --> 01:23:00,860
+Quite possibly.
+
+959
+01:23:00,860 --> 01:23:01,860
+Yeah, please.
+
+960
+01:23:01,860 --> 01:23:02,860
+That would be awesome.
+
+961
+01:23:02,860 --> 01:23:03,860
+I did a preview of the tutorial at work on Monday and got some feedback from folks so
+
+962
+01:23:03,860 --> 01:23:04,860
+I incorporated some changes.
+
+963
+01:23:04,860 --> 01:23:24,820
+Are you talking about the text and the objectives?
+
+964
+01:23:25,820 --> 01:23:26,820
+Yeah.
+
+965
+01:23:26,820 --> 01:23:27,820
+Oh, yeah.
+
+966
+01:23:27,820 --> 01:23:28,820
+Yeah.
+
+967
+01:23:28,820 --> 01:23:31,820
+You should be able to, if it's your default key, you should be able to type SSH add,
+
+968
+01:23:31,820 --> 01:23:32,820
+which will add it to the current text.
+
+969
+01:23:32,820 --> 01:23:51,820
+It will add the key to your current page.
+
+970
+01:23:52,820 --> 01:23:53,820
+Yeah.
+
+971
+01:23:53,820 --> 01:23:54,820
+Yeah.
+
+972
+01:23:54,820 --> 01:23:55,820
+Yeah.
+
+973
+01:23:55,820 --> 01:23:56,820
+Yeah.
+
+974
+01:23:56,820 --> 01:23:57,820
+Yeah.
+
+975
+01:24:27,820 --> 01:24:28,820
+Okay.
+
+976
+01:24:28,820 --> 01:24:34,820
+So we're going to work a little bit more, making sure everyone's caught up with part
+
+977
+01:24:34,820 --> 01:24:36,820
+one, lesson four, with the help text.
+
+978
+01:24:36,820 --> 01:24:45,820
+We're going to continue ahead on this, on these lessons for a while, and then at some
+
+979
+01:24:45,820 --> 01:24:51,500
+point I'm going to switch and we're going to go to the walkthrough for lesson four,
+
+980
+01:24:51,500 --> 01:24:54,380
+or part four, where we create our own projects.
+
+981
+01:24:54,380 --> 01:24:56,720
+I don't want to miss out on that part.
+
+982
+01:24:56,720 --> 01:25:02,800
+So these lessons, if we don't get to the end, you can continue these on your own, but
+
+983
+01:25:02,800 --> 01:25:08,320
+I want to switch when time gets crunched, probably around, let's see, we're done at
+
+984
+01:25:08,320 --> 01:25:17,280
+1220, so we probably want to do that around 1145.
+
+985
+01:25:17,280 --> 01:25:22,280
+So around 1145, if I don't remember someone, flag me down.
+
+986
+01:25:22,840 --> 01:25:27,840
+How's everybody doing on the help text one?
+
+987
+01:25:27,840 --> 01:25:30,840
+Are we good?
+
+988
+01:25:30,840 --> 01:25:33,840
+Okay.
+
+989
+01:25:33,840 --> 01:25:34,840
+Okay.
+
+990
+01:25:34,840 --> 01:25:42,400
+So for the next lesson in part one, we're going to start doing some input validation.
+
+991
+01:25:42,400 --> 01:25:50,200
+So really commonly you want a specific type for the options that are passed in, and you
+
+992
+01:25:50,200 --> 01:25:55,480
+want to be able to do something with it and expect that you're getting the right value.
+
+993
+01:25:55,480 --> 01:26:02,000
+So click is going to do some things kind of implicitly for you.
+
+994
+01:26:02,000 --> 01:26:08,040
+So if you pass, like in this example here, dash dash example, which has a default of
+
+995
+01:26:08,040 --> 01:26:14,720
+one, because the default is of type int, it is going to ensure that anything passed to
+
+996
+01:26:14,720 --> 01:26:18,640
+example is of type int.
+
+997
+01:26:18,640 --> 01:26:25,680
+The other way you could do that is you could explicitly say type equals int.
+
+998
+01:26:25,680 --> 01:26:31,160
+And the difference here is that if you do the default one and you don't pass that option,
+
+999
+01:26:31,160 --> 01:26:33,760
+one is going to get passed through into your function.
+
+1000
+01:26:33,760 --> 01:26:39,120
+If you don't have a default, but you just put the type and someone doesn't specify the
+
+1001
+01:26:39,120 --> 01:26:45,600
+option, it's going to be none if it's not passed, but then it'll validate that it's
+
+1002
+01:26:45,640 --> 01:26:50,000
+an int if something is passed.
+
+1003
+01:26:50,000 --> 01:26:53,860
+So you can do this with all the common built-in types.
+
+1004
+01:26:53,860 --> 01:26:56,820
+And then there's also some special types.
+
+1005
+01:26:56,820 --> 01:27:01,440
+They have handling for files, which we'll do a little later.
+
+1006
+01:27:01,440 --> 01:27:04,660
+But the other thing here is that you can have a choice.
+
+1007
+01:27:04,660 --> 01:27:11,240
+And so a choice is just an explicit list, meaning the option passed has to be in that
+
+1008
+01:27:11,240 --> 01:27:13,600
+list.
+
+1009
+01:27:13,680 --> 01:27:16,640
+And if it's a short list, you can just do it inline like this.
+
+1010
+01:27:16,640 --> 01:27:22,440
+But if you have a big list of possible valid options, you could import that from somewhere
+
+1011
+01:27:22,440 --> 01:27:26,760
+else or you could have it as a constant in your application.
+
+1012
+01:27:26,760 --> 01:27:32,360
+But again, even with the validation, if someone doesn't pass the option, the value is going
+
+1013
+01:27:32,360 --> 01:27:35,600
+to be none unless you specify a default.
+
+1014
+01:27:35,600 --> 01:27:41,160
+So if you want the text to by default be green if no one passes it in, you need to say default
+
+1015
+01:27:41,160 --> 01:27:43,960
+green explicitly.
+
+1016
+01:27:43,960 --> 01:27:50,520
+So yeah, so for lesson five, we're going to just play with the validation a little bit.
+
+1017
+01:27:50,520 --> 01:27:57,600
+We're going to add some new options that are just kind of really explicit what they are.
+
+1018
+01:27:57,600 --> 01:28:00,760
+So it's a dash dash int option is going to be an int.
+
+1019
+01:28:00,760 --> 01:28:02,800
+A float option is going to be a float.
+
+1020
+01:28:02,800 --> 01:28:05,160
+Boole option is going to be a Boolean.
+
+1021
+01:28:05,160 --> 01:28:08,720
+And then a choice option is going to be a choice of A, B, or C.
+
+1022
+01:28:08,760 --> 01:28:19,640
+And if any of these options are passed, we want the application to print out that value.
+
+1023
+01:28:19,640 --> 01:28:21,840
+But if they're not passed, you don't need to print it.
+
+1024
+01:28:21,840 --> 01:28:23,600
+And if multiple are passed, you're going to print multiple.
+
+1025
+01:28:23,600 --> 01:28:31,520
+So you're going to do like an if int option, then int colon, and then the value that was passed.
+
+1026
+01:28:31,520 --> 01:28:33,360
+And so you're going to do that.
+
+1027
+01:28:33,360 --> 01:28:35,120
+And the test should show you that.
+
+1028
+01:28:35,120 --> 01:28:36,960
+And they're going to, again, run in order.
+
+1029
+01:28:37,000 --> 01:28:40,800
+And so as you add these options, you'll see which ones are passing and which ones are failing.
+
+1030
+01:28:44,800 --> 01:28:46,520
+I probably do.
+
+1031
+01:28:46,520 --> 01:28:47,360
+What's that?
+
+1032
+01:28:53,240 --> 01:28:53,760
+I do.
+
+1033
+01:28:53,760 --> 01:28:54,040
+Yes.
+
+1034
+01:28:54,040 --> 01:28:54,880
+So that needs.
+
+1035
+01:28:54,880 --> 01:28:55,480
+Yeah.
+
+1036
+01:28:55,480 --> 01:28:55,880
+Good point.
+
+1037
+01:28:55,880 --> 01:28:58,840
+So click dot choice here.
+
+1038
+01:28:58,840 --> 01:28:59,440
+That's not right.
+
+1039
+01:28:59,440 --> 01:29:00,880
+It actually needs to take a list.
+
+1040
+01:29:00,880 --> 01:29:02,680
+So it's missing the brackets.
+
+1041
+01:29:02,680 --> 01:29:04,480
+Thank you.
+
+1042
+01:29:04,480 --> 01:29:05,000
+Yeah.
+
+1043
+01:29:06,960 --> 01:29:07,480
+Yeah.
+
+1044
+01:29:29,480 --> 01:29:30,200
+I had a thing for notes.
+
+1045
+01:29:30,200 --> 01:29:31,480
+I need to remember to write these down.
+
+1046
+01:29:36,960 --> 01:29:37,480
+Yeah.
+
+1047
+01:30:36,960 --> 01:30:41,960
+No.
+
+1048
+01:30:41,960 --> 01:30:44,960
+It's trying to search up below.
+
+1049
+01:30:44,960 --> 01:30:48,960
+So this is searching.
+
+1050
+01:30:48,960 --> 01:30:51,960
+So it's.
+
+1051
+01:30:51,960 --> 01:30:52,960
+No.
+
+1052
+01:30:52,960 --> 01:30:55,960
+So the result of the output would be the result of the input.
+
+1053
+01:30:55,960 --> 01:30:56,960
+Yeah.
+
+1054
+01:30:56,960 --> 01:30:57,960
+Well, yeah, that's searching.
+
+1055
+01:30:57,960 --> 01:30:58,960
+Yeah.
+
+1056
+01:31:27,960 --> 01:31:28,960
+Yeah.
+
+1057
+01:31:57,960 --> 01:31:59,960
+Oh.
+
+1058
+01:32:27,960 --> 01:32:28,960
+Yeah.
+
+1059
+01:32:57,960 --> 01:32:58,960
+Yeah.
+
+1060
+01:33:27,960 --> 01:33:28,960
+Yeah.
+
+1061
+01:33:28,960 --> 01:33:36,960
+I actually just fixed it and pushed it up.
+
+1062
+01:33:36,960 --> 01:33:37,960
+Yeah.
+
+1063
+01:33:37,960 --> 01:33:43,960
+Someone found an issue with the test, the way the tests are being imported for part
+
+1064
+01:33:43,960 --> 01:33:44,960
+two.
+
+1065
+01:33:44,960 --> 01:33:48,960
+So when we get to part two, the tests aren't going to work unless you do a git pull.
+
+1066
+01:33:48,960 --> 01:33:49,960
+So I already fixed it.
+
+1067
+01:33:50,960 --> 01:33:59,960
+So if you do a git pull before you proceed to part two, then everything should work.
+
+1068
+01:33:59,960 --> 01:34:00,960
+Thank you for that.
+
+1069
+01:34:29,960 --> 01:34:30,960
+Yeah.
+
+1070
+01:34:30,960 --> 01:34:31,960
+You can do that over.
+
+1071
+01:34:31,960 --> 01:34:32,960
+Cool.
+
+1072
+01:34:32,960 --> 01:34:33,960
+Yeah.
+
+1073
+01:34:33,960 --> 01:34:34,960
+Cool.
+
+1074
+01:34:34,960 --> 01:34:35,960
+So I'm going to go ahead and do a git pull.
+
+1075
+01:34:35,960 --> 01:34:36,960
+Yeah.
+
+1076
+01:34:36,960 --> 01:34:37,960
+So I'm going to go ahead and do a git pull.
+
+1077
+01:34:37,960 --> 01:34:38,960
+Yeah.
+
+1078
+01:34:38,960 --> 01:34:39,960
+So I'm going to go ahead and do a git pull.
+
+1079
+01:34:39,960 --> 01:34:40,960
+Yeah.
+
+1080
+01:34:40,960 --> 01:34:41,960
+So I'm going to go ahead and do a git pull.
+
+1081
+01:34:41,960 --> 01:34:42,960
+Yeah.
+
+1082
+01:34:42,960 --> 01:34:43,960
+So I'm going to go ahead and do a git pull.
+
+1083
+01:34:43,960 --> 01:34:44,960
+Yeah.
+
+1084
+01:34:44,960 --> 01:34:45,960
+So I'm going to go ahead and do a git pull.
+
+1085
+01:34:45,960 --> 01:34:46,960
+So I'm going to go ahead and do a git pull.
+
+1086
+01:34:46,960 --> 01:34:47,960
+Yeah.
+
+1087
+01:34:47,960 --> 01:34:48,960
+So I'm going to go ahead and do a git pull.
+
+1088
+01:34:48,960 --> 01:34:49,960
+So I'm going to go ahead and do a git pull.
+
+1089
+01:34:49,960 --> 01:34:50,960
+So I'm going to go ahead and do a git pull.
+
+1090
+01:34:50,960 --> 01:34:51,960
+So I'm going to go ahead and do a git pull.
+
+1091
+01:34:51,960 --> 01:34:52,960
+So I'm going to go ahead and do a git pull.
+
+1092
+01:34:52,960 --> 01:34:53,960
+Yeah.
+
+1093
+01:35:22,960 --> 01:35:23,960
+So I'm going to go ahead and do a git pull.
+
+1094
+01:35:52,960 --> 01:35:53,960
+Yeah.
+
+1095
+01:36:22,960 --> 01:36:23,960
+So I'm going to go ahead and do a git pull.
+
+1096
+01:36:52,960 --> 01:36:53,960
+Yeah.
+
+1097
+01:37:22,960 --> 01:37:23,960
+So I'm going to go ahead and do a git pull.
+
+1098
+01:37:23,960 --> 01:37:24,960
+Yeah.
+
+1099
+01:37:24,960 --> 01:37:25,960
+So I'm going to go ahead and do a git pull.
+
+1100
+01:37:25,960 --> 01:37:26,960
+So I'm going to go ahead and do a git pull.
+
+1101
+01:37:26,960 --> 01:37:27,960
+Yeah.
+
+1102
+01:37:27,960 --> 01:37:28,960
+So I'm going to go ahead and do a git pull.
+
+1103
+01:37:28,960 --> 01:37:29,960
+So I'm going to go ahead and do a git pull.
+
+1104
+01:37:29,960 --> 01:37:30,960
+Yeah.
+
+1105
+01:37:30,960 --> 01:37:31,960
+So I'm going to go ahead and do a git pull.
+
+1106
+01:37:31,960 --> 01:37:32,960
+So I'm going to go ahead and do a git pull.
+
+1107
+01:37:32,960 --> 01:37:33,960
+Yeah.
+
+1108
+01:37:33,960 --> 01:37:34,960
+So I'm going to go ahead and do a git pull.
+
+1109
+01:37:34,960 --> 01:37:35,960
+So I'm going to go ahead and do a git pull.
+
+1110
+01:37:35,960 --> 01:37:36,960
+Yeah.
+
+1111
+01:37:36,960 --> 01:37:37,960
+So I'm going to go ahead and do a git pull.
+
+1112
+01:37:37,960 --> 01:37:38,960
+So I'm going to go ahead and do a git pull.
+
+1113
+01:37:38,960 --> 01:37:39,960
+So I'm going to go ahead and do a git pull.
+
+1114
+01:37:39,960 --> 01:37:40,960
+Yeah.
+
+1115
+01:37:40,960 --> 01:37:41,960
+So I'm going to go ahead and do a git pull.
+
+1116
+01:37:41,960 --> 01:37:42,960
+Yeah.
+
+1117
+01:38:11,960 --> 01:38:36,960
+So I'm going to go ahead and do a git pull.
+
+1118
+01:38:36,960 --> 01:38:37,960
+Yeah.
+
+1119
+01:39:06,960 --> 01:39:32,960
+So I'm going to go ahead and do a git pull.
+
+1120
+01:39:32,960 --> 01:39:33,960
+Yeah.
+
+1121
+01:40:02,960 --> 01:40:04,960
+So I'm going to go ahead and do a git pull.
+
+1122
+01:40:32,960 --> 01:40:43,960
+Okay.
+
+1123
+01:40:43,960 --> 01:40:57,960
+Okay.
+
+1124
+01:40:57,960 --> 01:41:16,960
+Okay.
+
+1125
+01:41:16,960 --> 01:41:38,960
+Okay.
+
+1126
+01:41:38,960 --> 01:42:06,960
+Okay.
+
+1127
+01:42:06,960 --> 01:42:11,960
+Okay.
+
+1128
+01:42:36,960 --> 01:42:44,960
+Okay.
+
+1129
+01:43:06,960 --> 01:43:25,960
+Okay.
+
+1130
+01:43:36,960 --> 01:43:58,960
+Okay.
+
+1131
+01:43:58,960 --> 01:44:21,960
+Okay.
+
+1132
+01:44:21,960 --> 01:44:46,960
+Okay.
+
+1133
+01:44:46,960 --> 01:45:02,960
+Okay.
+
+1134
+01:45:02,960 --> 01:45:17,960
+Okay.
+
+1135
+01:45:17,960 --> 01:45:32,960
+Okay.
+
+1136
+01:45:32,960 --> 01:45:48,960
+Okay.
+
+1137
+01:45:48,960 --> 01:46:03,960
+Okay.
+
+1138
+01:46:03,960 --> 01:46:18,960
+Okay.
+
+1139
+01:46:18,960 --> 01:46:34,960
+Okay.
+
+1140
+01:46:34,960 --> 01:46:53,960
+Okay.
+
+1141
+01:46:53,960 --> 01:46:54,960
+Okay.
+
+1142
+01:46:54,960 --> 01:47:02,960
+So I know some people have worked ahead to part two, and we'll preface that in a couple
+
+1143
+01:47:02,960 --> 01:47:03,960
+of minutes.
+
+1144
+01:47:03,960 --> 01:47:04,960
+So I'm going to go ahead and do a git pull.
+
+1145
+01:47:04,960 --> 01:47:05,960
+Okay.
+
+1146
+01:47:05,960 --> 01:47:06,960
+Okay.
+
+1147
+01:47:06,960 --> 01:47:07,960
+Okay.
+
+1148
+01:47:07,960 --> 01:47:08,960
+Okay.
+
+1149
+01:47:08,960 --> 01:47:09,960
+Okay.
+
+1150
+01:47:09,960 --> 01:47:10,960
+Okay.
+
+1151
+01:47:10,960 --> 01:47:11,960
+Okay.
+
+1152
+01:47:11,960 --> 01:47:12,960
+Okay.
+
+1153
+01:47:12,960 --> 01:47:13,960
+Okay.
+
+1154
+01:47:13,960 --> 01:47:14,960
+Okay.
+
+1155
+01:47:14,960 --> 01:47:15,960
+Okay.
+
+1156
+01:47:15,960 --> 01:47:16,960
+Okay.
+
+1157
+01:47:16,960 --> 01:47:17,960
+Okay.
+
+1158
+01:47:17,960 --> 01:47:18,960
+Okay.
+
+1159
+01:47:18,960 --> 01:47:19,960
+Okay.
+
+1160
+01:47:19,960 --> 01:47:20,960
+Okay.
+
+1161
+01:47:20,960 --> 01:47:21,960
+Okay.
+
+1162
+01:47:21,960 --> 01:47:22,960
+Okay.
+
+1163
+01:47:22,960 --> 01:47:23,960
+Okay.
+
+1164
+01:47:23,960 --> 01:47:24,960
+Okay.
+
+1165
+01:47:24,960 --> 01:47:25,960
+Okay.
+
+1166
+01:47:25,960 --> 01:47:26,960
+Okay.
+
+1167
+01:47:26,960 --> 01:47:27,960
+Okay.
+
+1168
+01:47:27,960 --> 01:47:28,960
+Okay.
+
+1169
+01:47:28,960 --> 01:47:29,960
+Okay.
+
+1170
+01:47:29,960 --> 01:47:30,960
+Okay.
+
+1171
+01:47:30,960 --> 01:47:31,960
+Okay.
+
+1172
+01:47:31,960 --> 01:47:32,960
+Okay.
+
+1173
+01:47:32,960 --> 01:47:33,960
+Okay.
+
+1174
+01:47:33,960 --> 01:47:34,960
+Okay.
+
+1175
+01:47:34,960 --> 01:47:35,960
+Okay.
+
+1176
+01:47:35,960 --> 01:47:36,960
+Okay.
+
+1177
+01:48:01,960 --> 01:48:02,960
+Okay.
+
+1178
+01:48:31,960 --> 01:48:32,960
+Okay.
+
+1179
+01:49:01,960 --> 01:49:02,960
+Okay.
+
+1180
+01:49:02,960 --> 01:49:03,960
+Okay.
+
+1181
+01:49:03,960 --> 01:49:04,960
+Okay.
+
+1182
+01:49:04,960 --> 01:49:05,960
+Okay.
+
+1183
+01:49:05,960 --> 01:49:06,960
+Okay.
+
+1184
+01:49:06,960 --> 01:49:11,960
+So for anyone who's still working on the options lesson, can you just raise your hand?
+
+1185
+01:49:11,960 --> 01:49:12,960
+Okay.
+
+1186
+01:49:12,960 --> 01:49:13,960
+Cool.
+
+1187
+01:49:13,960 --> 01:49:22,960
+Or the validation, sorry.
+
+1188
+01:49:22,960 --> 01:49:37,960
+Okay.
+
+1189
+01:49:37,960 --> 01:49:56,960
+Okay.
+
+1190
+01:49:56,960 --> 01:50:15,960
+Okay.
+
+1191
+01:50:15,960 --> 01:50:34,960
+Okay.
+
+1192
+01:50:34,960 --> 01:50:53,960
+Okay.
+
+1193
+01:50:53,960 --> 01:51:12,960
+Okay.
+
+1194
+01:51:23,960 --> 01:51:31,960
+Okay.
+
+1195
+01:51:31,960 --> 01:51:40,960
+Okay.
+
+1196
+01:51:40,960 --> 01:51:41,960
+Okay.
+
+1197
+01:52:10,960 --> 01:52:11,960
+Okay.
+
+1198
+01:52:40,960 --> 01:52:41,960
+Okay.
+
+1199
+01:52:41,960 --> 01:52:59,460
+So we're going to move ahead and start talking about part two.
+
+1200
+01:52:59,460 --> 01:53:03,900
+For anyone who's still stuck, you can either keep working where you are, or if you want,
+
+1201
+01:53:03,900 --> 01:53:11,280
+you can skip ahead by typing tutorial lesson dash P2, and it'll skip to part two, and then
+
+1202
+01:53:11,280 --> 01:53:15,840
+you can go back later and continue where you were.
+
+1203
+01:53:15,840 --> 01:53:32,180
+So in the intro, I talked about being able to output the result of your program to standard
+
+1204
+01:54:03,180 --> 01:54:04,180
+output.
+
+1205
+01:54:04,180 --> 01:54:10,020
+So generally, you're better off using echo instead of print in your click commands.
+
+1206
+01:54:10,020 --> 01:54:15,860
+So the equivalent to just a print though would be click.echo, and then the string, and it's
+
+1207
+01:54:15,860 --> 01:54:19,460
+going to print that to standard out, and that's the default.
+
+1208
+01:54:19,460 --> 01:54:24,220
+But if you want to print it to standard error, you just need to pass err equals true, and
+
+1209
+01:54:24,220 --> 01:54:30,420
+then it'll print that string to standard error instead of standard out, allowing you to separate
+
+1210
+01:54:30,500 --> 01:54:33,860
+the output types.
+
+1211
+01:54:33,860 --> 01:54:41,300
+And then there is the ability to add styles to output strings.
+
+1212
+01:54:41,300 --> 01:54:45,580
+And so the way you do that is with click.style, where you'll add the style to the string,
+
+1213
+01:54:45,580 --> 01:54:52,360
+which just adds the color escape characters.
+
+1214
+01:54:52,360 --> 01:54:57,940
+But then there's a shortcut for that, which is just S-E-C-H-O for style echo.
+
+1215
+01:54:58,580 --> 01:55:03,820
+So you don't need the long form unless you're building that data up somewhere else and passing
+
+1216
+01:55:03,820 --> 01:55:04,820
+it along.
+
+1217
+01:55:04,820 --> 01:55:06,140
+That's the only reason you'd use that.
+
+1218
+01:55:06,140 --> 01:55:14,020
+So click.secho will do the color formatting for you.
+
+1219
+01:55:14,020 --> 01:55:19,620
+And again, that is going to print the colors when you're using it interactively and not
+
+1220
+01:55:19,620 --> 01:55:22,340
+print them when it's not interactive.
+
+1221
+01:55:22,340 --> 01:55:25,220
+And this is the source of our problem on Windows.
+
+1222
+01:55:25,220 --> 01:55:32,140
+So when you get to working on this lesson, you're going to make it print hello to standard
+
+1223
+01:55:32,140 --> 01:55:33,140
+out.
+
+1224
+01:55:33,140 --> 01:55:35,780
+You're going to say printing to standard error.
+
+1225
+01:55:35,780 --> 01:55:38,980
+And it's going to have a red option that prints red.
+
+1226
+01:55:38,980 --> 01:55:43,500
+You should be able to see for yourself if you run it on the command line, you run part
+
+1227
+01:55:43,500 --> 01:55:49,500
+02, the command, and then dash dash red, you should see it printing the text as red.
+
+1228
+01:55:49,500 --> 01:55:53,940
+But if you're on Windows, it seems the test will not pass.
+
+1229
+01:55:53,940 --> 01:56:01,940
+And it looks like the reason for this is the thing that it's doing to detect whether it's
+
+1230
+01:56:01,940 --> 01:56:06,500
+being run interactively works differently on Windows, is my guess.
+
+1231
+01:56:06,500 --> 01:56:12,060
+So in the test, we're telling it ignore the detection and just print colors no matter
+
+1232
+01:56:12,060 --> 01:56:13,060
+what.
+
+1233
+01:56:13,060 --> 01:56:15,100
+And it looks like that's not working on Windows.
+
+1234
+01:56:15,100 --> 01:56:22,220
+So on Linux and on Mac, it is running the test and it's saying even though I know that
+
+1235
+01:56:22,220 --> 01:56:26,860
+it's not interactive, I still want the color characters.
+
+1236
+01:56:26,860 --> 01:56:28,740
+Where on Windows it seems that that's being ignored.
+
+1237
+01:56:28,740 --> 01:56:30,300
+So that test is not going to pass.
+
+1238
+01:56:30,300 --> 01:56:34,000
+So for this lesson, I want you to make sure the first two tests pass.
+
+1239
+01:56:34,000 --> 01:56:36,420
+The red one will fail.
+
+1240
+01:56:36,420 --> 01:56:40,060
+But if you run it on the command line, you should see red output.
+
+1241
+01:56:40,060 --> 01:56:44,860
+And I'll figure out how to test that at some point after this.
+
+1242
+01:56:44,860 --> 01:56:49,860
+But then in order to when you're done with the other parts, in order to skip ahead, you
+
+1243
+01:56:49,860 --> 01:56:56,860
+would type tutorial lesson dash P2 dash L2, which will get you on the lesson two rather
+
+1244
+01:56:58,540 --> 01:57:05,540
+than because the tests are never going to pass.
+
+1245
+01:57:49,860 --> 01:57:56,860
+So we're going to switch it.
+
+1246
+01:58:49,860 --> 01:58:56,860
+So we're going to switch it.
+
+1247
+01:59:19,860 --> 01:59:26,860
+So we're going to switch it.
+
+1248
+01:59:49,860 --> 01:59:56,860
+So we're going to switch it.
+
+1249
+02:00:19,860 --> 02:00:26,860
+So we're going to switch it.
+
+1250
+02:00:49,860 --> 02:00:56,860
+So we're going to switch it.
+
+1251
+02:01:19,860 --> 02:01:26,860
+So we're going to switch it.
+
+1252
+02:01:49,860 --> 02:01:56,860
+So we're going to switch it.
+
+1253
+02:02:19,860 --> 02:02:26,860
+So we're going to switch it.
+
+1254
+02:02:49,860 --> 02:02:56,860
+Yeah, a couple of people have noticed that the tests for part two, even though you're
+
+1255
+02:03:11,620 --> 02:03:17,060
+making changes, it looks like it is still just running against a hello.
+
+1256
+02:03:17,060 --> 02:03:20,620
+And that's because of that issue that I said you needed to get pull.
+
+1257
+02:03:20,620 --> 02:03:24,300
+But it looks like if you have, depending on the get client you're using, if you have a
+
+1258
+02:03:24,300 --> 02:03:28,220
+bunch of local edits, it's not going to do the get pull successfully for you.
+
+1259
+02:03:28,220 --> 02:03:32,380
+If you need to manually fix the test.
+
+1260
+02:03:32,380 --> 02:03:39,380
+Let me show you where that is.
+
+1261
+02:03:47,620 --> 02:03:54,620
+So in the tests, so in like part two tests, base.py, this should say import from lessons.part2.
+
+1262
+02:03:57,340 --> 02:04:02,020
+If it's the wrong version, it's going to say it's trying to import lesson part three while
+
+1263
+02:04:02,020 --> 02:04:05,700
+it's running part two, which is the source of the confusion.
+
+1264
+02:04:05,700 --> 02:04:08,660
+And then it's the same thing for part three.
+
+1265
+02:04:08,660 --> 02:04:13,740
+You want to go to part three tests, base, and make sure that it's importing part three.
+
+1266
+02:04:13,740 --> 02:04:20,740
+Otherwise it's going to be really hard to make it work.
+
+1267
+02:10:13,740 --> 02:10:20,740
+So that's the thing.
+
+1268
+02:12:13,740 --> 02:12:20,740
+I tried opening this in the SQS.
+
+1269
+02:12:20,740 --> 02:12:27,740
+The problem is it's hard to see if there's an implementation issue here or something.
+
+1270
+02:12:27,740 --> 02:12:28,740
+It's just saying syntax error.
+
+1271
+02:12:28,740 --> 02:12:29,740
+But the syntax was...
+
+1272
+02:12:29,740 --> 02:12:30,740
+Yeah.
+
+1273
+02:12:30,740 --> 02:12:31,740
+I can't see, but I think if you open it in an editor that understands Python syntax, it's
+
+1274
+02:12:31,740 --> 02:12:32,740
+going to be a hilarious issue.
+
+1275
+02:12:32,740 --> 02:12:33,740
+It'll show you right away.
+
+1276
+02:12:33,740 --> 02:12:34,740
+I don't see anything.
+
+1277
+02:12:34,740 --> 02:12:35,740
+No problem.
+
+1278
+02:12:35,740 --> 02:12:42,740
+Yeah, it's just going to fail.
+
+1279
+02:12:42,740 --> 02:12:49,740
+You can type tutorial lesson dash p2 dash pelt2.
+
+1280
+02:13:49,740 --> 02:13:52,740
+Okay.
+
+1281
+02:13:52,740 --> 02:14:01,740
+I just got an alert that lunch is not in the place listed.
+
+1282
+02:14:01,740 --> 02:14:04,740
+It's in grand ballroom A and B.
+
+1283
+02:14:04,740 --> 02:14:05,740
+Yeah.
+
+1284
+02:14:05,740 --> 02:14:06,740
+No, you got the wrong thing.
+
+1285
+02:14:06,740 --> 02:14:07,740
+They have the right thing.
+
+1286
+02:14:07,740 --> 02:14:08,740
+Okay.
+
+1287
+02:14:08,740 --> 02:14:09,740
+So it's on the schedule, right?
+
+1288
+02:14:09,740 --> 02:14:10,740
+The schedule is right.
+
+1289
+02:14:10,740 --> 02:14:11,740
+Okay.
+
+1290
+02:14:11,740 --> 02:14:12,740
+The schedule is right.
+
+1291
+02:14:12,740 --> 02:14:14,740
+What I was about to tell you based on this thing they gave me was wrong.
+
+1292
+02:14:15,740 --> 02:14:16,740
+So I will not tell you the wrong information.
+
+1293
+02:14:16,740 --> 02:14:21,740
+Sorry for the confusion.
+
+1294
+02:14:21,740 --> 02:14:22,740
+Okay.
+
+1295
+02:14:22,740 --> 02:14:31,740
+So like I said, if you're stuck on that color issue for part two, lesson one, and you need
+
+1296
+02:14:31,740 --> 02:14:38,740
+to advance, you can type tutorial lesson p2 dash p2 dash l2 like this.
+
+1297
+02:14:38,740 --> 02:14:58,740
+And then when you hit enter, it will say you're currently working on part two lesson two.
+
+1298
+02:14:58,740 --> 02:15:02,740
+So I know at this point not everybody's caught up, but I also don't want to hold back too
+
+1299
+02:15:02,740 --> 02:15:05,740
+much for people who are sitting here waiting.
+
+1300
+02:15:05,740 --> 02:15:11,740
+So all these lessons, they're designed to be able to do them on your own, but I definitely
+
+1301
+02:15:11,740 --> 02:15:15,740
+wanted to have the explanation and the ability to help as much as I can.
+
+1302
+02:15:15,740 --> 02:15:20,740
+So I'm going to move ahead just so that we can cover the things we need to before switching
+
+1303
+02:15:20,740 --> 02:15:23,740
+to the creating our own package.
+
+1304
+02:15:23,740 --> 02:15:31,740
+So the next lesson is where we start to handle input and output to files.
+
+1305
+02:15:31,740 --> 02:15:39,740
+And click is going to treat standard input and standard output as open file streams for
+
+1306
+02:15:39,740 --> 02:15:40,740
+us.
+
+1307
+02:15:40,740 --> 02:15:46,740
+And this allows us to interact with standard in and standard out or a file on disk in the
+
+1308
+02:15:46,740 --> 02:15:48,740
+same way inside our application.
+
+1309
+02:15:48,740 --> 02:15:57,740
+And the way it does this is with an argument that has a type of a click dot file.
+
+1310
+02:15:57,740 --> 02:15:59,740
+So it click dot file.
+
+1311
+02:15:59,740 --> 02:16:05,740
+If it's open for reading and you pass the special default, which is just a dash and that's kind
+
+1312
+02:16:05,740 --> 02:16:08,740
+of a Unix standard thing.
+
+1313
+02:16:08,740 --> 02:16:15,740
+So if you pass a dash instead of a file name, it is going to read from standard in.
+
+1314
+02:16:15,740 --> 02:16:25,740
+If you open the file for writing and just use the default dash, it's going to open that file or
+
+1315
+02:16:25,740 --> 02:16:26,740
+open standard out.
+
+1316
+02:16:26,740 --> 02:16:33,740
+And so you can take advantage of this by making a command line that takes two arguments.
+
+1317
+02:16:33,740 --> 02:16:36,740
+So it could take an in file and an out file.
+
+1318
+02:16:36,740 --> 02:16:43,740
+But if you want to be able to read from standard in, you don't pass any arguments and it's going
+
+1319
+02:16:43,740 --> 02:16:46,740
+to read from standard in and then it's going to write to standard out.
+
+1320
+02:16:46,740 --> 02:16:52,740
+And so that's the program that we're going to write here is we're going to make something that
+
+1321
+02:16:52,740 --> 02:17:00,740
+will read from standard in by default, write to standard out by default, but then have the option
+
+1322
+02:17:00,740 --> 02:17:08,740
+or have an argument to be able to write the output to a file and to read from a file.
+
+1323
+02:17:08,740 --> 02:17:15,740
+And if you're running this interactively yourself, so the test, when it runs a test, it has a little
+
+1324
+02:17:15,740 --> 02:17:20,740
+temporary file with like just some input text in it that it's using.
+
+1325
+02:17:20,740 --> 02:17:27,740
+So if you're going to run this interactively just on your command line via PART02, you'll want to
+
+1326
+02:17:27,740 --> 02:17:29,740
+create a couple test files.
+
+1327
+02:17:29,740 --> 02:17:36,740
+So like just an input.txt and output.txt with some data in them to see as you're experimenting or
+
+1328
+02:17:36,740 --> 02:17:40,740
+working with the CLI that you build up.
+
+1329
+02:17:40,740 --> 02:17:46,740
+And then the other part is just to show that the standard error is separate from the output that it's
+
+1330
+02:17:46,740 --> 02:17:47,740
+generating.
+
+1331
+02:17:47,740 --> 02:17:52,740
+You're going to find the length of the input data and write out a message saying what that length is
+
+1332
+02:17:52,740 --> 02:17:55,740
+to standard error and not to standard out.
+
+1333
+02:18:16,740 --> 02:18:19,740
+So yeah, they output the output file.
+
+1334
+02:18:19,740 --> 02:18:23,740
+But then you can have the information for the standard error.
+
+1335
+02:18:23,740 --> 02:18:29,740
+So if you have a test pass, it will show you that it's just going to read everything from the input
+
+1336
+02:18:29,740 --> 02:18:31,740
+file and write it all in the output.
+
+1337
+02:18:31,740 --> 02:18:35,740
+That's it.
+
+1338
+02:18:35,740 --> 02:18:37,740
+Okay.
+
+1339
+02:18:37,740 --> 02:18:39,740
+Let's back up.
+
+1340
+02:18:39,740 --> 02:18:47,740
+I wonder if we're missing a...
+
+1341
+02:18:47,740 --> 02:18:49,740
+Oh.
+
+1342
+02:18:49,740 --> 02:18:51,740
+I don't think it's an issue.
+
+1343
+02:18:51,740 --> 02:18:55,740
+So the command doesn't actually take that into account.
+
+1344
+02:18:55,740 --> 02:19:00,740
+So that display's reading should actually be in the doc string.
+
+1345
+02:19:00,740 --> 02:19:04,740
+So it doesn't explain everything to the expert.
+
+1346
+02:19:04,740 --> 02:19:06,740
+So...
+
+1347
+02:19:06,740 --> 02:19:08,740
+Oh, here's our issue.
+
+1348
+02:19:08,740 --> 02:19:10,740
+We're just missing a front-end.
+
+1349
+02:19:10,740 --> 02:19:12,740
+After we've got choice.
+
+1350
+02:19:12,740 --> 02:19:14,740
+Okay.
+
+1351
+02:19:14,740 --> 02:19:16,740
+So we're going to have to do a test pass.
+
+1352
+02:19:16,740 --> 02:19:18,740
+So we're going to have to do a test pass.
+
+1353
+02:19:18,740 --> 02:19:20,740
+Oh, here's our issue.
+
+1354
+02:19:20,740 --> 02:19:22,740
+We're just missing a front-end.
+
+1355
+02:19:22,740 --> 02:19:24,740
+After we've got choice.
+
+1356
+02:19:24,740 --> 02:19:26,740
+So that's not closed.
+
+1357
+02:19:26,740 --> 02:19:28,740
+And so it's continuing to line.
+
+1358
+02:19:28,740 --> 02:19:30,740
+So you just put that choice as front-end.
+
+1359
+02:19:30,740 --> 02:19:32,740
+But this is all in this option here.
+
+1360
+02:19:32,740 --> 02:19:34,740
+So we need to put the most important thing.
+
+1361
+02:19:34,740 --> 02:19:36,740
+So we have a choice line.
+
+1362
+02:19:36,740 --> 02:19:38,740
+Oh, no.
+
+1363
+02:19:38,740 --> 02:19:40,740
+Right.
+
+1364
+02:19:40,740 --> 02:19:42,740
+This is the round-around.
+
+1365
+02:19:42,740 --> 02:19:44,740
+That's all it is.
+
+1366
+02:19:44,740 --> 02:19:46,740
+No problem.
+
+1367
+02:19:46,740 --> 02:19:48,740
+I'm surprised usually PSQoT actually shows you that specific issue,
+
+1368
+02:19:48,740 --> 02:19:50,740
+not syntax errors.
+
+1369
+02:19:50,740 --> 02:19:52,740
+That's kind of annoying.
+
+1370
+02:19:52,740 --> 02:19:54,740
+Yeah.
+
+1371
+02:19:54,740 --> 02:19:56,740
+No problem.
+
+1372
+02:19:56,740 --> 02:19:58,740
+Let's see if that's all it was.
+
+1373
+02:19:58,740 --> 02:20:00,740
+So.
+
+1374
+02:20:00,740 --> 02:20:02,740
+So.
+
+1375
+02:20:02,740 --> 02:20:04,740
+So.
+
+1376
+02:20:04,740 --> 02:20:06,740
+So.
+
+1377
+02:20:06,740 --> 02:20:08,740
+So.
+
+1378
+02:20:08,740 --> 02:20:10,740
+So.
+
+1379
+02:20:10,740 --> 02:20:12,740
+So.
+
+1380
+02:20:12,740 --> 02:20:14,740
+So.
+
+1381
+02:20:14,740 --> 02:20:16,740
+So.
+
+1382
+02:20:16,740 --> 02:20:18,740
+So.
+
+1383
+02:20:18,740 --> 02:20:20,740
+So.
+
+1384
+02:20:20,740 --> 02:20:22,740
+So.
+
+1385
+02:20:22,740 --> 02:20:24,740
+So.
+
+1386
+02:20:24,740 --> 02:20:26,740
+So.
+
+1387
+02:20:26,740 --> 02:20:28,740
+So.
+
+1388
+02:20:28,740 --> 02:20:30,740
+So.
+
+1389
+02:20:30,740 --> 02:20:32,740
+So.
+
+1390
+02:20:32,740 --> 02:20:34,740
+So.
+
+1391
+02:20:34,740 --> 02:20:36,740
+So.
+
+1392
+02:20:36,740 --> 02:20:38,740
+So.
+
+1393
+02:20:38,740 --> 02:20:40,740
+So.
+
+1394
+02:20:40,740 --> 02:20:42,740
+So.
+
+1395
+02:20:42,740 --> 02:20:44,740
+oper.
+
+1396
+02:20:44,740 --> 02:20:46,740
+So.
+
+1397
+02:20:47,740 --> 02:20:49,740
+Is it just looking for a strength,
+
+1398
+02:20:49,740 --> 02:20:51,740
+a length,
+
+1399
+02:20:51,740 --> 02:20:53,740
+one strength.
+
+1400
+02:21:23,740 --> 02:21:30,740
+So now it's just, that's on the Nexus.
+
+1401
+02:22:23,740 --> 02:22:30,740
+Okay.
+
+1402
+02:22:53,740 --> 02:23:00,740
+Okay.
+
+1403
+02:23:24,740 --> 02:23:31,740
+I wonder if it's the order of the records.
+
+1404
+02:23:31,740 --> 02:23:33,740
+Yeah, so this will happen.
+
+1405
+02:23:33,740 --> 02:23:35,740
+This is the one that gets worked.
+
+1406
+02:23:35,740 --> 02:23:41,740
+If you click that button above, it's going to wrap the record.
+
+1407
+02:23:41,740 --> 02:23:44,740
+Or if it's below, it's doing the inner one first.
+
+1408
+02:23:44,740 --> 02:23:48,740
+So it's actually doing the back record.
+
+1409
+02:23:48,740 --> 02:24:13,740
+Okay.
+
+1410
+02:24:13,740 --> 02:24:18,740
+Earlier someone asked if the order of the decorators matters.
+
+1411
+02:24:18,740 --> 02:24:22,740
+And I remember there was a couple edge cases where it did.
+
+1412
+02:24:22,740 --> 02:24:25,740
+So this lesson is actually one of them.
+
+1413
+02:24:25,740 --> 02:24:30,740
+So the arguments, if you start with click.command,
+
+1414
+02:24:30,740 --> 02:24:33,740
+any of the decorators after it are going to be used in order,
+
+1415
+02:24:33,740 --> 02:24:35,740
+like going down the file, right?
+
+1416
+02:24:35,740 --> 02:24:38,740
+So if you do click.command and then the input argument
+
+1417
+02:24:38,740 --> 02:24:41,740
+and then the output argument, it's going to read them in that order.
+
+1418
+02:24:41,740 --> 02:24:45,740
+So click.command is right before the function definition.
+
+1419
+02:24:45,740 --> 02:24:51,740
+It's actually going to go in an outward order from the click.command decorator.
+
+1420
+02:24:51,740 --> 02:24:54,740
+So you're going to actually get the arguments in reverse.
+
+1421
+02:24:54,740 --> 02:24:57,740
+And so that will cause some confusion because it's going to be reading your
+
+1422
+02:24:57,740 --> 02:25:01,740
+output file and overwriting your input file, which is not what you want.
+
+1423
+02:25:11,740 --> 02:25:34,740
+Okay.
+
+1424
+02:25:34,740 --> 02:25:37,740
+Okay.
+
+1425
+02:26:04,740 --> 02:26:28,740
+Okay.
+
+1426
+02:26:34,740 --> 02:27:01,740
+Okay.
+
+1427
+02:27:01,740 --> 02:27:30,740
+Okay.
+
+1428
+02:27:30,740 --> 02:27:53,740
+Okay.
+
+1429
+02:27:53,740 --> 02:28:14,740
+Okay.
+
+1430
+02:28:14,740 --> 02:28:41,740
+Okay.
+
+1431
+02:28:41,740 --> 02:28:50,740
+Okay.
+
+1432
+02:28:50,740 --> 02:29:13,740
+Okay.
+
+1433
+02:29:13,740 --> 02:29:40,740
+Okay.
+
+1434
+02:29:40,740 --> 02:29:48,740
+Okay.
+
+1435
+02:30:10,740 --> 02:30:33,740
+Okay.
+
+1436
+02:30:33,740 --> 02:30:58,740
+Okay.
+
+1437
+02:30:58,740 --> 02:31:13,740
+Okay.
+
+1438
+02:31:13,740 --> 02:31:29,740
+Okay.
+
+1439
+02:31:29,740 --> 02:31:47,740
+Okay.
+
+1440
+02:31:47,740 --> 02:31:48,740
+Okay.
+
+1441
+02:31:48,740 --> 02:31:51,740
+We're just running a little short on time at this point.
+
+1442
+02:31:51,740 --> 02:31:57,740
+So what I want to do is just give you an intro to the part three lessons.
+
+1443
+02:31:57,740 --> 02:32:00,740
+And then we're going to jump over to the other part,
+
+1444
+02:32:00,740 --> 02:32:04,740
+which is where we're going to create our own project with CLI,
+
+1445
+02:32:04,740 --> 02:32:09,740
+how you'd actually be doing this in the real world starting from the beginning.
+
+1446
+02:32:09,740 --> 02:32:13,740
+So part three gets into nested commands.
+
+1447
+02:32:13,740 --> 02:32:18,740
+And this is what allows you to build an interface with related subcommands.
+
+1448
+02:32:18,740 --> 02:32:23,740
+So again, a good example of this is the Django manage.py has, you know,
+
+1449
+02:32:23,740 --> 02:32:27,740
+manage.py and then it has a whole ton of subcommands and click will do the same
+
+1450
+02:32:27,740 --> 02:32:31,740
+thing for you where you have subcommands, but it can also read them dynamically.
+
+1451
+02:32:31,740 --> 02:32:33,740
+So you can there,
+
+1452
+02:32:33,740 --> 02:32:38,740
+there's stuff in the documentation about how you can make basically plugins to
+
+1453
+02:32:38,740 --> 02:32:43,740
+your own command line tools that will allow it to dynamically import new
+
+1454
+02:32:43,740 --> 02:32:45,740
+subcommands. And so you could,
+
+1455
+02:32:45,740 --> 02:32:50,740
+you could make a whole like set of tools that has a base command that runs it
+
+1456
+02:32:51,740 --> 02:32:56,740
+and then looks for new subcommands in the right location and imports those and
+
+1457
+02:32:56,740 --> 02:32:59,740
+brings them in. And then it makes them subcommands of your application.
+
+1458
+02:32:59,740 --> 02:33:04,740
+So if you need something like that, that's available.
+
+1459
+02:33:04,740 --> 02:33:08,740
+But for the lessons, we're, we're doing more simple examples.
+
+1460
+02:33:08,740 --> 02:33:11,740
+So all up until this point,
+
+1461
+02:33:11,740 --> 02:33:16,740
+we're using click commands where you're turning a function into a single command
+
+1462
+02:33:16,740 --> 02:33:17,740
+line interface.
+
+1463
+02:33:17,740 --> 02:33:20,740
+The next step for,
+
+1464
+02:33:20,740 --> 02:33:24,740
+for making these subcommands is to make a command group.
+
+1465
+02:33:24,740 --> 02:33:29,740
+And so you start by using the, a similar syntax.
+
+1466
+02:33:29,740 --> 02:33:31,740
+So the first function here,
+
+1467
+02:33:31,740 --> 02:33:36,740
+example command is now instead of decorating it with click dot command,
+
+1468
+02:33:36,740 --> 02:33:38,740
+we're going to decorate it with click dot group.
+
+1469
+02:33:38,740 --> 02:33:42,740
+And so it turns that into a container for a group of commands.
+
+1470
+02:33:42,740 --> 02:33:45,740
+Then your subcommands,
+
+1471
+02:33:45,740 --> 02:33:48,740
+you define them in the exact same way we've been doing commands up until this
+
+1472
+02:33:48,740 --> 02:33:51,740
+point, except instead of saying click dot command,
+
+1473
+02:33:51,740 --> 02:33:53,740
+which makes them an independent command,
+
+1474
+02:33:53,740 --> 02:33:56,740
+we use the name of the group function.
+
+1475
+02:33:56,740 --> 02:33:59,740
+So in this case, it's example, example underscore command,
+
+1476
+02:33:59,740 --> 02:34:01,740
+and then dot command.
+
+1477
+02:34:01,740 --> 02:34:06,740
+So it has gained the ability to turn other functions into click subcommands
+
+1478
+02:34:07,740 --> 02:34:10,740
+essentially by doing this.
+
+1479
+02:34:10,740 --> 02:34:12,740
+And so when you have this now,
+
+1480
+02:34:12,740 --> 02:34:15,740
+you're able to run example command dash dash help,
+
+1481
+02:34:15,740 --> 02:34:19,740
+and it'll show you a list of all its subcommands for you.
+
+1482
+02:34:19,740 --> 02:34:25,740
+And that's what lesson three or part three, lesson one does for you.
+
+1483
+02:34:25,740 --> 02:34:30,740
+You create a command that has a hello subcommand that says hello.
+
+1484
+02:34:30,740 --> 02:34:34,740
+And then you can see that if you try to run other arbitrary things,
+
+1485
+02:34:34,740 --> 02:34:36,740
+it doesn't work.
+
+1486
+02:34:37,740 --> 02:34:42,740
+And then part two gets into a little more advanced things.
+
+1487
+02:34:42,740 --> 02:34:49,740
+And this is where if you need some sort of state or some sort of common values
+
+1488
+02:34:49,740 --> 02:34:51,740
+in all of your subcommands,
+
+1489
+02:34:51,740 --> 02:34:57,740
+you can initialize them in the container command and then pass them along.
+
+1490
+02:34:57,740 --> 02:35:02,740
+And the way click does this is using a thing called the context.
+
+1491
+02:35:02,740 --> 02:35:08,740
+Now the context contains all of the information about how the command was invoked,
+
+1492
+02:35:08,740 --> 02:35:10,740
+the arguments that were passed to it,
+
+1493
+02:35:10,740 --> 02:35:13,740
+the environment variables that were read, like all that stuff.
+
+1494
+02:35:13,740 --> 02:35:17,740
+But then it also has a special value called obj.
+
+1495
+02:35:17,740 --> 02:35:23,740
+And so the way you get access to this is you add a decorator,
+
+1496
+02:35:23,740 --> 02:35:25,740
+click dot pass context.
+
+1497
+02:35:25,740 --> 02:35:31,740
+And so that's going to pass a new variable to your command function called ctx.
+
+1498
+02:35:32,740 --> 02:35:36,740
+And that ctx has a special value called obj.
+
+1499
+02:35:36,740 --> 02:35:40,740
+And this is where you could store any sort of state data.
+
+1500
+02:35:40,740 --> 02:35:44,740
+And so like in this example, it's just a dictionary.
+
+1501
+02:35:44,740 --> 02:35:48,740
+And this is just going to have like key value pairs for this application.
+
+1502
+02:35:48,740 --> 02:35:52,740
+But then if you want to use that in the other subcommands,
+
+1503
+02:35:52,740 --> 02:35:54,740
+if you need access to that whole context,
+
+1504
+02:35:54,740 --> 02:35:58,740
+like you want to be able to reparse the command line
+
+1505
+02:35:58,740 --> 02:36:01,740
+or you want to use something else about how the command was invoked,
+
+1506
+02:36:01,740 --> 02:36:04,740
+you can pass that context along to the subcommands.
+
+1507
+02:36:04,740 --> 02:36:06,740
+And so you use that same click dot pass context,
+
+1508
+02:36:06,740 --> 02:36:12,740
+and you get that same ctx object in that subcommand.
+
+1509
+02:36:12,740 --> 02:36:16,740
+And then it has the obj, and you can do whatever you need to with it.
+
+1510
+02:36:16,740 --> 02:36:21,740
+If all you need though is that obj, and you don't need the rest of the context,
+
+1511
+02:36:21,740 --> 02:36:24,740
+you can just use click dot pass obj,
+
+1512
+02:36:24,740 --> 02:36:28,740
+and then you get access to that object in the subcommand.
+
+1513
+02:36:28,740 --> 02:36:34,740
+And so like the tutorial runner command that you're using today is doing this.
+
+1514
+02:36:34,740 --> 02:36:38,740
+So it's finding the state of your tutorial, like where you are,
+
+1515
+02:36:38,740 --> 02:36:42,740
+and it's loading that and it's passing that along in the context.
+
+1516
+02:36:42,740 --> 02:36:46,740
+And so for this lesson, you're going to do that.
+
+1517
+02:36:46,740 --> 02:36:50,740
+You're going to create the command group, add the second subcommand,
+
+1518
+02:36:50,740 --> 02:36:53,740
+and pass the verbose along to it.
+
+1519
+02:36:53,740 --> 02:36:57,740
+And so these ones you can do on your own,
+
+1520
+02:36:57,740 --> 02:37:01,740
+because I really want to do part four before we run out of time.
+
+1521
+02:37:01,740 --> 02:37:05,740
+So this is the next most important part.
+
+1522
+02:37:05,740 --> 02:37:10,740
+So whenever you're starting a new Python project,
+
+1523
+02:37:10,740 --> 02:37:15,740
+there's a ton of boilerplate you need if you want to be able to package it up
+
+1524
+02:37:15,740 --> 02:37:18,740
+and distribute it and work with other people.
+
+1525
+02:37:19,740 --> 02:37:25,740
+And I mean, honestly, the Python packaging ecosystem is complex.
+
+1526
+02:37:25,740 --> 02:37:30,740
+It used to be like a bad mess, and now it's just a complex mess.
+
+1527
+02:37:30,740 --> 02:37:35,740
+But there's still just a ton of stuff you need to make this all work.
+
+1528
+02:37:35,740 --> 02:37:39,740
+And I don't like having to type out a bunch of boilerplate,
+
+1529
+02:37:39,740 --> 02:37:43,740
+so I love this project called Cookie Cutter.
+
+1530
+02:37:43,740 --> 02:37:50,740
+And so what Cookie Cutter does is it will take a template of a project layout.
+
+1531
+02:37:50,740 --> 02:37:54,740
+It'll prompt you for some settings or some variables,
+
+1532
+02:37:54,740 --> 02:37:58,740
+and then it'll build the directory structure for a new project for you.
+
+1533
+02:37:58,740 --> 02:38:05,740
+There's tons of kind of reference package templates out there.
+
+1534
+02:38:05,740 --> 02:38:09,740
+And Audrey Roy, the author of Cookie Cutter,
+
+1535
+02:38:09,740 --> 02:38:17,740
+has a template for a new Python package that includes a click command line interface.
+
+1536
+02:38:17,740 --> 02:38:20,740
+So it's a kind of perfect starting example.
+
+1537
+02:38:20,740 --> 02:38:24,740
+If you are going to be making your own Python applications you're planning on distributing,
+
+1538
+02:38:24,740 --> 02:38:29,740
+my recommendation is to learn a little bit more about Cookie Cutter
+
+1539
+02:38:29,740 --> 02:38:35,740
+and make a Cookie Cutter template that matches the things you want.
+
+1540
+02:38:35,740 --> 02:38:38,740
+So if you don't want to use PyTest, you want to use a different testing framework,
+
+1541
+02:38:38,740 --> 02:38:43,740
+or you want to use a different, you know, whatever library's different documentation.
+
+1542
+02:38:43,740 --> 02:38:45,740
+So put that in your own Cookie Cutter template,
+
+1543
+02:38:45,740 --> 02:38:49,740
+and then you use Cookie Cutter to make new projects based on that.
+
+1544
+02:38:49,740 --> 02:38:50,740
+And so we're going to do that.
+
+1545
+02:38:50,740 --> 02:38:56,740
+So as part of the installation, Cookie Cutter should have been installed for you.
+
+1546
+02:38:56,740 --> 02:39:02,740
+And what we can do is go to the, I think in the lesson instructions,
+
+1547
+02:39:02,740 --> 02:39:07,740
+so if you type tutorial lesson dash P4.
+
+1548
+02:39:07,740 --> 02:39:18,740
+So let's show that actually.
+
+1549
+02:39:18,740 --> 02:39:21,740
+So it's going to show you there's no working files in this case,
+
+1550
+02:39:21,740 --> 02:39:23,740
+and there's no test files because this isn't TDD.
+
+1551
+02:39:23,740 --> 02:39:26,740
+This is more kind of follow some documentation,
+
+1552
+02:39:26,740 --> 02:39:29,740
+and we're going to explore what we get out of it.
+
+1553
+02:39:29,740 --> 02:39:36,740
+So for this lesson, we're going to, I'm going to CD to the lessons part 04,
+
+1554
+02:39:36,740 --> 02:39:46,740
+just so we don't clutter up the rest of the directory structure.
+
+1555
+02:39:46,740 --> 02:39:53,740
+And then we're going to run Cookie Cutter with the URL of the template.
+
+1556
+02:39:53,740 --> 02:40:00,740
+And this is just a Git repository that is a template of a new Python package.
+
+1557
+02:40:00,740 --> 02:40:08,740
+And so it's going to ask you for your name, your email address, your GitHub username,
+
+1558
+02:40:08,740 --> 02:40:10,740
+because this one is based around GitHub.
+
+1559
+02:40:10,740 --> 02:40:13,740
+So if you use something other than GitHub, like you're using GitLab,
+
+1560
+02:40:13,740 --> 02:40:16,740
+or you're using Bitbucket or something else,
+
+1561
+02:40:16,740 --> 02:40:21,740
+you'd want to start with a new template or modify the template to match that.
+
+1562
+02:40:21,740 --> 02:40:25,740
+But this one's assuming you're using GitHub and that you're making a Python project.
+
+1563
+02:40:25,740 --> 02:40:27,740
+So it's going to ask you for the project name.
+
+1564
+02:40:27,740 --> 02:40:32,740
+It's going to generate a project slug, which is the importable Python version of the name.
+
+1565
+02:40:32,740 --> 02:40:37,740
+You give it a description, a version, whether you want to use PyTest.
+
+1566
+02:40:37,740 --> 02:40:44,740
+You can say no to deployment with Travis and no to the PyUp badge for now.
+
+1567
+02:40:44,740 --> 02:40:48,740
+The important part, though, is it's going to ask, do you want a command line interface?
+
+1568
+02:40:48,740 --> 02:40:51,740
+And obviously, for this example, we want to say yes, we want click.
+
+1569
+02:40:51,740 --> 02:40:55,740
+So you type one and you get the click interface.
+
+1570
+02:40:55,740 --> 02:41:00,740
+And so we're going to do this.
+
+1571
+02:41:00,740 --> 02:41:04,740
+So you can just copy the command from here.
+
+1572
+02:41:08,740 --> 02:41:15,740
+So since I've already used this cookie cutter before, it's asking if I want to re-clone it.
+
+1573
+02:41:15,740 --> 02:41:17,740
+So yes.
+
+1574
+02:41:17,740 --> 02:41:33,740
+And so the cookie cutter is initialized based on the author's information.
+
+1575
+02:41:33,740 --> 02:41:38,740
+So if you're making your own, you can have it default to your organization's information.
+
+1576
+02:41:38,740 --> 02:41:43,740
+Or if it's for personal use, your personal information so that every one of your templates uses your info.
+
+1577
+02:41:47,740 --> 02:41:50,740
+So that's the key.
+
+1578
+02:41:50,740 --> 02:41:52,740
+So that's the key.
+
+1579
+02:41:52,740 --> 02:41:54,740
+So that's the key.
+
+1580
+02:41:54,740 --> 02:41:56,740
+So that's the key.
+
+1581
+02:41:56,740 --> 02:41:58,740
+So that's the key.
+
+1582
+02:41:58,740 --> 02:42:00,740
+So that's the key.
+
+1583
+02:42:00,740 --> 02:42:02,740
+So that's the key.
+
+1584
+02:42:02,740 --> 02:42:04,740
+So that's the key.
+
+1585
+02:42:04,740 --> 02:42:06,740
+So that's the key.
+
+1586
+02:42:06,740 --> 02:42:08,740
+So that's the key.
+
+1587
+02:42:08,740 --> 02:42:10,740
+So that's the key.
+
+1588
+02:42:10,740 --> 02:42:12,740
+So that's the key.
+
+1589
+02:42:12,740 --> 02:42:14,740
+So that's the key.
+
+1590
+02:42:14,740 --> 02:42:16,740
+So that's the key.
+
+1591
+02:42:45,740 --> 02:42:47,740
+Okay.
+
+1592
+02:42:47,740 --> 02:42:53,740
+So and once you've run cookie cutter and answered all the questions, it's going to build out a new directory structure.
+
+1593
+02:42:53,740 --> 02:42:56,740
+This structure is a new Python package.
+
+1594
+02:42:56,740 --> 02:43:10,740
+And it has all the pieces you need to build the package, get it installed, build distribution files, upload it to GitHub, and have all the everything work.
+
+1595
+02:43:10,740 --> 02:43:15,740
+So it's really nice that you kind of get this for free.
+
+1596
+02:43:15,740 --> 02:43:30,740
+But since we selected we're going to add a click CLI, it's going to have in your project slug whatever name you gave it.
+
+1597
+02:43:30,740 --> 02:43:32,740
+So in my case I called it example CLI.
+
+1598
+02:43:32,740 --> 02:43:37,740
+So in example CLI, which is the Python package, there's a CLI.py.
+
+1599
+02:43:37,740 --> 02:43:40,740
+And that CLI.py is a click command.
+
+1600
+02:44:07,740 --> 02:44:12,740
+So.
+
+1601
+02:44:12,740 --> 02:44:14,740
+And so this is the default that it just gives you.
+
+1602
+02:44:14,740 --> 02:44:16,740
+So this is just from the template.
+
+1603
+02:44:16,740 --> 02:44:18,740
+So this should be familiar at this point.
+
+1604
+02:44:18,740 --> 02:44:19,740
+This is a click command.
+
+1605
+02:44:19,740 --> 02:44:27,740
+And all it's doing is echoing some information about what you can do to update it.
+
+1606
+02:44:27,740 --> 02:44:36,740
+The other thing this gives you though is tests.
+
+1607
+02:44:36,740 --> 02:44:40,740
+And so this gives you the first test for running the command line interface.
+
+1608
+02:44:40,740 --> 02:44:47,740
+And so this is going to invoke the CLI that just got installed.
+
+1609
+02:44:47,740 --> 02:44:50,740
+And it is going to make sure that it has help text.
+
+1610
+02:44:50,740 --> 02:45:00,740
+And so this is where you can start building up tests for your own command line similar to what we've been working with up to this point.
+
+1611
+02:45:00,740 --> 02:45:07,740
+And if you need examples for how to test specific things, you can go back to the tutorial in the lessons directory.
+
+1612
+02:45:07,740 --> 02:45:09,740
+There's a test directory for each one.
+
+1613
+02:45:09,740 --> 02:45:15,740
+You can look at the test so you can look to see how you would test, you know, whether something is being printed to standard error,
+
+1614
+02:45:15,740 --> 02:45:22,740
+how you would test, you know, invoking the commands in different ways and getting different results basically.
+
+1615
+02:45:22,740 --> 02:45:25,740
+But so the test is already here for you.
+
+1616
+02:45:25,740 --> 02:45:34,740
+So the plan for this lesson is basically just get yourself a working Python package here.
+
+1617
+02:45:34,740 --> 02:45:43,740
+And you could create a new virtual LEM for this or just to make it faster,
+
+1618
+02:45:43,740 --> 02:46:00,740
+we can since we already have a virtual LEM for the thing.
+
+1619
+02:46:00,740 --> 02:46:08,740
+So this package or this new project director that we have is itself another Python package and it can be installed.
+
+1620
+02:46:08,740 --> 02:46:15,740
+And the workflow for developing with it is you install it in editable mode in your virtual environment.
+
+1621
+02:46:15,740 --> 02:46:20,740
+And so that's what that pip install dash E does that we've been doing a couple of times now.
+
+1622
+02:46:20,740 --> 02:46:29,740
+And so what that means is you can edit the source files and you don't have to reinstall it as soon as like after you're done with your editing.
+
+1623
+02:46:29,740 --> 02:46:31,740
+You can see the results right away.
+
+1624
+02:46:31,740 --> 02:46:42,740
+So because I called this thing example CLI, it created a command line tool that just got installed called example CLI.
+
+1625
+02:46:42,740 --> 02:46:52,740
+And if we edited that example CLI file, we'd get different results.
+
+1626
+02:47:12,740 --> 02:47:27,740
+And now I just want to look at how that happens.
+
+1627
+02:47:27,740 --> 02:47:34,740
+So has anyone like built a Python package before?
+
+1628
+02:47:34,740 --> 02:47:37,740
+Cool. So this is all new.
+
+1629
+02:47:37,740 --> 02:47:47,740
+So when you want to distribute a Python package, so these are things that you'd want to upload to PIPI, the Python package index.
+
+1630
+02:47:47,740 --> 02:47:57,740
+When you go to do that, you need to have like certain pieces in place to make your package uploadable, installable and portable.
+
+1631
+02:47:57,740 --> 02:48:01,740
+You want to make it so that PIPI understands what's in there.
+
+1632
+02:48:01,740 --> 02:48:05,740
+And the way you do this is with a set of tools.
+
+1633
+02:48:05,740 --> 02:48:09,740
+One of them is called setup tools.
+
+1634
+02:48:09,740 --> 02:48:14,740
+And part of that is or most of that is defined in a setup.py in the project.
+
+1635
+02:48:14,740 --> 02:48:25,740
+So this is one of those things I love about cookie cutter is we don't have to get too into the weeds about this stuff because the defaults have been put there for us.
+
+1636
+02:48:25,740 --> 02:48:27,740
+And then if we need to edit things, we can edit things.
+
+1637
+02:48:27,740 --> 02:48:29,740
+But the defaults are pretty good.
+
+1638
+02:48:29,740 --> 02:48:38,740
+So in the Python project, there's a setup.py that describes information about the project and then how it gets installed.
+
+1639
+02:48:38,740 --> 02:48:41,740
+It's saying the things that it requires.
+
+1640
+02:48:41,740 --> 02:48:44,740
+So it requires all these packages.
+
+1641
+02:48:44,740 --> 02:48:48,740
+Actually, this is my tutorial setup.py.
+
+1642
+02:48:48,740 --> 02:49:05,740
+Let's look at the example one.
+
+1643
+02:49:05,740 --> 02:49:07,740
+There we go.
+
+1644
+02:49:07,740 --> 02:49:15,740
+Yeah. So the setup.py that you built from this template now, all it requires is click because we're giving a command line interface.
+
+1645
+02:49:15,740 --> 02:49:25,740
+But then it has some information about the package, like who the author is, some information about like what status it's in and what versions of Python we're advertising to support.
+
+1646
+02:49:25,740 --> 02:49:31,740
+But the really important part I want to show you is this.
+
+1647
+02:49:31,740 --> 02:49:35,740
+This is this entry points thing, then console scripts.
+
+1648
+02:49:35,740 --> 02:49:46,740
+This is how the command line applications that we have available to us get mapped to Python code.
+
+1649
+02:49:46,740 --> 02:49:53,740
+So this is how you know how you were editing like part 01 and then the CLI.py for part 01.
+
+1650
+02:49:53,740 --> 02:49:56,740
+And then on the command line immediately you could run part 01.
+
+1651
+02:49:56,740 --> 02:49:59,740
+This is how that's working.
+
+1652
+02:49:59,740 --> 02:50:13,740
+So when you install the package, it looks at these console scripts and it says, I want to map a command named whatever's on the left to a Python module and then function on the right.
+
+1653
+02:50:13,740 --> 02:50:27,740
+And so here it's saying I want a new command called example underscore CLI and I want to map it to the example CLI package, the CLI module and run the main function.
+
+1654
+02:50:27,740 --> 02:50:33,740
+And that's how we're getting like tutorial on the command line or part 01 or Python.
+
+1655
+02:50:33,740 --> 02:50:39,740
+All those things got installed because they're in console scripts in the respective packages.
+
+1656
+02:50:39,740 --> 02:50:43,740
+So when you're taking your own package and doing this, this is how you're going to make it work.
+
+1657
+02:50:43,740 --> 02:50:46,740
+If you want your command to be named something different.
+
+1658
+02:50:46,740 --> 02:50:56,740
+So.
+
+1659
+02:50:56,740 --> 02:50:58,740
+I can example.
+
+1660
+02:50:58,740 --> 02:51:07,740
+This is one of the cases where you do have to reinstall.
+
+1661
+02:51:07,740 --> 02:51:13,740
+Because as to redo that mapping.
+
+1662
+02:51:13,740 --> 02:51:16,740
+And now we have that same command is at PyCon example.
+
+1663
+02:51:16,740 --> 02:51:20,740
+And that's how that that wrapping works.
+
+1664
+02:51:20,740 --> 02:51:27,740
+So now that we have a valid Python package and we have a really minimal command line.
+
+1665
+02:51:27,740 --> 02:51:35,740
+If we want to distribute this, so we want to like upload this to PIPI and let other people have fun with it.
+
+1666
+02:51:35,740 --> 02:51:39,740
+We need to build distribution files.
+
+1667
+02:51:39,740 --> 02:51:42,740
+And this is something else that happens out of that setup pie.
+
+1668
+02:51:42,740 --> 02:51:49,740
+And this is something else that the cookie cutter templates are doing a lot of the heavy lifting for us for.
+
+1669
+02:51:49,740 --> 02:51:56,740
+So to build a package, if you look.
+
+1670
+02:51:56,740 --> 02:52:02,740
+If you're on a Mac or Linux, you can take advantage of the make file that's here.
+
+1671
+02:52:02,740 --> 02:52:08,740
+So there's a tool called make that will run all these little sub commands for you.
+
+1672
+02:52:08,740 --> 02:52:11,740
+And one is called make dist.
+
+1673
+02:52:11,740 --> 02:52:17,740
+But all that that's doing is running Python setup pie as dist and Python setup pie B dist wheel.
+
+1674
+02:52:17,740 --> 02:52:20,740
+So we can we can do that ourselves.
+
+1675
+02:52:20,740 --> 02:52:26,740
+So if you have a if you have a Mac or Linux, you can type make dist.
+
+1676
+02:52:26,740 --> 02:52:30,740
+If you have me installed.
+
+1677
+02:52:30,740 --> 02:52:32,740
+And so that makes the distribution files.
+
+1678
+02:52:32,740 --> 02:52:38,740
+But if you don't or if you're on Windows, you can type Python.
+
+1679
+02:52:38,740 --> 02:52:42,740
+Setup pie.
+
+1680
+02:52:42,740 --> 02:52:49,740
+Estes.
+
+1681
+02:52:49,740 --> 02:52:56,740
+And that's going to make a source distribution file, which is the your Python source code.
+
+1682
+02:52:56,740 --> 02:53:03,740
+And you can also do be dist wheel.
+
+1683
+02:53:03,740 --> 02:53:13,740
+Which is going to create a wheel formatted file, which is a more modern binary file for distributing your packages.
+
+1684
+02:53:13,740 --> 02:53:25,740
+So at this point, if you were going to distribute them on Pipeye, you'd use a tool called twine to upload them to Pipeye.
+
+1685
+02:53:25,740 --> 02:53:32,740
+We're not going to do that now because we don't want to pollute the package index with a bunch of like fake example things.
+
+1686
+02:53:32,740 --> 02:53:35,740
+But you can totally do this with your real projects.
+
+1687
+02:53:35,740 --> 02:53:41,740
+And so the I assume most people have installed things from Pipeye.
+
+1688
+02:53:41,740 --> 02:53:47,740
+Yeah. So you just need to go to Pipeye.org.
+
+1689
+02:53:47,740 --> 02:53:49,740
+If you don't have an account, you register an account.
+
+1690
+02:53:49,740 --> 02:53:58,740
+Once you have that, if you use twine on the command line, you can upload those distribution files and it'll just prompt you for your username and password.
+
+1691
+02:53:58,740 --> 02:54:04,740
+So.
+
+1692
+02:54:04,740 --> 02:54:14,740
+Yeah, so we can see that the commands made these two distribution files, the example CLI and the example CLI with all the none any dot wheel.
+
+1693
+02:54:14,740 --> 02:54:36,740
+And those are what's used to to just install on another system.
+
+1694
+02:54:36,740 --> 02:54:49,740
+Yeah. So at this point, all I really wanted you to do was see that you can edit the CLI.Pipeye in that new project and see your changes reflected and that you can build a distribution file.
+
+1695
+02:54:49,740 --> 02:55:03,740
+Because at this point, you could now tell somebody like if you uploaded this to Pipeye, you could say, hey, pip install example CLI and they'd install pip install example CLI and then they'd have your command available on the command line.
+
+1696
+02:55:03,740 --> 02:55:10,740
+So this is really cool. And there's there's a ton of details in the patching packaging stuff that you can get into and learn about.
+
+1697
+02:55:10,740 --> 02:55:26,740
+But you don't have to because of cookie cutter.
+
+1698
+02:55:26,740 --> 02:55:41,740
+Yeah. So he brought up that the template doesn't have a dunder main. And so that is a it's like an interesting convention where you can make a package runnable as a package.
+
+1699
+02:55:41,740 --> 02:55:47,740
+So that's where that's what allows you to do the thing where it's Python dash M and then the package name.
+
+1700
+02:55:47,740 --> 02:55:55,740
+And then if the name or the main exists, it can then invoke your command line.
+
+1701
+02:55:55,740 --> 02:56:22,740
+So if we look at the tutorial runner command actually does that.
+
+1702
+02:56:22,740 --> 02:56:28,740
+So so this tutorial runner is the package that you've been using to to run through the lessons today.
+
+1703
+02:56:28,740 --> 02:56:32,740
+I mean, it was built from a cookie cutter template from this cookie cutter template.
+
+1704
+02:56:32,740 --> 02:56:37,740
+But I did add the the main. So that was a good good call out.
+
+1705
+02:56:37,740 --> 02:56:49,740
+And so this main all it does is if the package is run with Python dash M tutorial underscore runner, it says, oh, main was invoked.
+
+1706
+02:56:49,740 --> 02:56:53,740
+So let's find the seal lie and import it and run that.
+
+1707
+02:56:53,740 --> 02:57:03,740
+And that does allow us to.
+
+1708
+02:57:03,740 --> 02:57:06,740
+So that allows us to run it this way.
+
+1709
+02:57:06,740 --> 02:57:17,740
+And the reason that's really useful is if you can't guarantee that someone is going to have a virtual environment with the path updated for you,
+
+1710
+02:57:17,740 --> 02:57:28,740
+if you can get at the Python installation, basically, you can then run your command line tools with this Python dash M that way.
+
+1711
+02:57:28,740 --> 02:57:38,740
+So that is actually a really useful thing. And honestly, I think having the main in the that might be a good pull request for that cookie cutter template.
+
+1712
+02:57:38,740 --> 02:57:46,740
+Yeah. And so that was basically what I wanted you to to kind of get an experience doing here for this part.
+
+1713
+02:57:46,740 --> 02:57:51,740
+And then all I had left.
+
+1714
+02:57:51,740 --> 02:58:01,740
+Find my window.
+
+1715
+02:58:01,740 --> 02:58:06,740
+There we go. All I had left was the part five lessons.
+
+1716
+02:58:06,740 --> 02:58:09,740
+So part five isn't really lessons. It's just like an example.
+
+1717
+02:58:09,740 --> 02:58:13,740
+See, I for you to to look at and mess around with.
+
+1718
+02:58:13,740 --> 02:58:25,740
+So there's a command part five that has a bunch of the helper functionality from click.
+
+1719
+02:58:25,740 --> 02:58:30,740
+So the like pagination and progress bars and just kind of shows how to go through and use all those things.
+
+1720
+02:58:30,740 --> 02:58:34,740
+So you can kind of use it as an example for your own stuff.
+
+1721
+02:58:34,740 --> 02:58:38,740
+So at this point, we did kind of skip over part three.
+
+1722
+02:58:38,740 --> 02:58:42,740
+So people want to go back and proceed with part three.
+
+1723
+02:58:42,740 --> 02:58:46,740
+That'd be cool. I'm going to be here for a little bit.
+
+1724
+02:58:46,740 --> 02:58:51,740
+But, you know, feel free to head out and grab lunch when you're ready to.
+
+1725
+02:58:51,740 --> 02:58:54,740
+I will be here for all of PyCon.
+
+1726
+02:58:54,740 --> 02:59:03,740
+So if you have any questions or you want to follow up with any of the lessons or have anything you want to chat about, come find me.
+
+1727
+02:59:03,740 --> 02:59:12,740
+You should have my email. Also, I did send a an email right before class started with a link to the survey they want you to fill out for this.
+
+1728
+02:59:12,740 --> 02:59:19,740
+So please do that. Let me know what worked for you, what you got out of it and what we could do better next time.
+
+1729
+02:59:19,740 --> 02:59:23,740
+So that's all I have today. So thank you all for coming here.
+

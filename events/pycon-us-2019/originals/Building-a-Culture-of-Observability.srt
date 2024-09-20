@@ -1,0 +1,2924 @@
+1
+00:00:00,000 --> 00:00:01,480
+Hello, everybody.
+
+2
+00:00:01,480 --> 00:00:03,120
+I'd like you to welcome Alex Landau.
+
+3
+00:00:03,120 --> 00:00:05,160
+And today, he's going to be talking about building
+
+4
+00:00:05,160 --> 00:00:06,920
+a culture of observability.
+
+5
+00:00:06,920 --> 00:00:14,400
+Hi, everyone.
+
+6
+00:00:14,400 --> 00:00:16,720
+Thank you very much for coming to this talk.
+
+7
+00:00:16,720 --> 00:00:18,520
+This talk is about some interesting work
+
+8
+00:00:18,520 --> 00:00:21,120
+we've been doing at Rover around observability.
+
+9
+00:00:21,120 --> 00:00:23,440
+My name's Alex Landau, and I've been
+
+10
+00:00:23,440 --> 00:00:26,520
+at Rover for about two years on our site reliability
+
+11
+00:00:26,520 --> 00:00:28,400
+engineering team.
+
+12
+00:00:28,400 --> 00:00:30,880
+So I just want to start with some quick facts about Rover
+
+13
+00:00:30,880 --> 00:00:32,040
+before we begin.
+
+14
+00:00:32,040 --> 00:00:35,040
+You can kind of think of Rover as like the Airbnb
+
+15
+00:00:35,040 --> 00:00:38,240
+for pet sitting or Uber for dog walking.
+
+16
+00:00:38,240 --> 00:00:41,440
+Basically, we connect pet service providers
+
+17
+00:00:41,440 --> 00:00:43,000
+with the needs of owners.
+
+18
+00:00:43,000 --> 00:00:45,040
+So we're the global leader in this space,
+
+19
+00:00:45,040 --> 00:00:46,600
+the biggest competitor.
+
+20
+00:00:46,600 --> 00:00:48,600
+We just launched in Europe last year.
+
+21
+00:00:48,600 --> 00:00:51,000
+And I think that we have a strong collaborative
+
+22
+00:00:51,000 --> 00:00:54,280
+engineering culture that encourages experimentation
+
+23
+00:00:54,280 --> 00:00:55,800
+and creative problem solving.
+
+24
+00:00:55,800 --> 00:00:57,840
+And I think that that led to some of the work
+
+25
+00:00:57,840 --> 00:01:00,600
+that we're going to talk about today.
+
+26
+00:01:00,600 --> 00:01:05,560
+I want to start with defining how we define observability
+
+27
+00:01:05,560 --> 00:01:07,640
+at Rover, like how we think about it,
+
+28
+00:01:07,640 --> 00:01:11,080
+and talk about why we thought it was important to focus on it,
+
+29
+00:01:11,080 --> 00:01:13,500
+why we thought it was worth investing engineering resources
+
+30
+00:01:13,500 --> 00:01:14,440
+towards it.
+
+31
+00:01:14,440 --> 00:01:16,440
+Then I want to talk about our particular approach
+
+32
+00:01:16,440 --> 00:01:20,960
+to a few major pillars of web apps
+
+33
+00:01:20,960 --> 00:01:22,520
+and doing observability in web apps,
+
+34
+00:01:22,520 --> 00:01:25,080
+in particular, logging metrics and dashboards.
+
+35
+00:01:25,080 --> 00:01:26,520
+And at the end of the talk, I want
+
+36
+00:01:27,480 --> 00:01:30,960
+to wrap up with some higher level philosophy about how
+
+37
+00:01:30,960 --> 00:01:35,200
+we actually built observability into our engineering culture.
+
+38
+00:01:35,200 --> 00:01:36,680
+So this is a tweet.
+
+39
+00:01:36,680 --> 00:01:38,760
+And it's kind of a tongue in cheek tweet
+
+40
+00:01:38,760 --> 00:01:42,400
+from Cindy Street-Harrin, who wrote a book on observability
+
+41
+00:01:42,400 --> 00:01:43,840
+and distributed systems.
+
+42
+00:01:43,840 --> 00:01:45,920
+And it's basically like an overheard tweet
+
+43
+00:01:45,920 --> 00:01:48,680
+where someone was saying that observability is just
+
+44
+00:01:48,680 --> 00:01:50,520
+a new fancy word for monitoring to make it
+
+45
+00:01:50,520 --> 00:01:52,580
+more palatable for developers.
+
+46
+00:01:52,580 --> 00:01:55,920
+And I think that it's true that observability encompasses
+
+47
+00:01:55,920 --> 00:01:57,360
+monitoring in a big way.
+
+48
+00:01:57,360 --> 00:02:00,920
+But at Rover, we take the definition a little bit further.
+
+49
+00:02:00,920 --> 00:02:04,600
+We think observability is all about knowing exactly what's
+
+50
+00:02:04,600 --> 00:02:06,960
+going on in your web application.
+
+51
+00:02:06,960 --> 00:02:08,560
+And when something does go wrong,
+
+52
+00:02:08,560 --> 00:02:11,520
+knowing very quickly what went wrong and how to fix it.
+
+53
+00:02:11,520 --> 00:02:13,720
+The metaphor that we like to use is
+
+54
+00:02:13,720 --> 00:02:15,560
+telling the narrative of your application
+
+55
+00:02:15,560 --> 00:02:17,760
+or the story of what's going on.
+
+56
+00:02:17,760 --> 00:02:20,360
+And we think a culture of observability
+
+57
+00:02:20,360 --> 00:02:23,160
+really empowers developers by removing
+
+58
+00:02:23,160 --> 00:02:27,240
+uncertainty and speculation and making it easy for developers
+
+59
+00:02:27,240 --> 00:02:30,280
+to feel comfortable working at all levels of the application
+
+60
+00:02:30,280 --> 00:02:33,120
+up and down the stack, especially as the application
+
+61
+00:02:33,120 --> 00:02:36,880
+grows in scale and complexity.
+
+62
+00:02:36,880 --> 00:02:39,960
+So complexity is something of an abstract term.
+
+63
+00:02:39,960 --> 00:02:43,400
+And I want to make it more concrete with an example.
+
+64
+00:02:43,400 --> 00:02:45,740
+And I want to take Rover's web app as an example of what I
+
+65
+00:02:45,740 --> 00:02:48,200
+think is a fairly complex Python web app.
+
+66
+00:02:48,200 --> 00:02:51,040
+We have about 600,000 lines of Python code
+
+67
+00:02:51,080 --> 00:02:55,040
+in a single monolithic Django application backed by MySQL.
+
+68
+00:02:55,040 --> 00:02:57,160
+We have about 100 developers committing code
+
+69
+00:02:57,160 --> 00:02:58,680
+to that on any given day.
+
+70
+00:02:58,680 --> 00:03:02,120
+And we're deploying changes between 15 and 30 times a day.
+
+71
+00:03:02,120 --> 00:03:06,220
+We have thousands of individual views, celery tasks,
+
+72
+00:03:06,220 --> 00:03:09,640
+management commands, cron jobs, basically lots of places
+
+73
+00:03:09,640 --> 00:03:11,720
+where we execute code and lots of places
+
+74
+00:03:11,720 --> 00:03:14,320
+where things can go wrong.
+
+75
+00:03:14,320 --> 00:03:16,960
+We care about observability because observability
+
+76
+00:03:16,960 --> 00:03:20,080
+has a real tangible impact on our business
+
+77
+00:03:20,080 --> 00:03:21,800
+and on our engineering culture.
+
+78
+00:03:21,800 --> 00:03:25,680
+It helps us wrangle the complexity of this web app.
+
+79
+00:03:25,680 --> 00:03:28,100
+Some examples include bugs being much easier
+
+80
+00:03:28,100 --> 00:03:30,440
+to identify and localize.
+
+81
+00:03:30,440 --> 00:03:32,020
+When things go wrong in production,
+
+82
+00:03:32,020 --> 00:03:35,000
+it's much easier to quickly detect what went wrong
+
+83
+00:03:35,000 --> 00:03:36,120
+and then fix it.
+
+84
+00:03:36,120 --> 00:03:38,120
+And then when we have a root cause analysis
+
+85
+00:03:38,120 --> 00:03:40,440
+after the fact or a postmortem, it's
+
+86
+00:03:40,440 --> 00:03:42,600
+a lot more efficient and productive.
+
+87
+00:03:42,600 --> 00:03:44,880
+That process gives us the action items
+
+88
+00:03:44,880 --> 00:03:48,960
+we need to prevent the issue from reoccurring in the future.
+
+89
+00:03:48,960 --> 00:03:51,840
+Basically, observability gives us the detective tools
+
+90
+00:03:51,840 --> 00:03:55,520
+that we need to eliminate mysteries and black boxes.
+
+91
+00:03:55,520 --> 00:03:58,880
+We think these are bad things to have in an application.
+
+92
+00:03:58,880 --> 00:04:02,360
+And it becomes a lot more common to have these
+
+93
+00:04:02,360 --> 00:04:04,480
+as your application grows in scale
+
+94
+00:04:04,480 --> 00:04:05,960
+and your engineering team grows.
+
+95
+00:04:05,960 --> 00:04:07,560
+And we think a culture of observability
+
+96
+00:04:07,560 --> 00:04:10,600
+really helps us eliminate those.
+
+97
+00:04:10,600 --> 00:04:14,400
+So we've defined observability as we see it at Rover
+
+98
+00:04:14,400 --> 00:04:16,200
+and motivated our focus on it.
+
+99
+00:04:16,200 --> 00:04:18,460
+So the question then is, how do we actually
+
+100
+00:04:18,460 --> 00:04:21,800
+enact observability into our engineering culture?
+
+101
+00:04:21,800 --> 00:04:23,680
+And as I mentioned before, I want
+
+102
+00:04:23,680 --> 00:04:28,560
+to go through three pillars, so logging, metrics,
+
+103
+00:04:28,560 --> 00:04:29,360
+and dashboards.
+
+104
+00:04:29,360 --> 00:04:31,600
+And in each pillar, we're going to talk about a problem
+
+105
+00:04:31,600 --> 00:04:33,420
+that we faced and a solution that we
+
+106
+00:04:33,420 --> 00:04:35,640
+built in Python and Django.
+
+107
+00:04:35,640 --> 00:04:37,960
+I'm going to focus mostly on tools for Python, Django,
+
+108
+00:04:37,960 --> 00:04:40,200
+because that's what we use at Rover.
+
+109
+00:04:40,200 --> 00:04:41,880
+But I think that there's some learnings that
+
+110
+00:04:41,880 --> 00:04:43,160
+are widely applicable.
+
+111
+00:04:43,160 --> 00:04:45,860
+And then at the end, we're going to talk about the philosophy
+
+112
+00:04:45,860 --> 00:04:48,100
+that we use to unify these tools as part
+
+113
+00:04:48,100 --> 00:04:50,500
+of our engineering culture.
+
+114
+00:04:50,500 --> 00:04:51,740
+So we'll start with logging.
+
+115
+00:04:51,740 --> 00:04:53,480
+Logging is fairly simple conceptually.
+
+116
+00:04:53,480 --> 00:04:56,660
+It's just writing down things as they happen.
+
+117
+00:04:56,660 --> 00:05:00,620
+It's a very standard way to keep track of what's
+
+118
+00:05:00,620 --> 00:05:02,180
+going on in your application.
+
+119
+00:05:02,180 --> 00:05:05,500
+But it starts to get more interesting at scale.
+
+120
+00:05:05,500 --> 00:05:07,860
+So the standard best practice is to just log things
+
+121
+00:05:07,860 --> 00:05:10,300
+to an output stream and then aggregate all your output
+
+122
+00:05:10,300 --> 00:05:13,180
+streams in one single centralized place
+
+123
+00:05:13,180 --> 00:05:16,420
+where the logs are structured and searchable.
+
+124
+00:05:16,420 --> 00:05:18,380
+Loggly is a third party service that does this.
+
+125
+00:05:18,380 --> 00:05:21,420
+You can also use the Elk Stack, which is Elastic Search
+
+126
+00:05:21,420 --> 00:05:22,620
+logs-kibana.
+
+127
+00:05:22,620 --> 00:05:25,380
+And the idea is you have a centralized stream that
+
+128
+00:05:25,380 --> 00:05:26,820
+developers can search.
+
+129
+00:05:26,820 --> 00:05:30,100
+And they can search on different facets, like application
+
+130
+00:05:30,100 --> 00:05:32,580
+or whatever other things you think are important.
+
+131
+00:05:32,580 --> 00:05:34,500
+And this is really useful for developers
+
+132
+00:05:34,500 --> 00:05:37,580
+because you can have logs coming from all over the place
+
+133
+00:05:37,580 --> 00:05:38,580
+in your infrastructure.
+
+134
+00:05:38,580 --> 00:05:41,200
+In fact, even on a single application server,
+
+135
+00:05:41,200 --> 00:05:44,400
+you could have logs coming from NGINX if you're using that,
+
+136
+00:05:44,400 --> 00:05:48,400
+your application, like your Python app, system processes,
+
+137
+00:05:48,400 --> 00:05:51,800
+lots of different things that are emitting logs.
+
+138
+00:05:51,800 --> 00:05:56,640
+This is an example of 10 minutes of logs from Rover's production
+
+139
+00:05:56,640 --> 00:05:57,680
+application.
+
+140
+00:05:57,680 --> 00:06:02,320
+This is from a Saturday last June, I think.
+
+141
+00:06:02,320 --> 00:06:03,880
+I think it was noon.
+
+142
+00:06:03,880 --> 00:06:05,680
+And so we had about a million log
+
+143
+00:06:05,680 --> 00:06:08,440
+events in that time, which is around 300 per second.
+
+144
+00:06:08,440 --> 00:06:10,800
+And I think that this is relatively moderate scale.
+
+145
+00:06:11,800 --> 00:06:14,760
+I think there are places that have much higher scale than this.
+
+146
+00:06:14,760 --> 00:06:17,520
+And it's certainly not our peak traffic during the week.
+
+147
+00:06:17,520 --> 00:06:19,400
+And so you can imagine these logs are coming
+
+148
+00:06:19,400 --> 00:06:21,080
+from all over our infrastructure,
+
+149
+00:06:21,080 --> 00:06:22,560
+from different applications.
+
+150
+00:06:22,560 --> 00:06:25,960
+They're all centralized in a place we use Loggly.
+
+151
+00:06:25,960 --> 00:06:28,160
+And it's a searchable, structured stream.
+
+152
+00:06:28,160 --> 00:06:31,600
+But the problem is, at a certain scale,
+
+153
+00:06:31,600 --> 00:06:34,440
+it becomes really difficult to focus
+
+154
+00:06:34,440 --> 00:06:37,760
+on one particular workflow, so seeing the logs
+
+155
+00:06:37,760 --> 00:06:39,080
+from one workflow.
+
+156
+00:06:39,080 --> 00:06:41,560
+And when I say workflow, what I'm talking about
+
+157
+00:06:41,560 --> 00:06:43,880
+is one execution of your web app,
+
+158
+00:06:43,880 --> 00:06:46,640
+whether that's a request response cycle or an async
+
+159
+00:06:46,640 --> 00:06:47,600
+workflow.
+
+160
+00:06:47,600 --> 00:06:49,760
+There's a lot of components that are probably
+
+161
+00:06:49,760 --> 00:06:52,600
+important to see in the logs of a workflow,
+
+162
+00:06:52,600 --> 00:06:55,400
+request response metadata, like status code, anything
+
+163
+00:06:55,400 --> 00:06:56,920
+that your application is logging.
+
+164
+00:06:56,920 --> 00:06:58,380
+But then there's a lot of other parts
+
+165
+00:06:58,380 --> 00:07:01,040
+that could be equally important, like if you're using NGINX
+
+166
+00:07:01,040 --> 00:07:03,000
+and you want to see the proxy jumps,
+
+167
+00:07:03,000 --> 00:07:06,360
+or if you're publishing async tasks from your requests,
+
+168
+00:07:06,360 --> 00:07:07,920
+or in a service-oriented architecture,
+
+169
+00:07:07,920 --> 00:07:10,280
+if you're calling into your other services.
+
+170
+00:07:10,280 --> 00:07:12,200
+These are all things that you want to see
+
+171
+00:07:12,200 --> 00:07:15,360
+as part of the components of a single workflow,
+
+172
+00:07:15,360 --> 00:07:17,120
+like request response cycle.
+
+173
+00:07:17,120 --> 00:07:19,600
+But at scale, it becomes really difficult
+
+174
+00:07:19,600 --> 00:07:21,240
+to find these in the logs.
+
+175
+00:07:21,240 --> 00:07:23,000
+You can't rely on timestamps.
+
+176
+00:07:23,000 --> 00:07:24,600
+First of all, timestamps are not always
+
+177
+00:07:24,600 --> 00:07:25,920
+reliable in a distributed system.
+
+178
+00:07:25,920 --> 00:07:27,040
+You can have clock drift.
+
+179
+00:07:27,040 --> 00:07:29,560
+But even if they were reliable, a lot of things
+
+180
+00:07:29,560 --> 00:07:30,920
+happen in the same instant.
+
+181
+00:07:30,920 --> 00:07:33,200
+And trying to correlate all of the logs
+
+182
+00:07:33,200 --> 00:07:35,420
+for a particular workflow becomes this needle
+
+183
+00:07:35,420 --> 00:07:37,760
+in a haystack problem.
+
+184
+00:07:37,760 --> 00:07:40,840
+So the common approach that a lot of APM and tracing tools
+
+185
+00:07:40,840 --> 00:07:44,800
+use is to inject a tracing ID into the logs.
+
+186
+00:07:44,800 --> 00:07:49,520
+So this is basically a string that is unique per execution.
+
+187
+00:07:49,520 --> 00:07:51,800
+And it's generated by something.
+
+188
+00:07:51,800 --> 00:07:53,420
+And it's injected into all of the logs.
+
+189
+00:07:53,420 --> 00:07:56,160
+And the idea is, if you search your logs
+
+190
+00:07:56,160 --> 00:07:59,040
+for this particular ID, you get all of the logs
+
+191
+00:07:59,040 --> 00:08:02,480
+for that workflow and only those logs, nothing else.
+
+192
+00:08:02,480 --> 00:08:04,640
+And the idea is, if you can find one log,
+
+193
+00:08:04,640 --> 00:08:08,020
+you can find all of them for a particular workflow.
+
+194
+00:08:08,020 --> 00:08:09,540
+It looks something like this.
+
+195
+00:08:09,540 --> 00:08:11,320
+This is just an example to illustrate
+
+196
+00:08:11,320 --> 00:08:12,480
+what I'm talking about.
+
+197
+00:08:12,480 --> 00:08:14,520
+I've highlighted the tracing ID here.
+
+198
+00:08:14,520 --> 00:08:15,400
+It's xyz.
+
+199
+00:08:15,400 --> 00:08:17,520
+Of course, in production, it would be like a UUID
+
+200
+00:08:17,520 --> 00:08:19,280
+or something that's actually globally unique.
+
+201
+00:08:19,280 --> 00:08:21,000
+And the idea is, if I search for xyz,
+
+202
+00:08:21,000 --> 00:08:22,360
+I would see only these logs.
+
+203
+00:08:22,360 --> 00:08:24,480
+So we have like nginx logs.
+
+204
+00:08:24,480 --> 00:08:27,040
+We have some application logging, some celery task
+
+205
+00:08:27,040 --> 00:08:27,840
+logging.
+
+206
+00:08:27,840 --> 00:08:29,340
+And this is really useful because it
+
+207
+00:08:29,340 --> 00:08:32,720
+allows you to just dig into a particular workflow.
+
+208
+00:08:32,720 --> 00:08:36,720
+Well, we don't actually need any APM tooling to do this.
+
+209
+00:08:36,720 --> 00:08:39,680
+We can just do it with the Python standard library.
+
+210
+00:08:39,680 --> 00:08:42,840
+We'll use a logging filter and thread local storage.
+
+211
+00:08:42,840 --> 00:08:45,440
+Logging filter is a tool that the standard library
+
+212
+00:08:45,440 --> 00:08:48,840
+provides to optionally filter out logs
+
+213
+00:08:48,840 --> 00:08:51,520
+from reaching your handler or to alter log records
+
+214
+00:08:51,520 --> 00:08:53,680
+as they come through before they reach the handler.
+
+215
+00:08:53,680 --> 00:08:56,680
+And we're going to use the latter functionality.
+
+216
+00:08:56,680 --> 00:08:59,240
+And then thread local storage is basically
+
+217
+00:08:59,240 --> 00:09:00,840
+just like an attribute bag that you
+
+218
+00:09:00,840 --> 00:09:03,680
+can use that is safe to access within a thread
+
+219
+00:09:03,680 --> 00:09:07,400
+and specific to a thread, which is important for web apps.
+
+220
+00:09:07,400 --> 00:09:11,040
+So our production implementation looks almost identical to this.
+
+221
+00:09:11,040 --> 00:09:13,200
+It's very similar.
+
+222
+00:09:13,200 --> 00:09:15,120
+This is the logging filter that we use.
+
+223
+00:09:15,120 --> 00:09:18,480
+So the tracing ID is being retrieved
+
+224
+00:09:18,480 --> 00:09:20,040
+from thread local storage.
+
+225
+00:09:20,040 --> 00:09:23,080
+And then it's being added into the log records dunderdict.
+
+226
+00:09:23,080 --> 00:09:25,280
+And that makes it accessible in the formatting string.
+
+227
+00:09:25,280 --> 00:09:28,000
+So you just have to have tracing ID in the formatting string,
+
+228
+00:09:28,000 --> 00:09:29,300
+and it will show up there.
+
+229
+00:09:29,300 --> 00:09:31,380
+And it's really simple to do this.
+
+230
+00:09:31,380 --> 00:09:34,500
+And it creates a ton of value for when
+
+231
+00:09:34,500 --> 00:09:35,900
+you're looking at logs.
+
+232
+00:09:35,900 --> 00:09:38,500
+Now, the only complexity here is really managing
+
+233
+00:09:38,500 --> 00:09:39,860
+the thread local storage.
+
+234
+00:09:39,860 --> 00:09:44,140
+But you can do that pretty easily in a web app.
+
+235
+00:09:44,140 --> 00:09:45,740
+It kind of depends on what you're using.
+
+236
+00:09:45,740 --> 00:09:46,700
+We use Django.
+
+237
+00:09:46,700 --> 00:09:48,900
+So we have a middleware that sets the tracing ID
+
+238
+00:09:48,900 --> 00:09:51,100
+as a request comes in and clears it as they come out.
+
+239
+00:09:51,100 --> 00:09:53,940
+If you use Flask, you already have this with the request
+
+240
+00:09:53,940 --> 00:09:55,540
+object that you can import.
+
+241
+00:09:55,540 --> 00:09:59,260
+But thread local storage works in all frameworks.
+
+242
+00:09:59,260 --> 00:10:02,380
+So one interesting extension to this
+
+243
+00:10:02,380 --> 00:10:05,660
+is if your web requests publish celery tasks, which
+
+244
+00:10:05,660 --> 00:10:08,620
+is pretty common, it gets a little tricky
+
+245
+00:10:08,620 --> 00:10:12,420
+to get this ID passed down into your celery workflows.
+
+246
+00:10:12,420 --> 00:10:13,800
+We wrote a blog post about it.
+
+247
+00:10:13,800 --> 00:10:15,340
+I don't have time to get into all the details now.
+
+248
+00:10:15,340 --> 00:10:17,780
+But the basic idea is to put the tracing ID as part
+
+249
+00:10:17,780 --> 00:10:19,340
+of your celery task IDs.
+
+250
+00:10:19,340 --> 00:10:20,880
+If you can find me after the talk,
+
+251
+00:10:20,880 --> 00:10:23,660
+I can tell you all about how we did that.
+
+252
+00:10:23,660 --> 00:10:25,940
+So once you've enabled this tracing behavior
+
+253
+00:10:25,940 --> 00:10:29,300
+for your logging, it makes it very useful
+
+254
+00:10:29,300 --> 00:10:31,100
+to understand at a granular level
+
+255
+00:10:31,100 --> 00:10:35,420
+how your application is behaving per execution.
+
+256
+00:10:35,420 --> 00:10:39,340
+But logging isn't great for looking
+
+257
+00:10:39,340 --> 00:10:41,500
+at systemic or aggregate behavior.
+
+258
+00:10:41,500 --> 00:10:44,260
+You can kind of get some of it from structured logs.
+
+259
+00:10:44,260 --> 00:10:46,300
+But logs tend to be really hard to monitor.
+
+260
+00:10:46,300 --> 00:10:48,820
+You end up with a lot of false positives, trouble
+
+261
+00:10:48,820 --> 00:10:51,980
+with parsing log formats that change.
+
+262
+00:10:51,980 --> 00:10:53,300
+There's a lot of issues with it.
+
+263
+00:10:53,300 --> 00:10:55,780
+And another kind of thing that people don't really
+
+264
+00:10:55,780 --> 00:10:58,020
+think about as much is logs are very expensive.
+
+265
+00:10:58,020 --> 00:11:01,380
+And the cost model of logs sort of roughly scales linearly
+
+266
+00:11:01,380 --> 00:11:02,140
+with your volume.
+
+267
+00:11:02,140 --> 00:11:04,780
+As you get more requests, you're going to be storing more logs.
+
+268
+00:11:04,780 --> 00:11:08,460
+And it's not great to rely on that just for monitoring.
+
+269
+00:11:08,460 --> 00:11:11,100
+So to fix these issues, we have metrics.
+
+270
+00:11:11,100 --> 00:11:13,820
+And metrics are also pretty simple conceptually.
+
+271
+00:11:13,820 --> 00:11:16,360
+It's just a measurement of something that you care about.
+
+272
+00:11:16,360 --> 00:11:17,980
+Where metrics get interesting is when
+
+273
+00:11:17,980 --> 00:11:20,140
+you go past the basic metrics.
+
+274
+00:11:20,140 --> 00:11:22,780
+Now, the basic metrics are basically these three.
+
+275
+00:11:22,780 --> 00:11:24,700
+These are the big three that most web apps are
+
+276
+00:11:24,700 --> 00:11:26,460
+going to be collecting.
+
+277
+00:11:26,460 --> 00:11:27,540
+So you have error rate.
+
+278
+00:11:27,540 --> 00:11:29,940
+How many 5XX responses are you sending back
+
+279
+00:11:29,940 --> 00:11:30,980
+to your clients?
+
+280
+00:11:30,980 --> 00:11:31,740
+Response time.
+
+281
+00:11:31,740 --> 00:11:34,260
+How long does it take to actually respond to requests?
+
+282
+00:11:34,260 --> 00:11:35,100
+And volume.
+
+283
+00:11:35,100 --> 00:11:39,300
+Do you have a giant spike in volume or a drop in volume?
+
+284
+00:11:39,300 --> 00:11:41,260
+If any of these metrics are going out of whack,
+
+285
+00:11:41,260 --> 00:11:42,420
+then someone's getting paged.
+
+286
+00:11:42,420 --> 00:11:47,580
+And people are seeing pages like this one from Reddit.
+
+287
+00:11:47,580 --> 00:11:50,900
+At Rover, these metrics were not quite enough to us
+
+288
+00:11:50,900 --> 00:11:52,500
+to understand some of the problems
+
+289
+00:11:52,500 --> 00:11:53,860
+that we were seeing at scale.
+
+290
+00:11:53,860 --> 00:11:56,140
+In particular, we were having a lot of issues
+
+291
+00:11:56,140 --> 00:11:58,820
+with our interactions with our database, which
+
+292
+00:11:58,820 --> 00:11:59,980
+is a shared resource.
+
+293
+00:11:59,980 --> 00:12:02,540
+So it's very important that we utilize that
+
+294
+00:12:02,540 --> 00:12:04,500
+in an effective way.
+
+295
+00:12:04,500 --> 00:12:06,440
+And this is kind of a common problem
+
+296
+00:12:06,440 --> 00:12:07,660
+in frameworks like Django.
+
+297
+00:12:07,660 --> 00:12:10,940
+Django uses an ORM, or an Object Relational Mapper,
+
+298
+00:12:10,940 --> 00:12:13,300
+which allows you to interact with Python code
+
+299
+00:12:13,300 --> 00:12:15,200
+and have SQL queries issued on your behalf.
+
+300
+00:12:15,200 --> 00:12:17,680
+It's basically an abstraction over SQL.
+
+301
+00:12:17,680 --> 00:12:19,180
+And it's common in those frameworks
+
+302
+00:12:19,180 --> 00:12:21,480
+to introduce suboptimal interactions
+
+303
+00:12:21,480 --> 00:12:23,300
+with your database layer.
+
+304
+00:12:23,460 --> 00:12:25,620
+We were seeing a lot of this as we scaled.
+
+305
+00:12:25,620 --> 00:12:27,380
+It's a problem that's pretty pernicious,
+
+306
+00:12:27,380 --> 00:12:31,860
+because we have lots of places where we execute queries.
+
+307
+00:12:31,860 --> 00:12:33,260
+And we have a complex web app.
+
+308
+00:12:33,260 --> 00:12:35,060
+So it was really important for us
+
+309
+00:12:35,060 --> 00:12:38,300
+to understand how we were issuing queries.
+
+310
+00:12:38,300 --> 00:12:41,780
+So we collected a class of metrics, query metrics.
+
+311
+00:12:41,780 --> 00:12:45,580
+And in particular, we collect in production
+
+312
+00:12:45,580 --> 00:12:49,540
+the distribution of the number of queries issued
+
+313
+00:12:49,540 --> 00:12:51,860
+and the total time spent querying the database
+
+314
+00:12:51,900 --> 00:12:54,340
+per request for all of our views
+
+315
+00:12:54,340 --> 00:12:57,540
+and per execution for all of our celery tasks.
+
+316
+00:12:57,540 --> 00:13:00,920
+So this provides us a really useful granular view
+
+317
+00:13:00,920 --> 00:13:03,600
+of how our application is behaving and performing
+
+318
+00:13:03,600 --> 00:13:06,840
+with respect to our database all over the place.
+
+319
+00:13:06,840 --> 00:13:08,340
+We use statsd to do this.
+
+320
+00:13:08,340 --> 00:13:11,240
+Statsd is a common metrics model
+
+321
+00:13:11,240 --> 00:13:13,120
+in a lot of Python applications.
+
+322
+00:13:13,120 --> 00:13:15,380
+Basically, you pre-aggregate metrics
+
+323
+00:13:15,380 --> 00:13:18,060
+on all of the servers or containers in your infrastructure
+
+324
+00:13:18,060 --> 00:13:20,220
+and periodically flush them to a backend,
+
+325
+00:13:20,220 --> 00:13:22,260
+which is Datadog in this case.
+
+326
+00:13:22,260 --> 00:13:25,300
+In a moment, I'm gonna show you how we use these metrics
+
+327
+00:13:25,300 --> 00:13:26,540
+to power some dashboards
+
+328
+00:13:26,540 --> 00:13:28,380
+and achieve some big performance wins.
+
+329
+00:13:28,380 --> 00:13:29,740
+But first, I wanna talk really quickly
+
+330
+00:13:29,740 --> 00:13:30,780
+about the implementation,
+
+331
+00:13:30,780 --> 00:13:32,740
+because I think it's kind of interesting.
+
+332
+00:13:33,700 --> 00:13:35,580
+The high level idea is really simple.
+
+333
+00:13:35,580 --> 00:13:37,940
+You just need to wrap your database queries
+
+334
+00:13:37,940 --> 00:13:42,020
+and you need to have a hook where you issue queries.
+
+335
+00:13:42,020 --> 00:13:44,620
+In Django 111, we do this by extending
+
+336
+00:13:44,620 --> 00:13:47,260
+the built-in MySQL database engine
+
+337
+00:13:47,260 --> 00:13:50,380
+and just overriding the execute method on the cursor.
+
+338
+00:13:50,380 --> 00:13:52,100
+In Django 2, this gets a lot easier.
+
+339
+00:13:52,100 --> 00:13:55,420
+It's supported as a first party API
+
+340
+00:13:55,420 --> 00:13:58,460
+using the connection.execute wrapper.
+
+341
+00:13:59,780 --> 00:14:01,540
+The interesting part of this implementation
+
+342
+00:14:01,540 --> 00:14:05,100
+is really around how we get the per request granularity
+
+343
+00:14:05,100 --> 00:14:08,140
+or the per execution granularity.
+
+344
+00:14:08,140 --> 00:14:09,480
+The way that we do that is,
+
+345
+00:14:09,480 --> 00:14:13,140
+instead of omitting a metric after every query,
+
+346
+00:14:13,140 --> 00:14:15,540
+we actually remember the total number of queries
+
+347
+00:14:15,540 --> 00:14:16,540
+across the request
+
+348
+00:14:16,540 --> 00:14:19,420
+and the total time spent querying the database
+
+349
+00:14:19,420 --> 00:14:21,500
+across the request or task.
+
+350
+00:14:21,500 --> 00:14:24,940
+And then at the end, we emit a single histogram,
+
+351
+00:14:24,940 --> 00:14:29,220
+which is Datadog's version of a distribution, basically.
+
+352
+00:14:29,220 --> 00:14:33,500
+And that gives us the distribution of query count
+
+353
+00:14:33,500 --> 00:14:36,020
+and query time per request.
+
+354
+00:14:36,020 --> 00:14:37,840
+And we'll see an example of that
+
+355
+00:14:37,840 --> 00:14:40,540
+on some graphs in just a second.
+
+356
+00:14:40,540 --> 00:14:42,660
+I should also mention that we thought
+
+357
+00:14:42,660 --> 00:14:43,980
+this was a pretty common use case
+
+358
+00:14:44,260 --> 00:14:46,820
+to have this capability to do that level of granularity
+
+359
+00:14:46,820 --> 00:14:47,660
+for metrics.
+
+360
+00:14:47,660 --> 00:14:50,300
+So we wrote a library to make it helpful.
+
+361
+00:14:50,300 --> 00:14:52,140
+It's a library that's specific to Datadog,
+
+362
+00:14:52,140 --> 00:14:54,100
+but it should be easy to extend
+
+363
+00:14:54,100 --> 00:14:56,060
+for any protocol of stastity
+
+364
+00:14:56,060 --> 00:14:58,000
+that supports tagging your metrics.
+
+365
+00:14:59,260 --> 00:15:01,780
+So we talked about this particular set of metrics
+
+366
+00:15:01,780 --> 00:15:02,780
+that have been really useful to us.
+
+367
+00:15:02,780 --> 00:15:06,780
+So I wanna talk now about how we put these into dashboards
+
+368
+00:15:06,780 --> 00:15:08,380
+in a useful way.
+
+369
+00:15:08,380 --> 00:15:11,220
+So our high level dashboarding strategy
+
+370
+00:15:11,220 --> 00:15:14,060
+is we wanna make dashboards very easy to visualize
+
+371
+00:15:14,060 --> 00:15:18,140
+and look for visual diffs or trends over time
+
+372
+00:15:18,140 --> 00:15:20,180
+that make it clear what's going on
+
+373
+00:15:20,180 --> 00:15:22,620
+for whomever is actually looking at the dashboard,
+
+374
+00:15:22,620 --> 00:15:24,820
+even if they weren't involved in making it.
+
+375
+00:15:24,820 --> 00:15:27,900
+Another philosophy that we have is
+
+376
+00:15:27,900 --> 00:15:31,540
+we think that documentation should live as closely
+
+377
+00:15:31,540 --> 00:15:34,000
+to the tool that's being documented as possible.
+
+378
+00:15:34,000 --> 00:15:36,340
+So we actually put on our dashboards,
+
+379
+00:15:36,340 --> 00:15:38,380
+what are you looking at in each of these charts,
+
+380
+00:15:38,380 --> 00:15:40,620
+and what are the things you should be looking for
+
+381
+00:15:40,620 --> 00:15:42,020
+in terms of what the lines are doing.
+
+382
+00:15:42,020 --> 00:15:44,260
+So even developers who weren't involved
+
+383
+00:15:44,260 --> 00:15:46,160
+in making the dashboards can get an understanding
+
+384
+00:15:46,160 --> 00:15:47,440
+of what they're seeing.
+
+385
+00:15:47,440 --> 00:15:50,460
+And lastly, when we're talking about dashboarding,
+
+386
+00:15:50,460 --> 00:15:52,220
+we like to share examples or case studies
+
+387
+00:15:52,220 --> 00:15:54,180
+of when the dashboards have been useful for us.
+
+388
+00:15:54,180 --> 00:15:55,620
+And so that's what I wanna do right now.
+
+389
+00:15:55,620 --> 00:15:57,260
+I wanna go through a few examples.
+
+390
+00:15:57,260 --> 00:15:58,460
+And in each of these examples,
+
+391
+00:15:58,460 --> 00:16:00,940
+we're going to look at what were we looking for
+
+392
+00:16:00,940 --> 00:16:02,180
+on this particular graph,
+
+393
+00:16:02,180 --> 00:16:05,140
+like what were we graphing and what were we looking for?
+
+394
+00:16:05,140 --> 00:16:07,500
+What did we see that made us take an action?
+
+395
+00:16:07,500 --> 00:16:08,700
+What action did we take?
+
+396
+00:16:08,700 --> 00:16:10,180
+And then what was the result?
+
+397
+00:16:11,300 --> 00:16:14,160
+So this first graph is a graph
+
+398
+00:16:14,160 --> 00:16:17,920
+of the median number of queries issued per request
+
+399
+00:16:17,920 --> 00:16:19,300
+for a particular view.
+
+400
+00:16:19,300 --> 00:16:22,180
+So this is that query count metric I was talking about.
+
+401
+00:16:22,180 --> 00:16:23,640
+So for each of these time slices,
+
+402
+00:16:23,640 --> 00:16:25,600
+basically it's saying within that time,
+
+403
+00:16:25,600 --> 00:16:28,220
+the median number of queries that any request
+
+404
+00:16:28,220 --> 00:16:30,340
+to that view issued was this number.
+
+405
+00:16:30,340 --> 00:16:32,020
+So about 200 in this case.
+
+406
+00:16:32,020 --> 00:16:33,540
+Now for this particular view,
+
+407
+00:16:33,540 --> 00:16:35,260
+it wasn't really supposed to be doing much.
+
+408
+00:16:35,260 --> 00:16:37,500
+And so what we were looking for is views
+
+409
+00:16:37,500 --> 00:16:39,800
+where there's a very high number of queries per request
+
+410
+00:16:39,800 --> 00:16:41,140
+or a variable number.
+
+411
+00:16:41,140 --> 00:16:44,320
+That's usually indicative of the N plus one query problem,
+
+412
+00:16:44,320 --> 00:16:47,660
+which is a common problem in ORM frameworks.
+
+413
+00:16:47,660 --> 00:16:50,000
+The idea is you end up issuing N queries
+
+414
+00:16:50,000 --> 00:16:52,880
+to fetch N rows instead of one query.
+
+415
+00:16:52,880 --> 00:16:55,920
+Very common, easy to introduce in frameworks like Django.
+
+416
+00:16:55,920 --> 00:16:57,420
+So we look for this on the graph.
+
+417
+00:16:57,420 --> 00:17:00,040
+We see a view that is not supposed to be doing much
+
+418
+00:17:00,040 --> 00:17:01,920
+that's issuing a lot of queries.
+
+419
+00:17:01,920 --> 00:17:05,040
+And when we were able to find the N plus one query
+
+420
+00:17:05,040 --> 00:17:08,800
+with our local debug toolbar, and we eliminated it,
+
+421
+00:17:08,800 --> 00:17:12,440
+you can see about a 75% drop in queries per request.
+
+422
+00:17:12,440 --> 00:17:14,760
+So that was a big win for us.
+
+423
+00:17:14,760 --> 00:17:18,560
+Another common problem in any framework
+
+424
+00:17:18,560 --> 00:17:21,280
+that's using MySQL or anytime you're backed
+
+425
+00:17:21,280 --> 00:17:23,680
+by a relational database is if you have a query
+
+426
+00:17:23,680 --> 00:17:27,640
+that grows in time linear with the growth of a table.
+
+427
+00:17:27,640 --> 00:17:28,480
+So that's bad.
+
+428
+00:17:28,480 --> 00:17:30,600
+That's usually an indication that you're missing an index.
+
+429
+00:17:30,600 --> 00:17:33,640
+So what this graph is showing is very similar
+
+430
+00:17:33,640 --> 00:17:35,760
+to the last one, but this is the median amount
+
+431
+00:17:35,760 --> 00:17:38,500
+of time spent querying the database per request
+
+432
+00:17:38,500 --> 00:17:39,660
+for a particular view.
+
+433
+00:17:39,660 --> 00:17:41,780
+So it's query time per request.
+
+434
+00:17:41,780 --> 00:17:44,100
+And when we look at several months of data,
+
+435
+00:17:44,100 --> 00:17:46,940
+if we see this trend of query time per request going up
+
+436
+00:17:46,940 --> 00:17:49,580
+kind of at a linear rate, that's an indication to us
+
+437
+00:17:49,580 --> 00:17:51,300
+that there's like a missing index.
+
+438
+00:17:51,300 --> 00:17:52,620
+And in this case, there was.
+
+439
+00:17:52,620 --> 00:17:54,860
+And when we added the index, we saw that the query time
+
+440
+00:17:54,860 --> 00:17:57,040
+per request dropped very significantly.
+
+441
+00:17:57,040 --> 00:17:59,420
+And most importantly, it's no longer trending up
+
+442
+00:17:59,420 --> 00:18:00,260
+at the same rate.
+
+443
+00:18:00,260 --> 00:18:02,400
+So this was really important for us.
+
+444
+00:18:03,500 --> 00:18:06,520
+And then one last example, this is a little bit different
+
+445
+00:18:06,520 --> 00:18:08,840
+from our previous metrics.
+
+446
+00:18:09,960 --> 00:18:11,840
+Once we had a hook where we were emitting
+
+447
+00:18:11,840 --> 00:18:14,560
+these query metrics, we started to think about
+
+448
+00:18:14,560 --> 00:18:16,740
+what else might be useful around the context
+
+449
+00:18:16,740 --> 00:18:17,960
+of a query to emit.
+
+450
+00:18:17,960 --> 00:18:20,120
+And one of the metrics that we thought was useful
+
+451
+00:18:20,120 --> 00:18:22,320
+was anytime there's one slow query,
+
+452
+00:18:22,320 --> 00:18:24,280
+we emit a metric, a counter,
+
+453
+00:18:24,280 --> 00:18:26,320
+and basically some metadata about it.
+
+454
+00:18:26,320 --> 00:18:30,360
+So what you're seeing on this slide is a graph
+
+455
+00:18:30,360 --> 00:18:33,360
+of a total number of slow queries, basically.
+
+456
+00:18:33,360 --> 00:18:35,400
+So queries over a threshold amount of seconds.
+
+457
+00:18:35,400 --> 00:18:36,840
+I think it's two in this case.
+
+458
+00:18:36,840 --> 00:18:38,900
+And you can see that there are quite a few of them.
+
+459
+00:18:38,900 --> 00:18:41,520
+And it's broken down by all of the views
+
+460
+00:18:41,520 --> 00:18:42,360
+in our infrastructure.
+
+461
+00:18:42,360 --> 00:18:45,080
+So you can see that we have like kind of a,
+
+462
+00:18:45,080 --> 00:18:46,720
+I don't know how easy it is to see on this graph
+
+463
+00:18:46,720 --> 00:18:49,000
+with the colors, but basically there were a handful
+
+464
+00:18:49,000 --> 00:18:52,640
+of views that were issuing a large number of slow queries.
+
+465
+00:18:52,640 --> 00:18:54,920
+And when we dug into it, we actually found
+
+466
+00:18:54,920 --> 00:18:56,920
+that it was all coming from one slow query
+
+467
+00:18:56,920 --> 00:18:58,760
+that was on a very hot code path.
+
+468
+00:18:58,760 --> 00:19:02,360
+And when we eliminated it, we saw not only a huge drop
+
+469
+00:19:02,360 --> 00:19:03,760
+in the total number of slow queries,
+
+470
+00:19:03,760 --> 00:19:06,200
+but we actually saw our database,
+
+471
+00:19:06,200 --> 00:19:08,040
+master database CPU utilization
+
+472
+00:19:08,040 --> 00:19:10,720
+and our IOPS drop like very noticeably.
+
+473
+00:19:10,720 --> 00:19:14,000
+So this one code change was really significant for us.
+
+474
+00:19:15,360 --> 00:19:18,880
+So I wanna wrap it up with speaking,
+
+475
+00:19:18,880 --> 00:19:20,480
+taking a step back and talking about
+
+476
+00:19:20,480 --> 00:19:23,880
+some higher level observability points.
+
+477
+00:19:23,880 --> 00:19:27,200
+So there's a saying that goes something like,
+
+478
+00:19:27,200 --> 00:19:28,640
+if you build it, they will come.
+
+479
+00:19:28,640 --> 00:19:31,080
+And the idea is like, if you build tools that are useful,
+
+480
+00:19:31,080 --> 00:19:32,520
+people are going to use them.
+
+481
+00:19:32,520 --> 00:19:35,920
+And I think that that only captures half the battle.
+
+482
+00:19:35,920 --> 00:19:38,080
+The other half is you have to document
+
+483
+00:19:38,080 --> 00:19:40,480
+and evangelize those tools in some way.
+
+484
+00:19:40,480 --> 00:19:43,360
+People aren't just going to use a tool that you build
+
+485
+00:19:43,360 --> 00:19:44,360
+just because it's really cool
+
+486
+00:19:44,360 --> 00:19:45,720
+and you know that it's really cool.
+
+487
+00:19:45,720 --> 00:19:48,600
+So one example at Rover that we have is a venue
+
+488
+00:19:48,600 --> 00:19:50,600
+for doing this where every two weeks
+
+489
+00:19:50,600 --> 00:19:53,920
+we have an informal gathering of the broader tech team
+
+490
+00:19:53,920 --> 00:19:56,440
+where anyone can present on some tech that they're working on
+
+491
+00:19:56,440 --> 00:19:57,640
+or some tools that they have.
+
+492
+00:19:57,640 --> 00:19:59,480
+And that's been a really useful venue for us
+
+493
+00:19:59,480 --> 00:20:02,880
+to evangelize these tools internally.
+
+494
+00:20:02,880 --> 00:20:07,480
+So as an SRE team, whenever we think that there is a metric
+
+495
+00:20:07,480 --> 00:20:10,600
+that would be widely applicable to all of our developers,
+
+496
+00:20:10,600 --> 00:20:14,360
+we actually go and we go out of our way
+
+497
+00:20:14,360 --> 00:20:17,560
+to emit this metric in a way that we don't have
+
+498
+00:20:17,560 --> 00:20:20,720
+to have our developers go instrument their code themselves.
+
+499
+00:20:20,720 --> 00:20:23,120
+So we find a way, for example, with these query metrics
+
+500
+00:20:23,120 --> 00:20:24,840
+where we don't have to have all of our developers
+
+501
+00:20:24,840 --> 00:20:27,200
+go instrument their code in order to get
+
+502
+00:20:28,200 --> 00:20:29,040
+the metrics submitted.
+
+503
+00:20:29,040 --> 00:20:29,880
+This is really important
+
+504
+00:20:29,880 --> 00:20:32,880
+because it makes the observability culture frictionless
+
+505
+00:20:32,880 --> 00:20:35,800
+and it makes developers much more likely to buy off
+
+506
+00:20:35,800 --> 00:20:38,080
+on the tools that you're making
+
+507
+00:20:38,080 --> 00:20:40,640
+and it empowers all of your developers as well.
+
+508
+00:20:41,960 --> 00:20:45,280
+We also think that it's much better to have a metric
+
+509
+00:20:45,280 --> 00:20:48,120
+and not need it than need one and not have it
+
+510
+00:20:48,120 --> 00:20:50,120
+because you can't retroactively measure something
+
+511
+00:20:50,120 --> 00:20:52,400
+that you didn't realize was going to be useful.
+
+512
+00:20:52,400 --> 00:20:55,040
+So we budget a lot for our custom metrics
+
+513
+00:20:55,040 --> 00:20:57,360
+and we err always on the side of granularity
+
+514
+00:20:57,360 --> 00:20:59,400
+in terms of whether we think a metric
+
+515
+00:20:59,400 --> 00:21:01,560
+is going to be useful for us.
+
+516
+00:21:01,560 --> 00:21:06,440
+And the last thing I wanna say is you can think of SRE
+
+517
+00:21:06,440 --> 00:21:10,960
+as this reactive harm reduction team
+
+518
+00:21:10,960 --> 00:21:13,000
+where you go shake your fist at developers
+
+519
+00:21:13,000 --> 00:21:14,720
+for introducing performance problems
+
+520
+00:21:14,720 --> 00:21:18,520
+or have these kind of confrontational
+
+521
+00:21:18,520 --> 00:21:22,360
+or antagonistic standoffs, which sometimes is what happens.
+
+522
+00:21:22,360 --> 00:21:25,040
+But I think it's much more productive to think of SRE
+
+523
+00:21:25,080 --> 00:21:27,640
+as a developer tooling platform,
+
+524
+00:21:27,640 --> 00:21:29,840
+which means that you're building tools for developers,
+
+525
+00:21:29,840 --> 00:21:31,920
+you're building tools to empower developers.
+
+526
+00:21:31,920 --> 00:21:33,360
+The developers are like the customers
+
+527
+00:21:33,360 --> 00:21:34,640
+of the things that we're building.
+
+528
+00:21:34,640 --> 00:21:37,600
+We think that not only has this made our engineering culture
+
+529
+00:21:37,600 --> 00:21:38,920
+like more friendly and inclusive,
+
+530
+00:21:38,920 --> 00:21:43,920
+but it's also helped us scale the SRE tooling we have
+
+531
+00:21:44,080 --> 00:21:45,520
+with a pretty large organization
+
+532
+00:21:45,520 --> 00:21:48,160
+while having a fairly small SRE team.
+
+533
+00:21:49,240 --> 00:21:51,480
+So that's all I have, thank you very much.
+
+534
+00:21:51,880 --> 00:21:54,880
+We have some time for questions.
+
+535
+00:21:54,880 --> 00:21:55,920
+If anybody has any questions,
+
+536
+00:21:55,920 --> 00:21:58,440
+there are microphones set up in the back.
+
+537
+00:21:58,440 --> 00:22:00,000
+If you go to those microphones
+
+538
+00:22:00,000 --> 00:22:02,000
+so that everybody can hear you, that'd be great.
+
+539
+00:22:04,600 --> 00:22:06,920
+Thank you for the presentation, that was wonderful.
+
+540
+00:22:06,920 --> 00:22:09,920
+I'm curious if you have any advice for how to make sure
+
+541
+00:22:09,920 --> 00:22:12,640
+that these tools that you create age well.
+
+542
+00:22:12,640 --> 00:22:14,800
+I'm not sure if you have any advice
+
+543
+00:22:14,800 --> 00:22:19,560
+for how to make sure that these tools that you create age well.
+
+544
+00:22:19,560 --> 00:22:21,440
+I found that when we create them,
+
+545
+00:22:21,440 --> 00:22:23,200
+they're really useful for the team
+
+546
+00:22:23,200 --> 00:22:25,280
+that we introduce them to,
+
+547
+00:22:25,280 --> 00:22:28,920
+and then the team changes or a new feature is added
+
+548
+00:22:28,920 --> 00:22:32,400
+and it breaks and then they lose faith.
+
+549
+00:22:32,400 --> 00:22:33,520
+Yeah, that's a great question.
+
+550
+00:22:33,520 --> 00:22:35,520
+I think it actually boils down to a similar question
+
+551
+00:22:35,520 --> 00:22:37,600
+about APIs that you develop.
+
+552
+00:22:37,600 --> 00:22:39,440
+When you develop an API, how do you know
+
+553
+00:22:39,440 --> 00:22:41,960
+that you're solving for the right problem,
+
+554
+00:22:41,960 --> 00:22:45,960
+that the API isn't going to solve for a problem that,
+
+555
+00:22:45,960 --> 00:22:48,000
+or like you have a problem in the future
+
+556
+00:22:48,440 --> 00:22:49,560
+and the API doesn't cover it.
+
+557
+00:22:49,560 --> 00:22:53,080
+So I think treating the tools like an API platform,
+
+558
+00:22:53,080 --> 00:22:54,080
+so when you're developing,
+
+559
+00:22:54,080 --> 00:22:58,080
+trying to make things generic, as generic as possible.
+
+560
+00:22:58,080 --> 00:23:00,720
+For us, queries is fairly generic for Django
+
+561
+00:23:00,720 --> 00:23:02,560
+because we issue queries from many different contexts,
+
+562
+00:23:02,560 --> 00:23:05,080
+but it all breaks down to interaction with the database.
+
+563
+00:23:05,080 --> 00:23:08,000
+So we try to avoid building any tools
+
+564
+00:23:08,000 --> 00:23:11,000
+that are only solving one problem
+
+565
+00:23:11,000 --> 00:23:13,720
+by spending a lot of time upfront thinking about
+
+566
+00:23:13,720 --> 00:23:15,080
+how do we build the tool in a way
+
+567
+00:23:15,160 --> 00:23:18,880
+that it might solve and other problems
+
+568
+00:23:18,880 --> 00:23:21,560
+that are in a similar space in the future.
+
+569
+00:23:21,560 --> 00:23:24,160
+It's a hard problem, there's no set answer to it,
+
+570
+00:23:24,160 --> 00:23:27,880
+but so is building a good API that ages well.
+
+571
+00:23:27,880 --> 00:23:29,840
+So I think it's a very similar problem.
+
+572
+00:23:31,440 --> 00:23:33,880
+So this might be out of scope for your talk,
+
+573
+00:23:33,880 --> 00:23:35,640
+but in a lot of cases,
+
+574
+00:23:35,640 --> 00:23:37,960
+the problem might be a result of an exception.
+
+575
+00:23:37,960 --> 00:23:41,360
+And I'm wondering if you've found principles or cases
+
+576
+00:23:41,360 --> 00:23:44,120
+where to ensure that when an exception occurs,
+
+577
+00:23:44,120 --> 00:23:47,920
+you have enough context available.
+
+578
+00:23:47,920 --> 00:23:49,760
+Yeah, so one of the tools I didn't talk about
+
+579
+00:23:49,760 --> 00:23:51,720
+that we use is Sentry,
+
+580
+00:23:51,720 --> 00:23:54,360
+and I think Sentry is a pretty widely used tool.
+
+581
+00:23:54,360 --> 00:23:59,280
+So these tools are not the only ones that we have.
+
+582
+00:23:59,280 --> 00:24:01,360
+Sentry covers the cases where you have
+
+583
+00:24:01,360 --> 00:24:02,680
+an unhandled exception
+
+584
+00:24:02,680 --> 00:24:05,720
+and will automatically kind of log a bunch of context for you.
+
+585
+00:24:05,720 --> 00:24:08,440
+And then Sentry also includes the tracing ID.
+
+586
+00:24:08,440 --> 00:24:10,160
+We make sure that all our Sentry contexts
+
+587
+00:24:10,160 --> 00:24:11,280
+have that tracing ID,
+
+588
+00:24:11,280 --> 00:24:13,080
+and we can use that to go into the logs
+
+589
+00:24:13,080 --> 00:24:15,120
+and kind of dig deeper and see what was happening
+
+590
+00:24:15,120 --> 00:24:16,320
+around that exception.
+
+591
+00:24:17,160 --> 00:24:18,000
+Thanks.
+
+592
+00:24:20,400 --> 00:24:25,320
+You mentioned when collecting the metrics
+
+593
+00:24:25,320 --> 00:24:27,840
+for database queries,
+
+594
+00:24:29,040 --> 00:24:32,080
+and how you would send basically state to Datadog,
+
+595
+00:24:32,080 --> 00:24:33,840
+like a histogram to Datadog.
+
+596
+00:24:33,840 --> 00:24:38,000
+How do you guys control if something crashes
+
+597
+00:24:38,000 --> 00:24:39,960
+or something like that and that state gets lost?
+
+598
+00:24:39,960 --> 00:24:43,600
+How do you not interfere with the actual query
+
+599
+00:24:43,600 --> 00:24:45,280
+that's gonna be run or anything like that?
+
+600
+00:24:45,280 --> 00:24:48,760
+How do you keep the tooling both out of the way
+
+601
+00:24:48,760 --> 00:24:50,960
+but still useful, I guess?
+
+602
+00:24:50,960 --> 00:24:52,240
+Yeah, that's a great question
+
+603
+00:24:52,240 --> 00:24:54,000
+because when we first rolled out the query metrics,
+
+604
+00:24:54,000 --> 00:24:56,800
+of course, that's the code path that everything goes down,
+
+605
+00:24:56,800 --> 00:24:58,080
+and we had an issue with it,
+
+606
+00:24:58,080 --> 00:25:00,360
+and so of course, you broke all queries, right?
+
+607
+00:25:00,360 --> 00:25:05,360
+Like, in a certain sense, it's unavoidable
+
+608
+00:25:05,720 --> 00:25:10,360
+if you introduce a change to a code path
+
+609
+00:25:10,360 --> 00:25:11,680
+that is like the hottest code path
+
+610
+00:25:11,680 --> 00:25:13,080
+in your entire application.
+
+611
+00:25:14,280 --> 00:25:16,840
+We try to avoid having things,
+
+612
+00:25:16,840 --> 00:25:20,400
+we try to avoid doing dangerous things in that code path.
+
+613
+00:25:20,400 --> 00:25:23,480
+So we keep it as simple as we can.
+
+614
+00:25:23,480 --> 00:25:25,760
+We unit test extensively,
+
+615
+00:25:25,760 --> 00:25:27,840
+and then we also do some integration testing.
+
+616
+00:25:27,840 --> 00:25:29,160
+So we have like a staging environment
+
+617
+00:25:29,160 --> 00:25:30,800
+where we're running Datadog,
+
+618
+00:25:30,800 --> 00:25:33,280
+and we can run some passes,
+
+619
+00:25:33,320 --> 00:25:36,440
+making sure that that stats-de path that we're impacting
+
+620
+00:25:36,440 --> 00:25:39,680
+is not going to be destructive to our code base.
+
+621
+00:25:39,680 --> 00:25:43,040
+But the short answer really is that it does happen.
+
+622
+00:25:43,040 --> 00:25:45,400
+Like, there are times where we've introduced problems in that,
+
+623
+00:25:45,400 --> 00:25:47,480
+and it's a production outage,
+
+624
+00:25:47,480 --> 00:25:50,040
+and there's a trade-off of how deeply
+
+625
+00:25:50,040 --> 00:25:52,440
+you extend the internals of something
+
+626
+00:25:52,440 --> 00:25:55,320
+and how much you alter hot code paths.
+
+627
+00:25:55,320 --> 00:25:57,720
+For us, the trade-off was worth it.
+
+628
+00:25:57,720 --> 00:25:58,840
+Thanks. Thanks.
+
+629
+00:25:59,840 --> 00:26:00,680
+Yeah.
+
+630
+00:26:00,680 --> 00:26:04,480
+Has your work helped to debug things
+
+631
+00:26:04,480 --> 00:26:06,720
+that are problems with the ORM,
+
+632
+00:26:06,720 --> 00:26:11,080
+and work around those problems with the database views?
+
+633
+00:26:11,080 --> 00:26:12,320
+Yeah, absolutely.
+
+634
+00:26:12,320 --> 00:26:14,760
+Actually, one of the biggest ones was,
+
+635
+00:26:14,760 --> 00:26:19,200
+Django has this kind of issue when you do unions in SQL,
+
+636
+00:26:19,200 --> 00:26:23,040
+and I don't remember the exact nature of the problem,
+
+637
+00:26:23,040 --> 00:26:25,160
+but it's something like if you apply any modifiers
+
+638
+00:26:25,160 --> 00:26:26,720
+to a query set after you do a union,
+
+639
+00:26:26,720 --> 00:26:29,200
+they don't get respected.
+
+640
+00:26:29,200 --> 00:26:32,800
+This comes up when we, especially in a slow query metrics,
+
+641
+00:26:32,800 --> 00:26:34,240
+when we go dig into those slow queries
+
+642
+00:26:34,240 --> 00:26:36,160
+and look at where they're being issued from
+
+643
+00:26:36,160 --> 00:26:37,800
+and what the query actually is.
+
+644
+00:26:37,800 --> 00:26:40,960
+We log kind of the templated version of queries in that case,
+
+645
+00:26:40,960 --> 00:26:43,280
+and one of our engineers actually developed a library
+
+646
+00:26:43,280 --> 00:26:44,320
+to fix that problem,
+
+647
+00:26:44,320 --> 00:26:47,480
+so it's absolutely led to some ORM improvements.
+
+648
+00:26:47,480 --> 00:26:49,040
+Sweet.
+
+649
+00:26:49,040 --> 00:26:50,600
+It's called Django Delayed Union,
+
+650
+00:26:50,600 --> 00:26:52,200
+I think is the package name.
+
+651
+00:26:53,600 --> 00:26:55,960
+Can you just talk a little bit
+
+652
+00:26:56,000 --> 00:26:58,400
+about how the workflows are actually created?
+
+653
+00:26:58,400 --> 00:27:01,320
+Are they spawned from your engineering teams,
+
+654
+00:27:01,320 --> 00:27:04,240
+or they spawn as a consequence of the application
+
+655
+00:27:04,240 --> 00:27:05,320
+from your team?
+
+656
+00:27:07,600 --> 00:27:09,240
+Percentage-wise, how is it divided up?
+
+657
+00:27:09,240 --> 00:27:13,320
+Can you talk about how the different workflows are created?
+
+658
+00:27:13,320 --> 00:27:15,720
+I think you mentioned they were workflows that you'd request.
+
+659
+00:27:15,720 --> 00:27:18,800
+Yeah, so I'm using workflow kind of as a model
+
+660
+00:27:18,800 --> 00:27:20,320
+for any request that comes in
+
+661
+00:27:20,320 --> 00:27:23,000
+or any asynchronous task that gets kicked off,
+
+662
+00:27:23,000 --> 00:27:25,040
+and then everything that happens after that.
+
+663
+00:27:25,920 --> 00:27:28,160
+To give an example, we might have a request come in
+
+664
+00:27:28,160 --> 00:27:29,600
+that kicks off a celery task,
+
+665
+00:27:29,600 --> 00:27:31,640
+that kicks off three more, and so on and so forth.
+
+666
+00:27:31,640 --> 00:27:35,280
+For me, that's what we consider it as one single workflow.
+
+667
+00:27:35,280 --> 00:27:37,480
+So the moment that the code starts executing,
+
+668
+00:27:37,480 --> 00:27:39,560
+to kind of like, if you think of it as a tree,
+
+669
+00:27:39,560 --> 00:27:41,360
+the end of that tree.
+
+670
+00:27:41,360 --> 00:27:43,400
+So that's, for us, one workflow,
+
+671
+00:27:43,400 --> 00:27:46,280
+and that should all be unified by a single ID.
+
+672
+00:27:46,280 --> 00:27:48,760
+So even if that workflow goes on and on and on
+
+673
+00:27:48,760 --> 00:27:50,240
+for a long time,
+
+674
+00:27:50,240 --> 00:27:53,320
+we think that the tracing ID should be part of all of that.
+
+675
+00:27:53,320 --> 00:27:55,280
+So requests coming in is one.
+
+676
+00:27:56,360 --> 00:27:57,960
+Django management commands is another,
+
+677
+00:27:57,960 --> 00:27:59,840
+so like a one-off command, and then cron jobs.
+
+678
+00:27:59,840 --> 00:28:02,800
+Those are sort of the three where we start workflows from.
+
+679
+00:28:02,800 --> 00:28:05,720
+Okay, yeah, I come from a highly variable,
+
+680
+00:28:05,720 --> 00:28:07,320
+large enterprise environment
+
+681
+00:28:07,320 --> 00:28:10,480
+where not all the workflows are auto-discovered.
+
+682
+00:28:10,480 --> 00:28:11,800
+So I was interested to see
+
+683
+00:28:11,800 --> 00:28:13,320
+if you had come across something like that.
+
+684
+00:28:13,320 --> 00:28:15,160
+Yeah, one way you can deal with that,
+
+685
+00:28:15,160 --> 00:28:16,160
+if you have that scenario,
+
+686
+00:28:16,160 --> 00:28:19,200
+is if you have in your middleware a header or something.
+
+687
+00:28:19,200 --> 00:28:20,840
+That's how a lot of tracing tools do it.
+
+688
+00:28:20,840 --> 00:28:22,680
+That's like a shared library
+
+689
+00:28:22,680 --> 00:28:25,320
+that all of your services use, something like that.
+
+690
+00:28:25,320 --> 00:28:29,120
+You can accomplish the capability fairly easily that way.
+
+691
+00:28:30,120 --> 00:28:30,960
+Thank you.
+
+692
+00:28:32,080 --> 00:28:34,680
+So as a pet-focused organization,
+
+693
+00:28:34,680 --> 00:28:36,640
+was Datadog a thematic choice?
+
+694
+00:28:36,640 --> 00:28:39,640
+No, it was purely a wonderful coincidence
+
+695
+00:28:39,640 --> 00:28:40,920
+that we joined that way,
+
+696
+00:28:40,920 --> 00:28:43,960
+and that their logo also happens to be like a dog.
+
+697
+00:28:43,960 --> 00:28:45,720
+Also, serious question.
+
+698
+00:28:47,640 --> 00:28:49,640
+Do you have a monolithic backend,
+
+699
+00:28:49,640 --> 00:28:50,960
+or some sort of shared library,
+
+700
+00:28:51,080 --> 00:28:53,400
+or how do you go about making these tools
+
+701
+00:28:53,400 --> 00:28:55,000
+very available and consistent?
+
+702
+00:28:55,000 --> 00:28:58,400
+Yeah, so we have one large shared code base right now.
+
+703
+00:28:59,240 --> 00:29:03,320
+There are certainly advantages and disadvantages to that.
+
+704
+00:29:03,320 --> 00:29:05,480
+We can talk all day about the disadvantages.
+
+705
+00:29:05,480 --> 00:29:09,520
+One advantage of it, though, is that you don't need to...
+
+706
+00:29:09,520 --> 00:29:11,560
+Versioning is whatever is in the app, right?
+
+707
+00:29:11,560 --> 00:29:13,480
+So when we roll out these tools,
+
+708
+00:29:13,480 --> 00:29:15,200
+it's all in the same shared code base,
+
+709
+00:29:15,200 --> 00:29:17,880
+so people can take advantage of them right away.
+
+710
+00:29:18,680 --> 00:29:20,520
+And of course, there are problems with that as well,
+
+711
+00:29:20,520 --> 00:29:22,400
+but that's where we are right now.
+
+712
+00:29:22,400 --> 00:29:23,240
+Thank you.
+
+713
+00:29:25,600 --> 00:29:27,920
+So my question is about asynchronous tasks,
+
+714
+00:29:27,920 --> 00:29:29,640
+and I want to read your celery blog post,
+
+715
+00:29:29,640 --> 00:29:31,920
+but we have a JavaScript front end
+
+716
+00:29:31,920 --> 00:29:33,160
+to the Ndjango backend,
+
+717
+00:29:33,160 --> 00:29:36,400
+and it's gonna be fun to trace the requests from the client.
+
+718
+00:29:37,240 --> 00:29:40,840
+Yep, like I said, I'll be outside or something,
+
+719
+00:29:40,840 --> 00:29:43,080
+and I can tell you all about how we did that.
+
+720
+00:29:44,800 --> 00:29:49,160
+And we are at time, so I'm sorry, last question rejected,
+
+721
+00:29:49,160 --> 00:29:52,160
+but there'll be open spaces on this topic.
+
+722
+00:29:52,160 --> 00:29:53,200
+Yeah, I'll be outside.
+
+723
+00:29:53,200 --> 00:29:55,240
+You can find Alex outside.
+
+724
+00:29:55,240 --> 00:29:56,320
+Thank you, everybody.
+
+725
+00:29:56,320 --> 00:29:57,160
+Thank you.
+
+726
+00:29:57,160 --> 00:29:58,000
+Thank you.
+
+727
+00:29:58,000 --> 00:29:58,840
+Thank you.
+
+728
+00:29:58,840 --> 00:29:59,680
+Thank you.
+
+729
+00:29:59,680 --> 00:30:00,520
+Thank you.
+
+730
+00:30:00,520 --> 00:30:01,360
+Thank you.
+
+731
+00:30:01,360 --> 00:30:02,200
+Thank you.
+

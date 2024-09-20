@@ -1,0 +1,1176 @@
+1
+00:00:00,000 --> 00:00:07,000
+Our next speaker is Aaron G. Clough speaking about Django channels and practice. Please welcome him.
+
+2
+00:00:07,000 --> 00:00:24,000
+Alright, hi folks. My name is Aaron G. Clough. Just a note right off the top before I start, this is not going to be a talk about building Django channels code. I just don't have time. This is mostly going to be about
+
+3
+00:00:24,000 --> 00:00:33,000
+planning for Django channels implementation and what's going to happen, what's going to go wrong, what's going to go potentially interesting as you deploy channels.
+
+4
+00:00:33,000 --> 00:00:45,000
+So I just wanted to set that off right off the top. Who am I? I'm the VP of engineering for a security startup that uses Django channels, which is where a lot of my information here comes from.
+
+5
+00:00:45,000 --> 00:00:49,000
+Other than that, I'm just some guy. I've been programming Python for a while.
+
+6
+00:00:49,000 --> 00:01:02,000
+So what is Django channels? For those of you that haven't seen it before, it's a Django project. It lets you use WebSockets in a Django app. This is a fairly obvious follow on question then. What's a WebSocket?
+
+7
+00:01:02,000 --> 00:01:18,000
+WebSocket is a way to do asynchronous communication in your browser. If you want to do sort of asynchronous communication, like if your server wanted to let your browser know that there was some information, you could do HTTP 2 or you could do really aggressive repeated polling from the client.
+
+8
+00:01:18,000 --> 00:01:29,000
+Your client could just say, is there anything new for me now? How about now? How about now? It was hideously wasteful for resources. WebSockets are a thing where your browser makes a connection to the server and just leaves that connection open.
+
+9
+00:01:29,000 --> 00:01:38,000
+And then either side can write data down that pipe at any time. It is enormously more efficient for that kind of communication pattern.
+
+10
+00:01:38,000 --> 00:01:48,000
+They're supported by every recent browser. I think anything in the past four or five years will have support for WebSockets. So if you're using anything vaguely recent, you should be able to do this.
+
+11
+00:01:48,000 --> 00:02:00,000
+Django channels then lets you use the Django ORM and all the various batteries included parts of Django with that communication pattern, with that asynchronous communication setup.
+
+12
+00:02:00,000 --> 00:02:14,000
+So what's it for? Why do you care? The obvious and most common use case you can hear about is chat because it's the really obvious asynchronous use case. You don't know when someone's going to start typing a message to somebody else and you don't know when that's somebody else going to type a message back again.
+
+13
+00:02:14,000 --> 00:02:26,000
+So rather than doing repeated polling, you just open a socket and wait for either side to start typing. Slack, I think Slack actually still uses this in their web client. A number of other systems use it for that kind of thing.
+
+14
+00:02:26,000 --> 00:02:36,000
+So that's an obvious use case. And since all your traffic is going through the central server, you can do syntax highlighting or text highlighting or chat bots or things like that fairly easily.
+
+15
+00:02:36,000 --> 00:02:52,000
+But that's only the beginning. You can do so much more with channels. There's a game I know called agar.io that is entirely in the browser that does all the game communication for where other players are in the game through WebSockets.
+
+16
+00:02:52,000 --> 00:03:01,000
+There's a game called obstruction that's coded at that URL. My company's app, which I'm going to use a demo on a couple of things here, does collaborative editing.
+
+17
+00:03:01,000 --> 00:03:11,000
+So for example, you can take a graph, have two people editing the same graph at the same time. You can do streaming data.
+
+18
+00:03:11,000 --> 00:03:21,000
+So if you have, say, stock data or like Bitcoin transaction information, you don't have to do two ways. You can just stream data down to the client with the WebSocket.
+
+19
+00:03:21,000 --> 00:03:30,000
+There's also something again supported in fairly recent browsers called WebRTC where you can do conference calling in the browser.
+
+20
+00:03:30,000 --> 00:03:39,000
+The way to set that up is to get each side of the browser to communicate to the other one what codec they support. The way to send that signaling, WebSockets.
+
+21
+00:03:39,000 --> 00:03:45,000
+So you can do all kinds of things with this and every one of these you can do in Django channels.
+
+22
+00:03:45,000 --> 00:03:53,000
+So let's say I've sold you on this. You want to do Django channels. What do you have to think about? How do you do this?
+
+23
+00:03:53,000 --> 00:03:59,000
+So let's talk about what you need to do to just think about right off the top before you write a line of code. Let's talk about planning.
+
+24
+00:03:59,000 --> 00:04:06,000
+First off, you want to decide what parts of the app really need to be real time. Some of it might not be.
+
+25
+00:04:06,000 --> 00:04:11,000
+You know, some of the stuff that Django ORM or maybe even just Django rest is going to be fine.
+
+26
+00:04:11,000 --> 00:04:20,000
+Coming back to this thing, we have the idea of a workspace and it has metadata like a start time, a title, things like that.
+
+27
+00:04:20,000 --> 00:04:28,000
+There's no reason to have the editing of that happen over the WebSocket. That's a rest call. The real time editing of a graph should be rest.
+
+28
+00:04:28,000 --> 00:04:36,000
+But when you're starting to build the app, you want to think about which actions should be just normal rest calls and which ones need to be really real time.
+
+29
+00:04:36,000 --> 00:04:43,000
+And you want to split those apart. There's something I'll talk about a couple of times called workers, which is a special part of Django channels.
+
+30
+00:04:43,000 --> 00:04:48,000
+And another thing you want to plan at the beginning, workers are sort of worker pools.
+
+31
+00:04:48,000 --> 00:04:53,000
+They're long lived things that can do computations and push data back again. I'll talk about those more in a minute.
+
+32
+00:04:53,000 --> 00:05:05,000
+But that's another part to think about is along with the real time requests that are coming in from a client or going out to a client, there may be some computations you want to run that are independent of a client.
+
+33
+00:05:05,000 --> 00:05:18,000
+Those will be good candidates for workers. And as you're planning out the architecture of the app, think about which ones are HTTP, which ones are rest calls, which ones are things responding to a client or pushing data client and which ones are just long lived computations.
+
+34
+00:05:18,000 --> 00:05:23,000
+Because that's basically your architecture for this thing.
+
+35
+00:05:23,000 --> 00:05:33,000
+Next up, once you've got sort of the architecture set up, I'm going to really strongly recommend talk to your users or talk to your UI team because going over the socket, you're sending messages down.
+
+36
+00:05:33,000 --> 00:05:39,000
+This is a communication protocol. You're basically defining how does your UI talk to your back end on the Web socket.
+
+37
+00:05:39,000 --> 00:05:47,000
+That can be anything. They're just basically JSON blobs. Technically, they can be just binary blobs coming down the Web socket.
+
+38
+00:05:47,000 --> 00:05:52,000
+So you want to define what am I expecting to get and what am I expecting to send?
+
+39
+00:05:52,000 --> 00:05:58,000
+In my case, my organization has, I think, north of 55 different event types going in and out again.
+
+40
+00:05:58,000 --> 00:06:07,000
+And so we really early had to standardize on this is the format of the message of the types are going to get. These are the type names. We're going to standardize even where the names where you have the names are arranged.
+
+41
+00:06:07,000 --> 00:06:14,000
+So there's request inbound. There's response outbound. Just because otherwise you're going to end up in a sea of pain and like misdirection.
+
+42
+00:06:14,000 --> 00:06:22,000
+So once you start to build these, once you've agreed on the formats and you're reading the architecture, you're going to start to code.
+
+43
+00:06:22,000 --> 00:06:33,000
+A thing to consider for this in Django channels for the consumer side, the thing that's actually answering the connections over the Web socket, the way channels works is it's going to instate you're going to connect a class.
+
+44
+00:06:33,000 --> 00:06:45,000
+You're going to write a whole class and connect that to a URL and that will be when the browser connects that URL, one instance of that class will be instantiated and it will answer requests for that particular client.
+
+45
+00:06:45,000 --> 00:06:50,000
+That will last for that instance will last for the lifetime of the connection.
+
+46
+00:06:50,000 --> 00:06:57,000
+So if the browser closes or navigate somewhere else, then that instance of your class will get destroyed.
+
+47
+00:06:57,000 --> 00:07:07,000
+That's actually really useful. You can do some interesting things with that because that instance is going to stay up for the whole length of your session, which means you can cache stuff onto self on the class.
+
+48
+00:07:07,000 --> 00:07:17,000
+And my first instance in this, I made this mistake and I'm going to advise you guys not to do this is my first thing was to avoid the Django ORM or avoid hitting the Django ORM a lot.
+
+49
+00:07:17,000 --> 00:07:26,000
+I went and grabbed that workspace. So this thing again, this is a Django ORM object that has the workspace and the workspace metadata.
+
+50
+00:07:26,000 --> 00:07:34,000
+I naively grabbed that on connect and slammed that up on a self and said I never need to hit the Django ORM again for any event on the Web socket.
+
+51
+00:07:34,000 --> 00:07:41,000
+And this is fantastic. And technically that's true. As long as you never do model that save.
+
+52
+00:07:41,000 --> 00:07:46,000
+Because you can edit the workspace through the rest API side also.
+
+53
+00:07:46,000 --> 00:07:56,000
+As soon as you do model that save, you nuked any change that was made on the rest side because it's not reloaded ever again unless you manually reload it.
+
+54
+00:07:56,000 --> 00:08:06,000
+So just that's the kind of thing to think about. This is not the in normal Django when you use a Django ORM object, it's loaded the moment a request is made.
+
+55
+00:08:06,000 --> 00:08:14,000
+That's not what's happening in channels. It's loaded and if you put stuff on self, it's loaded when you make the initial request and then it just lives and keeps going.
+
+56
+00:08:14,000 --> 00:08:21,000
+I'll talk about this a little later. These connections can live for days. I've had one guy leave his connection open for two weeks.
+
+57
+00:08:21,000 --> 00:08:27,000
+And so in that case, you would have a Django ORM object that is two weeks old.
+
+58
+00:08:27,000 --> 00:08:32,000
+And if you hit save on that, you just undid two weeks of edits to that object.
+
+59
+00:08:32,000 --> 00:08:37,000
+So think about that. That's the kind of thing that's going to go wrong here.
+
+60
+00:08:37,000 --> 00:08:48,000
+Also, I mentioned you're attaching one class to a URL for the session connection or for the WebSocket connection.
+
+61
+00:08:48,000 --> 00:08:53,000
+Those can get big. In my case, like I said, we have 55 different event types coming in.
+
+62
+00:08:53,000 --> 00:09:00,000
+I didn't want to have one giant 3000 line class because that's just unmanageable and unmaintainable.
+
+63
+00:09:00,000 --> 00:09:05,000
+So I split it apart. That has some other implications I'll talk about in a minute.
+
+64
+00:09:05,000 --> 00:09:13,000
+But you want to think about that. If you have a lot of different classes or a lot of different events coming in, you'll want to organize them and split them apart,
+
+65
+00:09:13,000 --> 00:09:20,000
+which is not the way the default channels or demonstrations go. They assume you have one big class and you're putting all your methods inside it.
+
+66
+00:09:20,000 --> 00:09:26,000
+That's for big setups, probably not the way you want to go.
+
+67
+00:09:26,000 --> 00:09:32,000
+And what that actually allowed me to do when I split that up is generalize some common tasks.
+
+68
+00:09:32,000 --> 00:09:40,000
+I have a common task of sending a message back to a client rather than have the code that handles that and handles errors and overflows and stuff
+
+69
+00:09:40,000 --> 00:09:50,000
+and put that in every one of my child classes. I made a generic worker class and have a self dot underscore send to user method
+
+70
+00:09:50,000 --> 00:09:56,000
+that then all the other ones call to handle all that automatically.
+
+71
+00:09:56,000 --> 00:10:04,000
+So one of the things also, and I'm bouncing around a lot, I apologize for this, that you'll hear talked about in Django channels is async versus synchronous.
+
+72
+00:10:04,000 --> 00:10:11,000
+Django channels can support Python's async and await method. So you can write asynchronous code and your consumers can be asynchronous.
+
+73
+00:10:11,000 --> 00:10:16,000
+But you have to write the consumers very differently. You have to declare that they're all going to be asynchronous.
+
+74
+00:10:16,000 --> 00:10:20,000
+You have to write asynchronous code from a different class when you're making the consumers.
+
+75
+00:10:20,000 --> 00:10:26,000
+So you have to really think and make your consumer asynchronous or synchronous right off the top.
+
+76
+00:10:26,000 --> 00:10:33,000
+In our case, we never did asynchronous code. And the reason is because the Django ORM has to be synchronous.
+
+77
+00:10:33,000 --> 00:10:38,000
+So if you're calling, if you're using models and you're doing object filters and gets and all that,
+
+78
+00:10:38,000 --> 00:10:45,000
+you have to either wrap that in an async to sync method that comes with Django channels or just write synchronous code.
+
+79
+00:10:45,000 --> 00:10:52,000
+In our case, we have a lot of code doing this stuff. And every time we thought about doing asynchronous code,
+
+80
+00:10:52,000 --> 00:10:57,000
+it turned out it was a better job for a worker, which is something I'll talk about in a little bit.
+
+81
+00:10:57,000 --> 00:11:01,000
+So in general, I'm not saying that asynchronous is useless. It may work well for your use case.
+
+82
+00:11:01,000 --> 00:11:06,000
+But for ours, we never touched asynchronous.
+
+83
+00:11:06,000 --> 00:11:13,000
+Now, the code that we're doing is actually a security tool. It's actually for security practitioners. So I'm kind of a security nerd.
+
+84
+00:11:13,000 --> 00:11:23,000
+So I cared about these two points a lot. You can attach the Django authentication system to WebSockets and use the users and all that as part of it.
+
+85
+00:11:23,000 --> 00:11:27,000
+And I would recommend you do. You can also turn on something called origin filtering.
+
+86
+00:11:27,000 --> 00:11:39,000
+Origin filtering is a slight variation on cross site request forgery controls because WebSockets aren't like HTTP requests.
+
+87
+00:11:39,000 --> 00:11:46,000
+They set up like HTTP requests, but they're a different protocol. And so all the controls across that request forgery don't really exist in a WebSocket world.
+
+88
+00:11:46,000 --> 00:11:52,000
+What does exist is something called origin filtering. When your browser makes the initial connection for the WebSocket,
+
+89
+00:11:52,000 --> 00:12:01,000
+it adds a header of an origin, which is the domain that caused the WebSocket request to come in.
+
+90
+00:12:01,000 --> 00:12:09,000
+You can turn on origin filtering to say, I only want to accept those domains that are in my allowed hosts file in Django.
+
+91
+00:12:09,000 --> 00:12:15,000
+From my point of view, I don't see any reason for either of those, the authentication or the origin filtering to be off.
+
+92
+00:12:15,000 --> 00:12:21,000
+Your application may accept WebSockets from random other sites on the Internet. If you do, you're going to want to turn off origin filtering.
+
+93
+00:12:21,000 --> 00:12:28,000
+I think the default should be use origin filtering, use authentication. And that's just, you know, security guy.
+
+94
+00:12:29,000 --> 00:12:34,000
+I feel about these things. For deploying it, there's two ways to deploy this.
+
+95
+00:12:34,000 --> 00:12:41,000
+You can use ASGI instead of WSGI and do it in your Web server the way you would for Django,
+
+96
+00:12:41,000 --> 00:12:48,000
+in which case your scaling happens the way it would for your Web server, where when your Web server forks,
+
+97
+00:12:48,000 --> 00:12:53,000
+you've got another fork with another instance of the Django channels app running.
+
+98
+00:12:53,000 --> 00:13:00,000
+Or you can use the Web server as a transparent proxy in front of an ASGI server.
+
+99
+00:13:00,000 --> 00:13:07,000
+This advantages and disadvantages to each. The advantage of running it inside the Web server is you're letting the Web server handle the scaling for you.
+
+100
+00:13:07,000 --> 00:13:12,000
+The disadvantage of that is you're making a Web server layer kind of more complicated.
+
+101
+00:13:12,000 --> 00:13:21,000
+For running a standalone ASGI server, you're making your default build more complicated, but you're keeping your Web server layer fairly straightforward.
+
+102
+00:13:21,000 --> 00:13:25,000
+In our case, we had to run workers and we knew we were going to run workers.
+
+103
+00:13:25,000 --> 00:13:31,000
+So we already had to be doing standalone ASGI servers because workers don't run in the Web server.
+
+104
+00:13:31,000 --> 00:13:36,000
+Workers are a totally standalone thing. And I keep promising this and I promise you we'll get there. We're going to talk about workers.
+
+105
+00:13:36,000 --> 00:13:40,000
+But they are a standalone separate thing that runs just as sort of a worker pool.
+
+106
+00:13:40,000 --> 00:13:43,000
+And they don't run in the Web server. They run as a separate ASGI thing.
+
+107
+00:13:43,000 --> 00:13:50,000
+So we already had to run an ASGI server, which meant it wasn't a whole lot more complexity for us to just add more instances of ASGI servers
+
+108
+00:13:50,000 --> 00:13:55,000
+running the actual channel side and to keep our Web server layer therefore very simple.
+
+109
+00:13:55,000 --> 00:14:03,000
+So in our case, we chose to run everything as standalone ASGI servers and make the Web server just a reverse proxy.
+
+110
+00:14:03,000 --> 00:14:10,000
+That may be different for your case. Ours, it made it simpler for our DevOps folks.
+
+111
+00:14:10,000 --> 00:14:19,000
+And speaking of a related question is for scaling and load, one of the things you may want to do is separate stuff out so they scale independently.
+
+112
+00:14:19,000 --> 00:14:28,000
+Like I mentioned, we have workers. Our workers, we actually split into a couple different tasks because one of our workers is a notification queue.
+
+113
+00:14:28,000 --> 00:14:36,000
+Just every event that comes through the system, we decide does someone need to be emailed or notified in the application about this?
+
+114
+00:14:36,000 --> 00:14:47,000
+That is its own pool, its own channel, so that it can scale independently of the asynchronous tasks and that can scale independently of the user connections.
+
+115
+00:14:47,000 --> 00:14:56,000
+So that's the default stuff. That's the stuff you can sort of intuit from reading the channel's docs.
+
+116
+00:14:56,000 --> 00:15:04,000
+So what's the fun stuff? What's the stuff where you may not actually have known this was going to happen until you really start building things?
+
+117
+00:15:04,000 --> 00:15:09,000
+The first one for me is event routing. So channels is something they call a group.
+
+118
+00:15:09,000 --> 00:15:19,000
+And I'm going to keep coming back to this demo here. When you have an event come into the socket, you can say, I want this to go to everyone in a particular group.
+
+119
+00:15:19,000 --> 00:15:25,000
+And so the browser on the right is a member of the same group on this graph.
+
+120
+00:15:25,000 --> 00:15:37,000
+And when this message is processed for the user on the right, it sends a message to the group, the browser on the right is a member of the group, it gets the message from this broadcast.
+
+121
+00:15:37,000 --> 00:15:44,000
+Channels has a group built in. So you can say this user, when they connect, add them to this group.
+
+122
+00:15:44,000 --> 00:15:50,000
+And when you send messages between instances, Django channels automatically routes those.
+
+123
+00:15:50,000 --> 00:15:58,000
+So you can say I have a move node event from this worker from this Django channels instance.
+
+124
+00:15:58,000 --> 00:16:03,000
+Sorry to this other instance and channels will automatically route that if you have add move node.
+
+125
+00:16:03,000 --> 00:16:09,000
+This guy will get a it's move node method called auto routes that you don't have to worry about that.
+
+126
+00:16:09,000 --> 00:16:19,000
+On the other hand, all messages coming in from the UI are routed to the same method, either receive receive JSON, depending on which particular class you're inheriting from.
+
+127
+00:16:19,000 --> 00:16:24,000
+That's actually backwards from what I wanted for my use case that may work well for your use case.
+
+128
+00:16:24,000 --> 00:16:28,000
+In my use case, I said we have about 55 almost 60 different event types.
+
+129
+00:16:28,000 --> 00:16:36,000
+We have create, update, delete for nodes, edges, attributes, timestamps, clusters and on and on and on.
+
+130
+00:16:36,000 --> 00:16:44,000
+What I desperately didn't want was a 55 branch if ELIF table inside receive JSON because that's unmanageable.
+
+131
+00:16:44,000 --> 00:16:47,000
+It's unwieldy. It's just gross.
+
+132
+00:16:47,000 --> 00:17:00,000
+So I want to invert that routing and I sort of hacked it together where when in receive JSON, I do exactly what the other side is doing, which is I look to see is there a method named to this event?
+
+133
+00:17:00,000 --> 00:17:03,000
+If so, call that.
+
+134
+00:17:03,000 --> 00:17:07,000
+On the other side, most of my events outbound are the same thing.
+
+135
+00:17:07,000 --> 00:17:09,000
+Send this message to the client.
+
+136
+00:17:09,000 --> 00:17:17,000
+So there's really only one outbound message for me and I'm doing auto routing inbound, which is inverted from what channels normally does.
+
+137
+00:17:17,000 --> 00:17:20,000
+Your use case may be different than that in mine.
+
+138
+00:17:20,000 --> 00:17:24,000
+Yeah, I had to really flip that around.
+
+139
+00:17:24,000 --> 00:17:27,000
+Other things to think about is your consumers can die.
+
+140
+00:17:27,000 --> 00:17:30,000
+The consumers get shut down when the WebSocket closes.
+
+141
+00:17:30,000 --> 00:17:31,000
+And here's where I find them promising.
+
+142
+00:17:31,000 --> 00:17:35,000
+We're going to talk about workers.
+
+143
+00:17:35,000 --> 00:17:40,000
+Consumers will close when the user closes their browser or navigate somewhere else.
+
+144
+00:17:40,000 --> 00:17:49,000
+So if you have a task that you want to happen and you want that to happen, independent of whether the user is still on the page or still connected to that WebSocket, you shouldn't do that in a consumer.
+
+145
+00:17:49,000 --> 00:17:52,000
+You should do that in something called a worker.
+
+146
+00:17:52,000 --> 00:17:57,000
+The idea for workers is they live as a separate ASGEE server.
+
+147
+00:17:57,000 --> 00:17:58,000
+They have their own channel.
+
+148
+00:17:58,000 --> 00:18:07,000
+You send them messages and they do whatever it is you want them to do and then send messages back again, either to clients or to existing consumers.
+
+149
+00:18:07,000 --> 00:18:10,000
+For example, some of the stuff you can do with them.
+
+150
+00:18:10,000 --> 00:18:22,000
+In our case, when someone adds a new node to this graph, you know, like if I added this IP address, we will go look up where is this geo located, who advertises it for domain name will look up who registered it.
+
+151
+00:18:22,000 --> 00:18:27,000
+These are lookups that should happen even if the user just dumps a domain name in here and closes the browser.
+
+152
+00:18:27,000 --> 00:18:29,000
+I want that lookup to continue.
+
+153
+00:18:29,000 --> 00:18:37,000
+And so that's the use case for running as a worker rather than in the class that you connect to the WebSocket itself.
+
+154
+00:18:37,000 --> 00:18:44,000
+We also use that for things like syncing data out of the system into like a search pool like elastic search.
+
+155
+00:18:44,000 --> 00:18:50,000
+It's a task that needs to happen and you have access to all the stuff that's happening in the WebSocket world.
+
+156
+00:18:50,000 --> 00:18:56,000
+But it doesn't need to be connected to a user user connection or user session.
+
+157
+00:18:56,000 --> 00:19:00,000
+I mentioned before the notification pool would do the same thing.
+
+158
+00:19:00,000 --> 00:19:10,000
+We have a whole asynchronous worker pool that gets a stream of events every time someone edits a workspace and just goes through every one of those and says, have I notified this person about it?
+
+159
+00:19:10,000 --> 00:19:12,000
+Do they want to be notified about it?
+
+160
+00:19:12,000 --> 00:19:14,000
+And if so, send a notification.
+
+161
+00:19:14,000 --> 00:19:16,000
+It's a whole just notification stream.
+
+162
+00:19:16,000 --> 00:19:19,000
+That doesn't matter whether or not a particular user is connected or not.
+
+163
+00:19:19,000 --> 00:19:21,000
+That stream needs to exist.
+
+164
+00:19:21,000 --> 00:19:33,000
+And so that's what we use workers for in that case is workers are for things that should be continuing to operate even if users aren't actually connected or if users disconnect part way through.
+
+165
+00:19:33,000 --> 00:19:41,000
+Also, channels assumes that messages will be lost and you want to think about whether or not this is going to work really, whether or not certain messages are going to work well.
+
+166
+00:19:41,000 --> 00:19:44,000
+In our case, some of these graphs get really big.
+
+167
+00:19:44,000 --> 00:19:48,000
+You know, I have a little thing here with just like what a half a dozen nodes.
+
+168
+00:19:48,000 --> 00:19:53,000
+We've had people ask us, can I get to five thousand six thousand nodes in the graph?
+
+169
+00:19:53,000 --> 00:20:04,000
+And in that case, we're sometimes sending five or six megabytes of data in one message down a WebSocket, which the browser aren't necessarily happy with.
+
+170
+00:20:04,000 --> 00:20:06,000
+The intermediate machines aren't necessarily happy with.
+
+171
+00:20:06,000 --> 00:20:11,000
+We end up actually auto compressing those because if you don't, they get dropped.
+
+172
+00:20:11,000 --> 00:20:13,000
+The session doesn't drop necessarily.
+
+173
+00:20:13,000 --> 00:20:20,000
+That's something that will occasionally happen with channels is messages that is unhappy with or a middle box unhappy with will just disappear.
+
+174
+00:20:20,000 --> 00:20:23,000
+And you need to handle that.
+
+175
+00:20:25,000 --> 00:20:27,000
+Client connections will also drop.
+
+176
+00:20:27,000 --> 00:20:33,000
+One of the things I've mentioned a couple of times is, you know, people will just do something and then close the connection.
+
+177
+00:20:33,000 --> 00:20:41,000
+So they and when it happens, the client instance will get reaped, like I mentioned, but the connections may get cut for other reasons.
+
+178
+00:20:41,000 --> 00:20:44,000
+It's a long lived socket. It's not an HTTP request.
+
+179
+00:20:44,000 --> 00:20:48,000
+So the communication pattern and this is something I'm trying to sort of beat into people.
+
+180
+00:20:48,000 --> 00:20:51,000
+The communication pattern for WebSockets isn't like HTTP.
+
+181
+00:20:51,000 --> 00:20:54,000
+In HTTP you're used to you make a connection and then you're done.
+
+182
+00:20:54,000 --> 00:20:58,000
+Even in HTTP 2, you make a connection, you might get some streaming stuff.
+
+183
+00:20:58,000 --> 00:21:01,000
+But overall, it's still very much a making connection, pulling data back.
+
+184
+00:21:01,000 --> 00:21:07,000
+WebSocket, the expectation is that this connection opens and stays open for a long time.
+
+185
+00:21:07,000 --> 00:21:12,000
+Long enough that I've had cases where firewall said this connection has been open for half an hour.
+
+186
+00:21:12,000 --> 00:21:14,000
+Away it goes.
+
+187
+00:21:14,000 --> 00:21:21,000
+And in that case, you want your clients to reconnect automatically because it's not their fault the connection got reaped.
+
+188
+00:21:21,000 --> 00:21:26,000
+Some middleware box decided this connection is too old and I want to kill it.
+
+189
+00:21:26,000 --> 00:21:34,000
+So you want to get your UI to reconnect and you'll probably want that UI to do a sort of algorithmic back off if it fails to reconnect.
+
+190
+00:21:34,000 --> 00:21:37,000
+Otherwise you're just pounding your system again and again.
+
+191
+00:21:37,000 --> 00:21:40,000
+But interestingly, the opposite problem happens also.
+
+192
+00:21:40,000 --> 00:21:43,000
+It's not some connections will live forever.
+
+193
+00:21:43,000 --> 00:21:50,000
+I actually had someone leave a connection to a workspace on our system open for so long that their Django session timed out.
+
+194
+00:21:50,000 --> 00:21:52,000
+They weren't doing anything. They weren't editing anything.
+
+195
+00:21:52,000 --> 00:21:57,000
+They just had a browser tab open for about two weeks.
+
+196
+00:21:57,000 --> 00:22:03,000
+And what happened was, since there were no Django requests made in that time frame, since there are no channels requests made in that time frame,
+
+197
+00:22:03,000 --> 00:22:05,000
+their session expired.
+
+198
+00:22:05,000 --> 00:22:13,000
+And then we did a deploy, which killed the pod that they were connected to, which killed their WebSocket connection.
+
+199
+00:22:13,000 --> 00:22:16,000
+So they reconnected, but they were locked out.
+
+200
+00:22:16,000 --> 00:22:17,000
+So the connection failed.
+
+201
+00:22:17,000 --> 00:22:22,000
+And then the UI said, well, I don't have a method to handle login failure on a WebSocket.
+
+202
+00:22:22,000 --> 00:22:24,000
+So connect again.
+
+203
+00:22:24,000 --> 00:22:27,000
+And they got rejected again and again and again and again.
+
+204
+00:22:27,000 --> 00:22:37,000
+So you will want to do the auto reconnect, but you'll also need to handle not just I failed to connect, but I was refused a connection.
+
+205
+00:22:37,000 --> 00:22:44,000
+Also, one really interesting problem we ran into, we had a user who could connect just fine,
+
+206
+00:22:44,000 --> 00:22:49,000
+but they had a security box at their office that was inspecting all their Web traffic.
+
+207
+00:22:49,000 --> 00:22:53,000
+And it was trying to understand the WebSocket protocol and failing.
+
+208
+00:22:53,000 --> 00:22:58,000
+So it would delay every message that went through it by about five seconds.
+
+209
+00:22:58,000 --> 00:23:02,000
+So he would make a change in a graph, and that message would take five seconds to get to us.
+
+210
+00:23:02,000 --> 00:23:06,000
+And we had to acknowledge that message, and that message would take five seconds to get back to him.
+
+211
+00:23:06,000 --> 00:23:12,000
+And in the meantime, he'd made another edit that was in flight that was also taking five seconds to get back to us and five seconds to get back again.
+
+212
+00:23:12,000 --> 00:23:20,000
+And the problem was he would do things like, say, adding this node and then changing what this term was.
+
+213
+00:23:20,000 --> 00:23:31,000
+And in the time between him making node and then changing the term would be when our first message come back confirming the add nodes, we would undo the edit he just made.
+
+214
+00:23:31,000 --> 00:23:36,000
+He found this completely infuriating. We found it pretty frustrating because we couldn't fix it.
+
+215
+00:23:36,000 --> 00:23:39,000
+You know, it's this middleware box that's breaking his connection.
+
+216
+00:23:39,000 --> 00:23:48,000
+What we ended up having to do was adding a message ID to every message that goes either from the UI or from the back end the other way and telling the UI,
+
+217
+00:23:48,000 --> 00:23:50,000
+you have sent a message with this message ID.
+
+218
+00:23:50,000 --> 00:24:02,000
+Wait, don't let the user make any other edits until you get a confirmation that that message ID has been processed, which is a little frustrating to him, but not as frustrating as having his work undone.
+
+219
+00:24:02,000 --> 00:24:06,000
+That made it really obvious to him, we are processing something. We have gotten your message.
+
+220
+00:24:06,000 --> 00:24:14,000
+We're working on it rather than just having his work mysteriously revert to previous versions.
+
+221
+00:24:14,000 --> 00:24:25,000
+One other thing to think about is I told you not to split up the rest side and the WebSocket side, but be aware when you do, the rest side and the WebSocket side don't talk to each other by default.
+
+222
+00:24:25,000 --> 00:24:31,000
+This WebSocket instance you create has no idea that edits have been made in the rest side.
+
+223
+00:24:31,000 --> 00:24:43,000
+The most obvious instance of this would be if somebody has permission to a WebSocket, like in this case, this user shared this workspace with this user.
+
+224
+00:24:43,000 --> 00:24:52,000
+If I remove that permission, the instance that's running this WebSocket over here for this user has no idea that happened.
+
+225
+00:24:52,000 --> 00:25:03,000
+There's no way for it to know unless you write code to send an update to the various instances to say, this user has just lost connectivity to this workspace.
+
+226
+00:25:03,000 --> 00:25:05,000
+You should close your connection.
+
+227
+00:25:05,000 --> 00:25:13,000
+And that could be anything. Maybe they've changed permissions, maybe they've lost access entirely, whatever it may be.
+
+228
+00:25:13,000 --> 00:25:24,000
+If your rest side can change something material about the WebSocket side, you're going to need to instrument that communication because it's not going to happen by default.
+
+229
+00:25:24,000 --> 00:25:27,000
+And lastly, this comes up a little bit in the documentation.
+
+230
+00:25:27,000 --> 00:25:32,000
+I mentioned the groups where you can send a message and then every member of that group will get that message.
+
+231
+00:25:32,000 --> 00:25:40,000
+The groups don't keep track of which users in which or don't give you an interface to see which users are in the group.
+
+232
+00:25:40,000 --> 00:25:44,000
+It's kind of an empty send this there and it will handle fanning things out.
+
+233
+00:25:44,000 --> 00:25:48,000
+And there's valid reasons for that. I get it. I'm not trying to criticize that decision.
+
+234
+00:25:48,000 --> 00:25:53,000
+It's just if you care, you need to track that yourself.
+
+235
+00:25:53,000 --> 00:25:58,000
+In our case, there are some messages where different users might see slightly different things.
+
+236
+00:25:58,000 --> 00:26:07,000
+Maybe some users don't have permissions to see some bits of information that we looked up or maybe they don't have permission to see that other data is available.
+
+237
+00:26:07,000 --> 00:26:13,000
+If you want to be able to do that, to be able to send different messages to different people, you need to track yourself.
+
+238
+00:26:13,000 --> 00:26:20,000
+This user is on this whatever WebSocket and has this reply channel. You need to do that mapping yourself.
+
+239
+00:26:20,000 --> 00:26:29,000
+Because channels really heavily uses or at least our setup of it really heavily uses Redis to do all the cross channel communication, we figured Redis is already there.
+
+240
+00:26:29,000 --> 00:26:34,000
+We're using it for that. But, you know, be aware you have to do that yourself.
+
+241
+00:26:34,000 --> 00:26:46,000
+In our case, actually, what we ended up doing was using a Redis hash map to say into this graph, this user ID is this reply channel that had actually a really interesting side effect.
+
+242
+00:26:46,000 --> 00:26:52,000
+You could call it a bug. Actually, I think it's more of a feature that you can't use the same user ID more than once in a workspace.
+
+243
+00:26:52,000 --> 00:26:57,000
+Because if you log in twice with the same user ID, that hash map gets overwritten the second time.
+
+244
+00:26:57,000 --> 00:27:00,000
+So the first user doesn't get events anymore.
+
+245
+00:27:00,000 --> 00:27:05,000
+From my point of view, this is a product I'm trying to sell access to. I don't want people to reuse logins.
+
+246
+00:27:05,000 --> 00:27:15,000
+So I'm fine with that bug. But be aware that's a design implication that if you need to do this tracking, that kind of thing is going to break things.
+
+247
+00:27:15,000 --> 00:27:19,000
+So I've burned through a bunch of stuff randomly.
+
+248
+00:27:19,000 --> 00:27:23,000
+Basically, I'm a huge fan. This has been super valuable to us.
+
+249
+00:27:23,000 --> 00:27:28,000
+I don't think we could do half of what our tool does without Django channels.
+
+250
+00:27:28,000 --> 00:27:31,000
+I hope this has convinced some of you that this is something cool to do.
+
+251
+00:27:31,000 --> 00:27:34,000
+If you've got any questions, please let me know.
+
+252
+00:27:34,000 --> 00:27:39,000
+I think we've got five or so minutes, two, three, whatever.
+
+253
+00:27:39,000 --> 00:27:44,000
+So yeah, that's my email address. If you have any questions, it is obligatory, I think, to say that we're going to do this.
+
+254
+00:27:44,000 --> 00:27:48,000
+It's obligatory, I think, to say that we're hiring, but we are.
+
+255
+00:27:48,000 --> 00:27:51,000
+So yeah, that's what I got. Any questions?
+
+256
+00:27:51,000 --> 00:28:00,000
+Thank you, Aaron. We have two minutes for questions.
+
+257
+00:28:00,000 --> 00:28:09,000
+So there are two microphones here in the room. If you want to go up to those, please keep it short so that we can get as many questions as possible.
+
+258
+00:28:09,000 --> 00:28:13,000
+If anyone has any questions, that is.
+
+259
+00:28:13,000 --> 00:28:17,000
+Oh, there's one person running out there.
+
+260
+00:28:17,000 --> 00:28:19,000
+Hi. Hey.
+
+261
+00:28:19,000 --> 00:28:25,000
+So I'm working on something that uses Celery to go do some background tasks.
+
+262
+00:28:25,000 --> 00:28:30,000
+And you mentioned I'm doing polling every five seconds.
+
+263
+00:28:30,000 --> 00:28:44,000
+I'm looking at channels to maybe present a different API for the front end to say, just check on the, know the state of the Celery task so when it's done, it can then pull the final result out of the database or something rather than doing the polling.
+
+264
+00:28:44,000 --> 00:28:47,000
+Is that kind of mind the right wavelength there for?
+
+265
+00:28:47,000 --> 00:28:53,000
+Ish. I mean, it's come up a couple times. I don't want to try and speak for Andrew Godwin because he may be actually be in the room.
+
+266
+00:28:53,000 --> 00:29:02,000
+But my understanding of the situation is that workers aren't designed to be a like timed polling thing. You can do it.
+
+267
+00:29:02,000 --> 00:29:06,000
+You can do, you know, periodic waits or periodic launch messages back onto the queue.
+
+268
+00:29:06,000 --> 00:29:12,000
+But it's not designed to be a replacement for Celery.
+
+269
+00:29:12,000 --> 00:29:16,000
+It's more for just sort of asynchronous processing of tasks.
+
+270
+00:29:16,000 --> 00:29:21,000
+Celery is a much better at scheduled. I want this to happen every five minutes.
+
+271
+00:29:21,000 --> 00:29:28,000
+If you want that, you can hack it into channels, but you'd probably be happier in Celery.
+
+272
+00:29:28,000 --> 00:29:33,000
+Any other questions?
+
+273
+00:29:33,000 --> 00:29:37,000
+We have a reservation flow that talks to a third party API.
+
+274
+00:29:37,000 --> 00:29:43,000
+Is this a good like if we make seven or so external calls to like reserve a class for a user?
+
+275
+00:29:43,000 --> 00:29:44,000
+I'm sorry.
+
+276
+00:29:44,000 --> 00:29:49,000
+Sorry. So we have a we make seven or so external API calls for one of our endpoints.
+
+277
+00:29:49,000 --> 00:29:57,000
+Would this be a good use case for a socket to like open a socket and update the user on how those API calls are going?
+
+278
+00:29:57,000 --> 00:30:07,000
+Sure. I mean, what you could do is so if I'm reading this right, someone connects to your system and as soon as they connect, you make sort of seven or eight API calls that are each asynchronous.
+
+279
+00:30:07,000 --> 00:30:10,000
+You want to then push those back.
+
+280
+00:30:10,000 --> 00:30:14,000
+Yep, and update them on the progress of each call. So that you see.
+
+281
+00:30:14,000 --> 00:30:17,000
+Yeah, you could make each of those make each of those an event.
+
+282
+00:30:17,000 --> 00:30:27,000
+So you on the connect, you just have a I have connected event or just do it in the connect method and entirely and then have just sort of progress update messages coming down the socket to the user.
+
+283
+00:30:27,000 --> 00:30:29,000
+Cool. Thanks.
+
+284
+00:30:29,000 --> 00:30:31,000
+And we can do one more question.
+
+285
+00:30:31,000 --> 00:30:38,000
+What is the client side of channels look like? Like are there JavaScript libraries or other language libraries?
+
+286
+00:30:38,000 --> 00:30:41,000
+There's tons of JavaScript libraries for web sockets.
+
+287
+00:30:41,000 --> 00:30:47,000
+I mean, the client side is entirely JavaScript, at least in my side. I haven't even messed with doing this in Wausam.
+
+288
+00:30:47,000 --> 00:30:50,000
+But there's a bunch of libraries do this on the JavaScript side.
+
+289
+00:30:50,000 --> 00:30:59,000
+And you really what you're doing is just accepting a message on the web socket and then processing that however is appropriate.
+
+290
+00:30:59,000 --> 00:31:01,000
+In our case, it's JSON.
+
+291
+00:31:01,000 --> 00:31:07,000
+And that's why I mentioned, you know, really agreeing early on on the communication protocol.
+
+292
+00:31:07,000 --> 00:31:21,000
+So it's really easy for your JavaScript folks to say, or if you're your own JavaScript for yourself to say, I know what this message that starts like this or is this message has to has to have done to it.
+
+293
+00:31:21,000 --> 00:31:23,000
+Thanks.
+
+294
+00:31:23,000 --> 00:31:26,000
+Let's thank Aaron again.
+

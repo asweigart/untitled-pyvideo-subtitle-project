@@ -1,0 +1,1192 @@
+1
+00:00:00,000 --> 00:00:06,920
+Good afternoon, everybody, and welcome to our next presentation here at PyCon 2019.
+
+2
+00:00:06,920 --> 00:00:09,960
+Next up we have Jess Shapiro speaking about Python's concurrency models.
+
+3
+00:00:09,960 --> 00:00:12,960
+Please make her feel welcome.
+
+4
+00:00:12,960 --> 00:00:20,920
+Thanks for coming out today.
+
+5
+00:00:20,920 --> 00:00:21,920
+Like you said, my name is Jess.
+
+6
+00:00:21,920 --> 00:00:27,920
+Today we're going to be talking about five of Python's many different concurrency models
+
+7
+00:00:28,080 --> 00:00:31,560
+and some of the qualities that make those different and the circumstances that you might
+
+8
+00:00:31,560 --> 00:00:33,920
+want to use them in.
+
+9
+00:00:33,920 --> 00:00:36,880
+So to start off, concurrency, what even is it?
+
+10
+00:00:36,880 --> 00:00:40,800
+All of us have heard that term, but what does it mean in practice?
+
+11
+00:00:40,800 --> 00:00:44,880
+The common explanation is that concurrency is what happens when you're doing multiple
+
+12
+00:00:44,880 --> 00:00:45,880
+things at once.
+
+13
+00:00:45,880 --> 00:00:48,560
+But it's sort of a little bit of a simplification.
+
+14
+00:00:48,560 --> 00:00:53,040
+Concurrency is really the idea that we can break down our programs into pieces that run
+
+15
+00:00:53,040 --> 00:00:57,640
+independently and we get the side benefit of when we have pieces of a program that can
+
+16
+00:00:57,640 --> 00:00:59,040
+run independently.
+
+17
+00:00:59,040 --> 00:01:03,760
+We can run those at the same time and get benefits like performance out of it.
+
+18
+00:01:03,760 --> 00:01:08,440
+So concurrency then isn't just something that you turn on or off.
+
+19
+00:01:08,440 --> 00:01:10,880
+It's something that's more qualitative.
+
+20
+00:01:10,880 --> 00:01:15,280
+And so today we're going to be talking about some of the things that lend different qualities
+
+21
+00:01:15,280 --> 00:01:19,360
+to different concurrency models in different circumstances and why we might want to choose
+
+22
+00:01:19,360 --> 00:01:21,760
+each model.
+
+23
+00:01:21,760 --> 00:01:25,360
+There are a bunch of options in Python, but today we're just going to be talking about
+
+24
+00:01:25,360 --> 00:01:32,360
+five, async IAO coroutines, Python threads, the much scarier global interpreter lock,
+
+25
+00:01:34,720 --> 00:01:41,720
+release threads, multiprocessing, and distributed tasks using frameworks like Hadoop.
+
+26
+00:01:41,900 --> 00:01:46,800
+So the first principle that we're going to talk about is parallelism, which is again
+
+27
+00:01:46,800 --> 00:01:50,000
+what a lot of people associate with concurrency.
+
+28
+00:01:50,000 --> 00:01:53,480
+And there are a couple of core questions that we want to ask ourselves.
+
+29
+00:01:53,480 --> 00:01:58,080
+When we do things concurrently, are they actually happening simultaneously?
+
+30
+00:01:58,080 --> 00:02:04,700
+A good proxy for this question is how does performance scale when you add more CPUs?
+
+31
+00:02:04,700 --> 00:02:11,700
+If you look at the graphic on the right, the left-hand model only provides concurrency
+
+32
+00:02:14,600 --> 00:02:16,800
+that is not truly parallel.
+
+33
+00:02:16,800 --> 00:02:23,240
+You can see that each of those tasks run independently, but none of them can run at really the same
+
+34
+00:02:23,640 --> 00:02:24,640
+time.
+
+35
+00:02:24,640 --> 00:02:27,040
+In comparison, the concurrency model on the right is truly parallel.
+
+36
+00:02:27,040 --> 00:02:30,720
+You can see that as many as three different things are happening at once.
+
+37
+00:02:30,720 --> 00:02:35,080
+Now that's not to say that concurrency models that aren't parallel aren't useful.
+
+38
+00:02:35,080 --> 00:02:39,420
+Because concurrency is the ability to break down a program into pieces, even models that
+
+39
+00:02:39,420 --> 00:02:45,580
+don't give us true parallelism can be used to great benefit.
+
+40
+00:02:45,580 --> 00:02:49,340
+The second principle that I want to talk about is the minimum scheduleable unit, and you're
+
+41
+00:02:49,340 --> 00:02:52,860
+going to have a lot of trouble if you Google this.
+
+42
+00:02:52,860 --> 00:02:56,660
+Code is made up of individual semantic chunks.
+
+43
+00:02:56,660 --> 00:02:59,520
+Depending on how we run those chunks, they behave differently.
+
+44
+00:02:59,520 --> 00:03:06,380
+Just like an individual block of 32 bits could be a positive integer, it could be an x86
+
+45
+00:03:06,380 --> 00:03:10,680
+instruction, it could be a negative floating point number, or it could even be a smiley
+
+46
+00:03:10,680 --> 00:03:12,820
+face emoji.
+
+47
+00:03:12,820 --> 00:03:18,000
+Even when we're talking about just pure Python code, the way we execute code is really important
+
+48
+00:03:18,000 --> 00:03:20,680
+and changes how it behaves.
+
+49
+00:03:20,680 --> 00:03:28,220
+The minimum scheduleable unit is the individual semantic unit of your code that can be decided
+
+50
+00:03:28,220 --> 00:03:32,820
+on to be run by the scheduler, whether that's the operating system kernel or the Python
+
+51
+00:03:32,820 --> 00:03:38,620
+interpreter that can be completely executed and that returns control to the scheduler
+
+52
+00:03:38,620 --> 00:03:42,620
+for it to do the next thing.
+
+53
+00:03:42,620 --> 00:03:47,180
+The third principle I want to talk about is data sharing and isolation.
+
+54
+00:03:47,200 --> 00:03:51,200
+The first question to this is how isolated is data between tasks?
+
+55
+00:03:51,200 --> 00:03:57,400
+If I have a piece of global state that I change in one of my tasks that's a part of my program,
+
+56
+00:03:57,400 --> 00:04:04,400
+is that global state change reflected in my other concurrent tasks?
+
+57
+00:04:04,400 --> 00:04:10,840
+If I acquire a piece of data, and this is the classic example of my program is a bank,
+
+58
+00:04:10,840 --> 00:04:15,400
+and I look up a bank account balance, how long does that data stay good for?
+
+59
+00:04:15,420 --> 00:04:20,940
+And I trust that no other task is going to modify that piece of data before I need to
+
+60
+00:04:20,940 --> 00:04:21,940
+use it.
+
+61
+00:04:21,940 --> 00:04:25,900
+And finally, what tools can be used to share data?
+
+62
+00:04:25,900 --> 00:04:30,140
+In models where there's a lot of state that's shared by default, these tools are typically
+
+63
+00:04:30,140 --> 00:04:35,660
+going to be things like locks or flags that allow us to ensure consistency, in fact reduce
+
+64
+00:04:35,660 --> 00:04:38,700
+the concurrency of our application.
+
+65
+00:04:38,700 --> 00:04:43,380
+In comparison for models that don't share data by default, these are tools that are
+
+66
+00:04:43,440 --> 00:04:50,440
+going to allow us to move data between tasks that each of those tasks need to be aware of.
+
+67
+00:04:52,440 --> 00:04:59,440
+So jumping into our five models, we're going to start with async IO coroutines.
+
+68
+00:04:59,440 --> 00:05:06,440
+Only one coroutine runs at a time, so right off the bat we know that in async IO, the
+
+69
+00:05:06,440 --> 00:05:09,440
+concurrency model is not a parallel model.
+
+70
+00:05:09,500 --> 00:05:16,500
+Instead, each coroutine will yield out to the event loop on a regular basis.
+
+71
+00:05:16,940 --> 00:05:22,500
+The minimum schedule unit is the awaitable block, and global state is consistent within
+
+72
+00:05:22,500 --> 00:05:25,540
+each awaitable block.
+
+73
+00:05:25,540 --> 00:05:27,380
+What does that look like?
+
+74
+00:05:27,380 --> 00:05:32,900
+If you look at the code sample on the screen, an awaitable block could be defined as the
+
+75
+00:05:32,900 --> 00:05:38,060
+section of code between the start of a function call or the start of a call to a coroutine
+
+76
+00:05:38,060 --> 00:05:45,060
+and the first await statement in that coroutine, or the space between each await statement
+
+77
+00:05:45,320 --> 00:05:47,040
+thereafter.
+
+78
+00:05:47,040 --> 00:05:51,160
+It doesn't matter what we do in between those statements, we're not going to yield out to
+
+79
+00:05:51,160 --> 00:05:54,800
+the event loop, and so we can be assured of data consistency.
+
+80
+00:05:54,800 --> 00:06:00,800
+We might make a print statement, we might sleep synchronously inside the thread, we
+
+81
+00:06:00,800 --> 00:06:04,160
+might loop over 10,000 different times.
+
+82
+00:06:04,260 --> 00:06:09,260
+If we don't await out, then we're still in a single block and we're still consistent.
+
+83
+00:06:09,260 --> 00:06:15,260
+In comparison, as soon as we make an await statement or a call to another coroutine,
+
+84
+00:06:15,260 --> 00:06:21,260
+we lose that consistency because we've yielded out to the event loop.
+
+85
+00:06:21,260 --> 00:06:25,260
+We're in a new block that is independently scheduled.
+
+86
+00:06:25,260 --> 00:06:32,260
+Now, the event loop in async IO basically receives information about the work that each
+
+87
+00:06:33,160 --> 00:06:34,360
+coroutine needs to have done.
+
+88
+00:06:34,360 --> 00:06:38,960
+That could be opening a file, that could be waiting a certain amount of time, or that
+
+89
+00:06:38,960 --> 00:06:41,960
+could be writing to a network socket.
+
+90
+00:06:41,960 --> 00:06:47,360
+The event loop will prepare that work to be done and then once that work is ready and
+
+91
+00:06:47,360 --> 00:06:54,360
+completed, it will re-enter the coroutine that was in process.
+
+92
+00:06:55,360 --> 00:06:57,160
+Here is some more sample code.
+
+93
+00:06:57,160 --> 00:07:01,560
+On the left, we have an example of two really good well-engineered coroutines that worked
+
+94
+00:07:01,860 --> 00:07:03,460
+well together.
+
+95
+00:07:03,460 --> 00:07:08,360
+The top method, tickUp, just increments a counter that's shared between the methods
+
+96
+00:07:08,360 --> 00:07:10,760
+every tenth of a second.
+
+97
+00:07:10,760 --> 00:07:15,760
+And the bottom one essentially just enters, acquires the information about where the counter
+
+98
+00:07:15,760 --> 00:07:20,760
+is at the beginning, sleeps 30 seconds asynchronously, and acquires information about where the counter
+
+99
+00:07:20,760 --> 00:07:21,760
+is at the end.
+
+100
+00:07:21,760 --> 00:07:27,760
+And because we tick up every tenth of a second and it's waited about 30 seconds, the counter
+
+101
+00:07:27,760 --> 00:07:30,560
+should have incremented about 300 times.
+
+102
+00:07:30,560 --> 00:07:36,060
+In comparison, on the right, the print and sleep sync function is very similar, but because
+
+103
+00:07:36,060 --> 00:07:42,060
+it never yields out to the event loop, instead using the time.sleep function call, this means
+
+104
+00:07:42,060 --> 00:07:46,460
+that the other coroutine never gets a chance to run.
+
+105
+00:07:46,460 --> 00:07:49,960
+This is a common pitfall when we're doing things synchronously that we should be doing
+
+106
+00:07:49,960 --> 00:07:51,460
+asynchronously.
+
+107
+00:07:51,460 --> 00:07:56,360
+And so when we get the information about where the counter is when it starts and where the
+
+108
+00:07:57,260 --> 00:08:02,060
+ends, they're in the same place, which means that we aren't doing work we might need to
+
+109
+00:08:02,060 --> 00:08:03,560
+do.
+
+110
+00:08:03,560 --> 00:08:09,060
+But that also provides a really good example of that data consistency within a single
+
+111
+00:08:09,060 --> 00:08:14,060
+awaitable block.
+
+112
+00:08:14,060 --> 00:08:20,660
+The next item is Python threads, and this is probably the most commonly used and well-known
+
+113
+00:08:20,660 --> 00:08:24,360
+concurrency model that most of you have used before.
+
+114
+00:08:24,460 --> 00:08:28,860
+Technically speaking, only one Python thread runs at a time due to the global interpreter
+
+115
+00:08:28,860 --> 00:08:35,160
+lock, but that can often seem to be other than the case because Python releases that
+
+116
+00:08:35,160 --> 00:08:39,460
+global interpreter lock during blocking I.O. operations and sleeps.
+
+117
+00:08:39,460 --> 00:08:44,260
+The minimum schedule unit is the Python bytecode, which is what Python compiles your
+
+118
+00:08:44,260 --> 00:08:47,460
+expressions down into when it runs them.
+
+119
+00:08:47,460 --> 00:08:51,960
+And global state is consistent within a single bytecode, but that doesn't really provide any
+
+120
+00:08:52,060 --> 00:08:55,160
+strong guarantees.
+
+121
+00:08:55,160 --> 00:09:01,960
+If you look at the four statements on the left hand of the screen, which of those is a
+
+122
+00:09:01,960 --> 00:09:03,660
+single bytecode operation?
+
+123
+00:09:03,660 --> 00:09:07,160
+One of them is, I promise.
+
+124
+00:09:07,160 --> 00:09:11,960
+Which do you think it is, the first one, just raise your hand.
+
+125
+00:09:11,960 --> 00:09:14,760
+The second one.
+
+126
+00:09:14,760 --> 00:09:17,160
+The third one.
+
+127
+00:09:17,160 --> 00:09:19,760
+And the fourth one.
+
+128
+00:09:19,760 --> 00:09:22,460
+Okay, so we got some pretty even distribution here.
+
+129
+00:09:22,460 --> 00:09:26,060
+In fact, it is the second one, but the point of this exercise isn't really to find the
+
+130
+00:09:26,060 --> 00:09:26,860
+right answer.
+
+131
+00:09:26,860 --> 00:09:32,260
+It's to kind of inform you that you shouldn't rely on Python bytecode consistency.
+
+132
+00:09:32,260 --> 00:09:38,060
+Instead, use primitives that are designed to allow you to work concurrently.
+
+133
+00:09:38,060 --> 00:09:45,060
+The bytecode consistency is mainly there for the Python interpreter itself.
+
+134
+00:09:45,060 --> 00:09:48,260
+Now, when we're talking about scheduling Python threads, it's sort of a combination of the
+
+135
+00:09:48,360 --> 00:09:53,460
+Python interpreter, which decides both when to attempt to acquire the global interpreter
+
+136
+00:09:53,460 --> 00:09:55,560
+lock and when to release it.
+
+137
+00:09:55,560 --> 00:10:00,160
+But when we're attempting to acquire the lock from multiple threads, the operating system
+
+138
+00:10:00,160 --> 00:10:04,360
+kernel is actually the entity that decides which thread gets a hold of it.
+
+139
+00:10:04,360 --> 00:10:11,460
+You can see in the graphic on the right that as we move through time, a shared state is
+
+140
+00:10:11,560 --> 00:10:18,560
+mutated for all threads simultaneously and that it happens during a single schedule unit.
+
+141
+00:10:21,960 --> 00:10:23,760
+And we have some sample code on the left.
+
+142
+00:10:23,760 --> 00:10:26,960
+Again, a very well-behaved threaded program.
+
+143
+00:10:26,960 --> 00:10:31,260
+We have a really simple method here that increments the counter a million times, and we run it
+
+144
+00:10:31,260 --> 00:10:33,260
+eight times concurrently.
+
+145
+00:10:33,260 --> 00:10:37,860
+At the end of it, as we expect, the counter is up to eight million.
+
+146
+00:10:37,860 --> 00:10:41,260
+On the right hand, we take a little bit more of a cavalier approach.
+
+147
+00:10:41,260 --> 00:10:45,460
+We don't gain a lock before incrementing that counter.
+
+148
+00:10:45,460 --> 00:10:49,960
+And rather than the eight million times we'd usually expect, we only get about three and
+
+149
+00:10:49,960 --> 00:10:51,160
+a half million.
+
+150
+00:10:51,160 --> 00:10:55,860
+This is a really simple thing to do, you would think, but it really shows that you can't
+
+151
+00:10:55,860 --> 00:11:02,560
+rely on any sort of external guarantees other than primitives that are designed for allowing
+
+152
+00:11:02,560 --> 00:11:08,760
+you to be concurrent.
+
+153
+00:11:08,760 --> 00:11:13,560
+So we're talking about releasing the global interpreter lock.
+
+154
+00:11:13,560 --> 00:11:17,060
+Here there be dragons.
+
+155
+00:11:17,060 --> 00:11:20,560
+Generally when we're talking about releasing the gil, what we're going to be doing is calling
+
+156
+00:11:20,560 --> 00:11:28,160
+out into another language like C or Rust or Go or really any other language that isn't
+
+157
+00:11:28,160 --> 00:11:33,560
+C and doing some really performance-intensive work there.
+
+158
+00:11:33,560 --> 00:11:37,860
+That allows us to both use optimized machine instructions and because we're not interacting
+
+159
+00:11:37,860 --> 00:11:41,860
+with a Python interpreter, we can safely allow multiple threads to run concurrently
+
+160
+00:11:41,860 --> 00:11:45,860
+without putting any of the Python data at risk.
+
+161
+00:11:45,860 --> 00:11:54,860
+Global state in a gil release thread is entirely shared and also entirely unreliable, so we
+
+162
+00:11:54,860 --> 00:11:58,860
+want to avoid using that shared state as much as we can.
+
+163
+00:11:58,860 --> 00:12:03,260
+Instead, when we're ready to communicate, reacquiring the global interpreter lock and
+
+164
+00:12:03,260 --> 00:12:07,160
+passing the data back into Python where it can be passed around safely.
+
+165
+00:12:07,160 --> 00:12:11,160
+Gil release threads are entirely scheduled by the operating system and we have some
+
+166
+00:12:11,160 --> 00:12:14,660
+sample code here.
+
+167
+00:12:14,660 --> 00:12:17,160
+This is not Python.
+
+168
+00:12:17,160 --> 00:12:26,160
+This is a Python function implemented using C that receives a string as an argument that
+
+169
+00:12:26,160 --> 00:12:31,160
+uses the PyBegin allow threads macro to release the global interpreter lock.
+
+170
+00:12:31,660 --> 00:12:37,660
+Does something very computationally intense with that input string and then reacquires
+
+171
+00:12:37,660 --> 00:12:42,160
+the global interpreter lock before passing the data back into the application.
+
+172
+00:12:42,160 --> 00:12:46,660
+What you really want to be using code like this for is implementing maybe you have a
+
+173
+00:12:46,660 --> 00:12:51,660
+core algorithm at the heart of your library or application that's really intensive.
+
+174
+00:12:51,660 --> 00:12:59,160
+If you implement just that tiny bit in a compiled optimized language like Rust or Go or C and
+
+175
+00:12:59,160 --> 00:13:05,160
+then use Python to really provide a robust API to that algorithm, you can get a lot of
+
+176
+00:13:05,160 --> 00:13:11,160
+performance gain that way, but it can be really hazardous and you want to be very careful
+
+177
+00:13:11,160 --> 00:13:16,660
+to ensure that you stay away from touching the Python interpreter itself while you do
+
+178
+00:13:16,660 --> 00:13:18,160
+that.
+
+179
+00:13:18,160 --> 00:13:28,160
+That brings us to multiprocessing, which is even though it seems like we've been getting
+
+180
+00:13:28,160 --> 00:13:34,160
+more and more scary as we go through this, multiprocessing actually becomes very comfortable
+
+181
+00:13:34,160 --> 00:13:36,160
+again.
+
+182
+00:13:36,160 --> 00:13:44,160
+Multiprocessing allows us to run Python code in parallel, truly simultaneously with global
+
+183
+00:13:44,160 --> 00:13:46,160
+state that we don't have to worry about.
+
+184
+00:13:46,160 --> 00:13:52,160
+Essentially what happens when we spawn a child process is that the entire state of our Python
+
+185
+00:13:52,160 --> 00:13:56,160
+application is copied over into that new process.
+
+186
+00:13:56,160 --> 00:14:02,160
+Once it's copied over, we can make changes to global variables however we want and they
+
+187
+00:14:02,160 --> 00:14:04,160
+don't affect the state of the parent.
+
+188
+00:14:04,160 --> 00:14:08,160
+If we change state in the child, it doesn't affect the state of the parent and if we change
+
+189
+00:14:08,160 --> 00:14:11,160
+state in the parent, it doesn't affect the state of the child.
+
+190
+00:14:11,160 --> 00:14:14,160
+It's a very safe, very easy use.
+
+191
+00:14:14,160 --> 00:14:19,160
+You can see in the graphic that each child inherits its state from its parent, but from
+
+192
+00:14:19,160 --> 00:14:25,160
+then on sort of evolves independently in doing its own thing and those states are not commingled.
+
+193
+00:14:25,160 --> 00:14:31,160
+The code sample for that is, of course, very simple.
+
+194
+00:14:31,160 --> 00:14:37,160
+When we make the OS.fork system call, the return value informs us about whether we are
+
+195
+00:14:37,160 --> 00:14:42,160
+the child or the parent with the processes being otherwise identical.
+
+196
+00:14:42,160 --> 00:14:46,160
+If we're in the parent, we're going to print that shared variable that we have originally,
+
+197
+00:14:46,160 --> 00:14:48,160
+modify it, print it again.
+
+198
+00:14:48,160 --> 00:14:52,160
+No worries because the child has separated its address space.
+
+199
+00:14:52,160 --> 00:14:56,160
+We can modify that variable as much as we want without interfering with what the child
+
+200
+00:14:56,160 --> 00:14:57,160
+is doing.
+
+201
+00:14:57,160 --> 00:15:03,160
+If we start out on the child, similarly we can print that variable, modify it, do whatever
+
+202
+00:15:03,160 --> 00:15:10,160
+you want without worrying about interfering with the parent process.
+
+203
+00:15:10,160 --> 00:15:13,160
+That brings us to distributed tasks.
+
+204
+00:15:13,160 --> 00:15:20,160
+This is often using a framework like Hadoop and an orchestrator like Yarm.
+
+205
+00:15:20,160 --> 00:15:26,160
+We're going to talk about one particular distributed task model in particular, specifically
+
+206
+00:15:26,160 --> 00:15:32,160
+Hadoop MapReduce streaming jobs.
+
+207
+00:15:32,160 --> 00:15:39,160
+Often the minimal schedule unit is the entire application being run for some subset of the
+
+208
+00:15:39,160 --> 00:15:41,160
+data we want to work with.
+
+209
+00:15:41,160 --> 00:15:48,160
+For example, if I have a 100 terabyte chunk of data that I need to process through and
+
+210
+00:15:48,160 --> 00:15:53,160
+100 CPUs, then the orchestrator will take care of splitting out that 100 terabytes of
+
+211
+00:15:53,160 --> 00:15:59,160
+data into 1 terabyte chunks that can easily and conveniently be sent to each CPU to be
+
+212
+00:15:59,160 --> 00:16:02,160
+worked with.
+
+213
+00:16:02,160 --> 00:16:08,160
+Each of those execution units or compute nodes or whatever the framework you're working with
+
+214
+00:16:08,160 --> 00:16:13,160
+calls them will often execute a process that's entirely independent from all the other execution
+
+215
+00:16:13,160 --> 00:16:18,160
+units just on the chunk of data that it receives.
+
+216
+00:16:18,160 --> 00:16:23,160
+Notably, using this concurrency model, there can be a lot of overhead.
+
+217
+00:16:23,160 --> 00:16:31,160
+You really want to be sure that you have big data in the ranges of hundreds of gigabytes
+
+218
+00:16:31,160 --> 00:16:38,160
+to hundreds of terabytes to hundreds of the next thing before starting to use a model
+
+219
+00:16:38,160 --> 00:16:40,160
+like this.
+
+220
+00:16:40,160 --> 00:16:44,160
+It's often the case that for smaller pieces of data you can actually incur a performance
+
+221
+00:16:44,160 --> 00:16:52,160
+cost by going to a framework like this before you're really ready for it.
+
+222
+00:16:52,160 --> 00:16:59,160
+Here's a code sample for a very simple job that just reads the lines of input that it
+
+223
+00:16:59,160 --> 00:17:04,160
+receives from the orchestrator, performs a process on each one.
+
+224
+00:17:04,160 --> 00:17:10,160
+For example, maybe converting a log line from a comma separated format into a structured
+
+225
+00:17:10,160 --> 00:17:16,160
+JSON format, and then prints the result of that line back to standard out.
+
+226
+00:17:16,160 --> 00:17:21,160
+In this case, the orchestrator feeds the data in line by line on standard in and retrieves
+
+227
+00:17:21,160 --> 00:17:25,160
+the process data from standard out.
+
+228
+00:17:25,160 --> 00:17:30,160
+You can see clearly that this program doesn't even really know about the framework it's
+
+229
+00:17:30,160 --> 00:17:39,160
+running on, and it's very safe and very simple.
+
+230
+00:17:39,160 --> 00:17:45,160
+Often when using a framework like MapReduce, a number of jobs like this will be chained
+
+231
+00:17:45,160 --> 00:17:50,160
+together to do things like count the number of a particular word in the file.
+
+232
+00:17:50,160 --> 00:17:54,160
+We might have a data set that's too large for an individual node to handle, but we
+
+233
+00:17:54,160 --> 00:18:01,160
+describe the problem in terms of a series of steps that lead towards a solution that
+
+234
+00:18:01,160 --> 00:18:08,160
+means we can separate the data out.
+
+235
+00:18:08,160 --> 00:18:12,160
+So when do we want to use each of these models?
+
+236
+00:18:12,160 --> 00:18:19,160
+Async I.O. is fantastic when our performance is bound by us doing I.O. operations like
+
+237
+00:18:19,160 --> 00:18:25,160
+network requests or reading or writing files rather than CPU or compute bound, like doing
+
+238
+00:18:25,160 --> 00:18:27,160
+lots of complicated math.
+
+239
+00:18:27,160 --> 00:18:34,160
+Because Async I.O. isn't a parallel concurrency model, it doesn't allow us to gain performance
+
+240
+00:18:34,160 --> 00:18:43,160
+from, it doesn't allow us to gain CPU performance specifically from implementing it.
+
+241
+00:18:43,160 --> 00:18:48,160
+Async I.O. is especially great if you're starting a new code base from scratch without
+
+242
+00:18:48,160 --> 00:18:51,160
+needing to integrate existing legacy code.
+
+243
+00:18:51,160 --> 00:18:56,160
+This is the case because if you have legacy code that you need to use, you'll often find
+
+244
+00:18:56,160 --> 00:19:03,160
+yourself adding threading anyway, and your threading interferes with the consistency
+
+245
+00:19:03,160 --> 00:19:10,160
+and safety guarantees that really are the hallmark of Async I.O. in the first place.
+
+246
+00:19:10,160 --> 00:19:16,160
+Threads are great when you need preemptive multitasking, that is when you need tasks to
+
+247
+00:19:16,160 --> 00:19:23,160
+be able to interrupt other tasks, when you need to integrate existing synchronous code
+
+248
+00:19:23,160 --> 00:19:30,160
+that explicitly waits for operations to complete from the operating system, when you need
+
+249
+00:19:30,160 --> 00:19:36,160
+fine-grained concurrency like tasks working together with each other simultaneously without
+
+250
+00:19:36,160 --> 00:19:43,160
+yielding out to an event loop, or when you're writing optimized C or Rust or Go code and
+
+251
+00:19:43,160 --> 00:19:48,160
+you really need an API to glue the pieces of that optimized code together.
+
+252
+00:19:48,160 --> 00:19:53,160
+Ideally, again, you want to keep the scope of that compiled code as small as possible
+
+253
+00:19:53,160 --> 00:19:59,160
+so you can take advantage of the safety and consistency guarantees that Python gives you.
+
+254
+00:19:59,160 --> 00:20:05,160
+Processes are great if you have parallel tasks that don't need substantial intertask
+
+255
+00:20:05,160 --> 00:20:12,160
+communication. Because processes don't share memory space between them, it becomes much
+
+256
+00:20:12,160 --> 00:20:18,160
+harder to share data when you need to. You'll typically implement shared data using things
+
+257
+00:20:18,160 --> 00:20:26,160
+like pipes or files or memory mapped regions that are shared between processes.
+
+258
+00:20:26,160 --> 00:20:33,160
+Processes are also great if you need full parallelism for Python code specifically.
+
+259
+00:20:33,160 --> 00:20:40,160
+If your program is implemented in a particular way in Python already and you can think of an
+
+260
+00:20:40,160 --> 00:20:46,160
+easy way to split the data apart, going to a multiprocessing model can give you a really quick,
+
+261
+00:20:46,160 --> 00:20:50,160
+really easy performance win.
+
+262
+00:20:50,160 --> 00:20:55,160
+Using distributed tasks like Hadoop are wonderful if you have a highly segmentable and
+
+263
+00:20:55,160 --> 00:21:02,160
+distributable workload. This is the case if you have a lot of data, if the data doesn't depend on
+
+264
+00:21:02,160 --> 00:21:08,160
+other parts of the data a lot. If your need for shared state is minimal, because the overhead of
+
+265
+00:21:08,160 --> 00:21:13,160
+communicating between compute nodes in the network becomes even greater than the overhead of
+
+266
+00:21:13,160 --> 00:21:19,160
+communicating between multiple processes on the same system. And when you have a large enough
+
+267
+00:21:19,160 --> 00:21:30,160
+workload to overcome the performance overhead of an orchestrator that splits your data apart.
+
+268
+00:21:30,160 --> 00:21:36,160
+I'd like to acknowledge Alison Capter and Chris Fenner for reviewing these slides for me. My
+
+269
+00:21:36,160 --> 00:21:43,160
+various other friends and mentors for their belief and support. Carbon.now.sh for the ability to
+
+270
+00:21:43,160 --> 00:21:50,160
+create nice high quality code snippet images. Mazarin on Market Street in San Francisco for avocado
+
+271
+00:21:50,160 --> 00:21:58,160
+toast and espresso. Very important. And all of you for coming out to this talk. If you'd like to
+
+272
+00:21:58,160 --> 00:22:06,160
+contact me, there is some information on the screen or I will be available for questions now.
+
+273
+00:22:06,160 --> 00:22:21,160
+So yes, if anyone has questions, there are microphones in the aisles there. Please phrase your
+
+274
+00:22:21,160 --> 00:22:26,160
+questions as questions. We do not need comments or stories at this point.
+
+275
+00:22:26,160 --> 00:22:51,160
+Are there any people with questions? Yes, not. Please thank Jess again. Sorry, we do have a question.
+
+276
+00:22:51,160 --> 00:22:59,160
+I went from programming and encode base that used threads to programming and encode base that used
+
+277
+00:22:59,160 --> 00:23:04,160
+async I O by switching code bases and switching jobs. Are there any successful migrations between
+
+278
+00:23:04,160 --> 00:23:11,160
+the different paradigms that you've outlined? Yes, so it's often the case that you're able to switch
+
+279
+00:23:11,160 --> 00:23:19,160
+from between processes and threads very easily or relatively easily because they're actually based on
+
+280
+00:23:19,160 --> 00:23:26,160
+the same underlying fundamentals. When you look at the way threads and processes interact with the
+
+281
+00:23:26,160 --> 00:23:33,160
+operating system, they're actually treated in very similar ways except for the difference in memory
+
+282
+00:23:33,160 --> 00:23:39,160
+mapping. And so if you're able to identify the points where there might be data conflict, then
+
+283
+00:23:39,160 --> 00:23:46,160
+switching from one to the other can be done very successfully. Switching from threads to async I O is
+
+284
+00:23:46,160 --> 00:23:51,160
+a lot harder because when you're running multiple threads, you're typically using blocking
+
+285
+00:23:51,160 --> 00:23:57,160
+operations and that sort of defeats the purpose of using async I O because you're not yielding out to
+
+286
+00:23:57,160 --> 00:24:09,160
+the event loop, other coroutines aren't able to run. Thanks for the talk. I've got a question about
+
+287
+00:24:09,160 --> 00:24:16,160
+multiprocessing. I ran into a project recently where we wanted to share more state than there was
+
+288
+00:24:16,160 --> 00:24:23,160
+potentially addressable space in RAM. Is there anything that we can do in a situation where we run
+
+289
+00:24:23,160 --> 00:24:30,160
+into that annoying error where it can't send enough memory across? Okay, so if I'm understanding the
+
+290
+00:24:30,160 --> 00:24:35,160
+question correctly, you've got a situation where you're already using multiprocessing to great effect,
+
+291
+00:24:35,160 --> 00:24:41,160
+but you're finding that the amount of state that you need to share between your individual tasks is
+
+292
+00:24:41,160 --> 00:24:49,160
+maybe greater than multiprocessing is really designed for. So in that case, if you have a large enough
+
+293
+00:24:49,160 --> 00:24:55,160
+data set, then you could look at moving to a distributed compute model. If you have a smaller data set
+
+294
+00:24:55,160 --> 00:25:04,160
+but just need to share data between tasks more easily, then your typical recourse is going to go out
+
+295
+00:25:04,160 --> 00:25:12,160
+to the file system to do it. And that can either be actual disk-backed file or in Unix you can have
+
+296
+00:25:12,160 --> 00:25:20,160
+memory-backed files that are high performance and allow you to communicate easily. Thanks. My question is
+
+297
+00:25:20,160 --> 00:25:25,160
+will you be posting your slides somewhere? Eventually. I'm not sure where. I will figure that out
+
+298
+00:25:25,160 --> 00:25:35,160
+and get back to you. Are there any more questions? Thank you again, Jess.
+

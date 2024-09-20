@@ -1,0 +1,1196 @@
+1
+00:00:00,000 --> 00:00:07,000
+Everybody, please join me in welcoming Andy Fundinger.
+
+2
+00:00:07,000 --> 00:00:12,000
+Thank you.
+
+3
+00:00:12,000 --> 00:00:18,000
+So, eight things that happen at the dot, attribute access and descriptors.
+
+4
+00:00:18,000 --> 00:00:27,000
+Kind of interesting, this talk is kind of coming full circle back to a conversation that happened at PyCon Portland
+
+5
+00:00:27,000 --> 00:00:35,000
+where I was talking with Guido and I said, what's a part of Python that doesn't get enough attention?
+
+6
+00:00:35,000 --> 00:00:37,000
+And he said, well, maybe descriptors.
+
+7
+00:00:37,000 --> 00:00:42,000
+And a few months later I said, well, maybe I'll try to make a talk out of that.
+
+8
+00:00:42,000 --> 00:00:47,000
+And now, well, a couple years later this talk is here.
+
+9
+00:00:47,000 --> 00:00:49,000
+So, who am I?
+
+10
+00:00:49,000 --> 00:01:03,000
+I've been a Python developer since version 2.4, but descriptors are not something that has changed since Python 2.2 with the new style classes.
+
+11
+00:01:03,000 --> 00:01:11,000
+Today we're using all Python 3, but the difference is basically a bunch of parenthetical objects being removed.
+
+12
+00:01:12,000 --> 00:01:19,000
+Myself, I've worked in industrial automation, metaverse development and the financial industry.
+
+13
+00:01:19,000 --> 00:01:28,000
+I've previously spoken about descriptors a few different places, PyCaribbean, PyGotham, EuroPython, PyCascades and PyTennessee.
+
+14
+00:01:28,000 --> 00:01:31,000
+They seem to keep creeping into my talks.
+
+15
+00:01:31,000 --> 00:01:33,000
+I don't know why.
+
+16
+00:01:33,000 --> 00:01:36,000
+Those are, some of them are different talks.
+
+17
+00:01:36,000 --> 00:01:41,000
+Currently I'm working at Bloomberg in the data license group.
+
+18
+00:01:41,000 --> 00:01:54,000
+What we do is we deliver financial data to clients in large chunks, like all the mortgages in North America, all the data about that.
+
+19
+00:01:54,000 --> 00:01:58,000
+We use a diverse set of tools to do that.
+
+20
+00:01:58,000 --> 00:02:08,000
+I pulled out some of them there, Flask, Celery, PyCSVW, Redis, Jena, Hadoop, even some things that are not Python.
+
+21
+00:02:08,000 --> 00:02:13,000
+Perl, JavaScript, C, C++, Fortran.
+
+22
+00:02:13,000 --> 00:02:18,000
+We are enterprise scale, but we are extremely agile.
+
+23
+00:02:18,000 --> 00:02:24,000
+A few of the other things Bloomberg does, the terminal is off in the expo hall.
+
+24
+00:02:24,000 --> 00:02:35,000
+We do trading solutions, trade book, enterprise data is my section, news, media, law, new energy, finance and government.
+
+25
+00:02:35,000 --> 00:02:38,000
+The numbers for Bloomberg are pretty large.
+
+26
+00:02:38,000 --> 00:02:42,000
+We have more than 5,000 engineers.
+
+27
+00:02:42,000 --> 00:02:46,000
+3,000 of them are Python developers.
+
+28
+00:02:46,000 --> 00:02:53,000
+150 data scientists, 150 plus.
+
+29
+00:02:53,000 --> 00:03:05,000
+Similarly, staggering numbers in some of the other categories, including the largest private network in the world.
+
+30
+00:03:05,000 --> 00:03:10,000
+But today we are talking about the dot.
+
+31
+00:03:10,000 --> 00:03:17,000
+Usually we look at the dot sitting there between O and X.
+
+32
+00:03:17,000 --> 00:03:23,000
+We could write a whole bunch of get at or OX.
+
+33
+00:03:23,000 --> 00:03:29,000
+That's probably just O Dunderdict index by X.
+
+34
+00:03:29,000 --> 00:03:33,000
+In the simplest case, sure, sure, sure it is.
+
+35
+00:03:33,000 --> 00:03:41,000
+O equals my object and we put the value of X in the Dunderdict as 3.
+
+36
+00:03:41,000 --> 00:03:44,000
+We look at Dunderdict and there it is.
+
+37
+00:03:44,000 --> 00:03:49,000
+O dot X and there is 3 and that's exactly what we expect.
+
+38
+00:03:49,000 --> 00:03:53,000
+But of course, maybe it's coming off the class.
+
+39
+00:03:53,000 --> 00:03:56,000
+This doesn't surprise us when it happens.
+
+40
+00:03:56,000 --> 00:03:59,000
+Here is a class.
+
+41
+00:03:59,000 --> 00:04:03,000
+We give my object a class of base object.
+
+42
+00:04:03,000 --> 00:04:09,000
+But we will use that next.
+
+43
+00:04:09,000 --> 00:04:15,000
+We set Y on my object and we look at the class Dict and it's a mapping proxy.
+
+44
+00:04:15,000 --> 00:04:17,000
+We see that Y is in there.
+
+45
+00:04:17,000 --> 00:04:20,000
+But O is still an instance of my object.
+
+46
+00:04:20,000 --> 00:04:25,000
+When we do O dot Y, yep, we went ahead and we found the value of Y.
+
+47
+00:04:25,000 --> 00:04:30,000
+The value of Y from the class.
+
+48
+00:04:30,000 --> 00:04:35,000
+But it could also come from the parent class.
+
+49
+00:04:35,000 --> 00:04:43,000
+We can look here and we can see that T is not in the class Dict.
+
+50
+00:04:43,000 --> 00:04:48,000
+But it is in the Dict of the first base class.
+
+51
+00:04:48,000 --> 00:04:52,000
+Along with an increasing number of other things.
+
+52
+00:04:52,000 --> 00:04:57,000
+I'm not going to say which are none because I haven't been declaring them.
+
+53
+00:04:57,000 --> 00:05:02,000
+When we call for O dot T, we get 4.
+
+54
+00:05:02,000 --> 00:05:05,000
+So great. Wonderful.
+
+55
+00:05:05,000 --> 00:05:10,000
+That's all fairly straightforward and we just wave our hand and assume that works.
+
+56
+00:05:10,000 --> 00:05:13,000
+But this is Python.
+
+57
+00:05:13,000 --> 00:05:17,000
+We know there's way more that we can do.
+
+58
+00:05:17,000 --> 00:05:21,000
+We'll take one of the old and boring things.
+
+59
+00:05:21,000 --> 00:05:26,000
+Dunder get adder has been with us for a very long time.
+
+60
+00:05:26,000 --> 00:05:29,000
+I believe this was Python 2.1.
+
+61
+00:05:29,000 --> 00:05:32,000
+Even before the new object model.
+
+62
+00:05:32,000 --> 00:05:37,000
+Dunder get adder is called when there is not a definition.
+
+63
+00:05:37,000 --> 00:05:43,000
+When an attribute is not defined on the instance.
+
+64
+00:05:43,000 --> 00:05:51,000
+We can see that here I've declared Dunder get adder.
+
+65
+00:05:51,000 --> 00:05:56,000
+And I've created a class called probe which has it defined.
+
+66
+00:05:56,000 --> 00:06:04,000
+And if I call for P dot R before setting a value for R.
+
+67
+00:06:04,000 --> 00:06:10,000
+Then I get back the value that it returns.
+
+68
+00:06:10,000 --> 00:06:15,000
+It's called and prints and it returns this ret value.
+
+69
+00:06:15,000 --> 00:06:17,000
+Get adder called.
+
+70
+00:06:17,000 --> 00:06:21,000
+But after I set a value in there that print statement is not hit.
+
+71
+00:06:21,000 --> 00:06:24,000
+Dunder get adder is not called.
+
+72
+00:06:24,000 --> 00:06:28,000
+The access is direct. The whole hook is skipped.
+
+73
+00:06:28,000 --> 00:06:37,000
+So there is a matching function on the other side called set adder.
+
+74
+00:06:37,000 --> 00:06:39,000
+Just to match that up.
+
+75
+00:06:39,000 --> 00:06:45,000
+Set adder just lets us say if we're setting a value we'll call this.
+
+76
+00:06:45,000 --> 00:06:47,000
+And we'll just see that for parity.
+
+77
+00:06:47,000 --> 00:06:49,000
+We define set adder on a probe.
+
+78
+00:06:49,000 --> 00:06:52,000
+We set P dot T equal to three.
+
+79
+00:06:52,000 --> 00:06:56,000
+And we see that that print statement is hit.
+
+80
+00:06:56,000 --> 00:06:59,000
+No magic takes place.
+
+81
+00:06:59,000 --> 00:07:07,000
+The dict does not get this value because I did not write any changes to the dict in my set adder.
+
+82
+00:07:09,000 --> 00:07:15,000
+Now get adder is actually being called by get attribute.
+
+83
+00:07:15,000 --> 00:07:23,000
+And we can override get attribute.
+
+84
+00:07:23,000 --> 00:07:31,000
+And if we do that we can control it regardless of whether the value is in the dict.
+
+85
+00:07:31,000 --> 00:07:35,000
+So here we have probe.
+
+86
+00:07:35,000 --> 00:07:38,000
+Probe has get attribute on it.
+
+87
+00:07:38,000 --> 00:07:43,000
+And before and after set P is called.
+
+88
+00:07:43,000 --> 00:07:48,000
+So P before set we get any var which is a return from get attribute.
+
+89
+00:07:48,000 --> 00:07:56,000
+And after set we also get any var which is also the return from get attribute.
+
+90
+00:07:56,000 --> 00:08:00,000
+Get attribute is actually managing the whole process.
+
+91
+00:08:00,000 --> 00:08:06,000
+But we'll just gloss over that because it's conceptually difficult.
+
+92
+00:08:06,000 --> 00:08:11,000
+But let's look at more about what get attribute is doing.
+
+93
+00:08:11,000 --> 00:08:18,000
+Get attribute is actually looking at what is found in the class dict.
+
+94
+00:08:18,000 --> 00:08:25,000
+Before it decides what to do when it's resolving what's in the class dict.
+
+95
+00:08:25,000 --> 00:08:31,000
+So if we create this class we'll call it probe nd.
+
+96
+00:08:31,000 --> 00:08:35,000
+And we put a method on here called dunder get.
+
+97
+00:08:35,000 --> 00:08:40,000
+Dunder get returns just a little string that says this was hit.
+
+98
+00:08:40,000 --> 00:08:46,000
+And we put that into the class dict of my object.
+
+99
+00:08:46,000 --> 00:08:49,000
+And then we have an instance of my object.
+
+100
+00:08:49,000 --> 00:08:52,000
+And we access o.z.
+
+101
+00:08:52,000 --> 00:08:57,000
+On that we don't get the probe nd object back.
+
+102
+00:08:57,000 --> 00:09:04,000
+We get the result of calling dunder get back.
+
+103
+00:09:04,000 --> 00:09:10,000
+However, if we put a value into the instance dictionary, in this case none,
+
+104
+00:09:10,000 --> 00:09:12,000
+we get that value back.
+
+105
+00:09:12,000 --> 00:09:16,000
+Just like get adder.
+
+106
+00:09:16,000 --> 00:09:25,000
+However, if we add a dunder set method and do the same, the behavior changes again.
+
+107
+00:09:25,000 --> 00:09:31,000
+So we put a dunder set method onto that probe nd,
+
+108
+00:09:31,000 --> 00:09:36,000
+we just inherit from it and make probe dd.
+
+109
+00:09:36,000 --> 00:09:39,000
+Which is exactly the same but has dunder set.
+
+110
+00:09:39,000 --> 00:09:43,000
+We put probe dd onto my object.
+
+111
+00:09:43,000 --> 00:09:51,000
+Create a new instance and go ahead and put none into that instance dictionary.
+
+112
+00:09:51,000 --> 00:09:55,000
+And then access it and it is called,
+
+113
+00:09:55,000 --> 00:10:06,000
+despite the fact that that dictionary has a value for z in it.
+
+114
+00:10:06,000 --> 00:10:11,000
+Just for completeness, we'll take a look here
+
+115
+00:10:11,000 --> 00:10:15,000
+and we'll make sure that dunder set is called as a set function.
+
+116
+00:10:15,000 --> 00:10:20,000
+So this is the same probe dd, exactly the same.
+
+117
+00:10:20,000 --> 00:10:26,000
+We'll go ahead and put none in as a value of z.
+
+118
+00:10:26,000 --> 00:10:32,000
+Except we'll set o.z equal to something.
+
+119
+00:10:32,000 --> 00:10:37,000
+And we can see here that the set function is now finally called.
+
+120
+00:10:37,000 --> 00:10:40,000
+And we can see that it does its print command
+
+121
+00:10:40,000 --> 00:10:46,000
+and prints out set my object and something, the value that it got.
+
+122
+00:10:46,000 --> 00:10:50,000
+And if we call o.z, we see that the get function still runs.
+
+123
+00:10:50,000 --> 00:10:54,000
+And if we check the dunder dict, we see that it hasn't even been altered
+
+124
+00:10:54,000 --> 00:11:00,000
+because once again I didn't write anything to change the dunder dict.
+
+125
+00:11:00,000 --> 00:11:08,000
+So set is a set function, it's called when we set on the left side.
+
+126
+00:11:08,000 --> 00:11:12,000
+So now we have our eight things.
+
+127
+00:11:12,000 --> 00:11:20,000
+So the first three are we use resolutions of dunder in the dictionary.
+
+128
+00:11:20,000 --> 00:11:26,000
+So first we look in the instance dictionary, we look in the class dictionary,
+
+129
+00:11:26,000 --> 00:11:31,000
+we look in the base classes dictionary.
+
+130
+00:11:31,000 --> 00:11:37,000
+Then items four and five are our dunder methods.
+
+131
+00:11:37,000 --> 00:11:42,000
+Dunder get adder and dunder get attribute.
+
+132
+00:11:42,000 --> 00:11:53,000
+Then items six and seven are something that's called the descriptor protocol.
+
+133
+00:11:53,000 --> 00:11:57,000
+Dunder get and dunder set.
+
+134
+00:11:57,000 --> 00:12:03,000
+And the eighth thing is that dunder get attribute raises an attribute error,
+
+135
+00:12:03,000 --> 00:12:07,000
+which we have surely seen enough times.
+
+136
+00:12:07,000 --> 00:12:10,000
+Of course this is not an order of precedence.
+
+137
+00:12:10,000 --> 00:12:14,000
+The order of precedence is that get attribute manages the whole thing.
+
+138
+00:12:14,000 --> 00:12:22,000
+And as we saw, whether we have get and set on that descriptor makes quite a difference.
+
+139
+00:12:22,000 --> 00:12:25,000
+So let's take a look at the descriptor protocol.
+
+140
+00:12:25,000 --> 00:12:32,000
+Again, this is initially included with Python 2.2's new style classes.
+
+141
+00:12:32,000 --> 00:12:38,000
+We know those in Python 3 as classes.
+
+142
+00:12:38,000 --> 00:12:42,000
+A descriptor has as many as four methods.
+
+143
+00:12:42,000 --> 00:12:48,000
+Dunder get, dunder set, dunder delete, and dunder set name starting in Python 3.6.
+
+144
+00:12:48,000 --> 00:12:55,000
+Dunder get is what's accessed when it's found in the class dictionary.
+
+145
+00:12:55,000 --> 00:12:59,000
+And to retrieve a value on the right hand side,
+
+146
+00:12:59,000 --> 00:13:07,000
+dunder set is what's used when you set a value to that class attribute on an instance.
+
+147
+00:13:07,000 --> 00:13:15,000
+Dunder delete is called when you delete from an instance.
+
+148
+00:13:15,000 --> 00:13:23,000
+And dunder set name, new in Python 3.6, is used during class creation
+
+149
+00:13:23,000 --> 00:13:29,000
+to let the descriptor know what class and what name it has been assigned to.
+
+150
+00:13:29,000 --> 00:13:36,000
+The signatures here for get, it gets an object,
+
+151
+00:13:36,000 --> 00:13:40,000
+which is the object that is the instance it's being called on,
+
+152
+00:13:40,000 --> 00:13:45,000
+and the class for set it only gets the instance and the value that's being set,
+
+153
+00:13:45,000 --> 00:13:48,000
+and delete it only gets the instance.
+
+154
+00:13:48,000 --> 00:13:51,000
+That's because get can be called at the class level,
+
+155
+00:13:51,000 --> 00:13:54,000
+in which case the instance would be none.
+
+156
+00:13:54,000 --> 00:13:58,000
+The others are only at instance level.
+
+157
+00:13:58,000 --> 00:14:00,000
+There's two kind of sub-protocols here.
+
+158
+00:14:00,000 --> 00:14:05,000
+If you only define dunder get, an optionally set name,
+
+159
+00:14:05,000 --> 00:14:08,000
+you have a non-dated descriptor.
+
+160
+00:14:08,000 --> 00:14:11,000
+That's why we had probe nd.
+
+161
+00:14:11,000 --> 00:14:18,000
+If you define dunder get and dunder set, or dunder get and dunder delete,
+
+162
+00:14:18,000 --> 00:14:20,000
+optionally set, of course,
+
+163
+00:14:20,000 --> 00:14:23,000
+you have a dated descriptor.
+
+164
+00:14:23,000 --> 00:14:28,000
+If anyone's actually defining dunder delete for purposes,
+
+165
+00:14:28,000 --> 00:14:32,000
+please talk to me after. I would like to know about that.
+
+166
+00:14:32,000 --> 00:14:41,000
+I have not found people implementing that other than out of a sense of completeness and obligation.
+
+167
+00:14:41,000 --> 00:14:47,000
+But it is there, and it does work. It absolutely works.
+
+168
+00:14:47,000 --> 00:14:51,000
+Okay. So what is this for?
+
+169
+00:14:51,000 --> 00:15:00,000
+The biggest thing to understand is this is the only reason that instance methods work at all in Python.
+
+170
+00:15:00,000 --> 00:15:05,000
+Method binding works entirely because of the descriptor protocol.
+
+171
+00:15:05,000 --> 00:15:11,000
+If we define a class greeter, and we put a method on it, greeting, and it just prints hi,
+
+172
+00:15:11,000 --> 00:15:15,000
+and we go ahead and look at what greeting is in the class dictionary,
+
+173
+00:15:15,000 --> 00:15:19,000
+we find that it's a function, and that doesn't surprise us.
+
+174
+00:15:19,000 --> 00:15:23,000
+If we look at that and we go, hey, I wonder if that has a dunder get on there,
+
+175
+00:15:23,000 --> 00:15:28,000
+we find that it does, and that may or may not surprise us.
+
+176
+00:15:28,000 --> 00:15:35,000
+But now after going through the previous, we'll understand that if we create an instance of greeter,
+
+177
+00:15:35,000 --> 00:15:41,000
+and we access greeting from it, that dunder get is called.
+
+178
+00:15:41,000 --> 00:15:48,000
+We get a different object, we get the return of dunder get, and that is a method.
+
+179
+00:15:51,000 --> 00:15:54,000
+And that is what we can call.
+
+180
+00:15:54,000 --> 00:16:00,000
+That is exactly how we bind our methods, both in Python 2 and 3.
+
+181
+00:16:00,000 --> 00:16:04,000
+They were called bound and unbound methods there.
+
+182
+00:16:04,000 --> 00:16:08,000
+So method binding uses it. What else?
+
+183
+00:16:09,000 --> 00:16:17,000
+Obviously, normal method binding, variant method binding is also going to use it.
+
+184
+00:16:17,000 --> 00:16:22,000
+This is how you do static methods, this is how you do class methods, this is how properties work.
+
+185
+00:16:22,000 --> 00:16:30,000
+As soon as we go into frameworks, SQLAlchemy uses it, Flask uses it in their config module.
+
+186
+00:16:30,000 --> 00:16:36,000
+If you start to try to get tricky, there's a very good chance you will start using descriptors
+
+187
+00:16:36,000 --> 00:16:39,000
+as well as whatever else you're using.
+
+188
+00:16:39,000 --> 00:16:49,000
+Lazy execution, proxying, monitoring, runtime type checking is very likely to go into descriptors.
+
+189
+00:16:51,000 --> 00:16:57,000
+So let's pull up some examples. Here's an alias descriptor.
+
+190
+00:16:57,000 --> 00:17:02,000
+Would you like to have two names for one attribute? Sure, wouldn't we all?
+
+191
+00:17:03,000 --> 00:17:09,000
+I wrote this up as an example for this talk, and then I found some code where I had to rename an attribute.
+
+192
+00:17:09,000 --> 00:17:14,000
+Didn't have time to go through all the call sites, so I put it in there.
+
+193
+00:17:16,000 --> 00:17:25,000
+So this is a descriptor. When it's created, I give it the name of the other attribute that should always have the same value.
+
+194
+00:17:26,000 --> 00:17:30,000
+And that's stored as alias 2 in Dunder init.
+
+195
+00:17:30,000 --> 00:17:35,000
+In Dunder git, if instance is none, it does something very common for descriptor.
+
+196
+00:17:35,000 --> 00:17:39,000
+It returns itself because it's being accessed at the class level.
+
+197
+00:17:39,000 --> 00:17:46,000
+Otherwise, it does a git adder on the instance and the other attribute that it's aliasing.
+
+198
+00:17:48,000 --> 00:17:55,000
+If it's set, it does a set adder and it sets the value of that other attribute.
+
+199
+00:17:56,000 --> 00:18:02,000
+So let's look at a class that uses it. Named data class, not the new data classes.
+
+200
+00:18:02,000 --> 00:18:09,000
+So data x, data y, data z, they're all aliasing legacy x, legacy y, legacy z.
+
+201
+00:18:11,000 --> 00:18:18,000
+The constructor is setting x, y, and z into those old attributes.
+
+202
+00:18:19,000 --> 00:18:25,000
+So we'll go ahead and construct one with the values of high PyCon 2019.
+
+203
+00:18:27,000 --> 00:18:29,000
+And check out the values.
+
+204
+00:18:30,000 --> 00:18:33,000
+So data x and legacy x are both high.
+
+205
+00:18:34,000 --> 00:18:38,000
+Legacy y is PyCon, that's exactly what we set.
+
+206
+00:18:38,000 --> 00:18:46,000
+And data z and legacy z are both 2019. They are identical by is operator.
+
+207
+00:18:47,000 --> 00:18:55,000
+If we change the value of data x, we see the value of legacy x has changed exactly to match.
+
+208
+00:18:56,000 --> 00:19:01,000
+And that's exactly as we would expect. Everything else has stayed the same.
+
+209
+00:19:05,000 --> 00:19:10,000
+Let's look at a non-data descriptor example.
+
+210
+00:19:10,000 --> 00:19:14,000
+I told you they were good for messing with method binding.
+
+211
+00:19:14,000 --> 00:19:20,000
+So this is both a descriptor and a decorator. That's a fairly common pattern.
+
+212
+00:19:23,000 --> 00:19:28,000
+In this case it's a binding decorator because it's going to mess with method binding.
+
+213
+00:19:32,000 --> 00:19:34,000
+Sorry, didn't want to preview that.
+
+214
+00:19:34,000 --> 00:19:44,000
+So in init we're going to get a function and we're going to store that function because it's a decorator.
+
+215
+00:19:44,000 --> 00:19:52,000
+And then when we do a get, either we will be given an object or not.
+
+216
+00:19:54,000 --> 00:19:59,000
+This goes to the function of this decorator.
+
+217
+00:19:59,000 --> 00:20:04,000
+Decorator, this is handling class methods in a different way.
+
+218
+00:20:04,000 --> 00:20:09,000
+Probably not a good way, but a good way for this example.
+
+219
+00:20:09,000 --> 00:20:18,000
+What this is doing is saying, hey, if you don't have an instance of the class and you call this method anyway,
+
+220
+00:20:18,000 --> 00:20:22,000
+instead of causing an error about it, just construct one.
+
+221
+00:20:22,000 --> 00:20:26,000
+Use the default parameters and make an instance.
+
+222
+00:20:27,000 --> 00:20:30,000
+Why not? Well, probably many reasons why not.
+
+223
+00:20:30,000 --> 00:20:38,000
+But it's doable and in some cases may be adequate to make your process work.
+
+224
+00:20:38,000 --> 00:20:42,000
+Again, this is something you should think about before doing.
+
+225
+00:20:42,000 --> 00:20:48,000
+So in the case that object is none, that means it's been called at the class level.
+
+226
+00:20:48,000 --> 00:20:55,000
+And you can see that it's creating a partial, which is equivalent to binding,
+
+227
+00:20:55,000 --> 00:21:01,000
+to bind a newly created instance of the class to the function,
+
+228
+00:21:01,000 --> 00:21:06,000
+constructing it and passing it as the first argument, which is of course self.
+
+229
+00:21:06,000 --> 00:21:11,000
+In the normal case where there's been an instance passed,
+
+230
+00:21:11,000 --> 00:21:17,000
+it will simply call get normally using the function that it was given
+
+231
+00:21:17,000 --> 00:21:22,000
+and being given the object and the class.
+
+232
+00:21:22,000 --> 00:21:26,000
+So name printer is another simple class.
+
+233
+00:21:26,000 --> 00:21:31,000
+It takes a name and has two functions, name print and print name.
+
+234
+00:21:31,000 --> 00:21:37,000
+They are entirely identical except one is decorated with defaulted method.
+
+235
+00:21:37,000 --> 00:21:44,000
+The defaulted method decorator is defined before.
+
+236
+00:21:44,000 --> 00:21:52,000
+When we put a name on name printer, we can see they work identically.
+
+237
+00:21:52,000 --> 00:21:59,000
+Andy.printname and Andy.nameprint both print out Andy and it's fine.
+
+238
+00:21:59,000 --> 00:22:05,000
+But if we call it at the class level, print name works
+
+239
+00:22:05,000 --> 00:22:14,000
+because the decorator goes in, sorry, the descriptor goes in, hits its dunder get,
+
+240
+00:22:14,000 --> 00:22:22,000
+notices that it's being called at the class level, constructs an instance,
+
+241
+00:22:22,000 --> 00:22:28,000
+hits the initializer of name printer, uses the default value of name
+
+242
+00:22:28,000 --> 00:22:35,000
+to go ahead and construct that instance and then print name is called on that
+
+243
+00:22:35,000 --> 00:22:40,000
+and we get default name and that's fine.
+
+244
+00:22:40,000 --> 00:22:44,000
+Or maybe not great, but it works.
+
+245
+00:22:44,000 --> 00:22:53,000
+Name print is a normal instance method and you can't call those on a class level.
+
+246
+00:22:53,000 --> 00:23:01,000
+That is not allowed and we get our type error as we would.
+
+247
+00:23:01,000 --> 00:23:07,000
+So the question would be what should we use and when?
+
+248
+00:23:07,000 --> 00:23:13,000
+These are like many meta, like really any metaprogramming technique,
+
+249
+00:23:13,000 --> 00:23:16,000
+a class of things that I call shovels.
+
+250
+00:23:16,000 --> 00:23:21,000
+They're good for getting you out of holes.
+
+251
+00:23:21,000 --> 00:23:26,000
+But you don't want to use them too early because if you use a shovel too early,
+
+252
+00:23:26,000 --> 00:23:31,000
+you will find yourself at the bottom of the hole with a broken shovel.
+
+253
+00:23:31,000 --> 00:23:38,000
+Do not go and use these until you are sure that the benefit is worth the added complexity.
+
+254
+00:23:38,000 --> 00:23:44,000
+Breaking down the techniques shown and the different ways of accessing attributes,
+
+255
+00:23:44,000 --> 00:23:48,000
+here's how I would suggest looking at it.
+
+256
+00:23:48,000 --> 00:23:54,000
+Normal attribute access is of course what you should use as long as you possibly can.
+
+257
+00:23:54,000 --> 00:24:04,000
+Git adder is particularly useful for caching lazy execution.
+
+258
+00:24:04,000 --> 00:24:09,000
+It works because once you've set a value, it won't be called anymore.
+
+259
+00:24:09,000 --> 00:24:14,000
+Git attribute however is probably something you're going to have to do
+
+260
+00:24:14,000 --> 00:24:21,000
+if you're proxying access to some unknown remote API that you'll never know what the methods are.
+
+261
+00:24:21,000 --> 00:24:26,000
+You simply want to intercept every access.
+
+262
+00:24:26,000 --> 00:24:34,000
+Non-data descriptors are fundamentally designed for method binding.
+
+263
+00:24:34,000 --> 00:24:43,000
+And data descriptors, a great example usage for that is runtime typing.
+
+264
+00:24:43,000 --> 00:24:48,000
+And with that, I will take some questions.
+
+265
+00:24:48,000 --> 00:24:56,000
+I will also be at the Bloomberg booth in the next break if anyone wants to talk about subjects raised here.
+
+266
+00:24:56,000 --> 00:25:14,000
+Please come up to this microphone to ask questions.
+
+267
+00:25:14,000 --> 00:25:17,000
+Hi, nice talk.
+
+268
+00:25:17,000 --> 00:25:28,000
+Could a descriptor be designed to not be able to, for the underlying object to be accessed?
+
+269
+00:25:28,000 --> 00:25:34,000
+For the underlying object not to be able to access? What do you mean the underlying object?
+
+270
+00:25:34,000 --> 00:25:38,000
+I mean like you are creating data descriptor objects.
+
+271
+00:25:38,000 --> 00:25:46,000
+And typically in Python you can't have hidden attributes that can't be accessed from outside the object.
+
+272
+00:25:46,000 --> 00:25:53,000
+Oh, the correct answer is no.
+
+273
+00:25:53,000 --> 00:26:03,000
+I mean you could do some very weird hacks that inspected the stack in ways that you should never ever ever do.
+
+274
+00:26:03,000 --> 00:26:09,000
+But other than that, no. The descriptor still doesn't know who's calling it.
+
+275
+00:26:09,000 --> 00:26:17,000
+The descriptor still doesn't have any way to filter so some things could access it and some couldn't.
+
+276
+00:26:17,000 --> 00:26:22,000
+What you can do with a descriptor is change where the data is stored.
+
+277
+00:26:22,000 --> 00:26:28,000
+So you can use a descriptor and say this data is stored in a database.
+
+278
+00:26:28,000 --> 00:26:30,000
+That's how SQL Alchemy works.
+
+279
+00:26:30,000 --> 00:26:40,000
+Like the fields in SQL Alchemy are fundamentally storing something in a database rather than actually on the object.
+
+280
+00:26:40,000 --> 00:26:46,000
+Okay, thank you.
+
+281
+00:26:46,000 --> 00:27:01,000
+Can you tell me any good resources on how to use this when you pull in inheritance into the mix basically where you want to override the descriptors?
+
+282
+00:27:01,000 --> 00:27:10,000
+I thought there were some quirky things that happened in some cases, at least from my experience.
+
+283
+00:27:10,000 --> 00:27:16,000
+So I was just wondering if you have any good resources other than the documentation, I guess.
+
+284
+00:27:16,000 --> 00:27:22,000
+There shouldn't be anything particularly quirky.
+
+285
+00:27:22,000 --> 00:27:36,000
+I mean the descriptor is going to be attached and if you replace it, you're going to be replacing it with a new behavior for everything up and down the stack.
+
+286
+00:27:36,000 --> 00:27:54,000
+The biggest problem is if something previously accessed it as a normal attribute and then you put in some behavior that's fundamentally incompatible with that or you need it to be initialized in order.
+
+287
+00:27:54,000 --> 00:28:06,000
+So you do have that problem, but that's depending on what you're doing with your descriptor.
+
+288
+00:28:06,000 --> 00:28:10,000
+Are there any other questions?
+
+289
+00:28:10,000 --> 00:28:15,000
+Can you come on up?
+
+290
+00:28:15,000 --> 00:28:20,000
+And I think this will be the last one. We're running out of time.
+
+291
+00:28:20,000 --> 00:28:39,000
+So I just wondered, the examples I've seen for data descriptors for their actual use of interest in an academic sense, so for validating or maybe manipulating the value that you supply to an attribute and you may change it to something, maybe coerce it to a certain bound or something like that.
+
+292
+00:28:39,000 --> 00:28:45,000
+Are there any other common scenarios we want to use data descriptors?
+
+293
+00:28:45,000 --> 00:29:09,000
+Yeah, the typing case is a great case, but again I'll suggest the SQL alchemy case is another excellent case where you're saying what I want to do is actually store this value in a database or maybe I would like to put it in there.
+
+294
+00:29:09,000 --> 00:29:30,000
+Yeah, maybe I would like to do some additional monitoring so you could conceivably put in a data descriptor at a critical point and say I would like to have every time this value changed, write it out to my monitoring system so I don't have to put a log statement on.
+
+295
+00:29:30,000 --> 00:29:39,000
+I don't have to rely on anyone remembering that they have to record, they changed that value.
+
+296
+00:29:39,000 --> 00:29:44,000
+Again, you can control where the data goes.
+
+297
+00:29:44,000 --> 00:29:48,000
+That's another case for that.
+
+298
+00:29:48,000 --> 00:29:49,000
+Thank you.
+
+299
+00:29:49,000 --> 00:29:55,000
+Okay, well thank you very much.
+

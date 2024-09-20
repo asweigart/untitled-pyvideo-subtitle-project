@@ -1,0 +1,2348 @@
+1
+00:00:00,000 --> 00:00:03,000
+Hi, everyone.
+
+2
+00:00:03,000 --> 00:00:04,000
+Welcome.
+
+3
+00:00:04,000 --> 00:00:12,240
+Our next speaker will be talking to us about statistical profiling and other forms of the
+
+4
+00:00:12,240 --> 00:00:13,240
+CIS model.
+
+5
+00:00:13,240 --> 00:00:14,240
+Please welcome Emeen Martina.
+
+6
+00:00:14,240 --> 00:00:15,240
+Thank you very much, and thanks for coming to my talk.
+
+7
+00:00:15,240 --> 00:00:28,480
+So today I'm going to tell you about why you might want to do statistical profiling.
+
+8
+00:00:29,480 --> 00:00:32,240
+I'll tell you about some of the various Python tools that are available, and I'll give you
+
+9
+00:00:32,240 --> 00:00:36,600
+some details about the auxprofile statistical profiling package, which I've written.
+
+10
+00:00:36,600 --> 00:00:40,560
+These slides and the source for all of this is on GitHub at the address below, so you
+
+11
+00:00:40,560 --> 00:00:42,560
+don't have to take notes or anything.
+
+12
+00:00:42,560 --> 00:00:48,600
+Okay, so we're going to learn how to use profilers, and hopefully you'll also learn how to write
+
+13
+00:00:48,600 --> 00:00:49,600
+your own.
+
+14
+00:00:49,600 --> 00:00:52,960
+One of the things I really love about Python is it gives you access to the internals of
+
+15
+00:00:52,960 --> 00:00:58,400
+the system in such a way that you can do things like debuggers, profilers, code coverage that
+
+16
+00:00:58,400 --> 00:01:02,600
+would be very difficult, at least for me in a language like C.
+
+17
+00:01:02,600 --> 00:01:04,920
+So let's start with what is profiling.
+
+18
+00:01:04,920 --> 00:01:09,720
+According to the python.org website, a profile is a set of statistics that describes how
+
+19
+00:01:09,720 --> 00:01:13,520
+often and for how long various parts of the program are executed.
+
+20
+00:01:13,520 --> 00:01:17,120
+So profiling is basically useful to find out which parts of your program are slow.
+
+21
+00:01:17,120 --> 00:01:21,520
+That way you can spend your efforts in optimizing things and writing really nice, tight code
+
+22
+00:01:21,520 --> 00:01:24,720
+in the parts of the program that really matter.
+
+23
+00:01:24,720 --> 00:01:28,440
+So for deterministic profiling, there's a number of profilers you can use.
+
+24
+00:01:28,440 --> 00:01:30,680
+Cprofile is one of the built-in profilers.
+
+25
+00:01:30,680 --> 00:01:31,680
+It's very easy to use.
+
+26
+00:01:31,680 --> 00:01:36,120
+You do import Cprofile, and then you do cprofile.run, and you give it a string for the function
+
+27
+00:01:36,120 --> 00:01:37,120
+you want it to run.
+
+28
+00:01:37,120 --> 00:01:41,480
+It will then run your code, and it will give you back what's called a profile, which tells
+
+29
+00:01:41,480 --> 00:01:46,880
+you how many function calls there were, how often each function was called, the total
+
+30
+00:01:46,880 --> 00:01:51,200
+time, the per call, cumulative, and it will rank them in order of the function that took
+
+31
+00:01:51,200 --> 00:01:52,280
+the most time.
+
+32
+00:01:52,280 --> 00:01:55,820
+Then you can look at that deterministic profile and see which parts of your program were
+
+33
+00:01:55,820 --> 00:01:59,240
+slow or took longer than you thought, and work on optimizing those.
+
+34
+00:01:59,240 --> 00:02:02,320
+So again, that's deterministic profiling.
+
+35
+00:02:02,320 --> 00:02:04,960
+So how does deterministic profiling work?
+
+36
+00:02:04,960 --> 00:02:07,860
+Well the Sys module provides you a couple of really neat hooks.
+
+37
+00:02:07,860 --> 00:02:09,500
+One of these is set profile.
+
+38
+00:02:09,500 --> 00:02:14,800
+So if you call sys.setProfile, you can give it your profiling function, and then the interpreter
+
+39
+00:02:14,800 --> 00:02:18,340
+will execute your profiling function on each function call.
+
+40
+00:02:18,340 --> 00:02:22,920
+And if you want even lower granularity, you can call setTrace, which is like setProfile,
+
+41
+00:02:22,920 --> 00:02:25,920
+where you give it a tracing function, and then the interpreter will call your tracing
+
+42
+00:02:25,920 --> 00:02:28,400
+function on every single line of your program.
+
+43
+00:02:28,400 --> 00:02:33,060
+And you can use that to figure out what code coverage is, or what parts are slow, or whatever
+
+44
+00:02:33,060 --> 00:02:35,100
+else you want to do.
+
+45
+00:02:35,100 --> 00:02:40,580
+Okay, so once we call these things, we get a hook to inspect the stack frame.
+
+46
+00:02:40,580 --> 00:02:43,720
+So you might say, well what is a stack frame?
+
+47
+00:02:43,720 --> 00:02:47,700
+So the way the Python interpreter works is you have some function foo, let's say, which
+
+48
+00:02:47,700 --> 00:02:51,800
+calls a function bar, which calls a function baz, which calls a function boo, and so on.
+
+49
+00:02:51,800 --> 00:02:55,400
+And the interpreter needs to keep track of the state of each function, the local variables,
+
+50
+00:02:55,400 --> 00:02:56,480
+and what's going on.
+
+51
+00:02:56,480 --> 00:02:59,520
+So it creates an object called the stack frame, which we show here.
+
+52
+00:02:59,520 --> 00:03:01,680
+The stack frame has a number of interesting things.
+
+53
+00:03:01,680 --> 00:03:07,040
+One of them is fback, which points to the caller's stack frame, so you know where your
+
+54
+00:03:07,040 --> 00:03:08,600
+function got called from.
+
+55
+00:03:08,600 --> 00:03:11,500
+There's also fglobals, which tells you which globals you can see.
+
+56
+00:03:11,500 --> 00:03:13,260
+There's a lot of other useful things in there.
+
+57
+00:03:13,260 --> 00:03:16,180
+The one we're going to focus on here is fcode.
+
+58
+00:03:16,200 --> 00:03:20,800
+Fcode is a code object, which is shown in that elliptical feature there.
+
+59
+00:03:20,800 --> 00:03:25,160
+And the code object has a lot of information about exactly what code is running in that
+
+60
+00:03:25,160 --> 00:03:26,160
+frame.
+
+61
+00:03:26,160 --> 00:03:30,080
+It's got the co-file name, which tells you the file name where it was created, co-firstline
+
+62
+00:03:30,080 --> 00:03:33,840
+number, which is the number of the first line of the source, a bunch of other interesting
+
+63
+00:03:33,840 --> 00:03:34,840
+things, and co-name.
+
+64
+00:03:34,840 --> 00:03:38,160
+And co-name is the one that's most interesting for us, because it gives us the name of the
+
+65
+00:03:38,160 --> 00:03:41,760
+function that is executing that stack frame.
+
+66
+00:03:41,760 --> 00:03:45,480
+So for a profiler, you look in the stack frame, you look at the code object, and you look
+
+67
+00:03:45,500 --> 00:03:49,500
+at the name, and now you know what function is executing, and you can keep track of that.
+
+68
+00:03:49,500 --> 00:03:54,260
+Okay, so let me give you a diagram of how the profiler works, or how deterministic profiling
+
+69
+00:03:54,260 --> 00:03:55,260
+works.
+
+70
+00:03:55,260 --> 00:03:57,660
+So you have your program, it's in its main thread.
+
+71
+00:03:57,660 --> 00:04:00,740
+Let's say there's some loop that's going to execute function one, then function two, then
+
+72
+00:04:00,740 --> 00:04:01,740
+function three.
+
+73
+00:04:01,740 --> 00:04:05,860
+So what happens is the interpreter enters function one, and then immediately calls that
+
+74
+00:04:05,860 --> 00:04:09,420
+profiling function you've given to sys.setProfile.
+
+75
+00:04:09,420 --> 00:04:12,600
+And then your function will record the name of the function that's executing by looking
+
+76
+00:04:12,620 --> 00:04:16,860
+at the stack frame, what time execution starts, and then it'll pass control back to the main
+
+77
+00:04:16,860 --> 00:04:19,460
+interpreter, which will execute your function one.
+
+78
+00:04:19,460 --> 00:04:24,340
+Then when function one is done, the system will call your profiling function again, you
+
+79
+00:04:24,340 --> 00:04:28,820
+record the function name, the end time, and then you pass control back to the interpreter.
+
+80
+00:04:28,820 --> 00:04:34,060
+And then the interpreter moves on to function two, and similar things happen, and moves
+
+81
+00:04:34,060 --> 00:04:38,780
+on to function three, and again your profiling function gets called to record the name, the
+
+82
+00:04:38,780 --> 00:04:42,500
+start time, or whatever other things you want to record.
+
+83
+00:04:42,500 --> 00:04:47,160
+So the key idea here is that for each function call, your profiling function gets called.
+
+84
+00:04:47,160 --> 00:04:50,960
+Or if you're using setTrace for each line, your trace function gets called.
+
+85
+00:04:50,960 --> 00:04:54,280
+So that's great, it gives you really detailed information about what's going on.
+
+86
+00:04:54,280 --> 00:04:57,000
+But the downside is it's slow.
+
+87
+00:04:57,000 --> 00:04:59,300
+These hooks have to run for each line or each call.
+
+88
+00:04:59,300 --> 00:05:02,440
+So deterministic profiling is great, but one of the drawbacks is it's slow.
+
+89
+00:05:02,440 --> 00:05:04,500
+Okay, so what's another drawback?
+
+90
+00:05:04,500 --> 00:05:06,340
+Another drawback is C number one.
+
+91
+00:05:06,340 --> 00:05:08,720
+It's slow, and it's really slow.
+
+92
+00:05:08,720 --> 00:05:13,220
+And so this is important because it makes it difficult to use profiling in production,
+
+93
+00:05:13,220 --> 00:05:14,720
+deterministic profiling in production.
+
+94
+00:05:14,720 --> 00:05:17,960
+So deterministic profiling is very useful when you're in the development stage.
+
+95
+00:05:17,960 --> 00:05:20,860
+You want to run some tests, you want to run some use cases, you want to see where the
+
+96
+00:05:20,860 --> 00:05:24,500
+bottlenecks are, you optimize it, you write great code, fantastic.
+
+97
+00:05:24,500 --> 00:05:28,580
+And then you deploy that in your production web server or your consumer application, what
+
+98
+00:05:28,580 --> 00:05:32,660
+have you, and the users do all kinds of crazy things which you didn't expect, and they complain
+
+99
+00:05:32,660 --> 00:05:35,020
+that your awesome program is slow.
+
+100
+00:05:35,020 --> 00:05:38,300
+And they often do that because regular users may not be programmers, so they're going to
+
+101
+00:05:38,300 --> 00:05:39,760
+use it differently than you.
+
+102
+00:05:39,760 --> 00:05:42,320
+And so that's a problem with deterministic profiling.
+
+103
+00:05:42,320 --> 00:05:45,480
+It's harder to get the production experience.
+
+104
+00:05:45,480 --> 00:05:50,200
+Another, you could say drawback or just kind of a difference in focus is that deterministic
+
+105
+00:05:50,200 --> 00:05:52,440
+profiling usually is not thread aware.
+
+106
+00:05:52,440 --> 00:05:55,880
+So this little blurb is from the documentation for set trace.
+
+107
+00:05:55,880 --> 00:06:00,260
+It says it must be registered using set trace for each thread being debugged.
+
+108
+00:06:00,260 --> 00:06:02,620
+And there's similar documentation for set profile.
+
+109
+00:06:02,620 --> 00:06:06,800
+So that is out of the box, deterministic profiling doesn't handle threads really well.
+
+110
+00:06:07,300 --> 00:06:10,780
+It's not so much a drawback, it's just kind of the way threading works, which is imagine
+
+111
+00:06:10,780 --> 00:06:14,660
+you're in some function foo and your profiling function gets called and says, okay, we're
+
+112
+00:06:14,660 --> 00:06:17,660
+in function foo starting at 2 p.m.
+
+113
+00:06:17,660 --> 00:06:21,500
+And then there's a thread switch and the interpreter starts running function bar, and function
+
+114
+00:06:21,500 --> 00:06:26,180
+bar takes a long time, and then the interpreter switches back and now it's 2.05 and function
+
+115
+00:06:26,180 --> 00:06:30,160
+foo finishes, and your deterministic profiler says, well, function two just took five minutes
+
+116
+00:06:30,160 --> 00:06:32,780
+to run, even though function foo maybe is really fast.
+
+117
+00:06:32,780 --> 00:06:36,540
+And so that makes profiling threaded code a little bit complicated.
+
+118
+00:06:36,540 --> 00:06:40,120
+You can do a deterministic profiling, but it is a little bit complicated.
+
+119
+00:06:40,120 --> 00:06:45,760
+Okay, so what we're going to talk about for the rest of this talk is a statistical profiler.
+
+120
+00:06:45,760 --> 00:06:50,080
+Now, the way a statistical profiler works is you have your main thread, you still have
+
+121
+00:06:50,080 --> 00:06:53,520
+your function one, function two, function three, just like before, but the statistical
+
+122
+00:06:53,520 --> 00:06:57,040
+profiler is going to record a sample of which function is running.
+
+123
+00:06:57,040 --> 00:07:01,240
+And it's only going to run occasionally to keep the overhead low so that it doesn't slow
+
+124
+00:07:01,240 --> 00:07:04,040
+down your production code and you can actually run it in production.
+
+125
+00:07:04,040 --> 00:07:05,640
+So here's a diagram of what it looks like.
+
+126
+00:07:05,640 --> 00:07:08,940
+So again, you have your main thread running, and then you have a sampler thread, which
+
+127
+00:07:08,940 --> 00:07:12,860
+is either another thread in your Python program or maybe a completely separate program.
+
+128
+00:07:12,860 --> 00:07:16,780
+What the sampler thread does most of the time is time.sleep, so it does nothing.
+
+129
+00:07:16,780 --> 00:07:20,620
+Every once in a while it wakes up from the time.sleep and it peaks in to see what the
+
+130
+00:07:20,620 --> 00:07:24,420
+main thread is doing, which function is it running, and then it records the name of that
+
+131
+00:07:24,420 --> 00:07:26,980
+function and then it goes back to sleep again.
+
+132
+00:07:26,980 --> 00:07:30,280
+So it's basically kind of waking up periodically and seeing what you're doing and going back
+
+133
+00:07:30,280 --> 00:07:32,220
+to sleep.
+
+134
+00:07:33,200 --> 00:07:35,800
+Okay, so how do we implement the sampler?
+
+135
+00:07:35,800 --> 00:07:39,600
+There's a couple different ways and there's packages for each approach.
+
+136
+00:07:39,600 --> 00:07:43,360
+So one thing you could do is use the POSIX timer.
+
+137
+00:07:43,360 --> 00:07:46,040
+So the POSIX timer is a low-level timer.
+
+138
+00:07:46,040 --> 00:07:49,400
+You can set it to wake up and interrupt your process.
+
+139
+00:07:49,400 --> 00:07:53,320
+And when you get that interrupt, you can check the call stack, see what the call stack is
+
+140
+00:07:53,320 --> 00:07:57,280
+doing, what function is executing, and keep track of things like that.
+
+141
+00:07:57,280 --> 00:08:00,640
+A couple of programs that use this are statprof and plop.
+
+142
+00:08:00,640 --> 00:08:02,120
+So those are great programs.
+
+143
+00:08:02,140 --> 00:08:06,020
+They're not available on Windows because this is a POSIX call.
+
+144
+00:08:06,020 --> 00:08:09,540
+Another way you can implement a statistical profiler was something called ptrace.
+
+145
+00:08:09,540 --> 00:08:12,060
+Now ptrace is a really neat system call in POSIX.
+
+146
+00:08:12,060 --> 00:08:16,660
+It lets you look at what some other thread is doing and control it or inspect it or whatever
+
+147
+00:08:16,660 --> 00:08:17,660
+you want.
+
+148
+00:08:17,660 --> 00:08:21,260
+And ptrace can actually be called completely outside of your own program.
+
+149
+00:08:21,260 --> 00:08:25,220
+So if you're familiar with something like GDB, GDB works along these lines, which is
+
+150
+00:08:25,220 --> 00:08:29,180
+you have your program that's running perfectly fine, it doesn't know anything's different,
+
+151
+00:08:29,560 --> 00:08:34,200
+and then some other program like GDB or a profiler will use ptrace to reach into your
+
+152
+00:08:34,200 --> 00:08:38,600
+running program and pause it or see what's going on in the stack or otherwise inspect
+
+153
+00:08:38,600 --> 00:08:40,360
+it.
+
+154
+00:08:40,360 --> 00:08:44,520
+So that's how Pyflame works, which is a very popular and nice statistical profiler.
+
+155
+00:08:44,520 --> 00:08:48,280
+Again, it's not available on Windows because this is a POSIX call.
+
+156
+00:08:48,280 --> 00:08:52,440
+Okay, so you might say, so I've mentioned two approaches, both of which are POSIX, and
+
+157
+00:08:52,440 --> 00:08:54,320
+so you might say, do we really care about non-POSIX?
+
+158
+00:08:54,320 --> 00:08:57,840
+I mean, a lot of us use Linux, a lot of servers run Linux.
+
+159
+00:08:57,840 --> 00:08:58,960
+Why do we care?
+
+160
+00:08:58,980 --> 00:09:02,460
+So one answer is it's nice to have a portable implementation.
+
+161
+00:09:02,460 --> 00:09:06,540
+That is, all other things being equal, it's nice to have something that's pure Python,
+
+162
+00:09:06,540 --> 00:09:09,580
+that's easier to move around to different systems in case, for example, you want to
+
+163
+00:09:09,580 --> 00:09:12,260
+use Windows.
+
+164
+00:09:12,260 --> 00:09:16,780
+Another reason is using only Python features makes it a little bit easier to understand
+
+165
+00:09:16,780 --> 00:09:21,700
+for those of us who are Python experts but maybe a little rusty in OS internals like
+
+166
+00:09:21,700 --> 00:09:24,580
+set-timer or ptrace.
+
+167
+00:09:24,580 --> 00:09:28,420
+And in particular, if the whole goal of using a statistical profiler is so you have a low
+
+168
+00:09:28,420 --> 00:09:32,400
+overhead profiler that you can run in production, it's nice to have an implementation which
+
+169
+00:09:32,400 --> 00:09:36,520
+is easy to understand, it's pure Python so you can look at what's going on, and then
+
+170
+00:09:36,520 --> 00:09:40,180
+we can get confidence that this statistical profiler you're using in production is not
+
+171
+00:09:40,180 --> 00:09:44,180
+going to mess up your code, or if heaven forbid it does mess up your code, you can at least
+
+172
+00:09:44,180 --> 00:09:48,540
+figure out why and go yell at the maintainer.
+
+173
+00:09:48,540 --> 00:09:52,460
+The third reason is there actually is software, believe it or not, that does run on Windows.
+
+174
+00:09:52,460 --> 00:09:56,340
+One good example is games, there's lots of other consumer software.
+
+175
+00:09:56,340 --> 00:10:00,620
+To take games as an example, if you want to find out why a game is going slow, Python
+
+176
+00:10:00,620 --> 00:10:04,860
+implemented game or game server for example, and you put a deterministic profiler on it,
+
+177
+00:10:04,860 --> 00:10:07,740
+it's going to slow down the game, it's going to slow down the frame rate, it's not only
+
+178
+00:10:07,740 --> 00:10:11,180
+going to make the game unplayable but it's going to make the user behavior a lot different.
+
+179
+00:10:11,180 --> 00:10:14,300
+So it's going to be essentially impossible to figure out what parts of something like
+
+180
+00:10:14,300 --> 00:10:18,900
+a game are slow if you use a deterministic profiler and slow it down.
+
+181
+00:10:18,900 --> 00:10:21,420
+And so for that you'd like to have something that works on Windows.
+
+182
+00:10:21,420 --> 00:10:24,620
+Okay, so now let's get into how we're going to do this.
+
+183
+00:10:24,620 --> 00:10:30,060
+So there's this really neat function in the sys module called underscore current frames.
+
+184
+00:10:30,060 --> 00:10:33,900
+And the way you know it's really neat is because it starts in an underscore in the sys module.
+
+185
+00:10:33,900 --> 00:10:37,180
+So something special is going on here.
+
+186
+00:10:37,180 --> 00:10:41,140
+So sys.currentFrame basically lists each thread's current frame.
+
+187
+00:10:41,140 --> 00:10:43,660
+And so then you can peek into the frame and figure out what's going on.
+
+188
+00:10:43,660 --> 00:10:47,940
+So this is how pprofile works and also oxprofile which is the profiler I wrote.
+
+189
+00:10:47,940 --> 00:10:51,500
+And because these are pure Python, they work on Windows, which is nice.
+
+190
+00:10:51,500 --> 00:10:53,220
+So let's look at how this works.
+
+191
+00:10:53,220 --> 00:10:54,500
+So again, you have the main thread.
+
+192
+00:10:54,500 --> 00:10:55,660
+It's in say function one.
+
+193
+00:10:55,660 --> 00:10:59,840
+You call sys.currentFrames, which tells you the active frame is in function one.
+
+194
+00:10:59,840 --> 00:11:00,840
+You get that stack frame.
+
+195
+00:11:00,840 --> 00:11:02,900
+You look in the stack frame for the code object.
+
+196
+00:11:02,900 --> 00:11:09,320
+You look at the co-name and you get the function name and then you keep track of it somehow.
+
+197
+00:11:09,320 --> 00:11:14,580
+And then if your program goes on another time, you wake up and you sample and you call sys.currentFrames
+
+198
+00:11:14,580 --> 00:11:17,280
+and it tells you program is in function two.
+
+199
+00:11:17,280 --> 00:11:19,820
+And so you record the name and you move on.
+
+200
+00:11:19,820 --> 00:11:23,500
+Later on you wake up maybe in function three, repeat the same process.
+
+201
+00:11:23,500 --> 00:11:28,220
+Okay, so I've told you some kind of high level thoughts about why you want to do statistical
+
+202
+00:11:28,220 --> 00:11:30,060
+profiling, how you want to do it.
+
+203
+00:11:30,060 --> 00:11:33,940
+I'm going to give you a concrete example here with oxprofile and then I'm going to go into
+
+204
+00:11:33,940 --> 00:11:37,140
+kind of how it works and the logistics of the sys module.
+
+205
+00:11:37,140 --> 00:11:40,740
+So if you wanted to use oxprofile, you would do pip install oxprofile.
+
+206
+00:11:40,740 --> 00:11:42,960
+You would import something from the module.
+
+207
+00:11:42,960 --> 00:11:46,220
+You would call a launch function to launch the profiler and that's it.
+
+208
+00:11:46,220 --> 00:11:51,340
+And then you just go on, run your code as normal, start your web server, run your game,
+
+209
+00:11:51,340 --> 00:11:54,420
+call your URL functions and so on.
+
+210
+00:11:54,420 --> 00:11:58,100
+And then at some point later when you want to see the profile, you call profiler.show
+
+211
+00:11:58,100 --> 00:12:01,540
+and it'll show you the profile and you'll see what's going on in your program.
+
+212
+00:12:01,540 --> 00:12:04,440
+And then if you want to cancel it, you call profiler.cancel.
+
+213
+00:12:04,440 --> 00:12:06,860
+So relatively easy to use.
+
+214
+00:12:06,860 --> 00:12:08,980
+Great, so how does it work?
+
+215
+00:12:08,980 --> 00:12:12,060
+So this is an oversimplified illustration of the sampler loop.
+
+216
+00:12:12,060 --> 00:12:15,060
+So we have while one, so we're going to loop forever.
+
+217
+00:12:15,100 --> 00:12:18,300
+This is going to be in a separate thread, so it's not going to block your main program.
+
+218
+00:12:18,300 --> 00:12:22,700
+We're going to do time.sleep for some interval and then we're going to call sys.currentframes,
+
+219
+00:12:22,700 --> 00:12:27,180
+which gives you back a dictionary and we're going to iterate over the IDs, which are the
+
+220
+00:12:27,180 --> 00:12:30,300
+keys, that's the thread IDs, and the stack frames in there.
+
+221
+00:12:30,300 --> 00:12:36,580
+Then for each stack frame, we'll look at frame.fcode.coname to get the name of the function that's executing.
+
+222
+00:12:36,580 --> 00:12:39,940
+And then in some dictionary, we'll just increment a count.
+
+223
+00:12:39,940 --> 00:12:40,940
+So that's it.
+
+224
+00:12:40,940 --> 00:12:46,060
+So we have a statistical profiler in four lines of code, which again, Python is a really
+
+225
+00:12:46,060 --> 00:12:49,340
+neat language and these sys module functions are pretty impressive.
+
+226
+00:12:49,340 --> 00:12:53,380
+You can do something that at first might seem complicated in four lines of code.
+
+227
+00:12:53,380 --> 00:12:56,860
+A couple things to mention here.
+
+228
+00:12:56,860 --> 00:13:00,740
+So the way you control the overhead is through this interval.
+
+229
+00:13:00,740 --> 00:13:04,580
+So you can call profiler.cent interval and it'll change the sampling interval.
+
+230
+00:13:04,580 --> 00:13:07,380
+So for example, if you use something like a five second sampling interval, it'll give
+
+231
+00:13:07,380 --> 00:13:08,380
+you a negligible overhead.
+
+232
+00:13:08,380 --> 00:13:10,020
+You won't even notice it.
+
+233
+00:13:10,020 --> 00:13:13,580
+And so what we have here is a trade off between various goals, which is accuracy, collection,
+
+234
+00:13:13,580 --> 00:13:15,280
+time, and overhead.
+
+235
+00:13:15,280 --> 00:13:19,060
+So in a deterministic profiler, the profiler is always running and looking at each function
+
+236
+00:13:19,060 --> 00:13:21,100
+call and keeping track of what you're doing.
+
+237
+00:13:21,100 --> 00:13:25,100
+And that's why it slows you down because it's doing something pretty much all the time.
+
+238
+00:13:25,100 --> 00:13:29,220
+Whereas if you set interval to something really long, like let's say 100 seconds, almost all
+
+239
+00:13:29,220 --> 00:13:31,860
+the time, the statistical profiler isn't doing anything.
+
+240
+00:13:31,860 --> 00:13:35,260
+As you bring that down from say 100 seconds to five seconds, you'll get more accurate
+
+241
+00:13:35,260 --> 00:13:36,260
+sampling of your program.
+
+242
+00:13:36,260 --> 00:13:38,660
+As you bring it down to one second, you'll get even more accurate sampling.
+
+243
+00:13:39,060 --> 00:13:42,620
+As you bring it down to say 100 milliseconds, you'll get super accurate sampling.
+
+244
+00:13:42,620 --> 00:13:45,940
+And so what happens with the longer sampling times is you just have to run the program
+
+245
+00:13:45,940 --> 00:13:49,780
+for longer so that your sampler wakes up and sees all the different parts of your program
+
+246
+00:13:49,780 --> 00:13:52,180
+and gives you an accurate estimate.
+
+247
+00:13:52,180 --> 00:13:55,380
+So you can tune that knob between accuracy and overhead.
+
+248
+00:13:55,380 --> 00:14:00,380
+And in theory, if you took the sampling interval all the way down to zero, it would go to become
+
+249
+00:14:00,380 --> 00:14:05,900
+like a line profile, which is constantly checking what your program is doing.
+
+250
+00:14:05,940 --> 00:14:10,540
+Another comment to mention is in some applications you may want to add some random jitter in
+
+251
+00:14:10,540 --> 00:14:15,380
+case you're worried about the statistical profiler waking up and somehow getting synchronized
+
+252
+00:14:15,380 --> 00:14:18,780
+in your program and never seeing certain aspects of your program.
+
+253
+00:14:18,780 --> 00:14:22,100
+In general, the Python threading tools tend to have enough randomness that you probably
+
+254
+00:14:22,100 --> 00:14:23,100
+don't need this.
+
+255
+00:14:23,100 --> 00:14:25,980
+But I mention it just in case you have some specialized application.
+
+256
+00:14:25,980 --> 00:14:29,540
+OK, so what does the output look like?
+
+257
+00:14:29,540 --> 00:14:32,580
+So we call profiler.show and we get this list.
+
+258
+00:14:32,580 --> 00:14:36,700
+It shows the function name in the module and the number of hits and the percentage of the
+
+259
+00:14:36,700 --> 00:14:37,700
+overall hits.
+
+260
+00:14:37,700 --> 00:14:41,060
+So you notice that this statistical profile is a little bit different from deterministic
+
+261
+00:14:41,060 --> 00:14:42,860
+profiles that you see.
+
+262
+00:14:42,860 --> 00:14:45,260
+That is, we don't have the time each function takes.
+
+263
+00:14:45,260 --> 00:14:47,820
+Instead we have a number of hits, how often we saw that.
+
+264
+00:14:47,820 --> 00:14:51,540
+There's how often when we woke up was the program running a given function.
+
+265
+00:14:51,540 --> 00:14:54,580
+And through that you can get an estimate not of how long each function takes, but of how
+
+266
+00:14:54,580 --> 00:14:57,280
+much time of your program it's taking up.
+
+267
+00:14:57,280 --> 00:15:02,800
+So for example, in this case send is taking is where we wake up most often and see which
+
+268
+00:15:02,800 --> 00:15:03,800
+function is running.
+
+269
+00:15:03,800 --> 00:15:06,380
+It's taking 2.8% of the program hits.
+
+270
+00:15:06,380 --> 00:15:09,800
+So if you want to optimize something, in this case you might want to optimize send or you
+
+271
+00:15:09,800 --> 00:15:15,920
+might look at other functions and see like, oh, such and such connect, let's say, is 1.5%
+
+272
+00:15:15,920 --> 00:15:17,560
+of program hits.
+
+273
+00:15:17,560 --> 00:15:19,200
+Maybe you expected that to be much lower.
+
+274
+00:15:19,200 --> 00:15:23,280
+And so you can look at this statistical profile to figure out where to focus on.
+
+275
+00:15:23,280 --> 00:15:25,200
+OK.
+
+276
+00:15:25,200 --> 00:15:29,460
+So now let's talk about the basic theory of sys.currentframes.
+
+277
+00:15:29,460 --> 00:15:31,960
+So we start a thread that's doing mostly time.sleep.
+
+278
+00:15:31,960 --> 00:15:37,400
+Periodically we wake up and we call sys.currentframes to get the stack frames that are executing
+
+279
+00:15:37,400 --> 00:15:39,320
+and record the info from the current stack frame.
+
+280
+00:15:39,320 --> 00:15:40,320
+And that's it.
+
+281
+00:15:40,320 --> 00:15:43,240
+Really simple four line program we showed you earlier.
+
+282
+00:15:43,240 --> 00:15:46,600
+So in theory you can write a simple statistical profiler with just these.
+
+283
+00:15:46,600 --> 00:15:51,200
+Now in theory there's no difference between theory and practice and that's just going
+
+284
+00:15:51,200 --> 00:15:52,960
+to work fine.
+
+285
+00:15:52,960 --> 00:15:55,880
+But in practice there's a little bit of a difference.
+
+286
+00:15:55,880 --> 00:15:56,880
+OK.
+
+287
+00:15:56,880 --> 00:16:00,200
+So let's go back to just the two line core of what we were showing you.
+
+288
+00:16:00,200 --> 00:16:03,520
+So we're going to call sys.currentframes, iterate over it and record.
+
+289
+00:16:03,520 --> 00:16:09,280
+Now I've started to make a few changes here which is instead of having self.myDB just
+
+290
+00:16:09,280 --> 00:16:13,520
+be a dictionary, maybe some other more complicated structure and you want to call a record method
+
+291
+00:16:13,520 --> 00:16:16,560
+just for generality and nice software engineering.
+
+292
+00:16:16,560 --> 00:16:20,200
+And instead of just directly grabbing the code name from the frame, maybe you want to
+
+293
+00:16:20,200 --> 00:16:21,680
+call some function called measureTool.
+
+294
+00:16:22,160 --> 00:16:24,280
+Maybe you want to record some other things from the frame.
+
+295
+00:16:24,280 --> 00:16:25,280
+That's not a big deal.
+
+296
+00:16:25,280 --> 00:16:30,640
+But the question you want to ask is OK, what could go wrong even with something as simple
+
+297
+00:16:30,640 --> 00:16:31,640
+as these two lines?
+
+298
+00:16:31,640 --> 00:16:34,480
+So you might want to think about it for 30 seconds.
+
+299
+00:16:34,480 --> 00:16:35,480
+OK.
+
+300
+00:16:35,480 --> 00:16:39,920
+So one thing that can happen is a thread contact switch.
+
+301
+00:16:39,920 --> 00:16:42,760
+That is your sampler thread gets control.
+
+302
+00:16:42,760 --> 00:16:45,440
+It calls sys.currentframes to look at what's going on.
+
+303
+00:16:45,440 --> 00:16:49,440
+It starts iterating over the current frames that are active.
+
+304
+00:16:49,480 --> 00:16:52,320
+And then all of a sudden the interpreter decides, OK, I want to switch to a different thread
+
+305
+00:16:52,320 --> 00:16:53,320
+context.
+
+306
+00:16:53,320 --> 00:16:58,240
+So it goes to a different thread, maybe your main thread or some other sub-thread, and
+
+307
+00:16:58,240 --> 00:17:02,640
+comes back five seconds later and you continue iterating over the frames that you've gotten
+
+308
+00:17:02,640 --> 00:17:06,600
+returned but now those frames maybe have gone away because the interpreter has moved on
+
+309
+00:17:06,600 --> 00:17:07,600
+in the other threads.
+
+310
+00:17:07,600 --> 00:17:11,840
+And so you try and read a stale frame and depending on your Python version you get a
+
+311
+00:17:11,840 --> 00:17:12,840
+crash.
+
+312
+00:17:12,840 --> 00:17:13,840
+OK.
+
+313
+00:17:14,000 --> 00:17:20,640
+So one thing we can do is we can use this other function called sys.getswitchinterval
+
+314
+00:17:20,640 --> 00:17:22,800
+and sys.setswitchinterval.
+
+315
+00:17:22,800 --> 00:17:28,600
+So sys.setswitchinterval will tell the interpreter, look, please don't switch away from my thread
+
+316
+00:17:28,600 --> 00:17:31,840
+for 10,000 seconds or whatever amount of time you give it.
+
+317
+00:17:31,840 --> 00:17:35,520
+So here what we do is we get the current switch interval, we set it to 10,000 saying please
+
+318
+00:17:35,520 --> 00:17:41,200
+don't switch away, then we do our really quick iteration over the frames, and then we say
+
+319
+00:17:41,360 --> 00:17:44,440
+set switch interval back to whatever it was before.
+
+320
+00:17:44,440 --> 00:17:47,640
+So this will help reduce the problem of looking at a stale frame.
+
+321
+00:17:47,640 --> 00:17:51,120
+There's other ways you can do it but this is a nice way to illustrate switch interval.
+
+322
+00:17:51,120 --> 00:17:52,200
+OK, great.
+
+323
+00:17:52,200 --> 00:17:56,120
+So now we're safer, more robust to contact switches.
+
+324
+00:17:56,120 --> 00:17:58,080
+Now what could go wrong?
+
+325
+00:17:58,080 --> 00:18:01,640
+Well anytime you're doing some kind of resource allocation you always want to keep track of
+
+326
+00:18:01,640 --> 00:18:05,560
+exceptions because if you had an exception here it would prevent switch interval from
+
+327
+00:18:05,560 --> 00:18:08,780
+being reset and then your threading might start to work strangely.
+
+328
+00:18:08,780 --> 00:18:13,420
+So this isn't really so much specific to statistical profiling but in general when
+
+329
+00:18:13,420 --> 00:18:15,720
+you're doing multi-threaded code you want to be parent-oriented.
+
+330
+00:18:15,720 --> 00:18:19,540
+So here what you want is a try finally so that no matter what happens even if there's
+
+331
+00:18:19,540 --> 00:18:23,380
+an exception you set the switch interval back to whatever it was originally.
+
+332
+00:18:23,380 --> 00:18:25,380
+OK, good.
+
+333
+00:18:25,380 --> 00:18:30,420
+So we're trying to protect from a contact switch, we're using try and finally, OK,
+
+334
+00:18:30,420 --> 00:18:31,980
+what else could go wrong?
+
+335
+00:18:31,980 --> 00:18:36,540
+We are just getting started in all the things that can go wrong in multi-threaded programming.
+
+336
+00:18:36,540 --> 00:18:40,820
+So I should say I don't want to discourage you from doing multi-threaded programming
+
+337
+00:18:40,820 --> 00:18:42,380
+or statistical profiling.
+
+338
+00:18:42,380 --> 00:18:46,220
+These things are reasonably robust but you just need to be careful of all the things
+
+339
+00:18:46,220 --> 00:18:48,180
+that could go wrong when there's multiple threads.
+
+340
+00:18:48,180 --> 00:18:51,380
+OK, so let's look at recording a sample.
+
+341
+00:18:51,380 --> 00:18:55,460
+So we have this simple function record which gets a measurement and it's going to look
+
+342
+00:18:55,460 --> 00:19:02,180
+in a dictionary to see have we seen the name of that function before and then we're going
+
+343
+00:19:02,180 --> 00:19:05,900
+to increment and if not we start with a count of zero and then we increment the count by
+
+344
+00:19:05,940 --> 00:19:06,940
+one.
+
+345
+00:19:06,940 --> 00:19:07,940
+OK, great.
+
+346
+00:19:07,940 --> 00:19:12,660
+So we're looking at a dictionary, we're incrementing the count by one, it's a two line function,
+
+347
+00:19:12,660 --> 00:19:14,620
+surely nothing can go wrong here, right?
+
+348
+00:19:14,620 --> 00:19:15,860
+So what can go wrong?
+
+349
+00:19:15,860 --> 00:19:21,580
+Well one thing that can go wrong is imagine that you're calling this record or the interpreter
+
+350
+00:19:21,580 --> 00:19:26,340
+is calling this record method when it's sampling a frame at the same time that the sampling
+
+351
+00:19:26,340 --> 00:19:31,220
+thread is sampling a frame somebody calls profiler.show to see the profile right now
+
+352
+00:19:31,380 --> 00:19:36,100
+or some other way they decide to access the self.mydb dictionary.
+
+353
+00:19:36,100 --> 00:19:40,180
+Then you've got one thread modifying the dictionary while another thread is reading the dictionary
+
+354
+00:19:40,180 --> 00:19:41,620
+iterating over it.
+
+355
+00:19:41,620 --> 00:19:46,020
+Python gets really upset if you have two threads, one of which is modifying a dictionary and
+
+356
+00:19:46,020 --> 00:19:47,780
+another one which is iterating the word.
+
+357
+00:19:47,780 --> 00:19:50,500
+So depending on your Python version you'll get a crash.
+
+358
+00:19:50,500 --> 00:19:53,260
+So what you want to do is you want to use a thread lock.
+
+359
+00:19:53,260 --> 00:19:57,140
+In this case I'm using threading.lock with a context manager and then you make sure all
+
+360
+00:19:57,140 --> 00:20:01,740
+the code that accesses mydb uses the same thread lock so that nobody accesses the dictionary
+
+361
+00:20:01,740 --> 00:20:04,380
+at the same time.
+
+362
+00:20:04,380 --> 00:20:10,460
+So we've got switch the context interval, we've got use try and finally, we've got use thread
+
+363
+00:20:10,460 --> 00:20:14,060
+locks, seems like we're being pretty paranoid here for multi-threading.
+
+364
+00:20:14,060 --> 00:20:15,460
+So what else could go wrong?
+
+365
+00:20:15,460 --> 00:20:16,460
+No guesses?
+
+366
+00:20:16,460 --> 00:20:19,180
+I don't know what else could go wrong.
+
+367
+00:20:19,180 --> 00:20:21,260
+There's always unknown unknowns.
+
+368
+00:20:21,260 --> 00:20:25,140
+So one other thing I would suggest anytime you're doing multi-threaded programming is
+
+369
+00:20:25,140 --> 00:20:26,820
+use fault handling.
+
+370
+00:20:26,820 --> 00:20:31,340
+So fault handler is this nifty little module that if you call fault handler.enable when
+
+371
+00:20:31,340 --> 00:20:35,780
+you start your program, if you have some really bizarre crash it'll still print out some basic
+
+372
+00:20:35,780 --> 00:20:36,780
+debugging information.
+
+373
+00:20:36,780 --> 00:20:40,900
+Now you're all probably used to having something go wrong and you see that nice stack trace
+
+374
+00:20:40,900 --> 00:20:44,420
+of the exception and then you're like, oh okay, it was function foo that caused it,
+
+375
+00:20:44,420 --> 00:20:45,420
+let me go debug that.
+
+376
+00:20:45,420 --> 00:20:51,100
+Now if you do multi-threaded code sometimes what you'll have happen is you'll corrupt
+
+377
+00:20:51,100 --> 00:20:52,100
+the memory.
+
+378
+00:20:52,100 --> 00:20:55,060
+Like if you read a stale stack frame or try and modify a dictionary while you iterate
+
+379
+00:20:55,540 --> 00:20:57,180
+or do some other funky stuff.
+
+380
+00:20:57,180 --> 00:21:02,140
+And if you corrupt memory you might corrupt the entire stack and so when you get an exception
+
+381
+00:21:02,140 --> 00:21:06,220
+instead of printing out that nice stack trace you'll get a core dump or some other really
+
+382
+00:21:06,220 --> 00:21:08,540
+ugly crash which won't tell you what's going on.
+
+383
+00:21:08,540 --> 00:21:11,420
+And then you'll start pulling your hair out saying like, well where did it crash?
+
+384
+00:21:11,420 --> 00:21:12,740
+Why did it crash?
+
+385
+00:21:12,740 --> 00:21:17,500
+Whereas if you use fault handler.enable when you get any type of crash it won't allocate
+
+386
+00:21:17,500 --> 00:21:21,940
+any new memory, it'll immediately print some really basic stuff so that even if your memory
+
+387
+00:21:21,940 --> 00:21:23,820
+is corrupted you'll still get something.
+
+388
+00:21:24,740 --> 00:21:28,420
+Okay, so let me mention some additional issues.
+
+389
+00:21:28,420 --> 00:21:32,780
+So in the sampler thread that we're using and in general for threading you want to set
+
+390
+00:21:32,780 --> 00:21:34,220
+this to be a daemon thread.
+
+391
+00:21:34,220 --> 00:21:37,660
+If you don't set it to be a daemon thread then when your main program exits your sampler
+
+392
+00:21:37,660 --> 00:21:41,140
+thread would still be alive and it would prevent your program from exiting.
+
+393
+00:21:41,140 --> 00:21:45,180
+Whereas if you set it to self.daemon equals true for your sampler thread then when your
+
+394
+00:21:45,180 --> 00:21:48,220
+main thread exits your daemon thread will also exit.
+
+395
+00:21:48,220 --> 00:21:53,180
+Another thing to keep in mind is that, so I mentioned before that in theory if you have
+
+396
+00:21:53,180 --> 00:21:57,220
+the sampling interval going all the way down to zero then your statistical profiler is
+
+397
+00:21:57,220 --> 00:21:59,580
+going to turn into a deterministic profiler.
+
+398
+00:21:59,580 --> 00:22:04,620
+So that's true in theory but time.sleep currently has some minimum granularity of like 1 to
+
+399
+00:22:04,620 --> 00:22:05,620
+10 milliseconds.
+
+400
+00:22:05,620 --> 00:22:09,300
+It's not really a big deal unless you're doing super high frequency trading or something
+
+401
+00:22:09,300 --> 00:22:16,180
+where you can execute code really fast but just worth keeping in mind.
+
+402
+00:22:16,180 --> 00:22:18,180
+So I want to mention Flask here.
+
+403
+00:22:18,180 --> 00:22:23,040
+So if you're using Flask and you want to use aux profile you can use this in a very simple
+
+404
+00:22:23,040 --> 00:22:24,040
+way to plug it in.
+
+405
+00:22:24,040 --> 00:22:31,200
+You import a blueprint, you do app.registerBlueprint for aux profile and you configure some admin
+
+406
+00:22:31,200 --> 00:22:36,240
+users and with just those three lines you can start using this profiler in Flask.
+
+407
+00:22:36,240 --> 00:22:38,440
+It will provide you four endpoints.
+
+408
+00:22:38,440 --> 00:22:41,320
+One is unpause which will turn on the profiler.
+
+409
+00:22:41,320 --> 00:22:44,400
+So the statistical profiler even though it's low overhead it doesn't turn on by default
+
+410
+00:22:44,400 --> 00:22:45,900
+you have to turn it on.
+
+411
+00:22:45,900 --> 00:22:49,480
+You can use pause to pause the profiler so it's not affecting production.
+
+412
+00:22:49,480 --> 00:22:53,640
+You can call status to show the current profile and the status of the results and you can
+
+413
+00:22:53,640 --> 00:22:56,800
+use setInterval to change the sampling frequency.
+
+414
+00:22:56,800 --> 00:23:01,540
+So again one of the main motivations for using statistical profilers is you have some website
+
+415
+00:23:01,540 --> 00:23:05,960
+or you have a lot of websites or application servers or something that's deployed in production
+
+416
+00:23:05,960 --> 00:23:10,160
+and you want to see what's slow or what's the bottleneck or what's the program doing
+
+417
+00:23:10,160 --> 00:23:12,640
+in real operation with real users.
+
+418
+00:23:12,640 --> 00:23:16,880
+So to do that it's nice to be able to have a statistical profiler inside there either
+
+419
+00:23:16,920 --> 00:23:21,320
+as an endpoint or in some other manner.
+
+420
+00:23:21,320 --> 00:23:25,180
+Okay let's look at some additional uses.
+
+421
+00:23:25,180 --> 00:23:28,200
+So what else can you do with sys.currentframes?
+
+422
+00:23:28,200 --> 00:23:32,800
+So again I want to say again like how awesome this function is.
+
+423
+00:23:32,800 --> 00:23:35,920
+So if there's any core maintainers in the room right now please don't take away this
+
+424
+00:23:35,920 --> 00:23:38,060
+function because it's just really neat.
+
+425
+00:23:38,060 --> 00:23:42,160
+So I'm going to give you some other thoughts of ideas you could do to have fun.
+
+426
+00:23:42,160 --> 00:23:44,480
+So what else can you do with sys.currentframes?
+
+427
+00:23:44,480 --> 00:23:49,840
+So first of all you can do some major damage that's really hard to track down.
+
+428
+00:23:49,840 --> 00:23:53,480
+So be careful because it lets you look into every thread that's running and mess with
+
+429
+00:23:53,480 --> 00:23:54,480
+it.
+
+430
+00:23:54,480 --> 00:23:55,480
+So be careful.
+
+431
+00:23:55,480 --> 00:23:59,600
+Okay more seriously one thing you could do is you could take a data snapshot.
+
+432
+00:23:59,600 --> 00:24:04,640
+That is you could use sys.currentframes to look at the active frames and then you could
+
+433
+00:24:04,640 --> 00:24:09,360
+periodically snapshot not just co-name but something like frame.flocals.
+
+434
+00:24:09,360 --> 00:24:13,040
+That is you could take a snapshot of what are all the local variables that are active
+
+435
+00:24:13,080 --> 00:24:14,960
+in some given function.
+
+436
+00:24:14,960 --> 00:24:17,960
+And particularly if you're dealing with a lot of third party libraries and you just
+
+437
+00:24:17,960 --> 00:24:22,000
+want to know what's going on that's kind of a nifty way without having to rewrite those
+
+438
+00:24:22,000 --> 00:24:27,360
+third party libraries to write a simple tool that can peek at what's happening in your
+
+439
+00:24:27,360 --> 00:24:28,360
+program.
+
+440
+00:24:28,360 --> 00:24:30,360
+You could even modify flocals.
+
+441
+00:24:30,360 --> 00:24:33,560
+You could go into flocals and you could add one to every integer you find or multiply
+
+442
+00:24:33,560 --> 00:24:36,120
+it by two or do some other crazy stuff.
+
+443
+00:24:36,120 --> 00:24:40,560
+Now why would you do this besides wanting to cause major damage which I'm obviously
+
+444
+00:24:40,560 --> 00:24:42,000
+not advocating.
+
+445
+00:24:42,160 --> 00:24:46,040
+If you're running your tests you might have invariants or assertion checks or other kind
+
+446
+00:24:46,040 --> 00:24:47,040
+of things in your tests.
+
+447
+00:24:47,040 --> 00:24:52,960
+Now those tests are great for your test cases but if you can go and randomly modify flocals
+
+448
+00:24:52,960 --> 00:24:57,320
+it's testing your code in a different way which could be kind of interesting.
+
+449
+00:24:57,320 --> 00:25:00,320
+Another thing you could do is you could do something like a statistical debugger where
+
+450
+00:25:00,320 --> 00:25:05,000
+you periodically snapshot some debug information like a full stack trace on all the locals
+
+451
+00:25:05,000 --> 00:25:09,200
+and either dump those to a log or save those so in case there's a crash maybe you have
+
+452
+00:25:09,240 --> 00:25:14,760
+a random snapshot of like 10 or 20 functions that were called recently.
+
+453
+00:25:14,760 --> 00:25:19,560
+You could use statistical code coverage just like coverage.py but turn it on periodically
+
+454
+00:25:19,560 --> 00:25:22,880
+and record which lines are being executed and then turn off so you don't incur much
+
+455
+00:25:22,880 --> 00:25:27,760
+overhead but you can track which code which lines of code are being actually covered in
+
+456
+00:25:27,760 --> 00:25:30,200
+your real use cases.
+
+457
+00:25:30,200 --> 00:25:31,200
+So let me summarize.
+
+458
+00:25:31,200 --> 00:25:34,960
+So profiling is designed to find bottlenecks and improve your code.
+
+459
+00:25:34,960 --> 00:25:39,200
+You can use deterministic profiles for that but they can be slow so you can use a statistical
+
+460
+00:25:39,200 --> 00:25:41,440
+profiler to sample your code periodically.
+
+461
+00:25:41,440 --> 00:25:46,200
+It'll let you use your statistical profiler in production to see what real users are doing
+
+462
+00:25:46,200 --> 00:25:49,000
+without providing too much overhead.
+
+463
+00:25:49,000 --> 00:25:53,560
+You can use ox profile which is open source non-GitHub or you can write your own and really
+
+464
+00:25:53,560 --> 00:25:57,560
+not that many lines provided you're careful of a few things.
+
+465
+00:25:57,560 --> 00:26:02,100
+The key functions here are set profile, set trace and sys.currentframes which lets you
+
+466
+00:26:02,100 --> 00:26:07,400
+peek into what the interpreter is doing or have the interpreter call your function periodically.
+
+467
+00:26:07,400 --> 00:26:10,880
+And it's simple in theory but anytime you're using threads be careful.
+
+468
+00:26:10,880 --> 00:26:16,180
+Use tri-finally, use locks, maybe use a switch interval and use fault handler.
+
+469
+00:26:16,180 --> 00:26:19,680
+So that concludes the main talk and ready for Q&A.
+
+470
+00:26:19,680 --> 00:26:31,320
+We've got a few minutes for questions now.
+
+471
+00:26:32,040 --> 00:26:34,960
+If you have a question just use one of the microphones here.
+
+472
+00:26:34,960 --> 00:26:45,720
+Hello, can you hear me?
+
+473
+00:26:45,720 --> 00:26:46,720
+There we go.
+
+474
+00:26:46,720 --> 00:26:55,160
+My question is with regard to statistical profiling in the example you gave where the
+
+475
+00:26:55,160 --> 00:27:00,080
+number of hits kind of tells you what to go look at for potential improvement, how would
+
+476
+00:27:00,840 --> 00:27:10,800
+you differentiate the fact that that number of hits may be due to just the fact that that
+
+477
+00:27:10,800 --> 00:27:14,920
+particular program, let's say a web crawler, would obviously have a huge percentage of
+
+478
+00:27:14,920 --> 00:27:27,000
+hits on request.get or whatever versus that number of hits suggesting that those particular
+
+479
+00:27:27,000 --> 00:27:29,320
+function calls are slow or need improvement.
+
+480
+00:27:29,760 --> 00:27:30,760
+Does that make sense?
+
+481
+00:27:30,760 --> 00:27:33,480
+Yeah, so let me rephrase what I think you're asking.
+
+482
+00:27:33,480 --> 00:27:37,760
+So I think what you're saying is what if you have something like request.get which is not
+
+483
+00:27:37,760 --> 00:27:41,960
+really slow in CPU terms but it's slow in the sense of time.
+
+484
+00:27:41,960 --> 00:27:45,840
+You just have to wait for things to go back and forth in the network.
+
+485
+00:27:45,840 --> 00:27:49,560
+So it's not CPU bound but it's still slow and the statistical profiler would be telling
+
+486
+00:27:49,560 --> 00:27:50,840
+you like it's slow.
+
+487
+00:27:50,840 --> 00:27:55,400
+Most of the time in your program you're waiting in this particular function.
+
+488
+00:27:55,400 --> 00:27:59,120
+So one thing you could do is if you know that's the case you can just ignore that line and
+
+489
+00:27:59,120 --> 00:28:00,520
+go down and look at the other things.
+
+490
+00:28:02,520 --> 00:28:07,800
+There's not a ton of stuff you can do because the fact that the Python interpreter is sitting
+
+491
+00:28:07,800 --> 00:28:13,920
+there waiting in there is going to be hard to figure out in a profiler because it really
+
+492
+00:28:13,920 --> 00:28:14,800
+is a slow function.
+
+493
+00:28:15,800 --> 00:28:18,160
+Does that answer your question or does that get at what you're saying?
+
+494
+00:28:18,240 --> 00:28:23,000
+Sort of. Yeah, it was more how do you like request.get was just an obvious example.
+
+495
+00:28:23,000 --> 00:28:30,600
+But really what I'm getting at is based on what you're seeing from a statistical profiler,
+
+496
+00:28:30,600 --> 00:28:38,600
+what clues do you have that can help you differentiate that a function call actually needs improvement
+
+497
+00:28:38,600 --> 00:28:42,040
+versus that it's just used a lot in the program?
+
+498
+00:28:42,040 --> 00:28:44,760
+So that's a good question.
+
+499
+00:28:44,760 --> 00:28:48,320
+So it's not so much a statistical versus deterministic profiling question.
+
+500
+00:28:48,320 --> 00:28:52,280
+It's just a question of how do you know if something is slow or it's just called a lot.
+
+501
+00:28:52,280 --> 00:28:54,960
+So a profiler can't help you so much with that.
+
+502
+00:28:54,960 --> 00:28:57,480
+That's more something you have to figure out.
+
+503
+00:28:57,480 --> 00:29:00,680
+And so the way to think about a profile is not necessarily what's the...
+
+504
+00:29:00,680 --> 00:29:03,880
+So you can look at what's the top hit or what's the slowest function.
+
+505
+00:29:03,880 --> 00:29:07,640
+And the more you can speed that up, the better your program will be.
+
+506
+00:29:07,640 --> 00:29:11,680
+Or you can look for what functions seem to be taking a lot more time than I expect.
+
+507
+00:29:11,680 --> 00:29:13,680
+And you can use that to drive what you look at.
+
+508
+00:29:13,680 --> 00:29:14,680
+Okay.
+
+509
+00:29:14,680 --> 00:29:15,680
+Thank you.
+
+510
+00:29:15,680 --> 00:29:16,680
+Maybe on this side?
+
+511
+00:29:16,680 --> 00:29:17,680
+Yeah.
+
+512
+00:29:18,000 --> 00:29:24,680
+Have you any experience with running a statistical profiler inside a Docker pod?
+
+513
+00:29:24,680 --> 00:29:25,680
+Inside a what?
+
+514
+00:29:25,680 --> 00:29:26,680
+Docker?
+
+515
+00:29:26,680 --> 00:29:27,680
+Docker.
+
+516
+00:29:27,680 --> 00:29:28,680
+Kubernetes?
+
+517
+00:29:28,680 --> 00:29:31,880
+So, it should work just fine in...
+
+518
+00:29:31,880 --> 00:29:36,200
+So statistical profiler should work just fine in Docker or Kubernetes because it's running
+
+519
+00:29:36,200 --> 00:29:38,200
+inside the Python interpreter.
+
+520
+00:29:38,200 --> 00:29:44,240
+And it's just telling you when the interpreter is running, what function is it in most often?
+
+521
+00:29:44,240 --> 00:29:46,240
+Does that answer your question?
+
+522
+00:29:46,240 --> 00:29:48,680
+Did you mean something different that I misunderstood?
+
+523
+00:29:48,680 --> 00:29:58,760
+I was wondering if the fact that you're really faking that you're on one processor but you're
+
+524
+00:29:58,760 --> 00:30:03,480
+really sharing a processor, does that change your statistics?
+
+525
+00:30:03,480 --> 00:30:05,480
+It won't change your statistics.
+
+526
+00:30:05,480 --> 00:30:12,680
+If for some reason your particular Docker process gets shoved to the side while other
+
+527
+00:30:12,680 --> 00:30:16,160
+things run, then that could be an issue, of course.
+
+528
+00:30:17,080 --> 00:30:20,600
+That's not really a problem you can solve with profilers.
+
+529
+00:30:20,600 --> 00:30:21,600
+Back to this side?
+
+530
+00:30:21,600 --> 00:30:24,600
+Just on the same note, first of all, great talk.
+
+531
+00:30:24,600 --> 00:30:27,240
+This is really educational.
+
+532
+00:30:27,240 --> 00:30:33,000
+Also in terms of messing with things such as context switching, how far down is that
+
+533
+00:30:33,000 --> 00:30:34,000
+propagated down?
+
+534
+00:30:34,000 --> 00:30:38,040
+Is that just propagated down to the Python interpreter?
+
+535
+00:30:38,040 --> 00:30:45,040
+If it's running on a virtual machine or there's hypervisors and stuff involved, it's not safeguarded
+
+536
+00:30:45,040 --> 00:30:47,640
+against that, right?
+
+537
+00:30:47,640 --> 00:30:48,640
+Good question.
+
+538
+00:30:48,640 --> 00:30:52,080
+The context switch, the set switch interval is only going to protect you from a context
+
+539
+00:30:52,080 --> 00:30:54,360
+switch happening in the Python interpreter.
+
+540
+00:30:54,360 --> 00:30:58,240
+It won't protect you from the operating system deciding which process gets to run.
+
+541
+00:30:58,240 --> 00:30:59,240
+That's true.
+
+542
+00:30:59,240 --> 00:31:03,120
+But the thing that we're worried about in that example is that if the Python interpreter
+
+543
+00:31:03,120 --> 00:31:09,440
+switches away and then switches back to you, you've now got stale stack frames potentially.
+
+544
+00:31:09,440 --> 00:31:12,780
+You're looking at stale memory and so that'll cause potentially a crash.
+
+545
+00:31:12,780 --> 00:31:16,300
+There's other ways you can try and check if those stack frames are live or stale, but
+
+546
+00:31:16,300 --> 00:31:19,300
+that's one simple example.
+
+547
+00:31:19,300 --> 00:31:20,300
+Back to this side.
+
+548
+00:31:20,300 --> 00:31:21,300
+Hi.
+
+549
+00:31:21,300 --> 00:31:22,300
+Thank you for the talk.
+
+550
+00:31:22,300 --> 00:31:23,300
+Two questions.
+
+551
+00:31:23,300 --> 00:31:29,540
+First, have you had a chance to measure the performance implications, say, with a 100-millisecond
+
+552
+00:31:29,540 --> 00:31:30,540
+sampling?
+
+553
+00:31:30,540 --> 00:31:36,780
+And second question, have you considered recording, let's say, if a function A calls function
+
+554
+00:31:36,780 --> 00:31:42,340
+B and you ended up seeing that a function B was called, that also implies that function
+
+555
+00:31:42,340 --> 00:31:46,340
+A was called, so the counter for the function A should also be incremented and that might
+
+556
+00:31:46,340 --> 00:31:49,860
+address one of the first questions there was.
+
+557
+00:31:49,860 --> 00:31:50,860
+Excellent question.
+
+558
+00:31:50,860 --> 00:31:51,860
+I'm glad you asked that.
+
+559
+00:31:51,860 --> 00:31:54,420
+So let me answer this.
+
+560
+00:31:54,420 --> 00:31:55,420
+So let me take that in order.
+
+561
+00:31:55,420 --> 00:31:59,260
+So if you set the sampling interval down 100 milliseconds, the sampler is going to run
+
+562
+00:31:59,260 --> 00:32:00,380
+more often.
+
+563
+00:32:00,380 --> 00:32:05,060
+It's hard to say anything concrete because if you're running on a 15-year-old laptop,
+
+564
+00:32:05,060 --> 00:32:09,060
+running it every 100 milliseconds is going to mean a lot more than if you're running
+
+565
+00:32:09,060 --> 00:32:12,180
+it on a top-end Xeon server or something.
+
+566
+00:32:12,500 --> 00:32:17,500
+The actual time for the sampler to run is relatively small, but that's what matters.
+
+567
+00:32:17,500 --> 00:32:20,420
+How long does it take the sampler to run relative to the sampling interval?
+
+568
+00:32:20,420 --> 00:32:24,140
+And that's how much overhead you're going to have.
+
+569
+00:32:24,140 --> 00:32:28,400
+Okay, so the second question was, what if function A calls function B calls function
+
+570
+00:32:28,400 --> 00:32:29,400
+C?
+
+571
+00:32:29,400 --> 00:32:33,320
+So let me go back to a diagram we had earlier right here.
+
+572
+00:32:33,320 --> 00:32:36,980
+So we have foo called bar, call baz, call boo.
+
+573
+00:32:36,980 --> 00:32:43,100
+So because we have F back, what you can do is you can say, okay, I'm in frame number
+
+574
+00:32:43,100 --> 00:32:46,280
+four, which is boo, but that was called by baz, which is called by bar, which is called
+
+575
+00:32:46,280 --> 00:32:47,320
+by foo.
+
+576
+00:32:47,320 --> 00:32:50,780
+So one thing you can do in your statistical profiler is say, don't just count the function
+
+577
+00:32:50,780 --> 00:32:53,700
+I'm in, also add a hit to each of the callers.
+
+578
+00:32:53,700 --> 00:32:58,220
+So I didn't show that just to keep things simple, but in Oxprofile, you can't not just
+
+579
+00:32:58,220 --> 00:32:59,700
+the function you're in, but all the callers.
+
+580
+00:32:59,700 --> 00:33:03,900
+So you'll capture that if there's some top-level function calling everybody.
+
+581
+00:33:03,900 --> 00:33:04,900
+Thank you.
+
+582
+00:33:05,300 --> 00:33:07,940
+Do we have time for more or are we done?
+
+583
+00:33:07,940 --> 00:33:08,940
+One more.
+
+584
+00:33:08,940 --> 00:33:09,940
+Okay, that's all the questions I think.
+
+585
+00:33:09,940 --> 00:33:12,620
+Sorry, I'll be outside in the hall if there's more questions.
+
+586
+00:33:12,620 --> 00:33:13,620
+Thanks, Emyn.
+
+587
+00:33:13,620 --> 00:33:14,620
+Thank you.
+

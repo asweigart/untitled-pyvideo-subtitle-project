@@ -1,0 +1,868 @@
+1
+00:00:00,000 --> 00:00:08,160
+Welcome, everyone. The title of the talk is strategies for testing async code. And the
+
+2
+00:00:08,160 --> 00:00:13,680
+speaker is Neil Shezin. Welcome, Neil.
+
+3
+00:00:13,680 --> 00:00:22,200
+Hey, everyone. Like the title of the topic of the slide says, I'm here to talk to you
+
+4
+00:00:22,200 --> 00:00:26,420
+about strategies for testing async code. I thought I'd start by telling you a little
+
+5
+00:00:26,900 --> 00:00:31,220
+bit about who I am. First of all, this is my first talk at PyCon. In fact, this is my
+
+6
+00:00:31,220 --> 00:00:37,860
+first time talking in a room with more than a couple dozen people in it. So I've been
+
+7
+00:00:37,860 --> 00:00:42,780
+programming in Python since the early 2000s. I think I started on 2.2 or 2.3. It was a
+
+8
+00:00:42,780 --> 00:00:48,620
+long time ago. And I've been doing async programming for the past four or five years in other
+
+9
+00:00:48,620 --> 00:00:56,580
+languages. And in 2017, I started using async in Python with 3.5. I believe that testing
+
+10
+00:00:56,580 --> 00:01:00,580
+software is very important. I'm trying to make sure that all the software I write is
+
+11
+00:01:00,580 --> 00:01:07,500
+well tested. And you can find me on Twitter at Neilithotep. And then I thought I'd talk
+
+12
+00:01:07,500 --> 00:01:11,460
+a little about work because they're paying for me to be here. And also, it's why I started
+
+13
+00:01:11,460 --> 00:01:18,600
+using async in Python. I work for an email security company called Agari. And I'm a senior
+
+14
+00:01:18,600 --> 00:01:23,400
+software engineer and tech lead there. It says on the screen, I don't think I should
+
+15
+00:01:23,400 --> 00:01:32,400
+read it, but Agari has a pretty audacious mission to prevent basically bad email. And
+
+16
+00:01:32,400 --> 00:01:38,340
+the team that I work on for our advanced threat protection product is responsible for a high
+
+17
+00:01:38,340 --> 00:01:44,560
+performance email ingest service where we process email that comes in and extract information
+
+18
+00:01:44,560 --> 00:01:48,560
+on it that we can then send to our data processing pipeline in order to determine if the email
+
+19
+00:01:48,560 --> 00:01:54,920
+is bad. We do a lot of Python at Agari. Some of it's still Python, too. But we're trying
+
+20
+00:01:54,920 --> 00:02:01,840
+to fix that. So now a brief outline of my talk. First, I'm going to talk about why I
+
+21
+00:02:01,840 --> 00:02:07,360
+decided to do this talk. And then I'm going to do a brief intro about async and async
+
+22
+00:02:07,360 --> 00:02:11,440
+I.O. just to kind of level the playing field for everyone here. And then I'm going to talk
+
+23
+00:02:11,440 --> 00:02:16,280
+about the challenges of testing that I ran into. Some solutions and kind of go through
+
+24
+00:02:16,280 --> 00:02:20,400
+some various challenges and the solutions that I found. And then I'll wrap up, which
+
+25
+00:02:20,400 --> 00:02:27,040
+is pretty obvious. So first of all, why? Well, I guess I got to answer a couple other questions
+
+26
+00:02:27,040 --> 00:02:33,600
+first before I can talk about why I did this talk. First of all, why do we test? Testing
+
+27
+00:02:33,600 --> 00:02:38,920
+is important. Unit, functional, integration tests, they all help us keep our software
+
+28
+00:02:39,280 --> 00:02:44,000
+high and make sure that as we change it in the future, the quality remains. Another thing
+
+29
+00:02:44,000 --> 00:02:51,000
+that is important in software is performance. And async I.O. is a really powerful tool in
+
+30
+00:02:51,720 --> 00:02:57,040
+the Python library to provide performance in certain circumstances. There are some other
+
+31
+00:02:57,040 --> 00:03:01,400
+async frameworks available like curio and trio. And some of these strategies in this
+
+32
+00:03:01,400 --> 00:03:06,820
+talk apply to them. But it's primarily focused towards async I.O. However, when you put these
+
+33
+00:03:06,820 --> 00:03:13,740
+two things together, I kind of got confused. I spent a lot of time running up against these
+
+34
+00:03:13,740 --> 00:03:20,500
+challenges and I hope that I can reduce some friction for everyone else. So now a very
+
+35
+00:03:20,500 --> 00:03:27,020
+brief intro to async in Python. So first of all, when I say async, I pretty much mean
+
+36
+00:03:27,020 --> 00:03:32,940
+asynchronous programming. And this definition here is applicable to more than just Python.
+
+37
+00:03:32,940 --> 00:03:38,280
+Pretty much any language that has asynchronous, this is what they mean. Concurrency through
+
+38
+00:03:38,280 --> 00:03:44,620
+cooperation. Different threads of execution yield control of the processor or processors
+
+39
+00:03:44,620 --> 00:03:49,740
+while they're waiting on their external I.O. and they explicitly yield control. So they
+
+40
+00:03:49,740 --> 00:03:56,740
+cooperatively work together to perform multiple tasks sort of simultaneously. Async I.O. is
+
+41
+00:03:57,340 --> 00:04:04,340
+the standard library implementation of asynchronous computing in Python. It's basically the Python
+
+42
+00:04:08,100 --> 00:04:14,500
+framework for asynchronous computing. It became available in the standard lib in 3.4 and then
+
+43
+00:04:14,500 --> 00:04:19,980
+in 3.5 they improved the syntax into a way that I think is pretty much the way it's going
+
+44
+00:04:19,980 --> 00:04:26,000
+to stay. And then we've got incremental changes in 3.6 and 3.7. I'll talk a little bit more
+
+45
+00:04:26,000 --> 00:04:33,000
+about 3.7 shortly. There's two primary concepts of async I.O. The first is coroutines and
+
+46
+00:04:34,920 --> 00:04:41,920
+the second is event loops. So coroutines perform asynchronous work. The 3.6 standard library
+
+47
+00:04:43,760 --> 00:04:49,720
+doc has an interesting definition for coroutine. It basically says a coroutine is either one,
+
+48
+00:04:49,720 --> 00:04:54,600
+the function that defines a coroutine, or two, the object obtained by calling such a
+
+49
+00:04:54,600 --> 00:05:00,740
+function that represents a computation and or I.O. operation that will complete eventually.
+
+50
+00:05:00,740 --> 00:05:05,280
+So it's kind of self-referential. But the basics of that is this is the interface that
+
+51
+00:05:05,280 --> 00:05:10,920
+allows you to have cooperative concurrency by performing work while waiting on I.O. The
+
+52
+00:05:10,920 --> 00:05:16,340
+second main concept is an event loop. An event loop is something that schedules asynchronous
+
+53
+00:05:16,340 --> 00:05:21,160
+work and what I mean by that is it runs a coroutine and then when a coroutine performs
+
+54
+00:05:21,160 --> 00:05:25,700
+I.O. it basically delegates that I.O. and while it's waiting for the return it runs
+
+55
+00:05:25,700 --> 00:05:29,980
+another coroutine and then when the I.O. returns it can resume the original coroutine with
+
+56
+00:05:29,980 --> 00:05:36,640
+the result of the I.O. call. And here we have the key syntax that you need to know for most
+
+57
+00:05:36,640 --> 00:05:43,320
+of async I.O. and Python. There's two keywords and in fact these keywords were defined pretty
+
+58
+00:05:43,320 --> 00:05:49,840
+much in 3.5 and became reserved in 3.7 which I think has broken some code out there. I
+
+59
+00:05:49,840 --> 00:05:57,120
+think particularly for await. So async defines a coroutine and await calls a coroutine and
+
+60
+00:05:57,120 --> 00:06:04,900
+there's an example here. On line one I'm creating a coroutine by calling async def my coroutine
+
+61
+00:06:04,900 --> 00:06:10,760
+and then on line two I'm awaiting the output of another coroutine that I call and as I
+
+62
+00:06:10,760 --> 00:06:16,280
+mentioned before when you call another coroutine with the open params closed params what you
+
+63
+00:06:16,280 --> 00:06:24,200
+get back is a coroutine object which represents an eventual completion of some sort of task
+
+64
+00:06:24,200 --> 00:06:29,600
+and that's what you're actually awaiting on. So it's nice to have some example to work
+
+65
+00:06:29,600 --> 00:06:35,800
+with as you do these tests and the way I've seen it mostly is for complex microservices
+
+66
+00:06:35,800 --> 00:06:39,880
+or network servers and I thought it might be nice to have something a little bit simpler
+
+67
+00:06:40,880 --> 00:06:46,640
+to keep in our minds for these things. So that brings us to cats. It's nice to have
+
+68
+00:06:46,640 --> 00:06:53,360
+a cat pic and a tech talk. It makes people happy. It also brings to mind the phrase hurting
+
+69
+00:06:53,360 --> 00:07:01,360
+cats which is getting cats to do the same thing like posing for a photo but really that's
+
+70
+00:07:01,360 --> 00:07:06,480
+not what it means. It means something more like this. A bunch of random actions happening
+
+71
+00:07:06,480 --> 00:07:14,520
+at various times and just a bunch of confusion. So to that end I have created a little cat
+
+72
+00:07:14,520 --> 00:07:26,320
+object. A cat has two main members to it. It has a name and a mood on line six and seven
+
+73
+00:07:26,320 --> 00:07:33,920
+and it also has a method defined pet which when you pet the cat you make its mood pleased.
+
+74
+00:07:33,920 --> 00:07:38,880
+And then I also defined a coroutine for moving a cat. And basically when you try to move
+
+75
+00:07:38,880 --> 00:07:46,000
+a cat if it's pleased it will eventually move. Then it might become displeased but if it's
+
+76
+00:07:46,000 --> 00:07:52,580
+not pleased it's not going to move for you. So there we have our little async example.
+
+77
+00:07:52,580 --> 00:07:57,960
+So then it brings us to our first challenge. How do we test a coroutine? This is something
+
+78
+00:07:58,800 --> 00:08:05,240
+I spent a little bit of time bashing my head over a few years ago. So first thing that
+
+79
+00:08:05,240 --> 00:08:09,920
+I try to do, well, actually take one step back. I'm going to find a little method to
+
+80
+00:08:09,920 --> 00:08:17,600
+test called herd which basically wraps petting a cat to make it happy and then moving it
+
+81
+00:08:17,600 --> 00:08:25,680
+in a function or a coroutine rather. So line five defines our method under test and then
+
+82
+00:08:25,680 --> 00:08:34,560
+we have a test case. This is using the unit test framework. So we have this test. Test
+
+83
+00:08:34,560 --> 00:08:38,920
+forward and then all we do is check to make sure that we get true when we try to herd
+
+84
+00:08:38,920 --> 00:08:44,440
+Garfield forward. I want to say that Garfield is not necessarily my favorite cat name but
+
+85
+00:08:44,440 --> 00:08:49,520
+it popped in my head when I wrote this. So that's just what there's there. And then the
+
+86
+00:08:49,520 --> 00:08:54,520
+output of this when we run it is well, at first it looks okay. We ran one test and it
+
+87
+00:08:54,520 --> 00:09:01,520
+returned okay. But really it's not okay. There's a runtime warning. Coroutine herd was never
+
+88
+00:09:04,480 --> 00:09:10,880
+awaited. The okay is because when we evaluated the return of that function call, we got a
+
+89
+00:09:10,880 --> 00:09:17,320
+coroutine object which is truthy. So asserting a truthy thing is true. So the runtime warning
+
+90
+00:09:17,320 --> 00:09:24,320
+there is something important to look for. Okay. This means we need to call await instead.
+
+91
+00:09:24,840 --> 00:09:31,840
+So here's another little iteration where we call await on herd. Run the test and we get
+
+92
+00:09:33,040 --> 00:09:39,320
+a syntax error. You can't call await outside of an async function. So you need a coroutine
+
+93
+00:09:39,320 --> 00:09:46,320
+to call a coroutine which is a little bit of a catch-22. But there's a way around this.
+
+94
+00:09:46,640 --> 00:09:53,640
+And that's using the event loop. So we add an import of async IOTR test and then we can
+
+95
+00:09:58,160 --> 00:10:05,160
+get in a loop as you can see on line 15 and run our coroutine in the loop, close the loop
+
+96
+00:10:06,240 --> 00:10:11,820
+and check our result. And this works. This is the most simple solution to the problem
+
+97
+00:10:11,820 --> 00:10:16,540
+that's available if you're using any sort of framework, any version of Python that supports
+
+98
+00:10:16,540 --> 00:10:23,540
+async IOTR. Even 3.4 should work this way. But there are some other things you can do
+
+99
+00:10:23,900 --> 00:10:30,700
+to test these functions. I don't know. How many people out here are using PyTest? So
+
+100
+00:10:30,700 --> 00:10:34,300
+there's a plug-in called PyTest async IOTR that makes things a little easier. So you
+
+101
+00:10:34,300 --> 00:10:41,300
+just pip install PyTest async IOTR, import PyTest to pull in all the dependencies and
+
+102
+00:10:41,300 --> 00:10:48,300
+then you can mark your test function with a decorator, PyTest mark async IOTR, and then
+
+103
+00:10:50,380 --> 00:10:56,460
+instead of defining a test method, you define a test coroutine. So you can see instead of
+
+104
+00:10:56,460 --> 00:11:02,740
+running test forward as a method, it's actually a coroutine and we're just calling it wait
+
+105
+00:11:02,740 --> 00:11:09,740
+as we would want to do on line 14. And we run this through PyTest and we get a nice
+
+106
+00:11:09,900 --> 00:11:14,500
+green bar at the bottom. I do like the output of PyTest. It's really straightforward. You
+
+107
+00:11:14,500 --> 00:11:21,500
+see green? You know everything passed. See red? Probably not. So that's pretty much a
+
+108
+00:11:23,380 --> 00:11:27,060
+nice way of using PyTest. There's one other thing that I found while I was researching
+
+109
+00:11:27,060 --> 00:11:34,060
+this talk, which is a new method in async IOTR in Python 3.7. This is async IOTR run, which
+
+110
+00:11:34,340 --> 00:11:40,420
+basically runs a coroutine. I guess essentially it's a purification of creating a loop, running
+
+111
+00:11:40,420 --> 00:11:46,980
+the coroutine and closing the loop. It's marked provisional, by the way, in the library, but
+
+112
+00:11:46,980 --> 00:11:53,980
+I doubt it's going to change. And you do it really simply. Like we see on line 15, you
+
+113
+00:11:54,660 --> 00:12:00,580
+just call async IOTR on the coroutine and you get a result and you can check if it's
+
+114
+00:12:00,580 --> 00:12:06,380
+true. This is really straightforward. Actually, now I remember something I forgot to mention.
+
+115
+00:12:06,380 --> 00:12:13,380
+I'm going to go back for a second. To this example, it's kind of verbose there. You probably
+
+116
+00:12:15,540 --> 00:12:21,540
+would want to do something like set up a tear down for your test case to create the loop
+
+117
+00:12:21,540 --> 00:12:28,540
+and get rid of it. Sorry about that. But here you don't have to worry about that because
+
+118
+00:12:30,580 --> 00:12:37,580
+that's just one line of code. Actually, that was here. All right. That brings us to our
+
+119
+00:12:38,020 --> 00:12:45,020
+next challenge. Mocking and patching. I know everyone doesn't use mocking and I think there
+
+120
+00:12:45,180 --> 00:12:49,980
+was a talk that kind of tried to convince us not to use them all the time, but regardless,
+
+121
+00:12:49,980 --> 00:12:54,260
+people do use mocks and they're an important way to separate the concerns of our unit tests
+
+122
+00:12:54,260 --> 00:13:01,260
+from other methods. The problem is that unit tests mock dot mock just won't mock a coroutine.
+
+123
+00:13:01,980 --> 00:13:08,500
+And let me show you an example of what I mean. So we're using the patch method to overwrite
+
+124
+00:13:08,500 --> 00:13:15,500
+cat dot move. You can see on line 14 we're using patch, which means that in the context
+
+125
+00:13:15,660 --> 00:13:21,100
+of the function, whenever you call the test function, whenever we call cat dot move, we
+
+126
+00:13:21,100 --> 00:13:28,100
+will call our new mock instead move mock. We're using our normal async IO get event
+
+127
+00:13:29,180 --> 00:13:36,180
+loop run until complete methodology here, but this is valid for any of the other things.
+
+128
+00:13:36,180 --> 00:13:40,620
+So when you do this and try and check to see that you called the mock object the way you
+
+129
+00:13:40,620 --> 00:13:47,620
+expected, you get a type error because you can't await a magic mock. Because instead
+
+130
+00:13:48,620 --> 00:13:53,100
+of getting a coroutine and for when we call movers turned the mock object returns another
+
+131
+00:13:53,100 --> 00:13:59,180
+mock object. Okay. So there's got to be a way to do this. And the best thing that I
+
+132
+00:13:59,180 --> 00:14:04,860
+found is this little basically wrapper and Google and Stack Overflow were very helpful
+
+133
+00:14:04,860 --> 00:14:11,660
+here. So we have a little new class called async mock, which is a super class, subclass
+
+134
+00:14:11,780 --> 00:14:18,260
+rather of magic mock. And it has one method, one coroutine actually, call of dunder call.
+
+135
+00:14:18,260 --> 00:14:22,820
+And what this does is it overwrites the policy for what happens when you call open friends,
+
+136
+00:14:22,820 --> 00:14:28,740
+close friends. And in this case, all we do is call the dunder call on the super class.
+
+137
+00:14:28,740 --> 00:14:33,820
+So we get the async call into the magic mock and we translate it into a normal method call
+
+138
+00:14:33,820 --> 00:14:40,820
+in the mock object. So we create our mock object by using the keyword argument new co-object
+
+139
+00:14:41,740 --> 00:14:46,300
+callable, which means instead of getting a normal mock or magic mock for the mock object
+
+140
+00:14:46,300 --> 00:14:51,780
+in patch, we actually use async mock. And because of the pass through that we created
+
+141
+00:14:51,780 --> 00:14:56,260
+in the object, we can simply call the normal mock methods and see that it was actually
+
+142
+00:14:56,260 --> 00:15:02,220
+called with forward. So that's nice and it's straightforward. And that brings us to our
+
+143
+00:15:02,220 --> 00:15:09,220
+next challenge. Context managers. This is actually a similar problem that I ran into.
+
+144
+00:15:09,380 --> 00:15:12,980
+Sometimes you'll have a method that expects to take an object that implements a context
+
+145
+00:15:12,980 --> 00:15:19,980
+manager and an async framework or you use async with to use a context manager. And if
+
+146
+00:15:20,620 --> 00:15:23,680
+you don't actually care about the context manager but you care about the function that's
+
+147
+00:15:23,680 --> 00:15:28,900
+testing it, you might want to use a mock. There's a pretty straightforward pattern
+
+148
+00:15:28,900 --> 00:15:35,020
+to addressing this, which is you create another type of super class to magic mock. And in
+
+149
+00:15:35,020 --> 00:15:38,820
+fact, you could probably do all this in one class if you wanted where you overwrite the
+
+150
+00:15:38,820 --> 00:15:43,660
+Dunder A enter and Dunder A exit methods and have them simply pass through to the Dunder
+
+151
+00:15:43,660 --> 00:15:50,360
+enter and Dunder exit on the underlying mock object. That's also pretty straightforward.
+
+152
+00:15:50,360 --> 00:15:57,360
+So then that brings us to the more complex use cases. So everything that we talked about
+
+153
+00:15:57,360 --> 00:16:02,660
+before really addresses the common issues and how you get started and everything when
+
+154
+00:16:02,660 --> 00:16:08,740
+you're just getting started async I O and trying it out. But some other things happen.
+
+155
+00:16:08,740 --> 00:16:15,740
+There's shortcomings that I found. In particular, sometimes you have coroutines that aren't
+
+156
+00:16:16,100 --> 00:16:20,620
+running in the main thread that might behave differently. I ran into this in particular
+
+157
+00:16:20,620 --> 00:16:25,740
+when I was taking code that was synchronous and migrating it to asynchronous code. And
+
+158
+00:16:25,740 --> 00:16:30,580
+we expected some certain signal behavior that didn't happen the right way because the signals
+
+159
+00:16:30,580 --> 00:16:34,620
+only operated properly in the main thread. So it's nice to be able to make sure you're
+
+160
+00:16:34,620 --> 00:16:41,220
+running signals and running your coroutines in the threads you expect. Other thing is
+
+161
+00:16:41,220 --> 00:16:47,420
+sometimes it's hard to test methods that are synchronous functions that eventually call
+
+162
+00:16:47,420 --> 00:16:54,420
+into event loops. Event loops might not always be there or working properly. And other thing
+
+163
+00:16:55,680 --> 00:16:59,940
+that I ran into problems is functional tests. Like what happens if you have a while loop
+
+164
+00:16:59,940 --> 00:17:06,300
+that's sitting there accepting network connections, creating async tests and just spinning forever?
+
+165
+00:17:06,300 --> 00:17:12,360
+That's never going to complete. And the final thing that I found problems with, this one
+
+166
+00:17:12,360 --> 00:17:19,360
+is event loop variance. And I guess the simplest thing to explain is the concept of event loop
+
+167
+00:17:20,020 --> 00:17:24,780
+is a generic class that you can plug in other things to. And there's one called UV loop
+
+168
+00:17:24,820 --> 00:17:31,820
+which is a very high performant implementation. You can look it up and it looks like it's
+
+169
+00:17:34,220 --> 00:17:41,220
+a performance as go or other things that tout their concurrency performance or node. Anyway,
+
+170
+00:17:43,380 --> 00:17:50,100
+so I created this thing called the loop runner that can manage a loop for you. This is a
+
+171
+00:17:50,100 --> 00:17:54,300
+little bit of an eye chart. By the way, all this code is posted in repo. I'll give you
+
+172
+00:17:54,300 --> 00:18:00,060
+a link to it later. But I'm going to go over the most important parts of this. So the main
+
+173
+00:18:00,060 --> 00:18:05,980
+interface of the loop runner is a method called run co-routine. And this is an interface that
+
+174
+00:18:05,980 --> 00:18:12,320
+runs a co-routine pass through it to inside the loop of the loop runner which is a subclass
+
+175
+00:18:12,320 --> 00:18:18,980
+of threading.thread. There's a method run co-routine thread safe which essentially makes sure that
+
+176
+00:18:18,980 --> 00:18:24,920
+you run the co-routine in the thread that event loop is running in. So we can do that
+
+177
+00:18:24,920 --> 00:18:31,920
+and get the result. And then here's the way you might use it. So you might use set up
+
+178
+00:18:32,860 --> 00:18:39,620
+and tear down methods to create a loop runner and start the thread. And then you can simply
+
+179
+00:18:39,620 --> 00:18:44,860
+say hey, run my co-routine in that loop. This is pretty simple. This actually looks like
+
+180
+00:18:44,860 --> 00:18:51,140
+running to loop complete. And it is essentially that. And if you can do that, you might not
+
+181
+00:18:51,140 --> 00:18:56,140
+want to use this. But there's some other cases that are more complex like when you're calling
+
+182
+00:18:56,140 --> 00:19:03,140
+a cost threads. So this is another example. This is on the surface. It might look a little
+
+183
+00:19:04,380 --> 00:19:11,260
+contrived. But this is actually really simple, similar to something that I wrote before kind
+
+184
+00:19:11,260 --> 00:19:17,300
+of as interface between synchronous code and asynchronous code and other asynchronous code.
+
+185
+00:19:17,300 --> 00:19:24,300
+So I called this herd router to keep in the herd, herding kittens pattern from before.
+
+186
+00:19:26,980 --> 00:19:33,980
+But the main thing to see here is that we have this method add command which runs its
+
+187
+00:19:34,180 --> 00:19:41,180
+own method thread safely with the key passed to it. And it does that in a thread safe manner
+
+188
+00:19:43,580 --> 00:19:49,260
+in this co-routine on line 12 which you can see actually uses a lock to make sure that
+
+189
+00:19:49,260 --> 00:19:56,260
+it is indeed thread safe. So this is how you might want to test this in a test case. So
+
+190
+00:19:56,260 --> 00:20:03,260
+we set it up by creating an event loop, creating a herd router on the event loop, creating
+
+191
+00:20:11,260 --> 00:20:17,300
+a runner on the event loop and starting the runner. And then in our test, we can say,
+
+192
+00:20:17,300 --> 00:20:22,740
+all right, let's call the method test and check to see that our results there. And this
+
+193
+00:20:22,860 --> 00:20:28,220
+works. That actually brings us to the end of the talk. A couple minutes ahead of where
+
+194
+00:20:28,220 --> 00:20:34,020
+I expect it to be. So I hope that this either gets you to try out async I O programming
+
+195
+00:20:34,020 --> 00:20:38,580
+if you are afraid of it for any reason or helps you get back into it if you ran into
+
+196
+00:20:38,580 --> 00:20:44,220
+testing problems. I hope that you keep testing and you can find my sample code and the whole
+
+197
+00:20:44,220 --> 00:20:51,220
+presentation at bit.ly slash nshazen dash PyCon 2019.
+
+198
+00:20:52,740 --> 00:20:59,740
+Thank you, Neil. We've got a couple of minutes for questions. So if you have any, come up
+
+199
+00:21:04,500 --> 00:21:11,500
+to the microphone and ask your questions.
+
+200
+00:21:22,740 --> 00:21:29,740
+Hi. Thanks for the talk. You spent sort of most of the content talking about unit testing
+
+201
+00:21:31,460 --> 00:21:37,620
+and testing sort of individual functions. In my experience, often when I'm using asynchronous
+
+202
+00:21:37,620 --> 00:21:41,300
+code, it's in part because I'm interested in running several things concurrently that
+
+203
+00:21:41,300 --> 00:21:46,380
+need to interact with one another. I was wondering if you have any suggestions or any ideas about
+
+204
+00:21:46,380 --> 00:21:51,380
+how to make it easier to orchestrate or like test more effectively the interactions of
+
+205
+00:21:51,620 --> 00:21:52,220
+things?
+
+206
+00:21:52,220 --> 00:21:56,220
+That is actually I think one of the things why I made the loop runner. That allowed me
+
+207
+00:21:56,220 --> 00:22:01,260
+to set some things running, particularly if they have loops that wait for processing in
+
+208
+00:22:01,260 --> 00:22:04,300
+the background, particularly if those are tested elsewhere, you can assume that they
+
+209
+00:22:04,300 --> 00:22:10,700
+work right and have your code under test run in the main thread and pass stuff there. I
+
+210
+00:22:10,700 --> 00:22:14,260
+originally had some example for that, but it was way too confusing. I couldn't keep
+
+211
+00:22:14,260 --> 00:22:19,300
+it. But basically, yeah, if you can do loop management for other event loops, you can
+
+212
+00:22:19,300 --> 00:22:20,580
+run other things concurrently.
+
+213
+00:22:20,580 --> 00:22:21,580
+Thank you.
+
+214
+00:22:21,580 --> 00:22:22,580
+Sure.
+
+215
+00:22:22,580 --> 00:22:23,580
+That's fine.
+
+216
+00:22:23,580 --> 00:22:26,580
+In the absence of any more questions, we have come to the end of the talk. So thank you
+
+217
+00:22:26,580 --> 00:22:27,580
+now.
+

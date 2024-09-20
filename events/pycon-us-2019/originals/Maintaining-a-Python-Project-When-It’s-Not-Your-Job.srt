@@ -1,0 +1,3956 @@
+1
+00:00:00,000 --> 00:00:03,800
+All right, folks, if you could all take your seats.
+
+2
+00:00:03,800 --> 00:00:05,480
+And now I want you all to welcome Hinnick, who's
+
+3
+00:00:05,480 --> 00:00:07,940
+going to be presenting about maintaining a Python project
+
+4
+00:00:07,940 --> 00:00:09,040
+when it's not your job.
+
+5
+00:00:17,720 --> 00:00:19,480
+Thanks for coming, everyone.
+
+6
+00:00:19,480 --> 00:00:22,160
+As we've just heard, I'm Hinnick.
+
+7
+00:00:22,160 --> 00:00:26,320
+And I maintain way too many open source projects.
+
+8
+00:00:26,320 --> 00:00:29,160
+You may have heard of Eris, which is the direct ancestor
+
+9
+00:00:29,160 --> 00:00:33,120
+of the much beloved data classes in Python 3.7, which
+
+10
+00:00:33,120 --> 00:00:36,720
+at this point has more than 12 million downloads per month,
+
+11
+00:00:36,720 --> 00:00:39,760
+which is roughly 4x of Django.
+
+12
+00:00:39,760 --> 00:00:42,400
+Also, I have still some stickers from last year left.
+
+13
+00:00:42,400 --> 00:00:44,320
+So if you want to come and talk to me.
+
+14
+00:00:44,320 --> 00:00:47,720
+Also, my second most popular project from is TrackLog,
+
+15
+00:00:47,720 --> 00:00:52,740
+which is one of the two major structured logging
+
+16
+00:00:52,740 --> 00:00:54,400
+packages for Python, the other one being
+
+17
+00:00:54,400 --> 00:00:56,380
+Elliott, which is also great.
+
+18
+00:00:56,380 --> 00:00:58,400
+This is much more hard to sell.
+
+19
+00:00:58,400 --> 00:01:01,800
+But it is widely used in critical systems at this point.
+
+20
+00:01:01,800 --> 00:01:04,280
+I've also been involved in many high profile ones,
+
+21
+00:01:04,280 --> 00:01:08,800
+like Twisted and CPython or PyopMSSL.
+
+22
+00:01:08,800 --> 00:01:13,280
+And I maintain a lot of less famous ones,
+
+23
+00:01:13,280 --> 00:01:18,440
+which unfortunately are no less work intensive in the long run.
+
+24
+00:01:18,440 --> 00:01:23,680
+Now, despite this anxiety inducing body of work,
+
+25
+00:01:23,680 --> 00:01:26,120
+I am not saying that I'm a good maintainer.
+
+26
+00:01:26,120 --> 00:01:30,320
+I'm also not saying that I'm a happy maintainer.
+
+27
+00:01:30,320 --> 00:01:32,520
+Occasionally, I'm quite unhappy.
+
+28
+00:01:32,520 --> 00:01:34,400
+It does not spark any joy at all.
+
+29
+00:01:34,400 --> 00:01:36,760
+And I try to say thank you and bring it to goodwill,
+
+30
+00:01:36,760 --> 00:01:38,440
+but nobody wanted them.
+
+31
+00:01:38,440 --> 00:01:43,760
+So I'm also sometimes really bad at it.
+
+32
+00:01:43,760 --> 00:01:46,000
+So sometimes I just don't have time.
+
+33
+00:01:46,000 --> 00:01:47,360
+So I have a crunch at work.
+
+34
+00:01:47,360 --> 00:01:50,560
+I have to travel, or I want to travel.
+
+35
+00:01:50,560 --> 00:01:52,160
+I have conference preparations.
+
+36
+00:01:52,160 --> 00:01:54,480
+You should see my GitHub inbox right now.
+
+37
+00:01:54,480 --> 00:01:57,320
+The month leading up to PyCon US is basically
+
+38
+00:01:57,320 --> 00:01:59,440
+no maintenance whatsoever.
+
+39
+00:01:59,440 --> 00:02:00,920
+And sometimes I do have time, but I
+
+40
+00:02:00,920 --> 00:02:03,080
+don't have the energy to deal with all the bugs, pull
+
+41
+00:02:03,080 --> 00:02:06,320
+requests, support requests, and whatnot.
+
+42
+00:02:06,320 --> 00:02:08,480
+But I'm not here to talk about how shitty it
+
+43
+00:02:08,480 --> 00:02:10,880
+is to maintain open source software.
+
+44
+00:02:10,880 --> 00:02:14,080
+I think Russell made this point very well this morning.
+
+45
+00:02:14,080 --> 00:02:17,200
+So he took that part from me.
+
+46
+00:02:17,200 --> 00:02:20,240
+Instead, I want to give you some tools and approaches
+
+47
+00:02:20,240 --> 00:02:23,240
+to feel less shitty about it and be
+
+48
+00:02:23,240 --> 00:02:26,720
+less stressed while shipping a high quality
+
+49
+00:02:26,720 --> 00:02:29,000
+package out to the world.
+
+50
+00:02:29,000 --> 00:02:32,800
+And to achieve that, I want you to remove friction.
+
+51
+00:02:32,800 --> 00:02:35,200
+And when I say friction, I mainly
+
+52
+00:02:35,200 --> 00:02:37,280
+mean for your contributors.
+
+53
+00:02:37,280 --> 00:02:41,280
+Because as a maintainer, and this is important to realize,
+
+54
+00:02:41,280 --> 00:02:44,320
+once your project is running, your main task
+
+55
+00:02:44,320 --> 00:02:47,640
+that is specific to you as a maintainer is being a leader,
+
+56
+00:02:47,640 --> 00:02:51,240
+being a product manager, a project manager.
+
+57
+00:02:51,240 --> 00:02:53,240
+That's the only specific task for you.
+
+58
+00:02:53,240 --> 00:02:55,600
+So you decide what goes in into your project.
+
+59
+00:02:55,600 --> 00:02:58,200
+You decide on the scope of your project.
+
+60
+00:02:58,200 --> 00:03:01,040
+You are probably interested in upholding
+
+61
+00:03:01,040 --> 00:03:03,960
+the quality of your project, because shipping buggy software
+
+62
+00:03:03,960 --> 00:03:06,960
+is the best way to burn out by issue tracker.
+
+63
+00:03:06,960 --> 00:03:10,920
+And I've seen some distressing hostilities on issue trackers,
+
+64
+00:03:10,920 --> 00:03:13,840
+because the maintainers were just so stressed out
+
+65
+00:03:13,840 --> 00:03:17,200
+by the constant influx by negativity.
+
+66
+00:03:17,200 --> 00:03:18,760
+And speaking of that, you also get
+
+67
+00:03:18,760 --> 00:03:20,920
+to set a tone in your project.
+
+68
+00:03:20,920 --> 00:03:23,760
+I think this is the biggest upside of maintaining projects,
+
+69
+00:03:23,760 --> 00:03:29,320
+that you get to kick out toxic people before they
+
+70
+00:03:29,320 --> 00:03:31,480
+become a problem, and before they
+
+71
+00:03:31,480 --> 00:03:32,960
+start running the project, actually,
+
+72
+00:03:32,960 --> 00:03:34,400
+because all the good people left,
+
+73
+00:03:34,400 --> 00:03:37,000
+because they didn't want to deal with it anymore.
+
+74
+00:03:37,000 --> 00:03:41,480
+So in practice, of course, you will still write code.
+
+75
+00:03:41,480 --> 00:03:43,720
+You will probably still write most of the code.
+
+76
+00:03:43,720 --> 00:03:46,880
+But your goal should be to set up your project in a way
+
+77
+00:03:46,880 --> 00:03:50,760
+that anybody could write code for it, even you.
+
+78
+00:03:50,760 --> 00:03:55,560
+And this is important, because once your project matures,
+
+79
+00:03:55,560 --> 00:03:57,280
+the development velocity goes down.
+
+80
+00:03:57,280 --> 00:03:58,480
+This is just natural.
+
+81
+00:03:58,480 --> 00:04:01,640
+And you're not going to hack on it every single day.
+
+82
+00:04:01,640 --> 00:04:06,360
+So once you have to come back after weeks, months,
+
+83
+00:04:06,360 --> 00:04:09,280
+to fix something, you'll be grateful for everything
+
+84
+00:04:09,280 --> 00:04:11,120
+that you put into place before that
+
+85
+00:04:11,120 --> 00:04:14,720
+helps you to hit the road running while contributing
+
+86
+00:04:14,720 --> 00:04:17,080
+to your own project.
+
+87
+00:04:17,080 --> 00:04:19,920
+And any friction for contributors
+
+88
+00:04:19,920 --> 00:04:23,120
+also falls back on you more or less directly.
+
+89
+00:04:23,120 --> 00:04:26,640
+So first, the most obvious thing, work does not get done.
+
+90
+00:04:26,640 --> 00:04:29,040
+So how many of you ever ran into something
+
+91
+00:04:29,040 --> 00:04:31,280
+that was a problem in a project you were using?
+
+92
+00:04:31,280 --> 00:04:33,520
+You knew how to fix it, but you did not
+
+93
+00:04:33,520 --> 00:04:41,040
+fix it because the process was just unclear or just not good?
+
+94
+00:04:41,040 --> 00:04:42,880
+That's more hands than I expected.
+
+95
+00:04:42,880 --> 00:04:45,680
+I'm right.
+
+96
+00:04:45,680 --> 00:04:49,960
+So every hand that just went up stands for work
+
+97
+00:04:49,960 --> 00:04:51,040
+that has not been done.
+
+98
+00:04:51,040 --> 00:04:54,480
+It stands for work that has been done maybe by the maintainer
+
+99
+00:04:54,480 --> 00:04:56,840
+who could have done more maintainery things.
+
+100
+00:04:56,840 --> 00:04:58,200
+So this is not good.
+
+101
+00:04:58,200 --> 00:04:59,840
+And also, if every new contributor
+
+102
+00:04:59,840 --> 00:05:03,800
+needs handholding to get started to keep things running,
+
+103
+00:05:03,800 --> 00:05:05,880
+the development environment and everything,
+
+104
+00:05:05,880 --> 00:05:08,440
+these are menial tasks, even though we
+
+105
+00:05:08,440 --> 00:05:10,400
+don't like to think about them like this.
+
+106
+00:05:10,400 --> 00:05:12,080
+But support labor is labor.
+
+107
+00:05:12,080 --> 00:05:14,000
+Emotional labor is labor.
+
+108
+00:05:14,000 --> 00:05:17,280
+And this kind of labor will burn out you much faster
+
+109
+00:05:17,280 --> 00:05:19,280
+than writing code, in my experience.
+
+110
+00:05:19,280 --> 00:05:21,240
+This is much, much worse to you.
+
+111
+00:05:21,240 --> 00:05:23,680
+And I think Russell said something along those lines,
+
+112
+00:05:23,680 --> 00:05:24,520
+too.
+
+113
+00:05:24,520 --> 00:05:27,920
+So what I'm saying is, if a willing contributor arrives,
+
+114
+00:05:27,920 --> 00:05:30,680
+you want them to get started as easily as possible.
+
+115
+00:05:30,680 --> 00:05:33,720
+They are not invested into your project yet.
+
+116
+00:05:33,720 --> 00:05:36,960
+So you should give them an early feeling of success
+
+117
+00:05:36,960 --> 00:05:39,800
+so they gain some confidence to continue.
+
+118
+00:05:39,800 --> 00:05:43,400
+Otherwise, they just abandon ship.
+
+119
+00:05:43,400 --> 00:05:47,320
+They should have a clear path from start to finish.
+
+120
+00:05:47,320 --> 00:05:52,000
+And this is something I feel like many people get wrong.
+
+121
+00:05:52,000 --> 00:05:55,520
+Contributors don't mind to put work into quality.
+
+122
+00:05:55,520 --> 00:05:58,560
+I mean, it's most likely they have this project
+
+123
+00:05:58,560 --> 00:06:00,520
+in production for themselves.
+
+124
+00:06:00,520 --> 00:06:02,000
+So they have an interesting interest
+
+125
+00:06:02,000 --> 00:06:03,000
+to keep it high quality.
+
+126
+00:06:03,000 --> 00:06:06,760
+They don't want to get paid at 3 AM because something broke.
+
+127
+00:06:06,760 --> 00:06:10,240
+But what's stopping people from contributing
+
+128
+00:06:10,240 --> 00:06:14,000
+or what's frustrating is when it's not clear what to do.
+
+129
+00:06:14,000 --> 00:06:17,880
+So a long but actionable and concrete to-do list
+
+130
+00:06:17,880 --> 00:06:20,440
+is much better than a short one, but that is vague.
+
+131
+00:06:20,440 --> 00:06:23,080
+That doesn't tell you what's expected of you.
+
+132
+00:06:23,080 --> 00:06:26,360
+And finally, short feedback loops.
+
+133
+00:06:26,360 --> 00:06:28,240
+Short feedback loops, which means basically
+
+134
+00:06:28,240 --> 00:06:31,260
+the time between trying something out and seeing
+
+135
+00:06:31,260 --> 00:06:35,000
+the result, is, in my opinion, a number one factor
+
+136
+00:06:35,000 --> 00:06:36,920
+in development ergonomics.
+
+137
+00:06:36,920 --> 00:06:38,760
+Because it encourages experimentation.
+
+138
+00:06:38,760 --> 00:06:42,880
+It gives you this feeling of security
+
+139
+00:06:42,880 --> 00:06:44,680
+when you're playing around.
+
+140
+00:06:44,680 --> 00:06:49,440
+And the lack of this is, to me, one of the number one reasons
+
+141
+00:06:49,440 --> 00:06:51,760
+to abandon work on something that is half finished,
+
+142
+00:06:51,760 --> 00:06:55,600
+but it's just too tedious to bring it over the line.
+
+143
+00:06:55,600 --> 00:06:59,040
+So in the following, I want to show you a bunch of ideas
+
+144
+00:06:59,040 --> 00:07:03,040
+how I try to remove friction from contributing
+
+145
+00:07:03,040 --> 00:07:05,560
+to my project.
+
+146
+00:07:05,560 --> 00:07:07,360
+So I'm going to take you through the lifecycle
+
+147
+00:07:07,360 --> 00:07:08,640
+of a contribution here.
+
+148
+00:07:08,640 --> 00:07:11,520
+And it's going to be a play in three acts featuring
+
+149
+00:07:11,520 --> 00:07:14,760
+you, who wants to contribute to a project of mine,
+
+150
+00:07:14,760 --> 00:07:17,240
+and me, who wants to get into the project
+
+151
+00:07:17,240 --> 00:07:21,640
+and out to the people with as little work as possible.
+
+152
+00:07:21,640 --> 00:07:24,860
+And ideally, and this is like the bonus round,
+
+153
+00:07:24,860 --> 00:07:27,320
+I want to bind you to the project.
+
+154
+00:07:27,320 --> 00:07:30,760
+I want you to do more work in the future
+
+155
+00:07:30,760 --> 00:07:32,520
+because you like it so much and because it
+
+156
+00:07:32,640 --> 00:07:35,040
+is such a pleasant experience.
+
+157
+00:07:35,040 --> 00:07:39,480
+So unfortunately, the program committee refused me
+
+158
+00:07:39,480 --> 00:07:41,040
+all the HINIX slot.
+
+159
+00:07:41,040 --> 00:07:45,080
+So instead of 10 hours, I have meekly 45 minutes.
+
+160
+00:07:45,080 --> 00:07:48,480
+So I'm mostly going to present concepts.
+
+161
+00:07:48,480 --> 00:07:50,440
+But there's going to be, as always in my talks,
+
+162
+00:07:50,440 --> 00:07:54,640
+a page at the end which shows the concrete implementations
+
+163
+00:07:54,640 --> 00:07:55,600
+of those concepts.
+
+164
+00:07:55,600 --> 00:07:58,240
+So if you find something interesting,
+
+165
+00:07:58,240 --> 00:08:02,520
+there is a concrete example for that on this page.
+
+166
+00:08:02,520 --> 00:08:04,320
+It also means absolutely no questions.
+
+167
+00:08:04,320 --> 00:08:08,160
+We also started slightly late because of a friend of mine
+
+168
+00:08:08,160 --> 00:08:09,380
+who talked too long.
+
+169
+00:08:13,320 --> 00:08:16,360
+So yeah, this is going to be fast and long.
+
+170
+00:08:16,360 --> 00:08:20,000
+So we will start with your part, the development.
+
+171
+00:08:20,000 --> 00:08:22,280
+This should be entirely about you.
+
+172
+00:08:22,280 --> 00:08:26,720
+And if I have to intervene, I have failed both you and myself.
+
+173
+00:08:27,600 --> 00:08:29,920
+So where do we start?
+
+174
+00:08:29,920 --> 00:08:32,000
+You need the source code.
+
+175
+00:08:32,000 --> 00:08:35,520
+And I still find it sometimes surprisingly hard
+
+176
+00:08:35,520 --> 00:08:37,880
+to find the canonical place to find
+
+177
+00:08:37,880 --> 00:08:39,560
+the source code of a project.
+
+178
+00:08:39,560 --> 00:08:43,480
+So what I do is that all my projects
+
+179
+00:08:43,480 --> 00:08:47,080
+have a section like this, which is present in the GitHub
+
+180
+00:08:47,080 --> 00:08:51,640
+readme, on PyPI, and in the documentation.
+
+181
+00:08:51,640 --> 00:08:55,920
+And it cross-references all those places with each other.
+
+182
+00:08:55,960 --> 00:08:57,520
+So no matter how you find my project,
+
+183
+00:08:57,520 --> 00:09:02,400
+you always find all other places where to work on it.
+
+184
+00:09:02,400 --> 00:09:06,000
+And there's also this important part, which is encouragement.
+
+185
+00:09:06,000 --> 00:09:07,920
+People still need to be encouraged a little bit
+
+186
+00:09:07,920 --> 00:09:11,880
+to contribute to projects that they perceive
+
+187
+00:09:11,880 --> 00:09:14,920
+as high value or high status.
+
+188
+00:09:14,920 --> 00:09:19,640
+And since Edder's somewhat is in that region,
+
+189
+00:09:19,640 --> 00:09:21,880
+I feel it important to just make sure that people
+
+190
+00:09:21,880 --> 00:09:23,400
+know that they are welcome.
+
+191
+00:09:23,400 --> 00:09:26,200
+And I also link our contribution guide,
+
+192
+00:09:26,200 --> 00:09:29,280
+which is a well-known file, which is called Contributing
+
+193
+00:09:29,280 --> 00:09:31,480
+RST, or MD.
+
+194
+00:09:31,480 --> 00:09:33,880
+And it gets linked prominently whenever
+
+195
+00:09:33,880 --> 00:09:36,320
+someone opens a pull request.
+
+196
+00:09:36,320 --> 00:09:39,480
+And this file should really encourage people even more
+
+197
+00:09:39,480 --> 00:09:42,200
+to follow through, because again, many people think
+
+198
+00:09:42,200 --> 00:09:44,640
+contributing to an open source project
+
+199
+00:09:44,640 --> 00:09:47,320
+is something only the enlightened elite can do.
+
+200
+00:09:47,320 --> 00:09:50,960
+This is obviously rubbish, but take a sentence
+
+201
+00:09:50,960 --> 00:09:53,360
+to dispel that notion.
+
+202
+00:09:53,360 --> 00:09:56,240
+Then I find it important to describe the development
+
+203
+00:09:56,240 --> 00:10:00,160
+process so people know if they fix something, what's
+
+204
+00:10:00,160 --> 00:10:01,320
+going to happen next?
+
+205
+00:10:01,320 --> 00:10:07,240
+How do I get this one character patch into a project?
+
+206
+00:10:07,240 --> 00:10:10,160
+And then I like to explain expectations,
+
+207
+00:10:10,160 --> 00:10:12,760
+like my code standards, because I'm quite picky about how
+
+208
+00:10:12,760 --> 00:10:15,320
+my code looks, about the coverage, which should always
+
+209
+00:10:15,320 --> 00:10:16,680
+be 100%.
+
+210
+00:10:16,680 --> 00:10:20,480
+And of course, about the behavior I expect from you
+
+211
+00:10:20,480 --> 00:10:23,680
+and the behavior you can expect from me.
+
+212
+00:10:23,680 --> 00:10:25,880
+So we're referencing another well-known file,
+
+213
+00:10:25,880 --> 00:10:28,280
+which is the Code of Conduct.
+
+214
+00:10:28,280 --> 00:10:33,080
+And finally, maybe most importantly,
+
+215
+00:10:33,080 --> 00:10:36,980
+I always give people a clear introduction
+
+216
+00:10:36,980 --> 00:10:40,600
+to how to get a local development environment
+
+217
+00:10:40,600 --> 00:10:44,240
+for the quick feedback group I've been harping around.
+
+218
+00:10:44,240 --> 00:10:46,760
+So first off, I still use setup tools.
+
+219
+00:10:46,760 --> 00:10:48,580
+I know there are alternatives.
+
+220
+00:10:48,580 --> 00:10:51,900
+I know people have strong opinions about both setup
+
+221
+00:10:51,900 --> 00:10:54,060
+tools and those alternatives.
+
+222
+00:10:54,060 --> 00:10:56,460
+None of those alternatives cover all my needs.
+
+223
+00:10:56,460 --> 00:10:58,820
+So for all its faults, I'm still on setup tools,
+
+224
+00:10:58,820 --> 00:11:01,020
+and it's not that bad.
+
+225
+00:11:01,020 --> 00:11:05,380
+So first, of course, create a virtual end however you want.
+
+226
+00:11:05,380 --> 00:11:06,980
+There are great wrappers around.
+
+227
+00:11:06,980 --> 00:11:08,940
+You don't have to do it by hand anymore.
+
+228
+00:11:08,940 --> 00:11:13,900
+And then let's install the package as editable,
+
+229
+00:11:13,900 --> 00:11:15,820
+which, yeah, people are laughing.
+
+230
+00:11:15,820 --> 00:11:20,380
+This doesn't work right now in PIP 19.1,
+
+231
+00:11:20,380 --> 00:11:23,060
+but I'm sure we are going to get a new release soon.
+
+232
+00:11:23,060 --> 00:11:26,020
+So editable installs are great because you
+
+233
+00:11:26,020 --> 00:11:28,580
+get to install your source base as a package.
+
+234
+00:11:28,580 --> 00:11:31,300
+And whenever you change something in a source code,
+
+235
+00:11:31,300 --> 00:11:33,700
+the package magically changes along with it.
+
+236
+00:11:33,700 --> 00:11:36,700
+This is different from just accidentally importing it
+
+237
+00:11:36,700 --> 00:11:38,580
+from your path.
+
+238
+00:11:38,580 --> 00:11:42,420
+Then I use an extra dependency called dev.
+
+239
+00:11:42,420 --> 00:11:46,980
+So who is familiar with this syntax?
+
+240
+00:11:46,980 --> 00:11:49,100
+OK, this is less hands than I expected.
+
+241
+00:11:49,100 --> 00:11:50,300
+So this is kind of cool.
+
+242
+00:11:50,300 --> 00:11:53,340
+So this is our optional dependencies.
+
+243
+00:11:53,340 --> 00:11:56,300
+And you can also use them in your requirements.txt.
+
+244
+00:11:56,300 --> 00:11:57,620
+You can have multiple of them.
+
+245
+00:11:57,620 --> 00:12:03,100
+You just separate them by commas inside the brackets.
+
+246
+00:12:03,100 --> 00:12:07,660
+And what you do here is that in your setup call,
+
+247
+00:12:07,700 --> 00:12:12,620
+you pass a dictionary in which maps names like dev
+
+248
+00:12:12,620 --> 00:12:15,460
+to a list of dependencies.
+
+249
+00:12:15,460 --> 00:12:18,820
+It's really simple, but it is very useful,
+
+250
+00:12:18,820 --> 00:12:20,140
+especially in cases like this.
+
+251
+00:12:20,140 --> 00:12:22,540
+And since setup.py is Python code,
+
+252
+00:12:22,540 --> 00:12:24,620
+you can build it incrementally.
+
+253
+00:12:24,620 --> 00:12:27,700
+So I always have an optional extra called
+
+254
+00:12:27,700 --> 00:12:31,500
+tests, which only contains dependencies for my tests,
+
+255
+00:12:31,500 --> 00:12:35,500
+one called docs, which only contains the dependencies
+
+256
+00:12:35,500 --> 00:12:37,060
+to build documentation.
+
+257
+00:12:37,060 --> 00:12:38,860
+And dev is all of the above.
+
+258
+00:12:38,860 --> 00:12:42,700
+So I can run my tests and build my docs locally
+
+259
+00:12:42,700 --> 00:12:44,580
+without any problems.
+
+260
+00:12:44,580 --> 00:12:51,380
+So I think that unless you have C extensions or something
+
+261
+00:12:51,380 --> 00:12:53,260
+like that, this should be all it takes
+
+262
+00:12:53,260 --> 00:12:58,220
+to get a workable development environment in Python.
+
+263
+00:12:58,220 --> 00:12:59,500
+Now, there are two problems.
+
+264
+00:12:59,500 --> 00:13:03,700
+So first, you have to remember how to run the tests.
+
+265
+00:13:03,700 --> 00:13:05,900
+I think, personally, it always should be PyTest,
+
+266
+00:13:05,900 --> 00:13:08,020
+because tests are code.
+
+267
+00:13:08,020 --> 00:13:10,780
+And you probably have more lines of code in tests
+
+268
+00:13:10,780 --> 00:13:14,300
+than you have lines of codes of actual business code.
+
+269
+00:13:14,300 --> 00:13:17,420
+And code needs to be maintained, so you should
+
+270
+00:13:17,420 --> 00:13:18,900
+use the best tools available.
+
+271
+00:13:18,900 --> 00:13:24,180
+I personally don't buy into this argument of purity of tests.
+
+272
+00:13:24,180 --> 00:13:27,300
+If you have another tool which you like, be my guest.
+
+273
+00:13:27,300 --> 00:13:29,180
+But just use the best tools available,
+
+274
+00:13:29,180 --> 00:13:32,220
+because you're going to write a lot of tests.
+
+275
+00:13:32,220 --> 00:13:34,740
+But still, I don't want you to remember my preferences
+
+276
+00:13:34,740 --> 00:13:36,380
+about how to run tests.
+
+277
+00:13:36,380 --> 00:13:39,220
+And this problem is sometimes solved using make files,
+
+278
+00:13:39,220 --> 00:13:41,580
+especially by people coming from corporate backgrounds,
+
+279
+00:13:41,580 --> 00:13:44,740
+because they have much more homogenous environments.
+
+280
+00:13:44,740 --> 00:13:46,540
+But this is not great for the reason alone
+
+281
+00:13:46,540 --> 00:13:48,300
+that it's problematic on Windows.
+
+282
+00:13:48,300 --> 00:13:50,940
+And as you may or may not, the vast majority of Python
+
+283
+00:13:50,940 --> 00:13:53,860
+developers are on Windows.
+
+284
+00:13:53,860 --> 00:13:57,980
+So if you did not know that, Steve Dower of Microsoft
+
+285
+00:13:57,980 --> 00:14:00,780
+is giving a talk on this on the last day of the conference.
+
+286
+00:14:00,780 --> 00:14:01,580
+He gave it before.
+
+287
+00:14:01,580 --> 00:14:03,500
+It's really interesting.
+
+288
+00:14:03,500 --> 00:14:05,020
+The average user of your package
+
+289
+00:14:05,020 --> 00:14:08,220
+may be someone very different from that what you think.
+
+290
+00:14:08,220 --> 00:14:10,820
+Now, the second problem is that you are testing only one Python
+
+291
+00:14:10,820 --> 00:14:14,940
+version, and you probably want to support more than one.
+
+292
+00:14:14,940 --> 00:14:18,020
+And you could start creating your virtual ENVs
+
+293
+00:14:18,020 --> 00:14:19,460
+with other Python versions.
+
+294
+00:14:19,460 --> 00:14:21,360
+But fortunately, there is a solution
+
+295
+00:14:21,360 --> 00:14:23,100
+for both of these problems.
+
+296
+00:14:23,100 --> 00:14:25,060
+Of course, it's TOCS.
+
+297
+00:14:25,060 --> 00:14:26,940
+Completely oversimplified, it allows
+
+298
+00:14:26,940 --> 00:14:29,180
+you to declare virtual environments,
+
+299
+00:14:29,180 --> 00:14:33,500
+optionally build your package, and install it
+
+300
+00:14:33,500 --> 00:14:36,980
+into this virtual environment, and then run commands out
+
+301
+00:14:36,980 --> 00:14:40,180
+of this virtual environment.
+
+302
+00:14:40,180 --> 00:14:44,140
+I think it's also broken with PIP 19.1.
+
+303
+00:14:44,140 --> 00:14:47,100
+But I think they pushed up things already.
+
+304
+00:14:47,100 --> 00:14:50,260
+So this is shown the easiest with an example, really quick.
+
+305
+00:14:50,260 --> 00:14:53,700
+So you need a TOCS.ini in your project directory.
+
+306
+00:14:53,700 --> 00:14:55,840
+First, you define the environments you want to have.
+
+307
+00:14:55,840 --> 00:15:02,000
+In this case, it's Python 2.7, 3.7, PyPy, and PyPy 3.
+
+308
+00:15:02,000 --> 00:15:03,640
+Next, you set global settings.
+
+309
+00:15:03,640 --> 00:15:05,040
+In this case, we're going to say we
+
+310
+00:15:05,040 --> 00:15:07,640
+want to install our package, which is the default.
+
+311
+00:15:07,640 --> 00:15:10,000
+But we use the extras test I've mentioned before,
+
+312
+00:15:10,000 --> 00:15:14,200
+which is usually, in my case, PyTest, coverage, sometimes
+
+313
+00:15:14,200 --> 00:15:17,120
+hypothesis, which is also very good.
+
+314
+00:15:17,120 --> 00:15:19,920
+So next, we just run PyTest.
+
+315
+00:15:19,920 --> 00:15:23,560
+And if you add this squirrely braces post-arcs thing
+
+316
+00:15:23,560 --> 00:15:26,800
+at the end of the line, you can even pass arguments
+
+317
+00:15:26,800 --> 00:15:28,440
+to this PyTest line.
+
+318
+00:15:28,440 --> 00:15:32,440
+So this line will run PyTest in Python 2.7
+
+319
+00:15:32,440 --> 00:15:34,400
+with the argument dash x.
+
+320
+00:15:34,400 --> 00:15:36,640
+So technically, you can get away without having
+
+321
+00:15:36,640 --> 00:15:40,000
+a local development environment at all if you have TOCS.
+
+322
+00:15:40,000 --> 00:15:42,800
+And this really means that you just have to install TOCS
+
+323
+00:15:42,800 --> 00:15:45,960
+and the Python interpreters you want to support to run
+
+324
+00:15:45,960 --> 00:15:49,200
+the test against all of your supported versions.
+
+325
+00:15:49,200 --> 00:15:52,720
+And here, I find it a valid expectation for most Python
+
+326
+00:15:52,760 --> 00:15:56,600
+projects that I just can go into the project directory,
+
+327
+00:15:56,600 --> 00:16:01,320
+type TOCS, and everything should be tested.
+
+328
+00:16:01,320 --> 00:16:03,840
+So you should have really good reasons for this
+
+329
+00:16:03,840 --> 00:16:05,920
+not to be the case.
+
+330
+00:16:05,920 --> 00:16:08,320
+One of the reasons might be that you're using NOX, which I
+
+331
+00:16:08,320 --> 00:16:12,120
+heard is also very good, which doesn't use this slightly
+
+332
+00:16:12,120 --> 00:16:15,040
+hacky in-e files and uses Python files instead.
+
+333
+00:16:15,040 --> 00:16:19,160
+So there's, however, more to code quality than tests.
+
+334
+00:16:19,160 --> 00:16:22,020
+There are issues of style, like consistency
+
+335
+00:16:22,020 --> 00:16:24,220
+makes code easier to read.
+
+336
+00:16:24,220 --> 00:16:26,860
+There is PEP8, of course, which comes to mind.
+
+337
+00:16:26,860 --> 00:16:30,900
+And there are things that are not wrong, not terrible,
+
+338
+00:16:30,900 --> 00:16:33,340
+but they are unfortunate, like unused variables
+
+339
+00:16:33,340 --> 00:16:35,180
+or unused imports.
+
+340
+00:16:35,180 --> 00:16:39,740
+It's fine, but it's confusing and it's also eating up memory.
+
+341
+00:16:40,660 --> 00:16:44,020
+So the process of checking code without actually running it
+
+342
+00:16:44,020 --> 00:16:44,860
+is called linting.
+
+343
+00:16:44,860 --> 00:16:47,820
+It's like based on the stuff that you sometimes find
+
+344
+00:16:47,820 --> 00:16:50,100
+in your pockets or in your belly buttons.
+
+345
+00:16:51,100 --> 00:16:56,020
+It's something terrible, but life is kind of better
+
+346
+00:16:56,020 --> 00:16:57,820
+without some crap in your belly button.
+
+347
+00:16:57,820 --> 00:17:04,740
+So the most famous linter for Python, of course, is Flake8.
+
+348
+00:17:04,740 --> 00:17:08,100
+And it combines multiple tools, PEP8 for style, and more
+
+349
+00:17:08,100 --> 00:17:12,180
+importantly, PyFlakes for correctness.
+
+350
+00:17:12,180 --> 00:17:16,340
+I'm going to go out on a limb and claim that code is usually
+
+351
+00:17:16,340 --> 00:17:18,580
+of better quality if it passes Flake8.
+
+352
+00:17:18,660 --> 00:17:20,860
+You can have disagreements on the style,
+
+353
+00:17:20,860 --> 00:17:24,420
+but it's definitely more readable and more correct.
+
+354
+00:17:24,420 --> 00:17:28,900
+So next up, what is the single commit every Python project has
+
+355
+00:17:28,900 --> 00:17:30,500
+that is using setup tools?
+
+356
+00:17:36,260 --> 00:17:38,100
+It's fixManifest.in.
+
+357
+00:17:38,100 --> 00:17:42,260
+But it turns out this loser only forgot to run his linters,
+
+358
+00:17:42,260 --> 00:17:44,820
+because there is a tool for it, and it's even aptly
+
+359
+00:17:44,820 --> 00:17:47,740
+named CheckManifest.
+
+360
+00:17:47,740 --> 00:17:51,100
+And finally, have you ever seen a project page like this?
+
+361
+00:17:51,100 --> 00:17:53,900
+It might be a little too small, but this
+
+362
+00:17:53,900 --> 00:17:57,380
+means that PyPI was not able to render your long description,
+
+363
+00:17:57,380 --> 00:18:00,220
+because probably you had a syntax error or something
+
+364
+00:18:00,220 --> 00:18:01,260
+like that in there.
+
+365
+00:18:01,260 --> 00:18:03,100
+And I'm using the screenshot with permission,
+
+366
+00:18:03,100 --> 00:18:04,620
+so thank you, Brian.
+
+367
+00:18:04,620 --> 00:18:06,340
+And if you look closely, you will
+
+368
+00:18:06,340 --> 00:18:08,260
+see that it is the test PyPI.
+
+369
+00:18:08,260 --> 00:18:09,980
+And this is actually a good thing to note,
+
+370
+00:18:09,980 --> 00:18:12,900
+because this is a great training ground when you're
+
+371
+00:18:12,900 --> 00:18:14,420
+starting out with Python packaging,
+
+372
+00:18:14,420 --> 00:18:16,900
+and you just want to upload a package somewhere
+
+373
+00:18:16,900 --> 00:18:20,540
+without breaking everyone's world.
+
+374
+00:18:20,540 --> 00:18:22,420
+And of course, there is a linter for that.
+
+375
+00:18:22,420 --> 00:18:23,900
+It's actually Twine, which is also
+
+376
+00:18:23,900 --> 00:18:26,140
+the tool you should use to upload your packages.
+
+377
+00:18:26,140 --> 00:18:30,540
+And yeah, that will check your packages to render correctly.
+
+378
+00:18:30,540 --> 00:18:33,740
+Now, linting and checking is great.
+
+379
+00:18:33,740 --> 00:18:36,740
+But what is even better than computers yelling at you
+
+380
+00:18:36,740 --> 00:18:39,380
+that you're doing something wrong?
+
+381
+00:18:39,380 --> 00:18:42,180
+It's making those stupid, expensive computers fixing
+
+382
+00:18:42,180 --> 00:18:45,140
+for you, and it is when automatic formatters come
+
+383
+00:18:45,140 --> 00:18:46,140
+into play.
+
+384
+00:18:46,140 --> 00:18:49,140
+And I personally have found it to be game changers,
+
+385
+00:18:49,140 --> 00:18:53,500
+because once you embrace that you are not in control,
+
+386
+00:18:53,500 --> 00:18:55,220
+you and your contributors can focus
+
+387
+00:18:55,220 --> 00:18:58,580
+on the problem they are solving and not
+
+388
+00:18:58,580 --> 00:19:01,820
+when to hit Enter or what kind of quotes to use.
+
+389
+00:19:01,820 --> 00:19:04,260
+And there's been a bunch of formatters for Python.
+
+390
+00:19:04,260 --> 00:19:10,580
+None of them were just quite there until Black appeared,
+
+391
+00:19:10,580 --> 00:19:12,740
+which is also the reason why everybody's late,
+
+392
+00:19:12,740 --> 00:19:16,540
+because the maintainer of this fine project talked too long.
+
+393
+00:19:16,540 --> 00:19:17,300
+I'm not bitter.
+
+394
+00:19:17,300 --> 00:19:22,380
+So I forgive him, because Black is amazing.
+
+395
+00:19:22,380 --> 00:19:24,700
+Black formats your code into a canonical format
+
+396
+00:19:24,700 --> 00:19:25,620
+that is deterministic.
+
+397
+00:19:25,620 --> 00:19:27,220
+So it's just not fixing your problems.
+
+398
+00:19:27,220 --> 00:19:30,620
+It will format the same code in the same format.
+
+399
+00:19:30,620 --> 00:19:32,940
+I really like it.
+
+400
+00:19:32,940 --> 00:19:34,660
+The second thing that's really nice
+
+401
+00:19:34,660 --> 00:19:37,380
+is iSort, which has been around quite a while, actually.
+
+402
+00:19:37,380 --> 00:19:41,900
+And it will sort your import into beautiful sorted blocks
+
+403
+00:19:41,900 --> 00:19:43,220
+separated by type.
+
+404
+00:19:43,220 --> 00:19:45,700
+So you're going to have your block with sign-out library,
+
+405
+00:19:45,700 --> 00:19:48,380
+third party, your own stuff.
+
+406
+00:19:48,380 --> 00:19:51,100
+Together with Black, it's like 90% of code formatting
+
+407
+00:19:51,100 --> 00:19:51,980
+is not automated.
+
+408
+00:19:51,980 --> 00:19:55,060
+This is stuff that you don't have to think about.
+
+409
+00:19:55,060 --> 00:19:57,700
+It's stuff that can't come up in code review,
+
+410
+00:19:57,700 --> 00:19:58,780
+because it's solved.
+
+411
+00:19:58,780 --> 00:20:00,020
+This is great.
+
+412
+00:20:00,020 --> 00:20:01,820
+It's much less attrition.
+
+413
+00:20:01,820 --> 00:20:06,300
+So now we just have to make the user run all those lintress
+
+414
+00:20:06,300 --> 00:20:08,380
+checkers, formatters, and whatnot.
+
+415
+00:20:08,380 --> 00:20:10,340
+So some of them, like checkManifest,
+
+416
+00:20:10,340 --> 00:20:11,980
+you're going to have to put in talks,
+
+417
+00:20:11,980 --> 00:20:15,820
+because there's some packaging issues implied.
+
+418
+00:20:15,820 --> 00:20:18,140
+But everything else, there is a better way.
+
+419
+00:20:18,140 --> 00:20:20,500
+It's pre-commit.
+
+420
+00:20:20,500 --> 00:20:22,820
+Pre-commit allows you to define hooks
+
+421
+00:20:22,820 --> 00:20:24,540
+that run before each git commit.
+
+422
+00:20:24,540 --> 00:20:27,140
+This is like the big picture thing.
+
+423
+00:20:27,140 --> 00:20:31,060
+And if it fails, the git commit will abort.
+
+424
+00:20:31,060 --> 00:20:34,740
+But it also allows you to run them over all of your files.
+
+425
+00:20:34,740 --> 00:20:38,140
+And to use it, you just need a config file in your repository
+
+426
+00:20:38,140 --> 00:20:41,020
+called pre-commit config.yaml.
+
+427
+00:20:41,020 --> 00:20:46,380
+And surprisingly, Flake 8 has direct support.
+
+428
+00:20:46,380 --> 00:20:48,780
+It's not surprising, because the maintainer is now
+
+429
+00:20:48,780 --> 00:20:52,220
+a maintainer of Flake 8, too, like pre-commit.
+
+430
+00:20:52,220 --> 00:20:53,780
+And it's very straightforward.
+
+431
+00:20:53,780 --> 00:20:55,940
+So you define a repo.
+
+432
+00:20:55,940 --> 00:20:59,540
+You set a version which ensures that the Flake 8 update does
+
+433
+00:20:59,540 --> 00:21:02,660
+not break the build, which used to happen in the past.
+
+434
+00:21:02,660 --> 00:21:04,820
+And people got really mad about it.
+
+435
+00:21:04,820 --> 00:21:07,020
+And I think this is a really good compromise
+
+436
+00:21:07,020 --> 00:21:08,580
+to locking everything.
+
+437
+00:21:08,580 --> 00:21:10,740
+Because locking everything, especially when your project
+
+438
+00:21:10,740 --> 00:21:12,860
+gets a little bit less active, leads
+
+439
+00:21:12,860 --> 00:21:15,060
+to having a lot of pull requests just with updates
+
+440
+00:21:15,060 --> 00:21:16,980
+to your dependencies, which is kind of annoying.
+
+441
+00:21:16,980 --> 00:21:18,220
+So this is kind of cool.
+
+442
+00:21:18,220 --> 00:21:21,380
+So then you choose a hook to run and the Python version
+
+443
+00:21:21,380 --> 00:21:22,980
+that is used for the hook.
+
+444
+00:21:22,980 --> 00:21:25,700
+This is all you have to do, nothing else.
+
+445
+00:21:25,700 --> 00:21:28,340
+Because pre-commit is Python aware.
+
+446
+00:21:28,340 --> 00:21:31,260
+It will store and manage your hooks
+
+447
+00:21:31,260 --> 00:21:33,340
+in their own virtual apps transparently.
+
+448
+00:21:33,340 --> 00:21:35,060
+You don't have to know anything about it.
+
+449
+00:21:35,060 --> 00:21:36,560
+It's somewhere in a cache directory.
+
+450
+00:21:36,560 --> 00:21:39,440
+I don't even know exactly where it is.
+
+451
+00:21:39,440 --> 00:21:42,760
+So using Blac and Isort is also very simple.
+
+452
+00:21:42,760 --> 00:21:46,680
+And there is a whole ecosystem you may not have ever heard of.
+
+453
+00:21:46,680 --> 00:21:51,680
+So who has ever checked in a PDB setrace?
+
+454
+00:21:51,680 --> 00:21:52,840
+Don't be shy.
+
+455
+00:21:52,840 --> 00:21:54,640
+I know it's more arms.
+
+456
+00:21:54,640 --> 00:21:58,400
+Right, so there is a hook for us.
+
+457
+00:21:58,400 --> 00:22:00,040
+And it's also not Python specific.
+
+458
+00:22:00,040 --> 00:22:02,560
+You can even run a Docker container if you want.
+
+459
+00:22:02,560 --> 00:22:05,760
+So it has a very wide support.
+
+460
+00:22:05,760 --> 00:22:08,240
+With all that in place, I could now
+
+461
+00:22:08,240 --> 00:22:10,960
+ask you to install pre-commit.
+
+462
+00:22:10,960 --> 00:22:14,120
+But it's a Python package.
+
+463
+00:22:14,120 --> 00:22:16,200
+I'm not going to ask you to install a Python package
+
+464
+00:22:16,200 --> 00:22:18,240
+globally, because then my bug tracker
+
+465
+00:22:18,240 --> 00:22:22,000
+will turn into a Python packaging support forum.
+
+466
+00:22:22,000 --> 00:22:24,000
+And I'm saying this because it happened before.
+
+467
+00:22:26,560 --> 00:22:29,120
+So what I do is I wrap it into my DevX try
+
+468
+00:22:29,120 --> 00:22:30,440
+I showed you before.
+
+469
+00:22:30,440 --> 00:22:33,240
+So it gets installed into the virtual environment
+
+470
+00:22:33,240 --> 00:22:35,560
+where you have your local development environment, which
+
+471
+00:22:35,560 --> 00:22:38,920
+means that if you follow the instructions I've
+
+472
+00:22:38,920 --> 00:22:40,800
+shown you before, you've got it.
+
+473
+00:22:40,800 --> 00:22:43,520
+Once you can run tests and build your documentation,
+
+474
+00:22:43,520 --> 00:22:45,680
+you can run pre-commit.
+
+475
+00:22:45,680 --> 00:22:48,560
+So now we just have to ensure that you run it.
+
+476
+00:22:48,560 --> 00:22:50,680
+Again, I could ask you to run pre-commit in it,
+
+477
+00:22:50,680 --> 00:22:52,480
+and it gets added as a GitHub.
+
+478
+00:22:52,480 --> 00:22:53,900
+So you don't have to think about it.
+
+479
+00:22:53,900 --> 00:22:56,840
+But still, I'm not going to rely on you remembering
+
+480
+00:22:56,840 --> 00:23:01,240
+to do something or me remembering to do something.
+
+481
+00:23:01,240 --> 00:23:04,880
+So now I'm going to use talks.
+
+482
+00:23:04,880 --> 00:23:07,040
+And in this case, we're going to add
+
+483
+00:23:07,040 --> 00:23:09,440
+an environment called lint.
+
+484
+00:23:09,440 --> 00:23:12,600
+The only dependency is pre-commit.
+
+485
+00:23:12,600 --> 00:23:16,400
+And we don't need to install our package, which
+
+486
+00:23:16,400 --> 00:23:19,320
+makes it much, much faster in operation.
+
+487
+00:23:19,320 --> 00:23:22,160
+And then we just run all the hooks against all the files.
+
+488
+00:23:22,160 --> 00:23:23,320
+And this is it.
+
+489
+00:23:23,320 --> 00:23:24,320
+Your code is perfect.
+
+490
+00:23:27,160 --> 00:23:30,040
+Come on, don't be so cynical.
+
+491
+00:23:30,040 --> 00:23:32,120
+So what is missing?
+
+492
+00:23:32,120 --> 00:23:33,960
+Of course, documentation.
+
+493
+00:23:33,960 --> 00:23:37,360
+How do we make sure documentation is building?
+
+494
+00:23:37,360 --> 00:23:38,760
+You guessed it.
+
+495
+00:23:38,760 --> 00:23:42,920
+Assuming it's Sphinx, which it should, because it's great.
+
+496
+00:23:42,920 --> 00:23:44,520
+It's another talks environment.
+
+497
+00:23:44,520 --> 00:23:47,800
+This time, we install our extras called docs,
+
+498
+00:23:47,800 --> 00:23:49,560
+which I talked before.
+
+499
+00:23:49,560 --> 00:23:53,560
+We ensure that our docs build as HTML.
+
+500
+00:23:53,560 --> 00:23:56,160
+And then we run the doc tests in our docs.
+
+501
+00:23:56,160 --> 00:23:59,760
+And I really think that all your examples in your docs
+
+502
+00:23:59,760 --> 00:24:01,520
+should be doc tests.
+
+503
+00:24:01,520 --> 00:24:04,320
+Because then you know that all your examples are actually
+
+504
+00:24:04,320 --> 00:24:05,360
+correct.
+
+505
+00:24:05,360 --> 00:24:07,640
+The only thing that's worse than not documentation
+
+506
+00:24:07,640 --> 00:24:10,600
+is wrong documentation, lying documentation.
+
+507
+00:24:10,600 --> 00:24:13,520
+Because it's not just the absence of information.
+
+508
+00:24:13,520 --> 00:24:17,960
+It's actually you are sending your users down the wrong path.
+
+509
+00:24:17,960 --> 00:24:20,640
+And they will spend like an hour debugging their environments
+
+510
+00:24:20,640 --> 00:24:24,080
+and questioning what they did wrong while you just
+
+511
+00:24:24,080 --> 00:24:26,240
+made a typo somewhere.
+
+512
+00:24:26,240 --> 00:24:29,600
+Consequently, if you have doc tests in your readme,
+
+513
+00:24:29,600 --> 00:24:31,080
+run them too.
+
+514
+00:24:31,080 --> 00:24:34,600
+Now, by running talks, by typing three characters,
+
+515
+00:24:34,600 --> 00:24:38,480
+we ensure that our tests are passing, the lenders passing,
+
+516
+00:24:38,480 --> 00:24:42,680
+the code and the imports are correctly formatted,
+
+517
+00:24:42,680 --> 00:24:46,200
+documentation built, and have working examples.
+
+518
+00:24:46,200 --> 00:24:50,360
+And the only thing you have to remember is really to run talks.
+
+519
+00:24:50,360 --> 00:24:54,560
+And everything I said before happened on your local machine.
+
+520
+00:24:54,560 --> 00:24:56,680
+And I may not even know that you exist,
+
+521
+00:24:56,680 --> 00:24:59,280
+and you already have a perfect patch for me,
+
+522
+00:24:59,280 --> 00:25:00,600
+which is kind of cool.
+
+523
+00:25:00,600 --> 00:25:02,560
+It also means that you can work anywhere.
+
+524
+00:25:02,560 --> 00:25:04,120
+So I travel a lot.
+
+525
+00:25:04,120 --> 00:25:08,320
+And sometimes I'm longing for conference Wi-Fi's.
+
+526
+00:25:08,320 --> 00:25:12,000
+Everybody who has ever used GitHub in rural Africa
+
+527
+00:25:12,000 --> 00:25:14,200
+will understand what I mean here.
+
+528
+00:25:14,200 --> 00:25:18,400
+The current internet is broken for most of the world.
+
+529
+00:25:18,400 --> 00:25:21,960
+And nobody of those responsible cares.
+
+530
+00:25:21,960 --> 00:25:23,800
+But this is not just about my laziness,
+
+531
+00:25:23,800 --> 00:25:28,160
+the consequences of colonialism, or anything like this.
+
+532
+00:25:28,160 --> 00:25:30,480
+It's also about my insecurity.
+
+533
+00:25:30,880 --> 00:25:33,880
+I don't like to publish unfinished work,
+
+534
+00:25:33,880 --> 00:25:36,480
+because I'm very self-conscious about everything I do.
+
+535
+00:25:36,480 --> 00:25:40,040
+So I don't want to force you to publish half-finished work.
+
+536
+00:25:40,040 --> 00:25:43,280
+So I give you the tools so you can ensure a high quality
+
+537
+00:25:43,280 --> 00:25:49,000
+of your initial PR, to give you confidence in your own work
+
+538
+00:25:49,000 --> 00:25:51,200
+before you have to share it with the world.
+
+539
+00:25:51,200 --> 00:25:53,520
+So now you are done.
+
+540
+00:25:53,520 --> 00:25:55,280
+Now you open up a pull request.
+
+541
+00:25:55,280 --> 00:25:57,800
+Now, if you look at your watch, we spend most of the time
+
+542
+00:25:57,800 --> 00:25:59,200
+in Act 1.
+
+543
+00:25:59,200 --> 00:26:02,920
+I told you I want to get involved as late as possible.
+
+544
+00:26:02,920 --> 00:26:05,320
+And so far, we've automated most of the things.
+
+545
+00:26:05,320 --> 00:26:07,640
+But certain things just cannot be automated.
+
+546
+00:26:07,640 --> 00:26:10,880
+So enter another well-known file, in this case,
+
+547
+00:26:10,880 --> 00:26:15,680
+pull request template, which allows you to add checklists
+
+548
+00:26:15,680 --> 00:26:17,120
+to new pull requests.
+
+549
+00:26:17,120 --> 00:26:18,720
+And I love checklists.
+
+550
+00:26:18,720 --> 00:26:22,680
+Checklists are the reason why airplanes don't crash every day.
+
+551
+00:26:22,680 --> 00:26:25,360
+Checklists are the reason why doctors wash their hands
+
+552
+00:26:25,360 --> 00:26:27,200
+before cutting you open.
+
+553
+00:26:27,200 --> 00:26:29,480
+They are like programs for humans.
+
+554
+00:26:29,480 --> 00:26:32,840
+And they are the second best thing after actual automation.
+
+555
+00:26:32,840 --> 00:26:35,760
+And fully rendered, it might look something like this.
+
+556
+00:26:35,760 --> 00:26:37,280
+And you can use it to remind people
+
+557
+00:26:37,280 --> 00:26:43,560
+to add documentation for new features, to add change log
+
+558
+00:26:43,560 --> 00:26:46,040
+entries, stuff like that.
+
+559
+00:26:46,040 --> 00:26:52,760
+Now, at this point, me or a co-maintainer
+
+560
+00:26:52,760 --> 00:26:55,360
+have to verify that you have done all these things.
+
+561
+00:26:55,360 --> 00:26:58,280
+Of course, I'm going to use that list now, too.
+
+562
+00:26:58,280 --> 00:27:00,760
+Because I don't know what I had today for lunch.
+
+563
+00:27:00,760 --> 00:27:04,040
+So I'm not going to remember this.
+
+564
+00:27:04,040 --> 00:27:06,720
+So while reviewing, I refer to this list.
+
+565
+00:27:06,720 --> 00:27:10,520
+But I don't want to clone your fork on my computer
+
+566
+00:27:10,520 --> 00:27:14,560
+to run the tests and checkers and whatever.
+
+567
+00:27:14,560 --> 00:27:17,800
+That is also kind of operational security issues,
+
+568
+00:27:17,800 --> 00:27:21,800
+like just running some random people's code on my computer.
+
+569
+00:27:21,800 --> 00:27:23,720
+But there's more to that.
+
+570
+00:27:23,720 --> 00:27:27,840
+So I want to encourage contributions
+
+571
+00:27:27,840 --> 00:27:29,840
+through the web interface, because that's even less
+
+572
+00:27:29,840 --> 00:27:31,200
+friction.
+
+573
+00:27:31,200 --> 00:27:33,440
+This is a very nice feature in GitHub
+
+574
+00:27:33,440 --> 00:27:36,920
+that you can just edit files and open pull requests.
+
+575
+00:27:36,920 --> 00:27:40,520
+And I feel like I'm getting most of the typo PRs through that.
+
+576
+00:27:40,520 --> 00:27:41,720
+And I love typo PRs.
+
+577
+00:27:41,720 --> 00:27:45,440
+Typos are super embarrassing when you see them.
+
+578
+00:27:45,440 --> 00:27:50,720
+But do you really want to fork and git pull and everything
+
+579
+00:27:50,720 --> 00:27:52,320
+and submit a PR?
+
+580
+00:27:52,320 --> 00:27:53,520
+So this is kind of nice.
+
+581
+00:27:53,520 --> 00:27:57,520
+But we need a way to run the tests on the internet.
+
+582
+00:27:57,520 --> 00:28:00,520
+So we need continuous integration, or CI.
+
+583
+00:28:00,520 --> 00:28:03,280
+And in the dark ages of open source,
+
+584
+00:28:03,280 --> 00:28:06,840
+only the most prestigious project had their own CIs.
+
+585
+00:28:06,840 --> 00:28:08,600
+Because the best case scenario was really
+
+586
+00:28:08,600 --> 00:28:10,760
+that someone donated you a server,
+
+587
+00:28:10,760 --> 00:28:13,040
+and then you had to run it yourself.
+
+588
+00:28:13,040 --> 00:28:13,760
+That's not good.
+
+589
+00:28:13,760 --> 00:28:16,840
+And I mean, is anyone here in open source
+
+590
+00:28:16,840 --> 00:28:17,960
+to be a system operator?
+
+591
+00:28:20,840 --> 00:28:22,760
+No.
+
+592
+00:28:22,760 --> 00:28:25,800
+So nobody.
+
+593
+00:28:25,800 --> 00:28:28,040
+So then came Travis.
+
+594
+00:28:28,040 --> 00:28:32,840
+And Travis had its ups and downs over the years, no question.
+
+595
+00:28:32,840 --> 00:28:37,080
+But it arguably democratized the continuous integration
+
+596
+00:28:37,080 --> 00:28:39,280
+scene in open source.
+
+597
+00:28:39,280 --> 00:28:40,960
+Adding it to your project is so simple.
+
+598
+00:28:40,960 --> 00:28:42,840
+You just copy and paste a bunch of YAML.
+
+599
+00:28:42,840 --> 00:28:43,920
+It's like setup.py.
+
+600
+00:28:43,920 --> 00:28:46,640
+You just copy it from other projects, and nobody can tell.
+
+601
+00:28:46,640 --> 00:28:51,040
+We reused the TOCS environment, so you
+
+602
+00:28:51,040 --> 00:28:54,360
+make sure the CI runs the same commands.
+
+603
+00:28:54,360 --> 00:28:55,120
+And it's great.
+
+604
+00:28:55,120 --> 00:28:57,520
+These are the good old times of 2018.
+
+605
+00:28:57,520 --> 00:29:00,520
+Remember how young we were.
+
+606
+00:29:00,520 --> 00:29:04,360
+Now then came Idara.
+
+607
+00:29:04,360 --> 00:29:08,160
+And I'm not going to comment on them specifically,
+
+608
+00:29:08,160 --> 00:29:09,800
+mostly because I don't want to get sued.
+
+609
+00:29:09,800 --> 00:29:13,000
+But I would like to encourage you to do your own research
+
+610
+00:29:13,000 --> 00:29:15,580
+on this company, how it conducts its business,
+
+611
+00:29:15,580 --> 00:29:18,880
+and how other companies they're taking over
+
+612
+00:29:18,880 --> 00:29:20,400
+are doing right now.
+
+613
+00:29:20,400 --> 00:29:22,920
+But here's the fact.
+
+614
+00:29:22,920 --> 00:29:25,400
+Shortly after taking over Travis,
+
+615
+00:29:25,400 --> 00:29:28,360
+they laid off a big part of the workforce.
+
+616
+00:29:28,360 --> 00:29:33,120
+So I'm going to say that it's kind of a red flag.
+
+617
+00:29:33,120 --> 00:29:36,160
+And it made what was supposed to be one slide telling you
+
+618
+00:29:36,160 --> 00:29:40,200
+to just use Travis and maybe Abwehr if you need to build
+
+619
+00:29:40,200 --> 00:29:43,240
+Windows binaries, an unexpected research project, one
+
+620
+00:29:43,240 --> 00:29:47,240
+that I did not enjoy and one that also didn't
+
+621
+00:29:47,240 --> 00:29:49,280
+give me great results.
+
+622
+00:29:49,280 --> 00:29:51,600
+Because unfortunately, every other option
+
+623
+00:29:51,600 --> 00:29:54,400
+is way more complex than Travis or is
+
+624
+00:29:54,400 --> 00:29:56,240
+lacking in some other way.
+
+625
+00:29:56,240 --> 00:29:58,800
+So all my projects are still on Travis.
+
+626
+00:29:58,800 --> 00:30:03,840
+But I hope to get them off there sooner than later,
+
+627
+00:30:03,840 --> 00:30:07,200
+because I consider Travis a time bomb at this point.
+
+628
+00:30:07,200 --> 00:30:08,840
+And I'm sure that the free offer of them
+
+629
+00:30:08,840 --> 00:30:12,080
+is running on borrowed time, which is sad.
+
+630
+00:30:12,080 --> 00:30:15,800
+It cannot be overstated how influential Travis was
+
+631
+00:30:15,800 --> 00:30:18,840
+to raise the bar of open source quality.
+
+632
+00:30:19,800 --> 00:30:23,800
+So if you meet any former or current Travis employees,
+
+633
+00:30:23,800 --> 00:30:26,320
+I would like to encourage you to let them know how important
+
+634
+00:30:26,320 --> 00:30:30,400
+their work was and is to you, because this is a very hard
+
+635
+00:30:30,400 --> 00:30:33,840
+time for them too, seeing their own legacy unwinded.
+
+636
+00:30:33,840 --> 00:30:36,160
+I'm sure they will appreciate it.
+
+637
+00:30:36,160 --> 00:30:40,280
+Nevertheless, good things are happening.
+
+638
+00:30:40,280 --> 00:30:43,520
+I think it's good that we have an end of our own monoculture,
+
+639
+00:30:43,520 --> 00:30:46,320
+because Travis was dominating really hard.
+
+640
+00:30:46,320 --> 00:30:48,960
+Azure Pipelines is probably the biggest contender right now,
+
+641
+00:30:48,960 --> 00:30:51,480
+but it's really complex.
+
+642
+00:30:51,480 --> 00:30:53,720
+On the other hand, the Microsoft booth
+
+643
+00:30:53,720 --> 00:30:56,520
+will help you to migrate to Azure Pipelines.
+
+644
+00:30:56,520 --> 00:30:59,360
+So just form an orderly line, and let's see how fast they
+
+645
+00:30:59,360 --> 00:31:02,840
+can work off this room.
+
+646
+00:31:02,840 --> 00:31:07,320
+Also, GitHub is working on a CI too called GitHub Actions.
+
+647
+00:31:07,320 --> 00:31:10,760
+Unfortunately, it has been in private beta for months.
+
+648
+00:31:10,760 --> 00:31:13,720
+I've been waiting for a month to get access to the private beta,
+
+649
+00:31:13,720 --> 00:31:17,600
+so I would not hold my breath for it to land anytime soon.
+
+650
+00:31:17,600 --> 00:31:22,840
+However, GitHub does offer some ways to automate,
+
+651
+00:31:22,840 --> 00:31:25,960
+most notably GitHub checks, which is just a way for third-party
+
+652
+00:31:25,960 --> 00:31:31,600
+library, third-party services to add a little red X next to your
+
+653
+00:31:31,600 --> 00:31:34,000
+pull request to tell you something is missing.
+
+654
+00:31:34,000 --> 00:31:38,040
+The most common one is, of course, CI integration,
+
+655
+00:31:38,040 --> 00:31:42,600
+but also checks based on data from CI, for example,
+
+656
+00:31:42,600 --> 00:31:46,280
+code curve can make your pull request fail if there's not
+
+657
+00:31:46,280 --> 00:31:48,880
+enough code coverage.
+
+658
+00:31:48,880 --> 00:31:53,840
+And there's more sophisticated or artisanal, if you will,
+
+659
+00:31:53,840 --> 00:31:57,200
+way of automation, which are GitHub bots.
+
+660
+00:31:57,200 --> 00:32:01,680
+And Mariata, the Kalei CI of CPython core development bots,
+
+661
+00:32:01,680 --> 00:32:03,160
+gave a talk on this this morning,
+
+662
+00:32:03,160 --> 00:32:05,920
+and I would like to encourage you all to watch the video,
+
+663
+00:32:05,920 --> 00:32:09,840
+because she did change core development forever with what
+
+664
+00:32:09,840 --> 00:32:11,760
+she has done with the bots.
+
+665
+00:32:11,800 --> 00:32:15,320
+There's so much, so much menial task you had to do as a core
+
+666
+00:32:15,320 --> 00:32:18,120
+developer day to day before.
+
+667
+00:32:18,120 --> 00:32:21,320
+Now, so much for the mechanical parts of the PR process.
+
+668
+00:32:21,320 --> 00:32:23,480
+So what happens after all checks pass?
+
+669
+00:32:23,480 --> 00:32:24,880
+All the robots are happy.
+
+670
+00:32:24,880 --> 00:32:26,080
+Someone has to review it.
+
+671
+00:32:26,080 --> 00:32:29,080
+In the beginning, it's you, but as the project grows,
+
+672
+00:32:29,080 --> 00:32:31,320
+you don't want to review everything yourself.
+
+673
+00:32:31,320 --> 00:32:34,560
+You probably can't review everything yourself.
+
+674
+00:32:34,560 --> 00:32:38,280
+GitHub even acknowledges that with the code owners file that
+
+675
+00:32:38,280 --> 00:32:42,800
+allows you to map paths to contributors.
+
+676
+00:32:42,800 --> 00:32:46,200
+You also don't want to try all bugs, answer all questions.
+
+677
+00:32:46,200 --> 00:32:49,680
+Your time is limited, especially if it's a free time.
+
+678
+00:32:49,680 --> 00:32:52,320
+So what this means is you need to build a community.
+
+679
+00:32:52,320 --> 00:32:54,640
+And community building is really hard.
+
+680
+00:32:54,640 --> 00:32:56,600
+There's lots of material out there.
+
+681
+00:32:56,600 --> 00:32:58,800
+I can't really say much new things,
+
+682
+00:32:58,800 --> 00:33:01,600
+but I would like to talk a bit about community empowerment
+
+683
+00:33:01,600 --> 00:33:02,760
+here.
+
+684
+00:33:02,760 --> 00:33:05,440
+And I think it's important to give your contributors
+
+685
+00:33:05,440 --> 00:33:08,080
+the feeling that the project is theirs too.
+
+686
+00:33:08,120 --> 00:33:11,240
+And I think it's really shitty to let others do the work,
+
+687
+00:33:11,240 --> 00:33:14,600
+to build your brand for nothing in return.
+
+688
+00:33:14,600 --> 00:33:16,440
+I think contributors should be celebrated.
+
+689
+00:33:16,440 --> 00:33:19,640
+And I'm trying to do this as well as I can,
+
+690
+00:33:19,640 --> 00:33:21,200
+taking all the fame for yourself,
+
+691
+00:33:21,200 --> 00:33:24,680
+for work that you maybe have done, but others too.
+
+692
+00:33:24,680 --> 00:33:26,840
+It feels good on a short term, no question.
+
+693
+00:33:26,840 --> 00:33:29,520
+You get to retweet all the praise to how awesome you
+
+694
+00:33:29,520 --> 00:33:32,920
+are in your project, but it will backfire eventually.
+
+695
+00:33:32,920 --> 00:33:35,040
+People burn out if they don't feel valued.
+
+696
+00:33:35,040 --> 00:33:37,520
+And I've seen some people get very resentful
+
+697
+00:33:37,520 --> 00:33:40,400
+about this treatment they received.
+
+698
+00:33:40,400 --> 00:33:43,920
+So in my case, once address grew beyond a certain size,
+
+699
+00:33:43,920 --> 00:33:46,120
+and a lot of the code was from other contributors,
+
+700
+00:33:46,120 --> 00:33:47,800
+like most notably all the typing code.
+
+701
+00:33:47,800 --> 00:33:51,520
+I still don't understand it, to be honest.
+
+702
+00:33:51,520 --> 00:33:55,720
+I felt bad to make it look like it's all my work.
+
+703
+00:33:55,720 --> 00:33:57,920
+They were still my name on GitHub.
+
+704
+00:33:57,920 --> 00:33:59,280
+There's also practical reasons.
+
+705
+00:33:59,280 --> 00:34:01,160
+There's a lot of functionality missing
+
+706
+00:34:01,160 --> 00:34:06,120
+from personal projects that you get in organizational projects,
+
+707
+00:34:06,120 --> 00:34:08,120
+which I really came to appreciate.
+
+708
+00:34:08,120 --> 00:34:11,000
+So I moved address into a GitHub organization.
+
+709
+00:34:11,000 --> 00:34:13,120
+And anyone who contributed to the project
+
+710
+00:34:13,120 --> 00:34:14,440
+can have full access.
+
+711
+00:34:14,440 --> 00:34:15,560
+Now it's our project.
+
+712
+00:34:19,520 --> 00:34:22,560
+And also, if it's less obvious that the project is yours,
+
+713
+00:34:22,560 --> 00:34:25,040
+people are much less likely to add to you on Twitter
+
+714
+00:34:25,040 --> 00:34:28,080
+and tell you that your free labor is ruining their lives.
+
+715
+00:34:28,080 --> 00:34:29,720
+Just a little life hack here.
+
+716
+00:34:30,720 --> 00:34:34,720
+So how do you decide, though, whom to take in,
+
+717
+00:34:34,720 --> 00:34:39,160
+whom to give special privileges on your project?
+
+718
+00:34:39,160 --> 00:34:43,240
+My suggestion is just don't make a big deal out of it.
+
+719
+00:34:43,240 --> 00:34:46,640
+My friend, Corey Banfield, whom we tragically
+
+720
+00:34:46,640 --> 00:34:52,680
+lost to a fruit company, basically told me that.
+
+721
+00:34:52,680 --> 00:34:54,240
+And PyPy does the same thing.
+
+722
+00:34:54,240 --> 00:34:56,880
+If someone wants commit rights on your project,
+
+723
+00:34:56,920 --> 00:34:57,720
+just give it to them.
+
+724
+00:34:57,720 --> 00:35:00,920
+Like, what can happen on a good project?
+
+725
+00:35:00,920 --> 00:35:02,920
+As long as you protect your master branch,
+
+726
+00:35:02,920 --> 00:35:05,320
+as long as you force everyone, including yourself,
+
+727
+00:35:05,320 --> 00:35:07,840
+through pull requests, there's nothing
+
+728
+00:35:07,840 --> 00:35:10,640
+you cannot revert what they could do.
+
+729
+00:35:10,640 --> 00:35:14,400
+And once the process is clear, people will adhere to it.
+
+730
+00:35:14,400 --> 00:35:18,840
+And if not, revert the work, kick them off the team.
+
+731
+00:35:18,840 --> 00:35:22,160
+But it never happened to me, Corey, or PyPy.
+
+732
+00:35:22,160 --> 00:35:24,080
+People tend to respect code.
+
+733
+00:35:24,120 --> 00:35:25,520
+Things that happen much more often
+
+734
+00:35:25,520 --> 00:35:28,920
+is that you have to kick people off mailing lists and stuff
+
+735
+00:35:28,920 --> 00:35:33,880
+like that, because, yeah, that's a much more common occurrence.
+
+736
+00:35:33,880 --> 00:35:37,200
+So finally, providing support can be also quite stressful,
+
+737
+00:35:37,200 --> 00:35:40,920
+especially on synchronous channels like IRC or God
+
+738
+00:35:40,920 --> 00:35:42,560
+forbid, Slack.
+
+739
+00:35:42,560 --> 00:35:45,440
+So I started moving my support to Stack Overflow.
+
+740
+00:35:45,440 --> 00:35:47,040
+And this has multiple advantages.
+
+741
+00:35:47,040 --> 00:35:48,520
+So first of all, it's asynchronous.
+
+742
+00:35:48,520 --> 00:35:50,480
+So people in San Francisco can ask,
+
+743
+00:35:50,480 --> 00:35:52,080
+and they can ask me questions.
+
+744
+00:35:52,120 --> 00:35:54,000
+So people in San Francisco can ask,
+
+745
+00:35:54,000 --> 00:35:57,960
+and I answer whenever I am awake in Berlin,
+
+746
+00:35:57,960 --> 00:36:00,720
+if someone didn't beat me to it.
+
+747
+00:36:00,720 --> 00:36:03,680
+It's searchable, so my answers don't get lost
+
+748
+00:36:03,680 --> 00:36:05,200
+in some weird archive.
+
+749
+00:36:05,200 --> 00:36:07,880
+So I don't have to answer the same question multiple times.
+
+750
+00:36:07,880 --> 00:36:10,360
+It's now the problem of Stack Overflow's moderators,
+
+751
+00:36:10,360 --> 00:36:13,120
+which is great.
+
+752
+00:36:13,120 --> 00:36:18,320
+I don't want to spend my all day on the page, though,
+
+753
+00:36:18,320 --> 00:36:21,960
+because on the web page, I wouldn't help myself
+
+754
+00:36:21,960 --> 00:36:23,440
+much, it's just a different medium.
+
+755
+00:36:23,440 --> 00:36:27,560
+So I have set up tags for all my projects.
+
+756
+00:36:27,560 --> 00:36:29,480
+And then I follow them on RSS.
+
+757
+00:36:32,040 --> 00:36:33,280
+RSS, yes.
+
+758
+00:36:33,280 --> 00:36:38,680
+You may have heard of it, like grandma talking about fondly.
+
+759
+00:36:38,680 --> 00:36:42,080
+It's like Instagram, but there's no stories.
+
+760
+00:36:42,080 --> 00:36:43,320
+It's not just photos.
+
+761
+00:36:43,320 --> 00:36:45,520
+And also, you can choose your own client to follow it.
+
+762
+00:36:45,520 --> 00:36:48,200
+You should really try it.
+
+763
+00:36:48,200 --> 00:36:50,520
+So only downside, you will need someone
+
+764
+00:36:50,520 --> 00:36:53,080
+with enough reputation to create tags,
+
+765
+00:36:53,080 --> 00:36:58,160
+because this is gated behind, I think, 1,500 points
+
+766
+00:36:58,160 --> 00:36:58,920
+or something.
+
+767
+00:36:58,920 --> 00:37:02,040
+I'm not one of those people yet, but we have plenty people
+
+768
+00:37:02,040 --> 00:37:03,840
+who can do that for you.
+
+769
+00:37:03,840 --> 00:37:05,280
+But back to our pull request.
+
+770
+00:37:05,280 --> 00:37:07,400
+Let's assume I had to review it.
+
+771
+00:37:07,400 --> 00:37:09,480
+While doing so, I didn't have to pass through you
+
+772
+00:37:09,480 --> 00:37:12,200
+about the line length, about the import order,
+
+773
+00:37:12,200 --> 00:37:15,920
+about the type of quotes to use, about trailing commas,
+
+774
+00:37:15,920 --> 00:37:18,880
+about not trailing commas, about failing tests,
+
+775
+00:37:18,880 --> 00:37:20,960
+about broken documentation, about broken examples
+
+776
+00:37:20,960 --> 00:37:22,480
+of documentation.
+
+777
+00:37:22,480 --> 00:37:24,760
+Robots got to be the assholes.
+
+778
+00:37:24,760 --> 00:37:26,680
+And studies have shown that people
+
+779
+00:37:26,680 --> 00:37:29,280
+take pestering from a robot much less personal.
+
+780
+00:37:29,280 --> 00:37:30,960
+And who doesn't like an asshole robot?
+
+781
+00:37:30,960 --> 00:37:34,920
+So merge it.
+
+782
+00:37:34,920 --> 00:37:36,080
+We are done.
+
+783
+00:37:36,080 --> 00:37:38,400
+And as a maintainer, I really want
+
+784
+00:37:38,400 --> 00:37:41,120
+to ask you to say thank you to our contributors.
+
+785
+00:37:41,120 --> 00:37:44,160
+I've been on both sides of this equation.
+
+786
+00:37:44,240 --> 00:37:48,680
+And I find it weirdly brusque and rude
+
+787
+00:37:48,680 --> 00:37:51,400
+if someone just merges my contributions
+
+788
+00:37:51,400 --> 00:37:53,120
+and doesn't say a word about it.
+
+789
+00:37:53,120 --> 00:37:56,080
+It's just human decency.
+
+790
+00:37:56,080 --> 00:38:01,120
+Anyhow, for everyone to use your great new feature
+
+791
+00:38:01,120 --> 00:38:04,760
+or not being pestered with the bug you just fixed,
+
+792
+00:38:04,760 --> 00:38:06,200
+we have to get it out to the world.
+
+793
+00:38:06,200 --> 00:38:09,840
+So it's time for the third and final act, the release.
+
+794
+00:38:09,840 --> 00:38:12,640
+And what I hope you realize here is that if you follow act one
+
+795
+00:38:12,640 --> 00:38:15,920
+and two, you can release any time.
+
+796
+00:38:15,920 --> 00:38:19,320
+Because your pull request-based workflow with CI
+
+797
+00:38:19,320 --> 00:38:21,920
+makes sure that your master branch is always green,
+
+798
+00:38:21,920 --> 00:38:23,680
+always ready to release.
+
+799
+00:38:23,680 --> 00:38:25,520
+This is not only convenient.
+
+800
+00:38:25,520 --> 00:38:27,720
+It's also essential if you have an emergency,
+
+801
+00:38:27,720 --> 00:38:30,320
+like a nest bug or even security problems.
+
+802
+00:38:33,080 --> 00:38:36,800
+However, a project is ready to be released any time,
+
+803
+00:38:36,800 --> 00:38:37,720
+but it is not.
+
+804
+00:38:37,720 --> 00:38:39,720
+Because the release process is such a drag
+
+805
+00:38:39,720 --> 00:38:41,400
+that you procrastinate on it.
+
+806
+00:38:41,400 --> 00:38:42,800
+It's kind of worthless.
+
+807
+00:38:42,800 --> 00:38:46,200
+And this leads to the bug reports you've all seen,
+
+808
+00:38:46,200 --> 00:38:48,320
+like, oh my god, the last release
+
+809
+00:38:48,320 --> 00:38:49,960
+has been so long time ago.
+
+810
+00:38:49,960 --> 00:38:52,560
+When are you going to finally do something about it?
+
+811
+00:38:52,560 --> 00:38:54,040
+You don't want that.
+
+812
+00:38:54,040 --> 00:38:57,280
+What you want is to fully automate this whole process.
+
+813
+00:38:57,280 --> 00:39:00,080
+And if you look at it, releasing a package to PyPI
+
+814
+00:39:00,080 --> 00:39:04,880
+is basically just a matter of replacing
+
+815
+00:39:04,880 --> 00:39:07,680
+a bunch of strings, running a bunch of commands,
+
+816
+00:39:07,680 --> 00:39:10,240
+and double checking a bunch of outputs.
+
+817
+00:39:10,280 --> 00:39:13,040
+You just have to pick where you want to let the CI do
+
+818
+00:39:13,040 --> 00:39:16,440
+your release, which is increasingly popular.
+
+819
+00:39:16,440 --> 00:39:19,000
+The hypothesis project, which I mentioned before,
+
+820
+00:39:19,000 --> 00:39:20,640
+takes this to 11.
+
+821
+00:39:20,640 --> 00:39:23,560
+Because whenever they merge a pull request,
+
+822
+00:39:23,560 --> 00:39:25,320
+they automatically build a new release
+
+823
+00:39:25,320 --> 00:39:27,160
+and push it out to PyPI.
+
+824
+00:39:27,160 --> 00:39:29,520
+So they have a lot of releases.
+
+825
+00:39:29,520 --> 00:39:31,480
+I personally prefer local automation
+
+826
+00:39:31,480 --> 00:39:34,280
+because I want more control.
+
+827
+00:39:34,280 --> 00:39:37,760
+And I also like to centralize my tools around my projects.
+
+828
+00:39:37,760 --> 00:39:39,640
+So I'm not going to talk about CI at all.
+
+829
+00:39:39,640 --> 00:39:42,080
+But there's going to be a talk tomorrow by Chris Wilcox,
+
+830
+00:39:42,080 --> 00:39:42,920
+actually.
+
+831
+00:39:42,920 --> 00:39:47,440
+So if you're interested in that, you should visit him.
+
+832
+00:39:47,440 --> 00:39:51,600
+So yeah, I should just ask for the first slot in a conference
+
+833
+00:39:51,600 --> 00:39:54,720
+and then just start sending people for fill in my gaps.
+
+834
+00:39:54,720 --> 00:39:57,000
+It's very convenient.
+
+835
+00:39:57,000 --> 00:40:00,920
+So since I maintain many, many projects,
+
+836
+00:40:00,920 --> 00:40:02,760
+and let me tell you one thing.
+
+837
+00:40:02,760 --> 00:40:04,760
+Projects tend to multiply once you
+
+838
+00:40:04,760 --> 00:40:08,280
+embrace the glamorous open source lifestyle.
+
+839
+00:40:08,280 --> 00:40:14,240
+I want to avoid duplication of code and knowledge.
+
+840
+00:40:14,240 --> 00:40:17,600
+And this is why I rely on conventions,
+
+841
+00:40:17,600 --> 00:40:19,920
+on conventions that I can enforce because I'm
+
+842
+00:40:19,920 --> 00:40:21,720
+in control of my project.
+
+843
+00:40:21,720 --> 00:40:24,400
+And because I can rely on conventions,
+
+844
+00:40:24,400 --> 00:40:27,360
+I only need one release script for all of my projects.
+
+845
+00:40:27,360 --> 00:40:28,720
+And it's really convenient.
+
+846
+00:40:28,720 --> 00:40:31,640
+So let's talk really quick about conventions.
+
+847
+00:40:31,640 --> 00:40:34,760
+So all of my projects have this block in their main Dunder
+
+848
+00:40:35,640 --> 00:40:39,600
+And most of it is actually a Python convention.
+
+849
+00:40:39,600 --> 00:40:42,360
+What's for me is this thing.
+
+850
+00:40:42,360 --> 00:40:45,960
+I mean, it's not just me, but it's something I like.
+
+851
+00:40:45,960 --> 00:40:48,920
+So when I'm in development, I'm having the next version
+
+852
+00:40:48,920 --> 00:40:53,560
+with a .dev0 suffix to make clear that it's not
+
+853
+00:40:53,560 --> 00:40:55,200
+the last version anymore.
+
+854
+00:40:55,200 --> 00:40:57,200
+And it's not the next version yet.
+
+855
+00:40:57,200 --> 00:41:01,200
+I find it very confusing when projects either bump too early
+
+856
+00:41:01,200 --> 00:41:02,240
+or bump too late.
+
+857
+00:41:02,240 --> 00:41:04,920
+And you don't really know where you are with the code
+
+858
+00:41:04,920 --> 00:41:07,000
+that you are looking at.
+
+859
+00:41:07,000 --> 00:41:09,280
+When I release, I just have to strip the little suffix
+
+860
+00:41:09,280 --> 00:41:11,440
+at the end, and the code is ready.
+
+861
+00:41:11,440 --> 00:41:12,400
+It's nice.
+
+862
+00:41:12,400 --> 00:41:15,360
+So this is the canonical metadata for my package.
+
+863
+00:41:15,360 --> 00:41:18,320
+And I find it makes sense to have it in the code.
+
+864
+00:41:18,320 --> 00:41:20,640
+The code is the canon.
+
+865
+00:41:20,640 --> 00:41:22,960
+And everything else just derives from it.
+
+866
+00:41:22,960 --> 00:41:27,720
+So my Sphinx docs loads this file and extracts the version.
+
+867
+00:41:27,720 --> 00:41:31,000
+My setup.py reads this file and uses
+
+868
+00:41:31,040 --> 00:41:33,840
+a very simple regular expression to just get out
+
+869
+00:41:33,840 --> 00:41:38,760
+all these fields and then pass it into the setup call.
+
+870
+00:41:38,760 --> 00:41:41,360
+If you use alternative builders like, I don't know,
+
+871
+00:41:41,360 --> 00:41:46,200
+Flit or Poetry, you will have to do more work yourself,
+
+872
+00:41:46,200 --> 00:41:47,040
+I'm afraid.
+
+873
+00:41:47,040 --> 00:41:49,160
+Like Flit will use the Dunder version thing,
+
+874
+00:41:49,160 --> 00:41:50,800
+which is really nice.
+
+875
+00:41:50,800 --> 00:41:53,160
+Standards can agree on.
+
+876
+00:41:53,160 --> 00:41:57,720
+The Poetry issue tracker, it was notably not Sebastian himself,
+
+877
+00:41:57,720 --> 00:41:59,600
+but they told me that I should just ship
+
+878
+00:41:59,640 --> 00:42:03,680
+my PyProject.toml and parse it at runtime.
+
+879
+00:42:04,560 --> 00:42:08,080
+Which I don't know about you, but I don't think it's okay
+
+880
+00:42:08,080 --> 00:42:13,080
+to parse files as a import side effect of your main package.
+
+881
+00:42:13,360 --> 00:42:15,600
+If you're gonna waste computing power like this,
+
+882
+00:42:15,600 --> 00:42:17,360
+you better get a Bitcoin out of it.
+
+883
+00:42:18,200 --> 00:42:23,200
+So I hope better methods will emerge over time,
+
+884
+00:42:24,080 --> 00:42:25,840
+but right now it's not great.
+
+885
+00:42:25,840 --> 00:42:27,400
+So what else changes in a release?
+
+886
+00:42:27,400 --> 00:42:28,400
+The change log.
+
+887
+00:42:29,320 --> 00:42:33,120
+You'll want to add today's date, the date of your release.
+
+888
+00:42:33,120 --> 00:42:34,160
+Please add the release date.
+
+889
+00:42:34,160 --> 00:42:39,000
+Change logs without the dates are very, very not nice.
+
+890
+00:42:40,360 --> 00:42:45,360
+And also please use the only format everybody can read.
+
+891
+00:42:45,680 --> 00:42:50,200
+Even me, even us who traded freedom for Kindle Surprise X
+
+892
+00:42:50,200 --> 00:42:51,720
+and Universal Healthcare.
+
+893
+00:42:51,720 --> 00:42:54,320
+Our lives are hard enough, don't make it any harder.
+
+894
+00:42:54,840 --> 00:42:59,840
+So for me, this means just replacing the word unreleased
+
+895
+00:42:59,840 --> 00:43:02,320
+with the current date in my change log.rst
+
+896
+00:43:02,320 --> 00:43:03,880
+in my project directory.
+
+897
+00:43:03,880 --> 00:43:06,080
+These are three lines of code.
+
+898
+00:43:06,080 --> 00:43:08,960
+You can push it into one line, I'm sure.
+
+899
+00:43:08,960 --> 00:43:11,000
+Technically, the project is ready for release.
+
+900
+00:43:11,000 --> 00:43:14,800
+I mean, the version is correct, the change log is ready,
+
+901
+00:43:14,800 --> 00:43:16,000
+you can go for it.
+
+902
+00:43:16,000 --> 00:43:17,680
+There's one thing I like to do though,
+
+903
+00:43:17,680 --> 00:43:20,800
+is to check all the links in my documentation,
+
+904
+00:43:20,800 --> 00:43:23,720
+like for 404s or moved content.
+
+905
+00:43:24,520 --> 00:43:26,480
+And if you're using Sphinx, this is super easy.
+
+906
+00:43:26,480 --> 00:43:29,080
+There's a make file target called make link check,
+
+907
+00:43:29,080 --> 00:43:31,440
+or if you're on Windows, you use the script they ship,
+
+908
+00:43:31,440 --> 00:43:35,280
+make.bat link check, and it will build all your docs
+
+909
+00:43:35,280 --> 00:43:37,960
+and it will check all the links it finds there.
+
+910
+00:43:37,960 --> 00:43:41,040
+I do not recommend making this part of your CI
+
+911
+00:43:41,040 --> 00:43:43,800
+because there are way too many transient failures
+
+912
+00:43:43,800 --> 00:43:44,880
+over the time.
+
+913
+00:43:44,880 --> 00:43:47,560
+Like for example, last time the US government shut down,
+
+914
+00:43:47,560 --> 00:43:50,280
+a bunch of HTTPS certificates expired
+
+915
+00:43:50,280 --> 00:43:51,920
+and a lot of CIs broke.
+
+916
+00:43:51,920 --> 00:43:55,440
+So maybe do it just before releases.
+
+917
+00:43:55,440 --> 00:43:57,280
+But here we are, we are ready to ship.
+
+918
+00:43:58,600 --> 00:44:01,800
+And actual shipping thing is just a few simple steps.
+
+919
+00:44:01,800 --> 00:44:04,240
+I've wrote a blog post about it if you're interested,
+
+920
+00:44:04,240 --> 00:44:06,400
+but it's just about committing the changes,
+
+921
+00:44:06,400 --> 00:44:10,120
+take your version, so RitaDocs can note
+
+922
+00:44:10,120 --> 00:44:12,360
+that it's a new release, build the package,
+
+923
+00:44:12,360 --> 00:44:15,280
+push to PyPI using the Twine tool and you're done.
+
+924
+00:44:15,280 --> 00:44:16,160
+That's all.
+
+925
+00:44:16,160 --> 00:44:19,040
+Congratulations, your contribution is on PyPI.
+
+926
+00:44:19,040 --> 00:44:20,560
+I didn't have to do that much
+
+927
+00:44:20,560 --> 00:44:22,520
+because everything I've just mentioned,
+
+928
+00:44:23,400 --> 00:44:26,640
+and more actually, is completely automated.
+
+929
+00:44:26,640 --> 00:44:29,040
+And I'm sure that everyone in this room
+
+930
+00:44:29,040 --> 00:44:33,240
+can write a script that has everything I just said in Act 3.
+
+931
+00:44:33,240 --> 00:44:37,000
+It might look trivial and it might feel like a waste of time
+
+932
+00:44:37,000 --> 00:44:39,320
+to automate these simple things,
+
+933
+00:44:39,320 --> 00:44:42,680
+but especially the trivial stuff adds up
+
+934
+00:44:42,680 --> 00:44:45,560
+and will save you time and frustrations
+
+935
+00:44:45,560 --> 00:44:48,720
+and complaints about the lack of releases.
+
+936
+00:44:48,760 --> 00:44:51,280
+So I'm afraid this is what I do.
+
+937
+00:44:51,280 --> 00:44:55,440
+There's so much more stuff I would like to talk about,
+
+938
+00:44:55,440 --> 00:44:58,720
+like how to handle coverage locally and in CI,
+
+939
+00:44:58,720 --> 00:45:02,400
+how to manage change logs using tools like Town Crier.
+
+940
+00:45:02,400 --> 00:45:04,960
+I had to kill almost 20 slides, I'm not lying,
+
+941
+00:45:04,960 --> 00:45:07,160
+like 20 slides just about documentation
+
+942
+00:45:07,160 --> 00:45:11,640
+and how to end my eternal love for RitaDocs.
+
+943
+00:45:11,640 --> 00:45:14,720
+I had an entire rant about how 79 characters
+
+944
+00:45:14,720 --> 00:45:16,240
+are the only true line length.
+
+945
+00:45:16,240 --> 00:45:19,840
+I had an essay on how to prevent packaging mishaps
+
+946
+00:45:19,840 --> 00:45:22,320
+like empty source disks on PyPI,
+
+947
+00:45:22,320 --> 00:45:24,320
+newsflash using SRC directory,
+
+948
+00:45:24,320 --> 00:45:28,080
+and I had a whole TED talk about semantic versioning
+
+949
+00:45:28,080 --> 00:45:29,600
+being well-intentioned,
+
+950
+00:45:29,600 --> 00:45:33,360
+ultimately fundamentally flawed.
+
+951
+00:45:33,360 --> 00:45:36,080
+But alas, the schedule is a crew mistress.
+
+952
+00:45:36,080 --> 00:45:38,360
+All of this I just mentioned is on the page,
+
+953
+00:45:38,360 --> 00:45:39,360
+I'm just gonna link.
+
+954
+00:45:41,000 --> 00:45:43,440
+So I hope that everyone could take something from here.
+
+955
+00:45:43,440 --> 00:45:45,520
+And of course, most of what I said,
+
+956
+00:45:46,280 --> 00:45:49,960
+is relevant even if that project is your job.
+
+957
+00:45:49,960 --> 00:45:52,760
+I use all the tools I've just mentioned on my own project
+
+958
+00:45:52,760 --> 00:45:54,000
+that I get paid for,
+
+959
+00:45:54,000 --> 00:45:56,720
+and you should automate as much as possible.
+
+960
+00:45:56,720 --> 00:45:59,360
+You should have standardized build and release scripts.
+
+961
+00:45:59,360 --> 00:46:01,960
+You should document your processes for yourself
+
+962
+00:46:01,960 --> 00:46:03,280
+and for your coworkers.
+
+963
+00:46:03,280 --> 00:46:05,960
+And you should invest in short feedback loops
+
+964
+00:46:05,960 --> 00:46:09,760
+because they pay off no matter whether you get paid or not.
+
+965
+00:46:09,760 --> 00:46:12,280
+So this is all I had for you today.
+
+966
+00:46:12,280 --> 00:46:15,360
+I would like to especially this time check out the talk page.
+
+967
+00:46:15,360 --> 00:46:16,880
+It got really long.
+
+968
+00:46:18,880 --> 00:46:20,880
+But everything I hand-waved over,
+
+969
+00:46:20,880 --> 00:46:22,560
+you can see that for real in action.
+
+970
+00:46:22,560 --> 00:46:25,040
+And of course, the usual thing, stuff,
+
+971
+00:46:25,040 --> 00:46:27,240
+follow me on Twitter, get your domains from Vario Media.
+
+972
+00:46:27,240 --> 00:46:29,640
+If you speak German, have an excellent PyCon,
+
+973
+00:46:29,640 --> 00:46:32,080
+feel free to chat me up about anything of that.
+
+974
+00:46:32,080 --> 00:46:35,040
+Please remember tomorrow is Maintainer Summit,
+
+975
+00:46:35,040 --> 00:46:37,320
+so there might be a lot of possibilities
+
+976
+00:46:37,320 --> 00:46:39,480
+to exchange about this kind of stuff.
+
+977
+00:46:39,480 --> 00:46:41,960
+So I'm Henik, thank you very much.
+
+978
+00:46:42,660 --> 00:46:43,920
+Thank you.
+
+979
+00:46:43,920 --> 00:46:45,800
+Thank you so much.
+
+980
+00:46:45,800 --> 00:46:46,640
+Thank you.
+
+981
+00:46:46,640 --> 00:46:49,360
+The topic is Maintainer Summit.
+
+982
+00:46:49,360 --> 00:46:51,080
+Thank you all for coming here.
+
+983
+00:46:51,080 --> 00:46:53,720
+We hope to see you in the Africanaisse,
+
+984
+00:46:53,720 --> 00:46:55,200
+so I'm Henik Olay, Br camarades Doc.
+
+985
+00:46:55,200 --> 00:46:56,040
+I appreciate it.
+
+986
+00:46:56,040 --> 00:47:00,120
+Thank you very much.
+
+987
+00:47:00,120 --> 00:47:02,440
+I can't believe it's taken so long.
+
+988
+00:47:02,440 --> 00:47:03,880
+It might not even take that long.
+
+989
+00:47:03,880 --> 00:47:09,400
+And it was a stage company and Prince's family
+

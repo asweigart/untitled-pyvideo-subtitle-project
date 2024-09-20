@@ -1,0 +1,1656 @@
+1
+00:00:00,000 --> 00:00:11,120
+Hello, everyone.
+
+2
+00:00:11,120 --> 00:00:19,780
+This is from Minutes to Milliseconds with SQL Alchemy by Leo.
+
+3
+00:00:19,780 --> 00:00:25,800
+If we have time at the end of the presentation, there are two microphones right in the middle
+
+4
+00:00:25,800 --> 00:00:29,360
+of this corridor right here.
+
+5
+00:00:29,360 --> 00:00:35,400
+If you have any questions, please form a line and we'll take questions one by one from there.
+
+6
+00:00:35,400 --> 00:00:36,400
+Thank you.
+
+7
+00:00:36,400 --> 00:00:37,400
+Leo.
+
+8
+00:00:37,400 --> 00:00:44,200
+Thank you.
+
+9
+00:00:44,200 --> 00:00:50,400
+So I'm here to talk about ORMs.
+
+10
+00:00:50,400 --> 00:00:52,560
+I'm Leonardo or Leo.
+
+11
+00:00:52,560 --> 00:00:59,600
+I'm a technical lead at Jiru, which is a financial services company in Brazil.
+
+12
+00:00:59,600 --> 00:01:06,520
+I'm by no means an expert in either SQL or SQL Alchemy or ORMs, but I'd like to pass
+
+13
+00:01:06,520 --> 00:01:12,840
+on some lessons I learned while optimizing some really little processes we found out
+
+14
+00:01:12,840 --> 00:01:18,480
+while using SQL Alchemy, in particular the ORM.
+
+15
+00:01:18,480 --> 00:01:22,720
+So Jiru, as I said, is a Brazilian fintech.
+
+16
+00:01:22,720 --> 00:01:28,240
+We do loans without collateral, completely online.
+
+17
+00:01:28,240 --> 00:01:32,120
+You don't have to visit the bank or anything like that.
+
+18
+00:01:32,120 --> 00:01:38,340
+Our backend stack is pretty much all Python.
+
+19
+00:01:38,340 --> 00:01:42,960
+We use mostly Postgres for storage.
+
+20
+00:01:43,160 --> 00:01:49,560
+We use Pyramid as a Python framework for almost all our projects.
+
+21
+00:01:49,560 --> 00:01:54,000
+Since we do Postgres with Pyramid, SQL Alchemy is a nice fit.
+
+22
+00:01:54,000 --> 00:02:02,640
+There's really great integration with Pyramid that integrates the request cycle of the web
+
+23
+00:02:02,640 --> 00:02:10,760
+framework with the transaction, with the SQL Alchemy transaction, so it's really nice.
+
+24
+00:02:10,760 --> 00:02:14,080
+Of course, when you talk about SQL Alchemy, there are two aspects.
+
+25
+00:02:14,080 --> 00:02:23,320
+One is the expression language, which is just a fancy way of writing SQL using Python.
+
+26
+00:02:23,320 --> 00:02:29,880
+And then there's the ORM, the object relational mapper, which is where you get classes mapping
+
+27
+00:02:29,880 --> 00:02:36,200
+to tables and records of these tables mapping to instances of the class.
+
+28
+00:02:36,200 --> 00:02:45,800
+In SQL Alchemy, the ORM is built upon the SQL Alchemy DSL, but you mostly can use them
+
+29
+00:02:45,800 --> 00:02:53,720
+without ever thinking about the other.
+
+30
+00:02:53,720 --> 00:02:55,000
+I really like SQL Alchemy.
+
+31
+00:02:55,000 --> 00:02:56,600
+I think it's awesome.
+
+32
+00:02:56,600 --> 00:03:01,400
+But as Martin Fowler said, frameworks still require you to make decisions about how to
+
+33
+00:03:01,400 --> 00:03:08,040
+use them, and knowing the underlying patterns is essential if you're to make wise choices.
+
+34
+00:03:08,040 --> 00:03:12,680
+So we're going to talk about the ORM trap.
+
+35
+00:03:12,680 --> 00:03:15,800
+Using an ORM is really nice.
+
+36
+00:03:15,800 --> 00:03:22,720
+You barely remember there's an SQL under that at all, and that's actually a problem, because
+
+37
+00:03:22,720 --> 00:03:24,800
+the database is an external system.
+
+38
+00:03:25,800 --> 00:03:37,240
+You treat it like you treat an external service, like you treat an API from a service provider.
+
+39
+00:03:37,240 --> 00:03:43,680
+Because if you don't, what happens is you do bad access patterns, you do things that
+
+40
+00:03:43,680 --> 00:03:53,440
+are inefficient, and the ORM doesn't help you write good performance SQL.
+
+41
+00:03:53,440 --> 00:04:02,080
+Things that look perfectly sensible in Python translate into bad SQL access patterns.
+
+42
+00:04:02,080 --> 00:04:05,120
+Worse is that this is unnoticeable at low data volumes.
+
+43
+00:04:05,120 --> 00:04:07,760
+Everything just works and seems happy enough.
+
+44
+00:04:07,760 --> 00:04:12,880
+And this happens, obviously, when you're developing and early in production.
+
+45
+00:04:12,880 --> 00:04:15,400
+So you're babysitting your system.
+
+46
+00:04:15,400 --> 00:04:18,960
+It seems to be doing fine, and you start to relax.
+
+47
+00:04:18,960 --> 00:04:19,960
+Everything's doing great.
+
+48
+00:04:19,960 --> 00:04:26,000
+And then when you're actually getting some success on your system, then things start
+
+49
+00:04:26,000 --> 00:04:27,840
+slowing to a crawl.
+
+50
+00:04:27,840 --> 00:04:39,080
+Because SQL alchemy is so good, and ORM from SQL alchemy is so good that the metaphor rarely
+
+51
+00:04:39,080 --> 00:04:40,720
+leaks.
+
+52
+00:04:40,720 --> 00:04:46,600
+You don't see bad SQL blowing in your face while using the ORM.
+
+53
+00:04:46,600 --> 00:04:52,160
+Things just start getting really slow.
+
+54
+00:04:52,160 --> 00:04:53,440
+So how do you fix that?
+
+55
+00:04:53,440 --> 00:04:59,280
+You need to be mindful of the work that the database is doing while you're operating with
+
+56
+00:04:59,280 --> 00:05:02,240
+what looks like just Python.
+
+57
+00:05:02,240 --> 00:05:12,600
+You need to be especially mindful of the amount of round trips that the access to your instances
+
+58
+00:05:12,600 --> 00:05:15,520
+do, the attributes that you look up.
+
+59
+00:05:15,520 --> 00:05:18,920
+What kind of queries does it do when you access that attribute?
+
+60
+00:05:18,920 --> 00:05:22,160
+Is that a relationship to another record?
+
+61
+00:05:22,160 --> 00:05:24,560
+Is that triggering an SQL statement as well?
+
+62
+00:05:24,560 --> 00:05:29,400
+You need to be mindful of those things, especially when you're looking at relationships, especially
+
+63
+00:05:29,400 --> 00:05:34,960
+when your ORM is mapping relationships into attributes.
+
+64
+00:05:34,960 --> 00:05:42,560
+You should try as much as possible to reduce the proportionality of the queries that you
+
+65
+00:05:42,560 --> 00:05:44,800
+emit during a transaction.
+
+66
+00:05:44,800 --> 00:05:53,920
+It should be ideally a fixed number of queries per, for example, an API request or a background
+
+67
+00:05:53,920 --> 00:05:56,800
+job.
+
+68
+00:05:56,800 --> 00:06:01,680
+You should, as much as possible, avoid looping through model instances.
+
+69
+00:06:01,680 --> 00:06:10,600
+You have this class that's mapping to a table, and it's tempting to go to a query that pulls
+
+70
+00:06:10,600 --> 00:06:14,280
+a bunch of those records and starts making calculations.
+
+71
+00:06:14,280 --> 00:06:15,280
+But you should avoid that.
+
+72
+00:06:15,280 --> 00:06:19,120
+Instead, you should let the DB do it for you.
+
+73
+00:06:19,120 --> 00:06:25,280
+So I'm going to be talking about one case that we got in our company, which was a report
+
+74
+00:06:25,280 --> 00:06:32,120
+that took more than 24 hours to run, and now it takes a few minutes.
+
+75
+00:06:32,120 --> 00:06:37,080
+So for that, I need to talk a little bit about how Jiru works.
+
+76
+00:06:38,080 --> 00:06:48,560
+This is a model of how my company works that simplifies beyond any sense of closeness to
+
+77
+00:06:48,560 --> 00:06:49,760
+reality.
+
+78
+00:06:49,760 --> 00:06:51,200
+But it's kind of like this.
+
+79
+00:06:51,200 --> 00:06:55,560
+There is a securitizing company, I don't know the correct term in English, that sells the
+
+80
+00:06:55,560 --> 00:07:00,680
+ventures like company loans.
+
+81
+00:07:00,680 --> 00:07:02,140
+With that, it acquires funds.
+
+82
+00:07:02,140 --> 00:07:11,060
+It uses those funds to grant loans to borrowers, and as those borrowers pay back their loans,
+
+83
+00:07:11,060 --> 00:07:16,300
+usually once a month, at the end of the month, or at the beginning of the next month, we
+
+84
+00:07:16,300 --> 00:07:20,620
+collect everything that was paid and pay it back to the debenture holder.
+
+85
+00:07:20,620 --> 00:07:24,760
+The contract for the debenture is such that the debenture holder knows what we're going
+
+86
+00:07:24,760 --> 00:07:30,620
+to do with the money, and he knows that if the borrowers don't pay, that's going to come
+
+87
+00:07:30,620 --> 00:07:35,460
+out of his premium.
+
+88
+00:07:35,460 --> 00:07:39,940
+So the company is not in any danger if the borrowers default.
+
+89
+00:07:39,940 --> 00:07:45,740
+It actually is in danger of investors not wanting to buy our debentures anymore, so
+
+90
+00:07:45,740 --> 00:07:49,620
+we have a really nice credit model to select the right borrowers.
+
+91
+00:07:49,620 --> 00:07:58,800
+But anyway, the thing is, this last arrow down there that says pay back debentures,
+
+92
+00:07:58,800 --> 00:08:07,840
+we run a report at the beginning of every month collecting everything that the borrowers
+
+93
+00:08:07,840 --> 00:08:14,960
+paid, contrast that with everything we ever paid to the debenture holder to make sure
+
+94
+00:08:14,960 --> 00:08:20,520
+that rounding errors don't leave anything behind, or also to make sure that payments
+
+95
+00:08:20,520 --> 00:08:27,560
+that were only registered after the last time we ran this report, regenerate payments for
+
+96
+00:08:27,760 --> 00:08:31,120
+things that should have gone in the previous month.
+
+97
+00:08:31,120 --> 00:08:38,120
+So we have this kind of relationship diagram here.
+
+98
+00:08:38,120 --> 00:08:41,440
+This kind of represents the models in our database.
+
+99
+00:08:41,440 --> 00:08:49,400
+We have a table or a model for the debenture holder, one for the debentures it owns, so
+
+100
+00:08:49,400 --> 00:08:53,720
+each debenture holder has one or more debentures.
+
+101
+00:08:53,720 --> 00:09:02,720
+The arrows here indicate which record points to the ID of each other record.
+
+102
+00:09:02,720 --> 00:09:08,480
+And then to the right side of this diagram you have the debenture series, which is a
+
+103
+00:09:08,480 --> 00:09:14,400
+collection of debentures that were sold to a number of debenture holders.
+
+104
+00:09:14,400 --> 00:09:21,480
+And the loans that go out, they pay money into this account, and each payment becomes
+
+105
+00:09:21,520 --> 00:09:24,920
+an operation into this account.
+
+106
+00:09:24,920 --> 00:09:31,400
+So a debenture is associated also with the debenture series, which points to the account,
+
+107
+00:09:31,400 --> 00:09:35,600
+and every month we do a series payout.
+
+108
+00:09:35,600 --> 00:09:39,520
+We collect everything that was paid, everything that was left behind that should have been
+
+109
+00:09:39,520 --> 00:09:48,520
+paid before, contrast with everything that was paid, and calculate the records that represent
+
+110
+00:09:48,600 --> 00:09:53,880
+the debenture holder.
+
+111
+00:09:53,880 --> 00:09:58,600
+For Texas purposes sometimes we don't actually distribute everything immediately to the debenture
+
+112
+00:09:58,600 --> 00:09:59,600
+holder.
+
+113
+00:09:59,600 --> 00:10:07,000
+We sometimes create a reserve of the principal amount so that we can pay all the principal
+
+114
+00:10:07,000 --> 00:10:13,000
+first, and then we reserve some of the principal, because the principal is not taxed, only the
+
+115
+00:10:13,000 --> 00:10:14,160
+premium is taxed.
+
+116
+00:10:14,160 --> 00:10:18,760
+So we try to pay all the principal first and pay the premium later so that the debenture
+
+117
+00:10:18,760 --> 00:10:21,980
+holder doesn't pay as much tax.
+
+118
+00:10:21,980 --> 00:10:27,620
+So we have this payout reserve that we do at the end of the price of each debenture,
+
+119
+00:10:27,620 --> 00:10:32,420
+and after that we pay only premiums and then we pay the reserve at the end.
+
+120
+00:10:32,420 --> 00:10:37,280
+So how does that look in code?
+
+121
+00:10:37,280 --> 00:10:44,280
+Well we have a base class for all the model classes, which is that class called base.
+
+122
+00:10:48,240 --> 00:10:54,480
+It inherits, because of the SQL alchemy declarative base called over there, from this ORM class
+
+123
+00:10:54,480 --> 00:11:01,480
+which has a property that makes it convenient for us to query models in a property called
+
+124
+00:11:01,480 --> 00:11:03,840
+querying the model itself.
+
+125
+00:11:03,840 --> 00:11:10,840
+So for example, one model is this debenture, which has a relationship with the debenture
+
+126
+00:11:10,840 --> 00:11:14,680
+holder, like I showed before.
+
+127
+00:11:14,680 --> 00:11:18,720
+So we also model an attribute for the relationship.
+
+128
+00:11:18,720 --> 00:11:25,180
+So when I access this attribute in an instance of debenture, I'm looking at an integer.
+
+129
+00:11:25,180 --> 00:11:31,040
+When I access this attribute, what SQL alchemy does is it goes into the database, does a
+
+130
+00:11:31,040 --> 00:11:38,040
+query and pulls a record for the debenture holder and wraps it up in an instance of
+
+131
+00:11:38,240 --> 00:11:41,600
+the debenture holder class.
+
+132
+00:11:41,600 --> 00:11:48,600
+And I then get access to that instance through the holder attribute in the debenture instance.
+
+133
+00:11:49,400 --> 00:11:54,000
+Same thing for series ID and the series relationship.
+
+134
+00:11:54,000 --> 00:11:59,200
+One important part here is this back ref here.
+
+135
+00:11:59,200 --> 00:12:06,200
+This call describes that the debenture holder class will in its turn have a debentures attribute
+
+136
+00:12:08,560 --> 00:12:14,280
+which represents all the debentures associated with that debenture holder.
+
+137
+00:12:14,280 --> 00:12:20,680
+And this lazy equals dynamic here means that what this attribute will be on the ORM class
+
+138
+00:12:20,680 --> 00:12:25,680
+is a query, just like model.query is.
+
+139
+00:12:26,200 --> 00:12:30,840
+The debenture holder.debentures is a query which allows me to then apply filters and
+
+140
+00:12:30,840 --> 00:12:35,480
+order by and things like that.
+
+141
+00:12:35,480 --> 00:12:42,480
+And it will only go into the database to fetch records when I iterate over it.
+
+142
+00:12:43,280 --> 00:12:50,280
+If I just access the debentures attribute in the debenture holder, I get a magical query
+
+143
+00:12:51,040 --> 00:12:52,400
+object.
+
+144
+00:12:52,400 --> 00:12:55,800
+It doesn't go into the database immediately.
+
+145
+00:12:55,800 --> 00:13:02,800
+So the thing is when this report was first running, it had to run in two parts.
+
+146
+00:13:10,640 --> 00:13:17,640
+One it was going over a bunch of calculations and caching them in a MongoDB somewhere and
+
+147
+00:13:18,640 --> 00:13:24,080
+then running the proper distribution using these values that were cached.
+
+148
+00:13:24,080 --> 00:13:25,480
+Why was it doing that?
+
+149
+00:13:25,480 --> 00:13:27,480
+Why did it need to do this thing?
+
+150
+00:13:27,480 --> 00:13:30,200
+And this caching run, it took four hours.
+
+151
+00:13:30,200 --> 00:13:35,440
+And then we had like five debenture series already emitted and each one of those was
+
+152
+00:13:35,440 --> 00:13:37,480
+taking an additional four hours.
+
+153
+00:13:37,480 --> 00:13:42,960
+So we had like 24 hours of reports to run this thing that run at the beginning of every
+
+154
+00:13:42,960 --> 00:13:43,940
+month.
+
+155
+00:13:43,940 --> 00:13:49,260
+And people just let it there for a while because, well, you know, it just runs once a month.
+
+156
+00:13:49,260 --> 00:13:52,660
+What's the problem with letting it run for a whole day?
+
+157
+00:13:52,660 --> 00:13:56,780
+Well the problem is if at the end of the reports the numbers are wrong and we need to debug
+
+158
+00:13:56,780 --> 00:14:02,540
+why they are wrong, you're facing another 24 hours of running it all over again.
+
+159
+00:14:02,540 --> 00:14:09,540
+So what we did, what I did, let me explain this function.
+
+160
+00:14:13,940 --> 00:14:19,420
+This function here that I wrote in the code.
+
+161
+00:14:19,420 --> 00:14:23,140
+So this function called SQL.
+
+162
+00:14:23,140 --> 00:14:25,020
+What is it doing?
+
+163
+00:14:25,020 --> 00:14:32,020
+It's using the sum SQL function from SQL alchemy over a column that I passed as parameter.
+
+164
+00:14:33,420 --> 00:14:38,260
+If there is a filter, it applies a filter on that and I will show the SQL of that what
+
+165
+00:14:38,260 --> 00:14:42,540
+it looks like later.
+
+166
+00:14:42,540 --> 00:14:44,860
+And it wraps that into a coalesce.
+
+167
+00:14:44,860 --> 00:14:45,860
+Why?
+
+168
+00:14:45,860 --> 00:14:52,860
+Because sum, if you are summing over an empty set of records, instead of getting zero, you
+
+169
+00:14:52,860 --> 00:14:54,780
+get a null.
+
+170
+00:14:54,780 --> 00:14:57,020
+And for our calculations we wanted a zero.
+
+171
+00:14:57,020 --> 00:15:04,020
+So you coalesce a null into a decimal zero when there is nothing to sum over.
+
+172
+00:15:05,220 --> 00:15:12,220
+And if a label is also passed, I, this function adds a label to this column and returns a
+
+173
+00:15:12,980 --> 00:15:13,980
+column.
+
+174
+00:15:13,980 --> 00:15:18,940
+This is just a way of assembling a piece of a query in SQL alchemy.
+
+175
+00:15:18,940 --> 00:15:25,940
+And it's used in this other function here, get column sum for query, by taking a query
+
+176
+00:15:29,060 --> 00:15:34,780
+just like the one from model.query or the one from a relationship and a definition of
+
+177
+00:15:34,780 --> 00:15:35,780
+a column.
+
+178
+00:15:35,780 --> 00:15:40,380
+And this definition of a column is exactly the class attribute that defines a column
+
+179
+00:15:40,380 --> 00:15:41,540
+in the model.
+
+180
+00:15:41,540 --> 00:15:45,940
+So for example, the bencher.sale price.
+
+181
+00:15:45,940 --> 00:15:51,780
+And it drops the order of the original query because if we are going to aggregate we don't
+
+182
+00:15:51,780 --> 00:15:56,620
+need to worry about the order and replaces everything that was in the query with a single
+
+183
+00:15:56,620 --> 00:16:03,260
+column which is the coalesced sum of the column that I'm interested in.
+
+184
+00:16:03,260 --> 00:16:04,260
+What uses this?
+
+185
+00:16:04,260 --> 00:16:07,260
+I'm going to show you it in a bit.
+
+186
+00:16:08,020 --> 00:16:15,020
+So you see here I imported those functions that I declared.
+
+187
+00:16:16,740 --> 00:16:23,740
+And this is the diff of the changes that I made, of some of the changes that I made.
+
+188
+00:16:24,660 --> 00:16:31,660
+And you can see here that what the code was doing before was looping in Python the code
+
+189
+00:16:37,660 --> 00:16:44,660
+for each payback operation between a start and an ending period and summing a few attributes
+
+190
+00:16:45,540 --> 00:16:48,500
+of it.
+
+191
+00:16:48,500 --> 00:16:55,500
+Then it was calculating another sum over the principle of operations also within the same
+
+192
+00:16:56,380 --> 00:16:57,860
+period.
+
+193
+00:16:57,860 --> 00:17:02,980
+But you see this is payback operations while this is, yeah, it's payback operations as
+
+194
+00:17:02,980 --> 00:17:03,980
+well.
+
+195
+00:17:03,980 --> 00:17:10,140
+It's doing two queries into the database, fetching a huge amount of records, fetching
+
+196
+00:17:10,140 --> 00:17:17,140
+all the columns of those records just to get a few sums again and again.
+
+197
+00:17:17,500 --> 00:17:23,860
+And then there's earnings operations which is another method but which also uses the
+
+198
+00:17:23,860 --> 00:17:28,620
+same period start and period end and so on and so on.
+
+199
+00:17:28,660 --> 00:17:34,540
+And I replaced that with a method called calculate operation summary.
+
+200
+00:17:34,540 --> 00:17:39,660
+I named it like that because just like bestiary is a collection of beasts, a summary is a
+
+201
+00:17:39,660 --> 00:17:45,540
+collection of sums, so I thought it appropriate that since I had a bunch of sums I would have
+
+202
+00:17:45,540 --> 00:17:51,140
+a method called calculate operation summary.
+
+203
+00:17:51,300 --> 00:17:58,300
+This operation summary is a record with attributes, with names that match the variables that I
+
+204
+00:17:59,300 --> 00:18:00,700
+had before.
+
+205
+00:18:00,700 --> 00:18:07,700
+So how did I create this record, this one single record that has all these things, all
+
+206
+00:18:08,500 --> 00:18:11,700
+these sums already calculated?
+
+207
+00:18:11,700 --> 00:18:18,700
+Ignore this part for a little bit.
+
+208
+00:18:18,700 --> 00:18:25,700
+So I refactored out the method that queried the operations in a period because you saw
+
+209
+00:18:25,820 --> 00:18:31,780
+that various methods there were accepting start and end period and all they were doing
+
+210
+00:18:31,780 --> 00:18:38,780
+were filtering self.operations between start and end date, all of them individually.
+
+211
+00:18:42,040 --> 00:18:47,460
+So I refactored that out into a method that calculates the query with these filters.
+
+212
+00:18:47,820 --> 00:18:53,300
+When you run this method you're still not running the SQL, it's just assembling a query
+
+213
+00:18:53,300 --> 00:18:56,500
+that has these filters.
+
+214
+00:18:56,500 --> 00:19:02,880
+And I then refactored out all the rest of the filters into attributes of a nested class
+
+215
+00:19:02,880 --> 00:19:06,020
+called operation filters.
+
+216
+00:19:06,020 --> 00:19:13,020
+And finally I rewrote the original methods that were using those filters to use the filters
+
+217
+00:19:13,540 --> 00:19:15,260
+that I factored out.
+
+218
+00:19:15,260 --> 00:19:22,260
+But I also implemented the calculate operation summary which gets the query for the operations
+
+219
+00:19:24,820 --> 00:19:31,820
+in the period, order by none because I'm just going to aggregate them all, and I replace
+
+220
+00:19:35,620 --> 00:19:38,500
+the columns that it was going to return.
+
+221
+00:19:38,500 --> 00:19:45,500
+Actually it was not going to return the columns, it was returning instances of the class operation.
+
+222
+00:19:47,620 --> 00:19:54,620
+And I asked Keolo Okumi to throw that away and instead return me the operations summary
+
+223
+00:19:58,220 --> 00:19:59,220
+columns.
+
+224
+00:19:59,220 --> 00:20:04,820
+You see here I used the Python operator for exploding a tuple into parameters, the star
+
+225
+00:20:04,820 --> 00:20:07,560
+here in the beginning of the method.
+
+226
+00:20:07,560 --> 00:20:11,840
+And what does this self get operation summary columns do?
+
+227
+00:20:11,840 --> 00:20:18,840
+It calls col-s-sum on operation value for several filters.
+
+228
+00:20:19,780 --> 00:20:26,000
+And these filters they are being applied not in a where clause of an SQL but in a filter
+
+229
+00:20:26,000 --> 00:20:28,760
+clause of a column.
+
+230
+00:20:28,760 --> 00:20:35,760
+And in the end because of this I only need to return one result set.
+
+231
+00:20:36,760 --> 00:20:43,760
+Each of those columns is looking at a set of operations, selecting some of them that
+
+232
+00:20:46,240 --> 00:20:53,240
+they are interested in and summing only the value of those records it is interested in.
+
+233
+00:20:55,320 --> 00:21:01,660
+But these records are a subset of a bigger set of records which I'm only fetching once
+
+234
+00:21:01,660 --> 00:21:06,580
+in the database and asking the database to aggregate it all for me in a single step.
+
+235
+00:21:06,580 --> 00:21:13,580
+So in the end I get a single record and you can see here that I pass labels here, g-r-u-f-e,
+
+236
+00:21:15,460 --> 00:21:22,460
+earnings, earnings taxes and those labels they match with the attribute names of the
+
+237
+00:21:22,460 --> 00:21:29,460
+record up here. So let's see how that looks in the code.
+
+238
+00:21:39,260 --> 00:21:46,260
+Where is my... Okay.
+
+239
+00:21:52,460 --> 00:21:59,460
+Is that readable back there? Okay. Now. One more? It's okay? Okay.
+
+240
+00:21:59,460 --> 00:22:06,460
+So here is the same piece of code that I showed in the function down there. And one
+
+241
+00:22:06,460 --> 00:22:13,460
+nice thing about SQL alchemy queries is that if you print them without iterating over them,
+
+242
+00:22:13,460 --> 00:22:20,460
+it prints the... Okay. So not that. It prints the SQL query for you. So it's all jumbled
+
+243
+00:22:21,820 --> 00:22:28,820
+up, but I have a SQL query for you. So I'm going to print the SQL query for you. So I'm
+
+244
+00:22:29,340 --> 00:22:36,340
+going to print the SQL query for you. So I'm going to print the SQL query for you. So I'm
+
+245
+00:22:36,340 --> 00:22:43,340
+going to print the SQL query for you. So it's all jumbled up, but I have the same thing
+
+246
+00:22:44,940 --> 00:22:51,940
+nicely formatted somewhere here. And that's unreadable. So not that. Actually those are
+
+247
+00:22:51,940 --> 00:22:58,940
+the slides. So you see, remember I called the coalesce. So I'm going to call it coalesce.
+
+248
+00:23:22,460 --> 00:23:29,460
+On top of sum, on top of the principle of an operation. Other... One of those functions
+
+249
+00:23:32,340 --> 00:23:38,380
+was calling operation.value. And operation.value is a hybrid property in the declared in SQL
+
+250
+00:23:38,380 --> 00:23:45,380
+alchemy that expands to a sum of other properties. So it's usable not only as a column, but also
+
+251
+00:23:46,540 --> 00:23:51,340
+as a query, just because I declared it as a hybrid property. So the ORM is really powerful.
+
+252
+00:23:51,340 --> 00:23:58,340
+We don't want to throw the ORM away, but we need to know how to use it to write well-performed
+
+253
+00:24:00,420 --> 00:24:07,420
+SQL queries. So what it does here, applying filters to the columns, it filters at the
+
+254
+00:24:07,980 --> 00:24:12,700
+column level instead of at the where level. At the where level I have other criteria like
+
+255
+00:24:12,700 --> 00:24:19,180
+selecting a specific dimension series that those operations belong to. And the timestamps
+
+256
+00:24:19,180 --> 00:24:26,180
+here are filtering for the range of operations that I wanted to. But I got all those columns
+
+257
+00:24:26,660 --> 00:24:32,380
+to do themselves their own filters so that I don't need to do many queries with different
+
+258
+00:24:32,380 --> 00:24:39,380
+where clauses into the database. And I did that without actually having to write SQL
+
+259
+00:24:40,220 --> 00:24:47,100
+on the Python side. I used the column definitions from the models themselves to assemble the
+
+260
+00:24:47,100 --> 00:24:54,100
+query for me. And this was just one of the changes, and there were many other changes
+
+261
+00:24:54,100 --> 00:25:01,100
+like this that caused a reduction from the four hours of the cache plus four hours for
+
+262
+00:25:02,340 --> 00:25:07,620
+each of the adventure series to 15 minutes for a single, for the run of a single adventure
+
+263
+00:25:07,620 --> 00:25:14,620
+series. Actually, it went from, first it went from four hours caching plus four hours of
+
+264
+00:25:15,620 --> 00:25:22,620
+running reports to just four hours running the reports because most of the time in the
+
+265
+00:25:24,140 --> 00:25:30,140
+second part was inserting payments. And they were inserting one by one the records in the
+
+266
+00:25:30,140 --> 00:25:37,140
+payments. And they had already optimized that to write raw SQL inserts to make it fast.
+
+267
+00:25:38,140 --> 00:25:45,140
+But they were still inserting one by one the records. So instead of doing that, on a second
+
+268
+00:25:47,220 --> 00:25:54,220
+phase of optimizations, I had, let me see if it's here. No. So on a second set of optimizations,
+
+269
+00:26:07,260 --> 00:26:14,260
+I asked SQL Alchemy itself to calculate the insert for me. Let me see if I can locate
+
+270
+00:26:17,460 --> 00:26:24,460
+the code here quickly because I had a little panic about 10, 30 minutes before the presentation
+
+271
+00:26:26,900 --> 00:26:31,260
+because my slides stopped working. And it's like, it got stuck in the first slide and
+
+272
+00:26:31,260 --> 00:26:38,260
+it wouldn't advance and I didn't know what was happening. But I managed to fix it in
+
+273
+00:26:38,260 --> 00:26:45,260
+time. So anyway, before I go to that, let me show another optimization. This one brought
+
+274
+00:26:46,780 --> 00:26:53,780
+a page that was rendering in a few, in one and something minutes to milliseconds, which
+
+275
+00:26:53,780 --> 00:27:01,780
+was not this one. All right. I just got it because I might have lost theAlexander. I
+
+276
+00:27:23,780 --> 00:27:35,220
+So, we had this, one nice thing about Pyramid is that it allows you to encapsulate the logic
+
+277
+00:27:35,220 --> 00:27:43,700
+for authentication and the lookup of the request object they're interested in the route itself.
+
+278
+00:27:43,700 --> 00:27:52,980
+Because most of the times when you write a route in a web framework, you take the parameters
+
+279
+00:27:52,980 --> 00:27:57,060
+and then you go look up the object and then you check if the user that is authenticated
+
+280
+00:27:57,060 --> 00:27:59,500
+is allowed to see the object.
+
+281
+00:27:59,500 --> 00:28:07,420
+And Pyramid allows you to delegate this part into separate routines that are called automatically
+
+282
+00:28:07,420 --> 00:28:12,020
+for your view so that when you get to your view, your request object has a context object
+
+283
+00:28:12,020 --> 00:28:18,340
+which is the object you're interested in and you only get there if the user is actually
+
+284
+00:28:18,340 --> 00:28:20,340
+allowed to see that.
+
+285
+00:28:21,300 --> 00:28:26,020
+But sometimes you also want to do permission checks manually.
+
+286
+00:28:26,020 --> 00:28:32,020
+Actually this admin, the banchor holder factory is exactly the code that's checking the permissions
+
+287
+00:28:32,020 --> 00:28:33,940
+before the view runs.
+
+288
+00:28:33,940 --> 00:28:41,940
+And what it was doing before, it was taking the user, taking the admin object which is
+
+289
+00:28:41,940 --> 00:28:47,860
+this property, it went to look up the admin role in the database and checking if it had
+
+290
+00:28:47,860 --> 00:28:50,980
+permission to do something or some other thing.
+
+291
+00:28:50,980 --> 00:28:58,260
+And by itself this was already doing many queries which were optimized away when I pulled
+
+292
+00:28:58,260 --> 00:29:02,460
+up the has permission method.
+
+293
+00:29:02,460 --> 00:29:21,260
+But the biggest benefit actually came from telling SQL Alchemy to, when it was time to
+
+294
+00:29:21,260 --> 00:29:31,020
+get the user to actually load with it all the profiles and from the profiles load all
+
+295
+00:29:31,100 --> 00:29:34,060
+the permissions.
+
+296
+00:29:34,060 --> 00:29:41,500
+Because of this, the SQL Alchemy would then issue not just a query for the user but a
+
+297
+00:29:41,500 --> 00:29:47,980
+query for all those objects where they were joined to the user and joined to the roles
+
+298
+00:29:47,980 --> 00:29:55,740
+so that they were already loaded by the time the piece of code that did the authentication
+
+299
+00:29:55,820 --> 00:30:03,740
+was going to do these checks here.
+
+300
+00:30:03,740 --> 00:30:09,900
+So instead of going into the database to check if a user had a certain permission, these
+
+301
+00:30:09,900 --> 00:30:14,780
+permissions were already loaded directly in memory.
+
+302
+00:30:14,780 --> 00:30:17,340
+So I got about 10 minutes.
+
+303
+00:30:17,420 --> 00:30:21,900
+I'm going to try to locate the code that calculates the inserts to show it to you.
+
+304
+00:30:35,900 --> 00:30:38,380
+In five minutes I will open for questions.
+
+305
+00:30:47,340 --> 00:30:56,380
+Oh, okay.
+
+306
+00:31:17,340 --> 00:31:20,380
+Okay.
+
+307
+00:31:20,380 --> 00:31:39,980
+So this was the final pass of optimizations that I did.
+
+308
+00:31:39,980 --> 00:31:59,020
+And you can see here that I ripped off what was essentially raw SQL being written to insert
+
+309
+00:31:59,020 --> 00:32:05,420
+into the database.
+
+310
+00:32:05,420 --> 00:32:09,820
+And it was written to insert one by one each record that was needed.
+
+311
+00:32:09,820 --> 00:32:24,940
+And instead I asked SQL Alchemy to generate the inserts for me because when you look at
+
+312
+00:32:24,940 --> 00:32:31,900
+the model declaration, the model declaration it has a Dunder table attribute which maps
+
+313
+00:32:31,900 --> 00:32:41,100
+to the DSL for writing SQLs that an SQL Alchemy has and then you can ask it to do an insert
+
+314
+00:32:41,100 --> 00:32:44,940
+to return to you the query that does the insert.
+
+315
+00:32:44,940 --> 00:32:47,260
+So here we have it.
+
+316
+00:32:47,260 --> 00:32:53,420
+A payout insert is a debenture payout dot Dunder table dot insert.
+
+317
+00:32:53,420 --> 00:33:00,700
+And the insert method has a from select which does an insert from select and you pass it
+
+318
+00:33:00,780 --> 00:33:05,660
+the list of columns that you're inserting from the query, the names of the columns,
+
+319
+00:33:05,660 --> 00:33:09,980
+and you pass the actual columns or constant values or whatever you need to insert into
+
+320
+00:33:09,980 --> 00:33:11,140
+the database.
+
+321
+00:33:11,140 --> 00:33:17,340
+So instead of looping on Python side inserting a lot of objects, I asked Postgres to loop
+
+322
+00:33:17,340 --> 00:33:24,220
+on his own side over the objects that he knew existed and insert values calculated according
+
+323
+00:33:24,220 --> 00:33:30,940
+to what I needed so that I didn't have to insert on my end each one of the objects.
+
+324
+00:33:30,940 --> 00:33:40,140
+So that brought down the whole report from four hours down to 15 minutes.
+
+325
+00:33:40,140 --> 00:33:45,180
+The other optimization I showed before about authentication, there were some pages that
+
+326
+00:33:45,180 --> 00:33:51,100
+were taking over a minute to render and they were rendering down to a few milliseconds.
+
+327
+00:33:51,100 --> 00:34:09,500
+So going back to our message, in order to write good performing ORM code, no matter
+
+328
+00:34:09,500 --> 00:34:15,420
+how comfortable the ORM code is, you need to understand SQL even if you're not going
+
+329
+00:34:15,420 --> 00:34:17,380
+to write it by hand.
+
+330
+00:34:17,380 --> 00:34:22,700
+Even if you're just using the DSL from SQL Alchemy, it's already a really good way to
+
+331
+00:34:22,700 --> 00:34:30,420
+refactor the common parts of generating SQL, but you need to understand what the database
+
+332
+00:34:30,420 --> 00:34:37,100
+is doing when you access an attribute or when you do an insert or when you access the attribute
+
+333
+00:34:37,100 --> 00:34:44,300
+of an attribute of an attribute and you should know how to do things in a well-performant
+
+334
+00:34:44,300 --> 00:34:57,980
+way in SQL so that you can map that to idiomatic SQL Alchemy.
+
+335
+00:34:57,980 --> 00:35:02,540
+So I recommend highly that you read the select documentation for your database and try to
+
+336
+00:35:02,540 --> 00:35:12,860
+understand which part of it it does and look up in Stack Exchange what does it mean, how
+
+337
+00:35:13,020 --> 00:35:17,580
+group by interacts with aggregation functions to reduce the number of rows that you get
+
+338
+00:35:17,580 --> 00:35:27,700
+back and why you need to have a column either in the aggregate or in the group by clause.
+
+339
+00:35:27,700 --> 00:35:36,820
+Understand the window functions of SQL which is another way of calculating aggregates without
+
+340
+00:35:37,060 --> 00:35:46,340
+reducing dimensionality, read about sub-queries with statements that allow you to calculate
+
+341
+00:35:46,340 --> 00:35:50,780
+a part of SQL, then calculate another part based on that calculation all going in a single
+
+342
+00:35:50,780 --> 00:36:00,420
+round trip to SQL and then study SQL Alchemy and understand the underlying queries that
+
+343
+00:36:00,420 --> 00:36:07,020
+SQL Alchemy is generating when you do attribute accesses. Try to push as much work as possible
+
+344
+00:36:07,020 --> 00:36:13,820
+into the DB but not too much. Sometimes you're going to be generating a very complex query
+
+345
+00:36:13,820 --> 00:36:20,340
+and it goes only one time to the DB and brings a bunch of information but then you don't
+
+346
+00:36:20,340 --> 00:36:26,140
+need all that information. Be careful of the amount of information you need and if for
+
+347
+00:36:26,180 --> 00:36:30,620
+some reason you're bound to a loop on the Python side because you need to do some Python
+
+348
+00:36:30,620 --> 00:36:37,860
+calculations, doing a very complex SQL query before entering the loop is kind of useless
+
+349
+00:36:37,860 --> 00:36:44,140
+so you might have to do a few round trips to the database but be mindful of the queries
+
+350
+00:36:44,140 --> 00:36:49,460
+that you're generating and try to reduce the amount of queries that you're doing and the
+
+351
+00:36:49,460 --> 00:36:56,700
+amount of volume of data you're trafficking. And that's it. Thank you very much for your attention.
+
+352
+00:36:56,700 --> 00:37:13,140
+Thank you, Leo. If anyone has questions, they can come to this microphone and ask them. I
+
+353
+00:37:13,580 --> 00:37:21,780
+request that you keep the questions objective and if you have more detailed questions or
+
+354
+00:37:21,780 --> 00:37:30,700
+want to, or comments, please see Leo outside in the interest of time. Thank you.
+
+355
+00:37:30,700 --> 00:37:37,580
+Thanks for the talk. I guess when we do optimizations nothing comes for free so you bought yourself
+
+356
+00:37:37,580 --> 00:37:44,700
+a lot of speed ups. What do you see as the costs of the optimization? What did it cost
+
+357
+00:37:44,700 --> 00:37:48,060
+you? And I guess if you have time there's a second question which is did you ever consider
+
+358
+00:37:48,060 --> 00:37:55,500
+giving up on the SQL Alchemy DSL and just writing SQL as strings? Thank you.
+
+359
+00:37:55,500 --> 00:38:08,740
+I did but most of what I needed to do as I showed you were trivial changes from summing
+
+360
+00:38:08,740 --> 00:38:17,900
+on the Python side to summing on the DB side so there weren't that many things that were
+
+361
+00:38:18,900 --> 00:38:26,380
+I was lucky that I knew about the filter where clause for columns that allowed me to do a
+
+362
+00:38:26,380 --> 00:38:31,740
+single round trip to the database and when I showed that to my colleagues they kept asking
+
+363
+00:38:31,740 --> 00:38:38,260
+me how do you know about this? It was pure luck. I was curious. I was reading the SQL
+
+364
+00:38:38,260 --> 00:38:44,740
+long before doing this optimization I was reading the select manual from Postgres and
+
+365
+00:38:44,740 --> 00:38:50,340
+I was curious why does it have a filter where here? And then oh that's what it's for and
+
+366
+00:38:50,340 --> 00:38:59,420
+things like that. Unfortunately there isn't much documentation either on Postgres or SQL
+
+367
+00:38:59,420 --> 00:39:05,460
+Alchemy on why certain things exist. They are there. If you're looking for them it's
+
+368
+00:39:05,460 --> 00:39:13,020
+easy to find how to do something but if you're not you have no idea what to do so my tip
+
+369
+00:39:13,020 --> 00:39:21,580
+is always study what the select can do, what insert can do, what update can do, go into
+
+370
+00:39:21,580 --> 00:39:27,620
+little corners, what does window mean here, what does over mean here, what does filter
+
+371
+00:39:27,620 --> 00:39:32,440
+where mean here and try to find examples of these things working so that you have baggage
+
+372
+00:39:32,440 --> 00:39:40,380
+to optimize these things later. And then I had not much difficulty in convincing SQL
+
+373
+00:39:40,380 --> 00:39:49,180
+Alchemy to do those things in a Python idiomatic way but the point is the Python idiomatic
+
+374
+00:39:49,180 --> 00:39:55,900
+way without thinking about SQL is going to lead you to generate bad SQL but if you are
+
+375
+00:39:55,900 --> 00:40:04,220
+aware of it it's easy with SQL Alchemy to generate good performance SQL from idiomatic
+
+376
+00:40:04,220 --> 00:40:05,220
+Python accesses.
+
+377
+00:40:05,220 --> 00:40:12,900
+Do you have a favorite way to review queries when they come out? I saw the text blob up
+
+378
+00:40:12,900 --> 00:40:15,940
+there and I've had a similar problem where it's like oh great it gave me this query and
+
+379
+00:40:15,940 --> 00:40:19,140
+now I need to format it in such a way I can actually read it. Do you have a tool or a
+
+380
+00:40:19,140 --> 00:40:21,860
+script you run for that?
+
+381
+00:40:21,860 --> 00:40:29,220
+There's a Python library called SQL format that you can run it through. There is a Perl
+
+382
+00:40:29,220 --> 00:40:34,220
+script called PG format that does that as well. The query that I showed was formatted
+
+383
+00:40:34,220 --> 00:40:41,300
+with PG format actually. Talk to me later and I'll show you the URLs for those.
+
+384
+00:40:41,300 --> 00:40:46,380
+Excellent. I had one more question that filter on column. I found that interesting too. How
+
+385
+00:40:46,380 --> 00:40:50,060
+do you do that in SQL Alchemy? What's the call to that?
+
+386
+00:40:50,060 --> 00:40:52,380
+How to do filter where?
+
+387
+00:40:52,380 --> 00:40:54,620
+Filter on the column as opposed to on the query?
+
+388
+00:40:54,620 --> 00:41:00,700
+You just do a column. If the column is an aggregation like a sum or something like that
+
+389
+00:41:00,820 --> 00:41:08,180
+it will have a filter attribute. You do sum of my column or average of column or count
+
+390
+00:41:08,180 --> 00:41:16,540
+of column, func.count, func.sum, close parenthesis, dot filter and then you pass the same things
+
+391
+00:41:16,540 --> 00:41:19,940
+you would pass into a filter clause of the SQL.
+
+392
+00:41:19,940 --> 00:41:22,940
+Excellent. Thank you.
+
+393
+00:41:23,540 --> 00:41:32,780
+Hi. Great talk. I have a question about where you decided to do your optimizations. How
+
+394
+00:41:32,780 --> 00:41:38,780
+did you identify that you needed to optimize that particular query or that particular function?
+
+395
+00:41:38,780 --> 00:41:44,060
+Did you do that through manual code review? Did you use some sort of profiling library
+
+396
+00:41:44,060 --> 00:41:51,260
+in Python or did you review the SQL queries running on the actual database and then traced
+
+397
+00:41:51,260 --> 00:41:52,260
+it up that way?
+
+398
+00:41:52,660 --> 00:41:56,580
+Yeah, actually there's something that I realized now that is missing from my talk. I should
+
+399
+00:41:56,580 --> 00:42:04,260
+have emphasized how important logging is. So if you configure the logging level of SQL
+
+400
+00:42:04,260 --> 00:42:11,860
+Alchemy to info, it will show all the queries. And then if you're running a report and you're
+
+401
+00:42:11,860 --> 00:42:17,260
+getting spewed on by gobs and gobs of queries, you know there's something there that should
+
+402
+00:42:17,260 --> 00:42:19,540
+be optimized.
+
+403
+00:42:19,540 --> 00:42:29,140
+I also use, well if you're using some service like New Relic, you usually nail down, for
+
+404
+00:42:29,140 --> 00:42:33,140
+example, in the case of the authentication there, it will show, oh this function here
+
+405
+00:42:33,140 --> 00:42:41,980
+that's doing this query is being called a lot. But also there's a WSGI filter called
+
+406
+00:42:42,060 --> 00:42:52,060
+slow log that dumps tracebacks of your request if you're using a web framework that's written
+
+407
+00:42:52,060 --> 00:42:59,180
+on top of WSGI. You can use slow log and point it to a file and every request that takes
+
+408
+00:42:59,180 --> 00:43:05,340
+more than say two seconds, it starts dumping every second the traceback of the thread.
+
+409
+00:43:05,340 --> 00:43:10,380
+So if you see that you're hitting SQL a bunch of times, you say, oh either this query is
+
+410
+00:43:10,780 --> 00:43:17,660
+very slow or this query is being called a lot. So you know how to optimize it just above that.
+
+411
+00:43:19,900 --> 00:43:27,900
+But that's mostly it. Of course nowadays I see a sum over an instance of a model. I ask my
+
+412
+00:43:27,900 --> 00:43:32,300
+people on my team to rewrite that. So it's like please don't sum on the Python side.
+
+413
+00:43:32,300 --> 00:43:40,060
+If we don't have any questions. Thank you so much Leo.
+
+414
+00:43:40,060 --> 00:43:46,620
+Thank you.
+

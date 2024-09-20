@@ -1,0 +1,1688 @@
+1
+00:00:00,000 --> 00:00:06,240
+Okay, thank you for bearing with us.
+
+2
+00:00:06,240 --> 00:00:10,200
+Up next we have Alana Hashman with the magic of Python wheels.
+
+3
+00:00:10,200 --> 00:00:12,200
+Is there time?
+
+4
+00:00:12,200 --> 00:00:15,200
+Here it goes.
+
+5
+00:00:15,200 --> 00:00:18,920
+Hello, PyCon.
+
+6
+00:00:18,920 --> 00:00:19,920
+Can you hear me?
+
+7
+00:00:19,920 --> 00:00:20,920
+Great.
+
+8
+00:00:20,920 --> 00:00:21,920
+Okay.
+
+9
+00:00:21,920 --> 00:00:24,280
+Sorry for the initial technical difficulties.
+
+10
+00:00:24,280 --> 00:00:25,760
+I'm Alana Hashman.
+
+11
+00:00:25,760 --> 00:00:28,800
+Welcome to my talk, the black magic of Python wheels.
+
+12
+00:00:28,800 --> 00:00:32,680
+If you want to tweet, my handle is at E hash D N.
+
+13
+00:00:32,680 --> 00:00:42,400
+So today I'm going to put on my Python packaging authority hat.
+
+14
+00:00:42,400 --> 00:00:44,960
+And tell you a little about Linux wheels.
+
+15
+00:00:44,960 --> 00:00:48,840
+Python wheels particularly for the Linux platform.
+
+16
+00:00:48,840 --> 00:00:51,640
+Now you may be thinking, Alana, I'm not a witch.
+
+17
+00:00:51,640 --> 00:00:55,100
+I'm not so sure about this black magic thing.
+
+18
+00:00:55,100 --> 00:01:00,140
+To which I'll say sometimes the greater good requires a bit of sacrifice.
+
+19
+00:01:00,140 --> 00:01:04,940
+I will admit I had a lot of doubts myself when I was doing the research for this talk.
+
+20
+00:01:04,940 --> 00:01:08,380
+There used to be so many problems with Python eggs.
+
+21
+00:01:08,380 --> 00:01:12,500
+Obtaining reagents for your Python potions is rough.
+
+22
+00:01:12,500 --> 00:01:17,260
+Now if you are a witch, then I'm delighted to welcome you here at the hour of gathering.
+
+23
+00:01:17,260 --> 00:01:23,860
+The topic today is the Python native extension and its distribution, a most curious spell.
+
+24
+00:01:23,860 --> 00:01:27,540
+Before we jump into things, let's do a quick survey of the coven.
+
+25
+00:01:27,540 --> 00:01:31,620
+How many of you are familiar with Python packaging and distribution?
+
+26
+00:01:31,620 --> 00:01:32,620
+Great.
+
+27
+00:01:32,620 --> 00:01:37,860
+How many of you have heard of ELF or executable and linkable format files?
+
+28
+00:01:37,860 --> 00:01:38,860
+Wow, great.
+
+29
+00:01:38,860 --> 00:01:41,980
+How many of you have heard of dynamic linking?
+
+30
+00:01:41,980 --> 00:01:44,540
+Still a lot of people.
+
+31
+00:01:44,540 --> 00:01:45,540
+Stretch goal.
+
+32
+00:01:45,540 --> 00:01:49,220
+How many of you have heard of application binary interfaces or symbol versioning?
+
+33
+00:01:49,220 --> 00:01:50,860
+Ah, less hands.
+
+34
+00:01:50,860 --> 00:01:51,860
+Great.
+
+35
+00:01:51,860 --> 00:01:53,620
+Well, you're in the right place.
+
+36
+00:01:53,620 --> 00:01:56,440
+And don't worry too much if some of these concepts aren't familiar to you.
+
+37
+00:01:56,440 --> 00:01:59,900
+By the end of this talk, I'm hoping you'll come away with a better understanding of modern
+
+38
+00:01:59,900 --> 00:02:04,500
+Python packaging and learn how each of these concepts work together under the hood, unlocking
+
+39
+00:02:04,500 --> 00:02:09,400
+some of the witchcraft behind how computers work really.
+
+40
+00:02:09,400 --> 00:02:11,220
+So what are we going to cover?
+
+41
+00:02:11,220 --> 00:02:16,340
+First, a very brief history of Python packaging formats and an overview of the wheel.
+
+42
+00:02:16,340 --> 00:02:21,500
+Next, the motivation behind native extensions and why binary wheels are useful.
+
+43
+00:02:21,500 --> 00:02:26,380
+We'll spend the bulk of the talk discussing how do native extensions even work, really,
+
+44
+00:02:26,380 --> 00:02:30,660
+including a discussion of how Python packaging tools, many Linux and audit wheel fit into
+
+45
+00:02:30,660 --> 00:02:32,340
+this picture.
+
+46
+00:02:32,340 --> 00:02:36,300
+And last, I'll close with how you might get involved in some of this wheel building yourself
+
+47
+00:02:36,300 --> 00:02:39,340
+if you're interested.
+
+48
+00:02:39,340 --> 00:02:43,220
+As I mentioned earlier, before the Python wheel, there was the egg.
+
+49
+00:02:43,220 --> 00:02:48,180
+Now, eggs serve the community as best they could, but they had some problems.
+
+50
+00:02:48,180 --> 00:02:51,480
+They were organically adopted without the guidance of a PEP and hence there were many
+
+51
+00:02:51,480 --> 00:02:54,440
+conflicting ways to do the same things.
+
+52
+00:02:54,440 --> 00:02:58,180
+Without a standard, there was nothing to coordinate the thousands of Python developers trying
+
+53
+00:02:58,180 --> 00:03:00,580
+to ship software to end users.
+
+54
+00:03:00,580 --> 00:03:03,300
+And incompatibility was inevitable.
+
+55
+00:03:03,300 --> 00:03:08,180
+Eggs were also designed to be directly importable and as such, they could contain some or even
+
+56
+00:03:08,180 --> 00:03:13,060
+exclusively compiled PyC files which might not actually be compatible with the version
+
+57
+00:03:13,060 --> 00:03:16,040
+of Python you have installed.
+
+58
+00:03:16,040 --> 00:03:21,320
+So wheels were designed by the Python community via a PEP to provide that standard and implement
+
+59
+00:03:21,320 --> 00:03:24,600
+many of the existing PEPs that eggs did not comply with.
+
+60
+00:03:24,600 --> 00:03:28,720
+Among other things, wheels provide much better metadata than eggs and are designed to be
+
+61
+00:03:28,720 --> 00:03:34,120
+more portable as they are primarily a means of distributing, not importing, Python.
+
+62
+00:03:34,120 --> 00:03:39,600
+Wheels cannot contain PyC files although they can contain other precompiled resources.
+
+63
+00:03:39,600 --> 00:03:43,480
+Now, there are three kinds of wheels worth mentioning.
+
+64
+00:03:43,480 --> 00:03:45,640
+First, pure wheels.
+
+65
+00:03:45,640 --> 00:03:48,340
+These wheels consist of just Python code.
+
+66
+00:03:48,340 --> 00:03:53,520
+They may target a specific version of Python such as Python 3.7.
+
+67
+00:03:53,520 --> 00:03:56,720
+Next universal wheels which are a special kind of pure wheel.
+
+68
+00:03:56,720 --> 00:03:59,780
+They are Python 2.3 compatible.
+
+69
+00:03:59,780 --> 00:04:02,680
+For these first two kinds of wheels, I've got great news.
+
+70
+00:04:02,680 --> 00:04:04,840
+They're not much different than BDist eggs.
+
+71
+00:04:04,840 --> 00:04:09,760
+You just have to run the following two commands and boom, you get a wheel.
+
+72
+00:04:09,760 --> 00:04:14,360
+Now unfortunately, not all Python packages fall into one of these two categories or else
+
+73
+00:04:14,400 --> 00:04:18,160
+the talk would be over and I could spare you from the dark knowledge of this other kind
+
+74
+00:04:18,160 --> 00:04:20,040
+of wheel.
+
+75
+00:04:20,040 --> 00:04:25,240
+This last kind is called an extension wheel which contains a Python extension.
+
+76
+00:04:25,240 --> 00:04:27,760
+How many of you have heard of a Python extension?
+
+77
+00:04:27,760 --> 00:04:28,760
+Yeah.
+
+78
+00:04:28,760 --> 00:04:33,440
+Well, rather than trying to explain to you what a Python extension is, I think the best
+
+79
+00:04:33,440 --> 00:04:37,920
+way to introduce them is to tell you about this rite of passage many early Python programmers
+
+80
+00:04:37,920 --> 00:04:42,680
+go through, myself included, and through this example, we'll see how wheels make it easier
+
+81
+00:04:42,800 --> 00:04:45,120
+to roll out Python.
+
+82
+00:04:45,120 --> 00:04:49,960
+We're going to pretend that I'm a newbie Python developer and I'm trying to get my Python
+
+83
+00:04:49,960 --> 00:04:52,920
+environment set up to work on this cool web app.
+
+84
+00:04:52,920 --> 00:04:58,560
+Here I am installing pip install requirements.txt and one of my requirements is cryptography
+
+85
+00:04:58,560 --> 00:05:04,120
+because I know security is important and I want to use SSL.
+
+86
+00:05:04,120 --> 00:05:05,120
+Here I go.
+
+87
+00:05:05,120 --> 00:05:10,880
+I'm going to install cryptography and get to work and oh, the installation fails because
+
+88
+00:05:10,880 --> 00:05:13,120
+I'm missing Python.h?
+
+89
+00:05:13,120 --> 00:05:14,120
+What's Python.h?
+
+90
+00:05:14,120 --> 00:05:16,520
+Why do I have a pound included in my error here?
+
+91
+00:05:16,520 --> 00:05:17,520
+I have no idea.
+
+92
+00:05:17,520 --> 00:05:19,920
+Remember, I'm a new Python programmer.
+
+93
+00:05:19,920 --> 00:05:25,080
+But I do a little hunting on stack overflow and learn I need to install the Python dev
+
+94
+00:05:25,080 --> 00:05:26,080
+package.
+
+95
+00:05:26,080 --> 00:05:28,560
+So, okay, let's do that.
+
+96
+00:05:28,560 --> 00:05:31,640
+Problem solved, right?
+
+97
+00:05:31,640 --> 00:05:35,720
+Well actually it turns out I'm missing ffi.h as well, whatever that is.
+
+98
+00:05:35,720 --> 00:05:40,800
+So I do another search on my favorite search engine, find that I need to install libffi.dev
+
+99
+00:05:40,880 --> 00:05:42,960
+and I should be good to go.
+
+100
+00:05:42,960 --> 00:05:43,960
+Right?
+
+101
+00:05:43,960 --> 00:05:47,280
+Who thinks this is going to work?
+
+102
+00:05:47,280 --> 00:05:48,520
+Well the nays have it.
+
+103
+00:05:48,520 --> 00:05:50,760
+Now I'm missing open SSL.
+
+104
+00:05:50,760 --> 00:05:54,560
+I still don't know what the heck is going on but I figure every time I install a thing,
+
+105
+00:05:54,560 --> 00:05:57,280
+I've got a little further, why not install another thing?
+
+106
+00:05:57,280 --> 00:05:59,080
+How many more things could there possibly be?
+
+107
+00:05:59,080 --> 00:06:02,280
+Do you think this is going to work now?
+
+108
+00:06:02,280 --> 00:06:03,280
+Yay!
+
+109
+00:06:03,280 --> 00:06:06,000
+Well, it finally worked this time.
+
+110
+00:06:06,040 --> 00:06:11,320
+And it took 16 seconds overall to install, not including all of my frantic stack overflow
+
+111
+00:06:11,320 --> 00:06:12,320
+searches.
+
+112
+00:06:12,320 --> 00:06:16,640
+So that's kind of slow, like an extra 16 seconds on every fresh build.
+
+113
+00:06:16,640 --> 00:06:20,280
+That's maybe a lot of time I could be shaving off of my CI runs.
+
+114
+00:06:20,280 --> 00:06:22,000
+Who thinks we can do better?
+
+115
+00:06:22,000 --> 00:06:23,880
+Oh, some people.
+
+116
+00:06:23,880 --> 00:06:24,880
+Good.
+
+117
+00:06:24,880 --> 00:06:25,880
+Enthusiasm.
+
+118
+00:06:25,880 --> 00:06:31,080
+What if I told you that the solution is a pre-built extension wheel?
+
+119
+00:06:31,080 --> 00:06:32,600
+Well let's try it out.
+
+120
+00:06:32,640 --> 00:06:37,360
+Here I'm going to install pre-built wheel, avoiding all of those system package installations,
+
+121
+00:06:37,360 --> 00:06:42,560
+and on top of that I shaved 15 seconds off of install time.
+
+122
+00:06:42,560 --> 00:06:45,120
+What sort of black magic is this?
+
+123
+00:06:45,120 --> 00:06:46,280
+What's the catch?
+
+124
+00:06:46,280 --> 00:06:49,520
+What's going on here?
+
+125
+00:06:49,520 --> 00:06:53,200
+This accomplishment is a really big deal for the Python ecosystem.
+
+126
+00:06:53,200 --> 00:06:57,240
+Historically it was very painful and user unfriendly to pip install Python extensions,
+
+127
+00:06:57,240 --> 00:07:00,240
+as demonstrated by our earlier example.
+
+128
+00:07:00,280 --> 00:07:04,480
+Now the conda package format was developed to address this gap, particularly for the
+
+129
+00:07:04,480 --> 00:07:08,160
+scientific Python ecosystem, and it's done a great job of that.
+
+130
+00:07:08,160 --> 00:07:14,360
+Conda is very popular, so why bother with, shall we say, reinventing the wheel here?
+
+131
+00:07:14,360 --> 00:07:19,280
+Well conda, like eggs, was not adopted by a PEP and suffers from similar incompatibility
+
+132
+00:07:19,280 --> 00:07:20,600
+issues.
+
+133
+00:07:20,600 --> 00:07:25,760
+As well, the conda package format can be used to package anything, not just Python code,
+
+134
+00:07:25,760 --> 00:07:30,280
+and hence isn't supported by the Python packaging authority or PyPI.
+
+135
+00:07:30,280 --> 00:07:34,240
+And conda packages are only compatible with conda environments, meaning that if you want
+
+136
+00:07:34,240 --> 00:07:38,800
+to use just one conda Python package, the rest of your Python packages must be conda
+
+137
+00:07:38,800 --> 00:07:41,320
+too, you can't mix and match.
+
+138
+00:07:41,320 --> 00:07:44,520
+Hence the need for the Python packaging authority to address this gap.
+
+139
+00:07:44,520 --> 00:07:48,120
+Conda is a great solution and works for a lot of people, but it doesn't work with pip
+
+140
+00:07:48,120 --> 00:07:49,640
+and PyPI.
+
+141
+00:07:49,640 --> 00:07:54,120
+While conda packages don't work with non-conda environments, you can install wheels in a
+
+142
+00:07:54,120 --> 00:07:57,440
+conda environment, which is great news for conda users.
+
+143
+00:07:57,440 --> 00:08:02,680
+So Python extension wheels allow end users to, for example, safely install pip install
+
+144
+00:08:02,680 --> 00:08:06,760
+numpy, whereas a few years ago that would have been very inadvisable.
+
+145
+00:08:06,760 --> 00:08:11,840
+So I'd say binary wheels are an amazing change for the better.
+
+146
+00:08:11,840 --> 00:08:14,560
+So what is a Python extension?
+
+147
+00:08:14,560 --> 00:08:20,300
+Well it's short for Python native extension, and native means that this code was built
+
+148
+00:08:20,300 --> 00:08:24,940
+specifically for my operating system and my version of Python.
+
+149
+00:08:24,940 --> 00:08:26,820
+My OS is its home.
+
+150
+00:08:26,820 --> 00:08:31,140
+If I try to run this cryptography wheel that I downloaded from my Linux machine on my Windows
+
+151
+00:08:31,140 --> 00:08:33,340
+laptop, that won't work.
+
+152
+00:08:33,340 --> 00:08:37,420
+If I try to run this wheel against Python 3.4 and it was built for 3.5, that won't
+
+153
+00:08:37,420 --> 00:08:38,820
+work either.
+
+154
+00:08:38,820 --> 00:08:43,700
+So if I want to distribute precompiled versions of my Python native extension, I have to build
+
+155
+00:08:44,700 --> 00:08:50,740
+that covers every single operating system Python version and CPU type combination.
+
+156
+00:08:50,740 --> 00:08:54,540
+The extension bit refers to the fact that we're extending Python's functionality with
+
+157
+00:08:54,540 --> 00:08:58,340
+some code that wasn't actually written in Python.
+
+158
+00:08:58,340 --> 00:09:03,040
+You may have guessed by now that our example package cryptography is a Python native extension.
+
+159
+00:09:03,040 --> 00:09:07,100
+If we look inside cryptography's code, indeed we see that a small component of it is written
+
+160
+00:09:07,100 --> 00:09:12,900
+in C, and many of the files have pound include statements declaring C dependencies.
+
+161
+00:09:12,900 --> 00:09:18,940
+The set up.py file inside cryptography indicates that it provides a CFFI extension package.
+
+162
+00:09:18,940 --> 00:09:25,940
+CFFI is a library used for declaring and interacting with C foreign function interfaces.
+
+163
+00:09:25,940 --> 00:09:28,460
+So what does all this mean?
+
+164
+00:09:28,460 --> 00:09:33,460
+It turns out a lot of Python code depends on code that is not Python at all.
+
+165
+00:09:33,460 --> 00:09:38,180
+C is the lingua franca of the modern operating system for better or for worse.
+
+166
+00:09:38,180 --> 00:09:42,340
+While not all Python extensions depend on C libraries, for example, many of the scientific
+
+167
+00:09:42,420 --> 00:09:45,460
+Python libraries depend on G4.
+
+168
+00:09:45,460 --> 00:09:52,780
+Under the hood, everything has a dependency on the C runtime, including G4.
+
+169
+00:09:52,780 --> 00:09:57,180
+With C compatibility, we can harness the power of thousands of existing libraries without
+
+170
+00:09:57,180 --> 00:10:02,580
+having to re-implement them in Python, which may be time consuming or impossible.
+
+171
+00:10:02,580 --> 00:10:06,460
+Python native extensions allow us to harness this power.
+
+172
+00:10:06,460 --> 00:10:09,940
+But now we're not just in the business of managing Python, we're in the business of
+
+173
+00:10:09,980 --> 00:10:14,860
+managing C code as well, and that's where things start to get messy.
+
+174
+00:10:14,860 --> 00:10:21,420
+In order to understand how extension wheels work, we must first understand how C works.
+
+175
+00:10:21,420 --> 00:10:25,980
+C is a compiled language that is the code I write must be fed to a program called a
+
+176
+00:10:25,980 --> 00:10:30,120
+compiler, and the compiler turns that into a bunch of machine code that can be run directly
+
+177
+00:10:30,120 --> 00:10:31,940
+by my CPU.
+
+178
+00:10:31,940 --> 00:10:37,120
+On this slide, I have an example Hello World program written in C. It calls puts, which
+
+179
+00:10:37,120 --> 00:10:42,400
+stands for put string, from the standard IO library in order to print Hello World.
+
+180
+00:10:42,400 --> 00:10:45,040
+In order to run the code, I first need to compile it.
+
+181
+00:10:45,040 --> 00:10:52,560
+So I invoke the GNU C compiler GCC, and by default, it produces an executable called
+
+182
+00:10:52,560 --> 00:10:56,160
+a.out, since I didn't specify an output name.
+
+183
+00:10:56,160 --> 00:11:00,800
+The output on the right here is a byte by byte printout of my compiled application in
+
+184
+00:11:00,800 --> 00:11:02,880
+hexadecimal form.
+
+185
+00:11:02,880 --> 00:11:06,760
+This executable consists of a bunch of native machine code, zeros and ones, that can be
+
+186
+00:11:06,760 --> 00:11:09,800
+run directly on my specific CPU.
+
+187
+00:11:09,800 --> 00:11:14,980
+If you work with a lot of ASCII, those first four bytes might look a little familiar.
+
+188
+00:11:14,980 --> 00:11:19,520
+The format of this compiled program is called an ELF file, which stands for executable and
+
+189
+00:11:19,520 --> 00:11:21,140
+linkable format.
+
+190
+00:11:21,140 --> 00:11:26,560
+And indeed, the second through fourth bytes literally spell out ELF.
+
+191
+00:11:26,560 --> 00:11:30,400
+So now that we've got hexes and ELFs on our hands, I suppose we've passed the point of
+
+192
+00:11:30,400 --> 00:11:35,120
+no return, so we may as well take a closer look inside.
+
+193
+00:11:35,120 --> 00:11:39,160
+Executable refers to the fact that this binary contains machine code that we can execute.
+
+194
+00:11:39,160 --> 00:11:42,320
+But what does linkable mean?
+
+195
+00:11:42,320 --> 00:11:46,580
+I'm going to use a tool called readelf to try to make sense of this binary file.
+
+196
+00:11:46,580 --> 00:11:50,120
+The dash a flag means to print all sections of the file.
+
+197
+00:11:50,120 --> 00:11:54,800
+On the next few slides, I'm going to explain some pieces of the produced output.
+
+198
+00:11:54,800 --> 00:11:58,880
+The first chunk of output displayed here on this slide is part of the header of the ELF
+
+199
+00:11:58,880 --> 00:11:59,880
+file.
+
+200
+00:11:59,880 --> 00:12:03,280
+The ELF format is standardized, and the first thing I want to point out to you is I have
+
+201
+00:12:03,280 --> 00:12:04,920
+not been exaggerating.
+
+202
+00:12:04,920 --> 00:12:09,440
+The first piece of metadata in the header is literally called magic.
+
+203
+00:12:09,440 --> 00:12:13,740
+And if you can remember from the last slide, these magic first 32 bytes are the same as
+
+204
+00:12:13,740 --> 00:12:15,880
+what was displayed there.
+
+205
+00:12:15,880 --> 00:12:19,400
+I also want to point out this file is aware of the machine architecture it was compiled
+
+206
+00:12:19,400 --> 00:12:20,400
+for.
+
+207
+00:12:20,400 --> 00:12:23,400
+In this case, AMD x86-64.
+
+208
+00:12:23,400 --> 00:12:27,000
+Different machine architectures require different compiled code since they have different CPU
+
+209
+00:12:27,000 --> 00:12:28,400
+and instruction sets.
+
+210
+00:12:28,400 --> 00:12:33,360
+For example, I can't run 64-bit code on a 32-bit machine because the instructions won't
+
+211
+00:12:33,360 --> 00:12:34,360
+fit.
+
+212
+00:12:34,360 --> 00:12:38,200
+Next, we'll take a brief walk through the program headers.
+
+213
+00:12:38,200 --> 00:12:43,160
+In particular, I want to point out the program interpreter whose location was hard coded
+
+214
+00:12:43,160 --> 00:12:46,360
+into this binary at compile time.
+
+215
+00:12:46,360 --> 00:12:50,920
+The program interpreter, also called an ELF interpreter, is the program needed to make
+
+216
+00:12:50,920 --> 00:12:53,860
+this binary run on my operating system.
+
+217
+00:12:53,860 --> 00:12:57,400
+The ELF interpreter is responsible for making sense out of this pile of binary, which is
+
+218
+00:12:57,400 --> 00:13:01,320
+a very good thing because if I had to do it, I imagine I'd go mad.
+
+219
+00:13:01,320 --> 00:13:05,280
+Next, we'll take a look at the relocation section.
+
+220
+00:13:05,280 --> 00:13:09,680
+This is where we record any symbols that our code relies on but don't have a corresponding
+
+221
+00:13:09,680 --> 00:13:11,960
+implementation in our binary.
+
+222
+00:13:11,960 --> 00:13:16,080
+In our case, we called puts from the standard library rather than defining its implementation
+
+223
+00:13:16,080 --> 00:13:20,120
+in our program, so that implementation needs to be filled in later.
+
+224
+00:13:20,120 --> 00:13:22,520
+There's only one entry in this table.
+
+225
+00:13:22,520 --> 00:13:25,520
+Puts at glibc 2.2.5.
+
+226
+00:13:25,520 --> 00:13:30,120
+Now, I remember we called puts, but what's this at glibc bit all about?
+
+227
+00:13:30,120 --> 00:13:32,840
+This is what we call a symbol version.
+
+228
+00:13:32,840 --> 00:13:37,760
+In the same way that we can version APIs and import or call a specific version of a dependency
+
+229
+00:13:37,760 --> 00:13:43,840
+in our code, an application binary interface or ABI can also have versions.
+
+230
+00:13:43,840 --> 00:13:48,040
+The compiler tacking this version onto our puts symbol ensures that when we go to find
+
+231
+00:13:48,040 --> 00:13:52,280
+the implementation of puts, we don't accidentally call the wrong version, which might have an
+
+232
+00:13:52,920 --> 00:13:56,160
+incompatible interface with what our program was compiled against.
+
+233
+00:13:56,160 --> 00:14:00,960
+And unlike with semantic version APIs where typically only one version of the library
+
+234
+00:14:00,960 --> 00:14:06,800
+is installed or loaded at a given time, application binary interfaces usually contain many version
+
+235
+00:14:06,800 --> 00:14:10,120
+implementations in order to ensure backwards compatibility.
+
+236
+00:14:10,120 --> 00:14:15,280
+Last, let's take a look at the version needs section of our ELF file.
+
+237
+00:14:15,280 --> 00:14:19,440
+Version R here stands for version required, and this section tells us what versions are
+
+238
+00:14:19,480 --> 00:14:22,320
+needed for each library file we depend on.
+
+239
+00:14:22,320 --> 00:14:29,320
+So here we see we depend only on one file, libc.so.6, with version name glibc 2.2.5.
+
+240
+00:14:30,920 --> 00:14:32,120
+And this makes sense.
+
+241
+00:14:32,120 --> 00:14:35,160
+This is the version of the puts symbol we saw on our last slide, and we know we called
+
+242
+00:14:35,160 --> 00:14:39,640
+puts from the C standard library, aka libc.
+
+243
+00:14:39,640 --> 00:14:42,960
+So let's illustrate how this all works together.
+
+244
+00:14:42,960 --> 00:14:49,000
+In my C code, the file hello.c, I depend on puts from standard IO, a part of the C standard
+
+245
+00:14:49,040 --> 00:14:50,360
+library.
+
+246
+00:14:50,360 --> 00:14:55,920
+When my code is compiled into the binary file, the C compiler resolves the puts symbol to
+
+247
+00:14:55,920 --> 00:14:59,240
+puts with version glibc 2.2.5.
+
+248
+00:14:59,240 --> 00:15:03,240
+The version required table in this binary tells us we can get this symbol with that
+
+249
+00:15:03,240 --> 00:15:07,240
+version from libc.so.6.
+
+250
+00:15:07,240 --> 00:15:12,440
+If we look inside libc.so.6, and I'm sparing you from having to read any read ELF output,
+
+251
+00:15:12,440 --> 00:15:19,000
+we see it has a section called new version D or version definitions, and glibc 2.2.5
+
+252
+00:15:19,000 --> 00:15:23,480
+is one of those declared versions as well as a bunch of more recent versions.
+
+253
+00:15:23,480 --> 00:15:28,600
+If we take a look at the DIN sim or the symbol table for dynamic linking, we find the implementation
+
+254
+00:15:28,600 --> 00:15:32,000
+of our function puts with the correct version.
+
+255
+00:15:32,000 --> 00:15:36,480
+So now that we have all these pieces, how do they work together when we try to run this
+
+256
+00:15:36,480 --> 00:15:37,720
+program?
+
+257
+00:15:38,360 --> 00:15:44,360
+Well, when we run the file a.out before the code can actually execute on our CPU, we first
+
+258
+00:15:44,360 --> 00:15:47,760
+have to brave a bunch of eldritch horrors under the hood.
+
+259
+00:15:47,760 --> 00:15:49,720
+What happens looks something like this.
+
+260
+00:15:49,720 --> 00:15:54,420
+First, our OS parses the magic ELF bytes at the beginning of the binary.
+
+261
+00:15:54,420 --> 00:15:56,480
+This is our arcane invocation.
+
+262
+00:15:56,480 --> 00:16:01,440
+Next, the OS invokes the ELF interpreter specified by the binary.
+
+263
+00:16:01,440 --> 00:16:04,140
+Only the ELF interpreter can unlock the powers within.
+
+264
+00:16:04,140 --> 00:16:08,220
+The ELF interpreter is also a native program, so if this ELF file wasn't compiled from my
+
+265
+00:16:08,220 --> 00:16:13,260
+CPU, I won't be able to run it as the right program interpreter won't be found.
+
+266
+00:16:13,260 --> 00:16:17,260
+Assuming the correct ELF interpreter is there, it will load any required files with valid
+
+267
+00:16:17,260 --> 00:16:22,180
+versions as specified by the binary, and it will move things around and lay everything
+
+268
+00:16:22,180 --> 00:16:27,080
+out all nicely in memory to ensure this code can actually run.
+
+269
+00:16:27,080 --> 00:16:31,920
+Only then can our CPU execute the binary instructions loaded in memory and breathe life into this
+
+270
+00:16:31,920 --> 00:16:35,760
+program, printing the ancient letters upon our screen.
+
+271
+00:16:35,760 --> 00:16:37,560
+Hello world.
+
+272
+00:16:37,560 --> 00:16:41,480
+This rather frightening process is usually referred to as dynamic linking, and it's how
+
+273
+00:16:41,480 --> 00:16:46,480
+almost every program on your Linux system works, including Python programs.
+
+274
+00:16:46,480 --> 00:16:53,120
+Okay, so now we understand how these C programs express and load their binary dependencies.
+
+275
+00:16:53,120 --> 00:16:55,000
+How do our Python programs do it?
+
+276
+00:16:55,000 --> 00:16:59,040
+Well, the good news is the Python interpreter handles most of the heavy lifting for us in
+
+277
+00:16:59,040 --> 00:17:02,560
+that respect, dealing with all the dynamic linking and the like.
+
+278
+00:17:02,560 --> 00:17:08,000
+Our responsibility as the user of the software is to ensure that any C dependencies our Python
+
+279
+00:17:08,000 --> 00:17:13,140
+program has are available on our system for the program to use, and that our Python extension
+
+280
+00:17:13,140 --> 00:17:16,000
+is compiled to be able to link against them.
+
+281
+00:17:16,000 --> 00:17:18,520
+So there are two ways to do this.
+
+282
+00:17:18,520 --> 00:17:22,840
+The old way, which is still completely valid, is to provide a source-only download of the
+
+283
+00:17:22,840 --> 00:17:28,200
+Python extension and ask our users to compile our Python extension from source.
+
+284
+00:17:28,200 --> 00:17:32,640
+We give users the Python package code, and then finding all the four dependencies is
+
+285
+00:17:32,640 --> 00:17:34,240
+their problem.
+
+286
+00:17:34,240 --> 00:17:38,000
+When a Python extension gets installed, it will build against the system installed version
+
+287
+00:17:38,000 --> 00:17:42,000
+of dependencies, which will ensure that the output binary depends on the right system
+
+288
+00:17:42,000 --> 00:17:45,120
+library application binary interfaces.
+
+289
+00:17:45,120 --> 00:17:49,220
+So what we saw earlier with cryptography, the hard way.
+
+290
+00:17:49,220 --> 00:17:53,500
+But we also saw there is a shiny new way we can do this.
+
+291
+00:17:53,500 --> 00:17:57,960
+With an extension wheel pre-built by a package developer, we can remove the compilation burden
+
+292
+00:17:57,960 --> 00:17:59,240
+from users.
+
+293
+00:17:59,240 --> 00:18:03,800
+By bundling precompiled dependencies into our Python wheel, everything the end user
+
+294
+00:18:03,800 --> 00:18:08,000
+needs will be available without them having to install or compile anything outside of
+
+295
+00:18:08,000 --> 00:18:13,860
+their desired package, assuming wheels are available for all of its dependencies.
+
+296
+00:18:13,860 --> 00:18:19,520
+And as we saw earlier trying to install cryptography, the old ways have many problems.
+
+297
+00:18:19,520 --> 00:18:24,440
+It's slow because we need to compile everything from source, and that's computationally intensive.
+
+298
+00:18:24,440 --> 00:18:28,880
+This also means the end user needs to install not just runtime dependencies, but also any
+
+299
+00:18:28,880 --> 00:18:33,600
+build time dependencies needed by our extensions, which is a ton of extra work for end users
+
+300
+00:18:33,600 --> 00:18:36,120
+that just want to use my library.
+
+301
+00:18:36,120 --> 00:18:40,000
+It's also possible that the user runs into version mismatches, where they've installed
+
+302
+00:18:40,000 --> 00:18:43,320
+a version of a dependency that's different than the developer intended because that's
+
+303
+00:18:43,320 --> 00:18:48,440
+what was available in their OS package manager, resulting in subtle bugs or unintended behavior
+
+304
+00:18:48,440 --> 00:18:52,120
+that they might not have the expertise to diagnose.
+
+305
+00:18:52,120 --> 00:18:56,480
+And last, as we saw earlier, this will frequently require knowledge of the system package manager
+
+306
+00:18:56,480 --> 00:19:00,660
+or at least stack overflow, which is a really bad experience for new users that just want
+
+307
+00:19:00,660 --> 00:19:03,720
+to try out Python stuff.
+
+308
+00:19:03,720 --> 00:19:07,560
+Now we still need the old way because someone is always going to have to compile things
+
+309
+00:19:07,560 --> 00:19:12,360
+from source in order to produce a compiled binary, but isn't it better to just leave
+
+310
+00:19:12,360 --> 00:19:17,200
+this in the hands of experts rather than requiring every end user to become an expert on compiling
+
+311
+00:19:17,200 --> 00:19:19,320
+C and Fortran?
+
+312
+00:19:19,320 --> 00:19:22,640
+So binary Python wheels solve this problem.
+
+313
+00:19:22,640 --> 00:19:26,560
+They ensure that the dependencies provided inside the wheel are always the right versions
+
+314
+00:19:26,560 --> 00:19:31,320
+and they come precompiled so users don't have to worry about any compilation steps.
+
+315
+00:19:31,320 --> 00:19:34,280
+This also means installations are much faster.
+
+316
+00:19:34,280 --> 00:19:36,740
+And since wheels are Python native, you just pip install them.
+
+317
+00:19:36,740 --> 00:19:41,400
+No knowledge of outside package management required.
+
+318
+00:19:41,400 --> 00:19:46,660
+But how can we ensure the precompiled binaries are compatible with my system?
+
+319
+00:19:46,660 --> 00:19:52,020
+The cryptography developers might be running the latest Ubuntu 18.10 and I'm stuck in the
+
+320
+00:19:52,020 --> 00:19:57,640
+stone age because I'm running 14.04 because I hate upgrading my laptop.
+
+321
+00:19:57,640 --> 00:19:59,360
+This is a really hard problem.
+
+322
+00:19:59,360 --> 00:20:04,860
+How would we know if our precompiled binaries would be compatible with whatever random version
+
+323
+00:20:04,860 --> 00:20:08,540
+of libc an arbitrary user had installed?
+
+324
+00:20:08,540 --> 00:20:13,580
+Well from the example earlier in the talk, you may remember that we had a simple C program
+
+325
+00:20:13,580 --> 00:20:19,260
+that depended on the put symbol and once it was compiled, it had a simple version attached.
+
+326
+00:20:19,260 --> 00:20:23,740
+Recall too that while C libraries add new version implementations, they also keep the
+
+327
+00:20:23,740 --> 00:20:27,420
+older versions to support backwards compatibility.
+
+328
+00:20:27,420 --> 00:20:32,880
+So what if we just depended on a really old version of libc when we built our dependencies
+
+329
+00:20:32,880 --> 00:20:33,880
+for distribution?
+
+330
+00:20:33,880 --> 00:20:38,560
+Wouldn't that maximize compatibility for everyone?
+
+331
+00:20:38,560 --> 00:20:41,160
+This cuts to the question at the heart of this talk.
+
+332
+00:20:41,160 --> 00:20:45,240
+How can we ship compiled Python extensions that are compatible with as many systems as
+
+333
+00:20:45,240 --> 00:20:46,640
+possible?
+
+334
+00:20:46,640 --> 00:20:50,040
+Now we have all the magic we need to answer that question.
+
+335
+00:20:50,040 --> 00:20:51,320
+The answer?
+
+336
+00:20:51,320 --> 00:20:55,560
+Simple versioning and dependency bundling achieve with the Python packaging tools, many
+
+337
+00:20:55,560 --> 00:20:58,640
+Linux and audit wheel.
+
+338
+00:20:58,640 --> 00:21:01,180
+So what are these things?
+
+339
+00:21:01,180 --> 00:21:07,160
+In order to ensure widespread compatibility of compiled binaries, peps 513 and 571 define
+
+340
+00:21:07,160 --> 00:21:11,840
+a minimal set of permitted libraries and symbol versions that can assume to be present
+
+341
+00:21:11,840 --> 00:21:14,780
+on the average Linux system for built wheels.
+
+342
+00:21:14,780 --> 00:21:18,920
+Any other symbols that a wheel depends on must be declared inside that wheel.
+
+343
+00:21:18,920 --> 00:21:23,340
+This ensures that Python wheels don't use any cool new GCC features that aren't available
+
+344
+00:21:23,340 --> 00:21:28,340
+on older systems or assume that certain shared objects will be available.
+
+345
+00:21:28,340 --> 00:21:32,760
+You may remember that in my cryptography installation example, the first thing I had to install
+
+346
+00:21:32,760 --> 00:21:35,340
+was the Python dev header package.
+
+347
+00:21:35,340 --> 00:21:39,740
+For this reason, even the Python development libraries are not included in this minimal
+
+348
+00:21:39,740 --> 00:21:40,740
+base.
+
+349
+00:21:40,740 --> 00:21:46,100
+Thus, we ensure that many Linux systems are compatible with this standard.
+
+350
+00:21:46,100 --> 00:21:48,180
+Hence the name many Linux.
+
+351
+00:21:48,180 --> 00:21:52,620
+Many Linux is both the name of the policy and a Docker image used to implement these
+
+352
+00:21:52,620 --> 00:21:53,620
+policies.
+
+353
+00:21:53,620 --> 00:21:58,860
+The original policy from pep 513 and corresponding Docker image was called many Linux 1 based
+
+354
+00:21:58,860 --> 00:22:03,860
+on the CentOS 5 distribution and the newest many Linux policy and Docker image called
+
+355
+00:22:04,060 --> 00:22:09,100
+many Linux 2010 is based on CentOS 6 which was released in 2010.
+
+356
+00:22:09,100 --> 00:22:14,220
+Both images are available for the AMD 64 and I386 architectures.
+
+357
+00:22:14,220 --> 00:22:18,340
+By building your extension wheels inside the Docker container, you can ensure that you
+
+358
+00:22:18,340 --> 00:22:22,340
+use a build environment that's compatible with the aforementioned Peps making it easier
+
+359
+00:22:22,340 --> 00:22:25,260
+to produce a compliant binary.
+
+360
+00:22:25,260 --> 00:22:29,200
+Once you produce the wheel through some means, many Linux or not, you can inspect it with
+
+361
+00:22:29,200 --> 00:22:30,660
+audit wheel.
+
+362
+00:22:30,660 --> 00:22:34,620
+Audit wheel investigates any symbols and versions contained inside your built wheel
+
+363
+00:22:34,620 --> 00:22:37,900
+and determines if the wheel is policy compliant.
+
+364
+00:22:37,900 --> 00:22:42,380
+Given the set of many Linux policies and a priority ordering, audit wheel finds all external
+
+365
+00:22:42,380 --> 00:22:46,620
+symbols and their versions that your wheel depends on and labels it with the strictest
+
+366
+00:22:46,620 --> 00:22:49,460
+policy your wheel complies with, if any.
+
+367
+00:22:49,460 --> 00:22:53,820
+But that's not all audit wheel can do.
+
+368
+00:22:53,820 --> 00:22:58,540
+Audit wheel can do much more than just checking compliance against the many Linux policies.
+
+369
+00:22:58,540 --> 00:23:03,460
+Since it already has a very dark understanding of the inner workings of wheels in order to
+
+370
+00:23:03,460 --> 00:23:06,900
+determine whether or not they comply with policies.
+
+371
+00:23:06,900 --> 00:23:12,940
+As such, audit wheel can use that arcane knowledge to actually locate external versions of dependencies
+
+372
+00:23:12,940 --> 00:23:18,380
+on your systems, make copies of them, perform name mangling and then update paths to bundle
+
+373
+00:23:18,380 --> 00:23:22,820
+these dependencies directly into your built wheel for distribution.
+
+374
+00:23:22,820 --> 00:23:25,540
+This is extremely spooky.
+
+375
+00:23:25,540 --> 00:23:29,260
+This empowers Python developers to build many Linux wheels without having to make
+
+376
+00:23:29,260 --> 00:23:32,460
+substantial changes to their build processes.
+
+377
+00:23:32,460 --> 00:23:37,120
+All they need to do is build and install dependencies inside the appropriate many Linux image and
+
+378
+00:23:37,120 --> 00:23:39,900
+then build their wheel like they normally would.
+
+379
+00:23:39,900 --> 00:23:44,540
+Running audit wheel repair on a built wheel will bundle all the necessary binary dependencies
+
+380
+00:23:44,540 --> 00:23:51,360
+inside and produce a policy compliant wheel installable on many Linux systems.
+
+381
+00:23:51,360 --> 00:23:56,080
+To illustrate and summarize this process from start to finish, I will share this picture.
+
+382
+00:23:56,080 --> 00:24:00,040
+As developers, we start with our excellent Python extension.
+
+383
+00:24:00,040 --> 00:24:04,800
+First we build it inside the many Linux image against each version of Python we support
+
+384
+00:24:04,800 --> 00:24:07,560
+and for each architecture we support.
+
+385
+00:24:07,560 --> 00:24:11,120
+Once our wheels are built, we then repair them with audit wheel which will bundle copies
+
+386
+00:24:11,120 --> 00:24:14,420
+of any native dependencies required by the package.
+
+387
+00:24:14,420 --> 00:24:18,760
+We then use audit wheel to inspect that output ensuring that all the included symbol versions
+
+388
+00:24:18,760 --> 00:24:21,520
+comply with the desired policy.
+
+389
+00:24:21,520 --> 00:24:26,160
+And last we upload our wheels to PyPI giving users the option of downloading and installing
+
+390
+00:24:26,160 --> 00:24:32,920
+binary extension wheels, speeding up their installs and reducing their dependency overhead.
+
+391
+00:24:32,920 --> 00:24:36,480
+So now that you understand a little more about how this works and what you need to do to
+
+392
+00:24:36,480 --> 00:24:39,640
+build a wheel, how can you get involved?
+
+393
+00:24:39,640 --> 00:24:43,760
+We would love to see you build wheels of your package if you're not doing that already.
+
+394
+00:24:43,760 --> 00:24:45,680
+Feedback is enthusiastically welcomed.
+
+395
+00:24:45,680 --> 00:24:47,200
+Please let us know if it doesn't work.
+
+396
+00:24:47,200 --> 00:24:50,080
+We want to make it better.
+
+397
+00:24:50,080 --> 00:24:56,680
+Python wheels.com has information about wheels as well including which of the top 360 packages
+
+398
+00:24:56,680 --> 00:24:59,120
+on PyPI ship wheels.
+
+399
+00:24:59,120 --> 00:25:03,000
+I didn't cover how to make a Python extension because that's out of the scope of this talk
+
+400
+00:25:03,000 --> 00:25:07,080
+but this is a great place to see how and why different projects are doing that.
+
+401
+00:25:07,080 --> 00:25:10,600
+You could also use this to find an example package and see how they build wheels for
+
+402
+00:25:10,600 --> 00:25:12,060
+inspiration.
+
+403
+00:25:12,060 --> 00:25:16,100
+We didn't cover Windows or Mac OS wheel building in this talk so that could be a good resource
+
+404
+00:25:16,180 --> 00:25:19,100
+if you want to target those systems too.
+
+405
+00:25:19,100 --> 00:25:23,340
+We also have a many Linux demo repo with a more straightforward example to play around
+
+406
+00:25:23,340 --> 00:25:28,580
+with if you want to try out a more hello world sort of wheel build.
+
+407
+00:25:28,580 --> 00:25:30,300
+There's another way you can get involved.
+
+408
+00:25:30,300 --> 00:25:34,860
+Audit wheel needs a new maintainer because after three years I'm stepping down.
+
+409
+00:25:34,860 --> 00:25:39,900
+There's also a lot of work to be done on the new many Linux 2014 spec and existing many
+
+410
+00:25:39,900 --> 00:25:43,340
+Linux Docker images which don't currently have a maintainer.
+
+411
+00:25:43,340 --> 00:25:46,940
+If you're at all interested do come find me and I'll try to put you in touch with the
+
+412
+00:25:46,940 --> 00:25:51,180
+right folks in PyPA to help you help us.
+
+413
+00:25:51,180 --> 00:25:52,500
+Do we have time for questions?
+
+414
+00:25:52,500 --> 00:25:54,580
+No, we do not.
+
+415
+00:25:54,580 --> 00:25:55,660
+Thank you.
+
+416
+00:25:55,660 --> 00:25:58,020
+Thanks to my employer for letting me attend.
+
+417
+00:25:58,020 --> 00:26:05,900
+Thanks to these folks for reviewing my talk.
+
+418
+00:26:05,900 --> 00:26:09,140
+If you want to check out some resources I posted related to my talk you can visit this
+
+419
+00:26:09,140 --> 00:26:10,140
+link on my website.
+
+420
+00:26:10,380 --> 00:26:14,180
+It includes a copy of these slides, links to all the reference PEPs, supplemental readings
+
+421
+00:26:14,180 --> 00:26:15,180
+and more.
+
+422
+00:26:15,180 --> 00:26:15,900
+Thank you so much for attending.
+

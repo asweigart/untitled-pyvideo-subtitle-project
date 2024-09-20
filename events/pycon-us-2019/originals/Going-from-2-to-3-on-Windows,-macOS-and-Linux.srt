@@ -1,0 +1,1444 @@
+1
+00:00:00,000 --> 00:00:07,120
+Hey, everybody. Welcome today. If you're coming in, please take a seat. You can sit closer
+
+2
+00:00:07,120 --> 00:00:11,380
+to the front if you want. Today, Max Belanger and Damian Deville are going to talk to us
+
+3
+00:00:11,380 --> 00:00:17,080
+about migrating from Python 2 to 3 on Windows, Mac OS, and Linux. So please give them a round
+
+4
+00:00:17,080 --> 00:00:20,080
+of applause. Welcome them.
+
+5
+00:00:20,080 --> 00:00:29,680
+Hi, everyone. This is going from 2 to 3 on Windows, Mac OS, and Linux. My name is Max.
+
+6
+00:00:29,680 --> 00:00:30,680
+I'm an engineer at Dropbox.
+
+7
+00:00:30,680 --> 00:00:33,680
+Hello, I'm Damian. I'm also an engineer at Dropbox.
+
+8
+00:00:33,680 --> 00:00:38,800
+All right. So why are we here? Well, the first part of the answer to that question is we
+
+9
+00:00:38,800 --> 00:00:44,040
+love Python. So Dropbox has been using Python actually from the very beginning. The very
+
+10
+00:00:44,040 --> 00:00:48,480
+first lines of code ever written at the company by our CEO, Drew, were actually in Python
+
+11
+00:00:48,480 --> 00:00:52,480
+for Windows. And we use it, obviously, not just for servers, but also for our desktop
+
+12
+00:00:52,480 --> 00:00:56,560
+clients. We use it on Windows, Mac OS, and Linux. And that's really just from the beginning
+
+13
+00:00:56,560 --> 00:01:01,280
+all the way to now. We include, in fact, we include our own custom fork of Python that
+
+14
+00:01:01,280 --> 00:01:05,800
+we ship to our users with a whole bunch of fun patches. And really, over the years, we've
+
+15
+00:01:05,800 --> 00:01:09,080
+just become Python fans. We've kind of used it all. We've used async core. We've used
+
+16
+00:01:09,080 --> 00:01:16,920
+multiprocessing. We just love Python. So that's part one. Part two. So for almost a decade,
+
+17
+00:01:16,920 --> 00:01:23,560
+Dropbox has been using Python 2. This actually ended late last year. So in late 2018, we
+
+18
+00:01:23,560 --> 00:01:28,200
+actually made the jump. So we made the leap from Python 2 to 3. And so today, what we
+
+19
+00:01:28,200 --> 00:01:33,200
+want to talk about is the sort of abridged story of our four-year journey from Python
+
+20
+00:01:33,200 --> 00:01:37,760
+2 to Python 3. The main takeaway here is that migrating client software has some pretty
+
+21
+00:01:37,760 --> 00:01:42,320
+fun and unique challenges. You may have heard stories of other Python 3 migrations, but
+
+22
+00:01:42,320 --> 00:01:47,600
+we hope ours will be a little bit more interesting because of the crazy things that we've had
+
+23
+00:01:47,600 --> 00:01:53,520
+to do. So without any more delay, let's get to what we're going to talk about today. So
+
+24
+00:01:53,520 --> 00:01:59,280
+we'll start with the why and sort of what led us to finally decide to make the jump.
+
+25
+00:01:59,280 --> 00:02:02,640
+Second we'll go into the how. So we'll talk about how we laid out the problem that we
+
+26
+00:02:02,640 --> 00:02:08,080
+were facing and how we actually started to solve it. Then we'll do a deep dive into sort
+
+27
+00:02:08,080 --> 00:02:12,720
+of two of the major efforts that made this project happen. The first one was Project
+
+28
+00:02:12,720 --> 00:02:18,920
+Hercules where we migrated our entire code base from Python 2 to a hybrid Python 2 and
+
+29
+00:02:18,920 --> 00:02:24,520
+3 syntax. Then we'll talk about Hydra, which was our hybrid runtime, so the ability to
+
+30
+00:02:24,520 --> 00:02:30,680
+run both 2 and 3 on a user's computer. And then finally we'll go into how we combine
+
+31
+00:02:30,680 --> 00:02:37,680
+those into actually executing the transition, so how we made the rollout happen. So why
+
+32
+00:02:38,400 --> 00:02:43,160
+would you even want to switch, right? Like why would you want to make such a giant transition?
+
+33
+00:02:43,160 --> 00:02:48,840
+Isn't Python 2 working just fine? The answer was it was relatively working just fine. But
+
+34
+00:02:49,000 --> 00:02:53,080
+there were two primary reasons why we wanted to do this. It was in a way a pretty straightforward
+
+35
+00:02:53,080 --> 00:02:58,440
+cost benefit analysis. So Python 3 had huge benefits that we valued and Python 2 had huge
+
+36
+00:02:58,440 --> 00:03:05,440
+costs that were becoming difficult to bear. So let's start with Python 3. Python 3 is
+
+37
+00:03:05,440 --> 00:03:10,060
+actually genuinely exciting. It represents the actual evolution of the language and it
+
+38
+00:03:10,060 --> 00:03:14,600
+shows when you compare the two. So let's start with the Gill. So if you're not familiar,
+
+39
+00:03:14,600 --> 00:03:18,700
+the Gill is this measure that the runtime user is to maintain consistency when you
+
+40
+00:03:18,700 --> 00:03:24,880
+have concurrency with multiple threads, but it does that at the cost of parallelism. The
+
+41
+00:03:24,880 --> 00:03:28,840
+Gill is actually really important in a client-side app because it affects responsiveness. So it
+
+42
+00:03:28,840 --> 00:03:33,520
+affects how quickly your UI can respond to the user's requests. Now, we've been growing
+
+43
+00:03:33,520 --> 00:03:38,640
+the amount of UI that we have in our app, and so Python 3's Gill having all these improvements
+
+44
+00:03:38,640 --> 00:03:45,120
+actually made a difference, and I'll get to why in just a second. Second, native type
+
+45
+00:03:45,120 --> 00:03:49,960
+annotations. So we love type annotations. We're huge fans of MyPy at DrawBox, largely because
+
+46
+00:03:49,960 --> 00:03:54,080
+this is huge if you have a large code base. So we have hundreds of engineers working on
+
+47
+00:03:54,080 --> 00:03:57,560
+this. Being able to know exactly what's going to happen when you call a function is a big
+
+48
+00:03:57,560 --> 00:04:03,040
+deal, and so being able to do that natively in the syntax is just fantastic. Next, generally
+
+49
+00:04:03,040 --> 00:04:07,120
+just syntax improvements, things like f-strings. There's a long list of those, but when you
+
+50
+00:04:07,120 --> 00:04:11,120
+combine them, you get much greater developer productivity, and that's something we wanted
+
+51
+00:04:11,120 --> 00:04:16,680
+to take advantage of. As you might be able to imagine, we use the OS module a lot. So
+
+52
+00:04:16,680 --> 00:04:21,720
+DrawBox's job on Windows, Mac, and Linux is to sync your files, and so we use the OS module.
+
+53
+00:04:21,720 --> 00:04:26,240
+We use POSIX module quite a bit, and there's been so many improvements there, so many enhancements
+
+54
+00:04:26,240 --> 00:04:29,880
+over the years that we really wanted to be able to take advantage of them. Pathlib is
+
+55
+00:04:29,880 --> 00:04:35,640
+the best example of that. And finally, coroutines. So the whole async IO effort, that's just
+
+56
+00:04:35,640 --> 00:04:41,360
+a great leap for the language. To us, it opens up an entirely new way to think of concurrency,
+
+57
+00:04:41,360 --> 00:04:45,400
+and we see a potentially much better way to implement a bunch of patterns that occur very
+
+58
+00:04:45,400 --> 00:04:54,120
+often in our code. So really, there was no shortage of excitement around Python 3. And
+
+59
+00:04:54,120 --> 00:04:58,680
+for the second part of the reason, Python 2 became an issue. It became difficult to
+
+60
+00:04:58,680 --> 00:05:03,040
+maintain it and to keep it running. We're going to consider Python 2 for Windows as
+
+61
+00:05:03,040 --> 00:05:08,160
+an example. That's a good example because Windows is our most popular platform. There's
+
+62
+00:05:08,160 --> 00:05:12,400
+been a lot of amazing work done in Python 3 to improve Windows support, but we weren't
+
+63
+00:05:12,400 --> 00:05:17,320
+able to take advantage of that work. If you consider how old the compiler requirements
+
+64
+00:05:17,320 --> 00:05:21,880
+are for Python 2, then you see the sort of core of our issue. Python 2 requires Visual
+
+65
+00:05:21,880 --> 00:05:27,240
+Studio 2008. Let that sink in. That is an 11-year-old compiler, right? And there's a
+
+66
+00:05:27,240 --> 00:05:30,680
+good reason for that. It means if you download something from Pippi, you get a binary that's
+
+67
+00:05:30,680 --> 00:05:35,000
+going to work the same way regardless of where you download it or where you install Python.
+
+68
+00:05:35,000 --> 00:05:38,200
+But that's a bit of a problem. Thankfully, we control our own Python, so we decided to
+
+69
+00:05:38,200 --> 00:05:43,200
+fork Python 2, and we actually manually patched it all the way up to supporting Visual Studio
+
+70
+00:05:43,200 --> 00:05:49,040
+2013. But the more we did that, the more painful merges were becoming and the more kind of
+
+71
+00:05:49,040 --> 00:05:53,840
+undocumented behavior started appearing. And this came to a head when some of our key dependencies
+
+72
+00:05:53,840 --> 00:06:01,200
+like Qt or Chromium just started requiring the very latest and greatest in compilers.
+
+73
+00:06:01,200 --> 00:06:04,360
+And then on top of all of this, we realized we were starting to spend considerable time
+
+74
+00:06:04,360 --> 00:06:10,120
+taking features from Python 3 and backporting them into 2. So, for example, we actually
+
+75
+00:06:10,120 --> 00:06:16,760
+backported Python 3.2's Gill into 2.7 specifically for the native responsiveness issues that
+
+76
+00:06:16,760 --> 00:06:22,920
+we were seeing. So the point of all this is Python 3 basically became a blocker to a bunch
+
+77
+00:06:23,000 --> 00:06:26,920
+of our initiatives. We realized in order to build what we wanted to build, we needed to
+
+78
+00:06:26,920 --> 00:06:32,080
+upgrade, and the more we waited, the worse this would get. And to talk about the how,
+
+79
+00:06:32,080 --> 00:06:33,080
+Damian?
+
+80
+00:06:33,080 --> 00:06:40,400
+Cool. All right. So we knew that we had essentially upgraded Python 3, and this talk is about
+
+81
+00:06:40,400 --> 00:06:47,680
+how we actually did it. So we have a problem at first, right, which is Dropbox is not a
+
+82
+00:06:47,680 --> 00:06:52,240
+small application. We have hundreds of thousands of lines of code with hundreds of engineers
+
+83
+00:06:52,560 --> 00:06:58,760
+that push code every day. We support a large number of configurations. So we don't just
+
+84
+00:06:58,760 --> 00:07:04,960
+run on the server. On client, we run on Windows, we run on Mac OS, we run on Linux, and we
+
+85
+00:07:04,960 --> 00:07:10,440
+support pretty old OSes. So making sure that our code runs everywhere is not just super
+
+86
+00:07:10,440 --> 00:07:18,680
+easy. Also, as Max said, we have a custom fork of Python, which means that we have pretty
+
+87
+00:07:18,680 --> 00:07:25,440
+much like a decade of patches that we need to kind of try to migrate and maintain and
+
+88
+00:07:25,440 --> 00:07:31,280
+all of that. And finally, the last thing is we like a desktop application, which means
+
+89
+00:07:31,280 --> 00:07:37,920
+that shipping code doesn't just happen overnight. Releasing an app happens every couple of weeks,
+
+90
+00:07:37,920 --> 00:07:45,360
+but we go through a series of channels, which means that the time it takes between I learn
+
+91
+00:07:45,360 --> 00:07:50,800
+the code now, essentially you will be able to run the code that I learned in six weeks.
+
+92
+00:07:50,800 --> 00:07:56,480
+So you kind of just flip a switch and change all your stuff to Python 3 or things like
+
+93
+00:07:56,480 --> 00:08:00,600
+that and just make a switch and everything is available everywhere. So that's a bit essentially
+
+94
+00:08:00,600 --> 00:08:06,680
+of like a sort of complexity on the scope of the issue here. So how would we even start
+
+95
+00:08:06,680 --> 00:08:14,040
+with that? Because there's not like a perfect time to just go ahead and oh, yeah, let's
+
+96
+00:08:14,040 --> 00:08:22,440
+go ahead and migrate to Python 3. So where did we begin? And really it came out of Hack
+
+97
+00:08:22,440 --> 00:08:26,360
+Week. And if you're not familiar with Hack Week, it's basically we have a couple of weeks
+
+98
+00:08:26,360 --> 00:08:31,480
+a year where engineers can work on whatever they want and try to do the things that they
+
+99
+00:08:31,480 --> 00:08:37,060
+probably wouldn't either have time or sort of bandwidth to do in the rest of the year.
+
+100
+00:08:37,060 --> 00:08:44,300
+So in 2015 and 2016, like a bunch of us just met and we're like, yeah, what if we just
+
+101
+00:08:44,300 --> 00:08:50,920
+tried? And it was super important to kind of build like a sort of momentum and getting
+
+102
+00:08:50,920 --> 00:08:55,220
+a lot of folks excited. So there were folks that were excited about like the language
+
+103
+00:08:55,220 --> 00:08:59,500
+itself. There were folks that were excited about like sort of challenge and we met all
+
+104
+00:08:59,500 --> 00:09:04,460
+these folks and we kind of set a little team during Hack Week and worked on that. And most
+
+105
+00:09:04,500 --> 00:09:09,660
+importantly, we showed the rest of the organization that, hey, this is doable. Like we are small,
+
+106
+00:09:09,660 --> 00:09:14,860
+we can make it work. That's something that we could do. And basically, yeah, it was really
+
+107
+00:09:14,860 --> 00:09:23,380
+the perfect sort of setting to like start the work and bootstrap it. So as part of Hack
+
+108
+00:09:23,380 --> 00:09:28,540
+Week, we also like got a chance to discover what would work and not work. So like a great
+
+109
+00:09:28,540 --> 00:09:33,780
+example, the first thing that like we tried to say, hey, we got a code base there, let's
+
+110
+00:09:33,780 --> 00:09:40,660
+just feed it into a 2 to 3, get code and just like everything is going to work, right?
+
+111
+00:09:40,660 --> 00:09:46,700
+Well, we figured out it's not that easy. So we kind of looked at, yeah, five options and
+
+112
+00:09:46,700 --> 00:09:53,180
+realized that. But what really came out of Hack Week was we put a system in place, like
+
+113
+00:09:53,180 --> 00:09:59,900
+we had a way to start a Python interpreter in Python 3 and feed our code to it. Nothing
+
+114
+00:09:59,900 --> 00:10:05,100
+worked. It was like doing nothing. It was just crashed. It crashed like at boot. But
+
+115
+00:10:05,100 --> 00:10:12,100
+at least we sort of unblocked other engineers after Hack Week to like work on it and just
+
+116
+00:10:12,100 --> 00:10:16,420
+iterate and try to make like, oh, yeah, we'll fix a bunch of tests and make sure they run
+
+117
+00:10:16,420 --> 00:10:21,340
+on Python 3 and things like that. So like it was super, super important. So that's the
+
+118
+00:10:21,340 --> 00:10:26,180
+graph. That's like a histogram of basically a number of, it's not a number of commits.
+
+119
+00:10:26,180 --> 00:10:32,540
+So it's basically additions and deletions of code that like touch Python 2 and 3 across
+
+120
+00:10:32,540 --> 00:10:37,260
+the years, like the last five years. And you can see the kind of two exploratory attempts
+
+121
+00:10:37,260 --> 00:10:44,020
+in like in 15 and 16, which is really Hack Week. And then like bulk of the work was like
+
+122
+00:10:44,020 --> 00:10:49,020
+spent in 2017 when we actually staffed the team and decided we all in into that and we
+
+123
+00:10:49,020 --> 00:10:54,660
+just made like the work. And we shipped that in 2018. So all the work that happened in
+
+124
+00:10:55,140 --> 00:11:02,140
+2018 was mostly fixing bugs and try to stabilize the thing and make sure that everything worked.
+
+125
+00:11:02,380 --> 00:11:07,540
+So yeah, most of the work was really a year, but it was kind of spread into a bunch of
+
+126
+00:11:07,540 --> 00:11:14,540
+initiatives early on. So like the thing I really want to kind of take out of that is
+
+127
+00:11:16,780 --> 00:11:22,300
+the transition of Python 3 will very like force it had to be a gradual process. Like
+
+128
+00:11:22,340 --> 00:11:29,340
+it didn't happen overnight and it took a while and we really, really rated on that. So let's
+
+129
+00:11:29,700 --> 00:11:34,500
+start actually a deep dive into how and what we specifically did. I want to talk about
+
+130
+00:11:34,500 --> 00:11:41,500
+like the syntax and the basically hybrid. So we had a project called Hercules and given
+
+131
+00:11:43,060 --> 00:11:48,780
+that we had to gradually move to Python 3, it basically meant that we had to support
+
+132
+00:11:48,780 --> 00:11:55,780
+both 2 and 3 at the same time. So what did we do? From the future we just import Python
+
+133
+00:11:55,820 --> 00:12:02,820
+3 and everything worked. Not quite. It was not that easy. This would have been great.
+
+134
+00:12:02,820 --> 00:12:07,420
+But it was not that bad. As in there are like there is a rich set of tools that can really
+
+135
+00:12:07,420 --> 00:12:14,420
+help you there. So we've used a bunch of modernize and 2 to 3 really selectively rather than
+
+136
+00:12:15,300 --> 00:12:21,580
+throwing the whole code at it. Mostly fix the sort of obvious issues. So like syntax
+
+137
+00:12:21,580 --> 00:12:27,060
+has changed, like exception, you cannot have a comma here and there and things like that.
+
+138
+00:12:27,060 --> 00:12:32,260
+Like obvious issues that work on 2 to 3. So we fixed that. But first like really the key
+
+139
+00:12:32,260 --> 00:12:39,260
+was 6. So if you're not familiar with 6, it's essentially a model that lets you import things
+
+140
+00:12:39,260 --> 00:12:43,220
+that will work on 2 and 3 at the same time, if that makes sense. So you don't have to
+
+141
+00:12:43,460 --> 00:12:49,580
+write a lot of if clauses. If on Python 3 import that. If on Python 2 import that and do this
+
+142
+00:12:49,580 --> 00:12:55,940
+other way. So we used a ton of that. And basically our code was like we didn't want the code
+
+143
+00:12:55,940 --> 00:13:00,220
+to look a lot worse because of the migration. We still wanted to have a code base that looked
+
+144
+00:13:00,220 --> 00:13:04,660
+good and that was easier to work on once we were on Python 3. So that was super key to
+
+145
+00:13:04,660 --> 00:13:11,660
+us. And finally we wrote a bunch of like small helpers. So in nature if any of you have used
+
+146
+00:13:12,420 --> 00:13:19,420
+a future.utils function, it's similar. It's mostly a deal with strings. And these helpers
+
+147
+00:13:21,740 --> 00:13:26,780
+are like, hey, when I'm fed a string, just give me a unicode. If I'm fed a string or
+
+148
+00:13:26,780 --> 00:13:30,340
+a unicode or things like that. Just to make sure that you're dealing with the right type
+
+149
+00:13:30,340 --> 00:13:37,340
+of string. And finally we used a typing module in MyPy. There is a type annotation called
+
+150
+00:13:37,340 --> 00:13:44,340
+text that's simply unicode in Python 2 and stir on Python 3. And we really used that
+
+151
+00:13:45,100 --> 00:13:52,100
+where it made sense. And it was super important for us to have our APIs adder to a contract.
+
+152
+00:13:52,100 --> 00:13:56,100
+Hey, I will never be passed bytes. I'm dealing with a unicode string everywhere. So we used
+
+153
+00:13:56,100 --> 00:14:03,100
+that a lot. And that was super, super important. So on types in general, as Max said, we still
+
+154
+00:14:03,100 --> 00:14:10,100
+are super fan of MyPy. We use it a lot. And it's really, really, really helpful on a code
+
+155
+00:14:13,020 --> 00:14:20,020
+base that is pretty large, right? And as part of migrating, we have annotated our code quite
+
+156
+00:14:21,060 --> 00:14:27,060
+a lot. We reached like a 60% as part of the transition. I think we're like a bit above
+
+157
+00:14:27,060 --> 00:14:32,980
+now. And that was just, yeah, it was just very important for us to kind of verify the
+
+158
+00:14:32,980 --> 00:14:39,980
+compliance with the new APIs or contract to making sure that the code was actually correct.
+
+159
+00:14:40,020 --> 00:14:44,020
+And for all these issues where you don't really know what sort of type you're passing or what
+
+160
+00:14:44,020 --> 00:14:49,620
+you work across, you know, sort of run times, this was important. We even found like a bunch
+
+161
+00:14:49,620 --> 00:14:54,580
+of bugs that were just in Python 2 bugs that we've had forever. And that's the classic
+
+162
+00:14:54,580 --> 00:14:58,300
+engineer thing. You stare at your screen and you're like, how did that ever work? And
+
+163
+00:14:58,300 --> 00:15:04,300
+so we found these bugs. And that was cool. However, there's one little thing you won't
+
+164
+00:15:04,300 --> 00:15:09,940
+be surprised. It's strings. It's just not that easy. And even if you type your code
+
+165
+00:15:09,940 --> 00:15:16,220
+super, super well, ideally you would say, yeah, so stir become bytes. And now your unicode
+
+166
+00:15:16,220 --> 00:15:21,500
+is stir and everything is good. But the problem is really Python 2 is very permissive with
+
+167
+00:15:21,500 --> 00:15:26,460
+strings, like more than happy to sort of coerce them and things like that. So in order
+
+168
+00:15:26,460 --> 00:15:31,500
+to kind of explain that, I want to go in detail. In a couple of little bugs that we've had,
+
+169
+00:15:31,500 --> 00:15:37,980
+that just show you what we mean by that, right? So we've all done that. That's basically an
+
+170
+00:15:37,980 --> 00:15:43,540
+authorization header that you want to send to HTTP and you pass and you generate a token
+
+171
+00:15:43,540 --> 00:15:49,380
+from like a value that you had and you base 648 and put it in there. You run the code
+
+172
+00:15:49,380 --> 00:15:55,620
+on Python 2 and things like that's good. That's what I expect. Nice. You run the same code
+
+173
+00:15:55,620 --> 00:16:02,100
+on Python 3 and suddenly you're like, wait, that's not what I want. And you go through
+
+174
+00:16:02,100 --> 00:16:08,340
+server logs and why can't I authorize everyone? And the problem is, well, this is not a token.
+
+175
+00:16:08,340 --> 00:16:13,740
+This is a representation of a token. So what's the issue here, really? We're trying to interpolate
+
+176
+00:16:14,740 --> 00:16:20,740
+a byte string into a unique string. The essential person test is like, okay, I need to get a
+
+177
+00:16:20,740 --> 00:16:25,740
+string representation of that thing, so let me just call stir on it. In Python 2, a byte
+
+178
+00:16:25,740 --> 00:16:32,740
+string is a string. That's what it is. So it just gives that one back and that goes into
+
+179
+00:16:32,740 --> 00:16:39,740
+there. In Python 3, however, a byte string is not a string anymore. And it needs to call
+
+180
+00:16:39,740 --> 00:16:44,940
+a reaper to get a string out of that. And the representation of a byte string happened
+
+181
+00:16:44,940 --> 00:16:51,940
+to contain this like a prefix and quotes. So this was a fun one. And a second one that
+
+182
+00:16:51,940 --> 00:16:58,940
+we kind of... So this is more like of a kind of a scary bug, I would say. So when you deal
+
+183
+00:17:00,660 --> 00:17:06,060
+with like Python versions, there is the code, but there's also anything around the code
+
+184
+00:17:06,060 --> 00:17:10,460
+that you might write a disk or get from a server that might be different across the
+
+185
+00:17:10,460 --> 00:17:14,500
+versions of Python you get. So in that case, that's like a simple little thing. You've
+
+186
+00:17:14,500 --> 00:17:19,380
+got like a database with a table that basically has like a bunch of hash and size. And the
+
+187
+00:17:19,380 --> 00:17:23,900
+idea is you want to know the size of a file and you compute the hash of the file and you
+
+188
+00:17:23,900 --> 00:17:28,500
+get it. That's like simple. On Python 2, you will just... Like you compute the hash of
+
+189
+00:17:28,500 --> 00:17:34,420
+the file, you put its size and you just insert that in SQLite. And then back on Python 3,
+
+190
+00:17:34,420 --> 00:17:40,300
+you execute a query where you basically bind the hash and hope to get the size back. But
+
+191
+00:17:40,300 --> 00:17:45,580
+unfortunately, if you run that code on Python 3, you will get nothing. The reason for that
+
+192
+00:17:45,580 --> 00:17:52,580
+is... Well, as we saw earlier, in Python 2, bytes string, it's a string. So what happened
+
+193
+00:17:53,620 --> 00:18:00,620
+on the third line is basically SQLite is just trying to insert a string. So we like insert
+
+194
+00:18:00,740 --> 00:18:06,020
+a row as text. On Python 3, it says, oh, yeah, I'm giving bytes. So that's a blob. So let
+
+195
+00:18:06,020 --> 00:18:13,020
+me just bind it as a blob. So it bytes in the statement as a blob. And basically the
+
+196
+00:18:14,740 --> 00:18:18,580
+query doesn't match anything because there is no blob that match that. So this was a
+
+197
+00:18:18,580 --> 00:18:25,580
+fun one. So that's kind of like issues with like strings in general, a lot of little things.
+
+198
+00:18:26,580 --> 00:18:31,580
+So now that we can actually write code that works in Python 2 and 3, how do we make this
+
+199
+00:18:31,580 --> 00:18:38,580
+sort of lasting improvement? So making sure that code works and we avoid a bunch of regressions.
+
+200
+00:18:39,620 --> 00:18:45,660
+So what we did is we made sure that our tests always run in Python 2 and in Python 3. And
+
+201
+00:18:45,660 --> 00:18:51,940
+we made sure that we type checked on Python 2 and 3 all the time. And basically we made
+
+202
+00:18:52,020 --> 00:18:58,420
+it like, hey, if you break Python 3, you break the build entirely. And that's just breaking
+
+203
+00:18:58,420 --> 00:19:05,420
+the build and that's not acceptable. And a better yet, we like even set a git hook that
+
+204
+00:19:05,620 --> 00:19:11,780
+would just run all unit tests on Python 2 and 3 and mypy in Python 2 and 3. And you
+
+205
+00:19:11,780 --> 00:19:18,780
+couldn't push any code unless it worked on both. And yes, so basically we were like preventing
+
+206
+00:19:18,940 --> 00:19:25,260
+anyone from writing code that wouldn't work on either. So we really tried to make it easy
+
+207
+00:19:25,260 --> 00:19:31,540
+for our engineers to write code that would work on Python 2 and 3 from day one. And yeah,
+
+208
+00:19:31,540 --> 00:19:38,540
+that was quite important for us. So I'm going to give it to Max to talk about the runtime.
+
+209
+00:19:39,340 --> 00:19:43,540
+Okay, so let's go into the second part of our deep dive. So now that our code is compatible
+
+210
+00:19:43,540 --> 00:19:48,240
+with Python 2 and Python 3, how do we get it to our users? So let's take a step back
+
+211
+00:19:48,240 --> 00:19:51,560
+for a second. So if you're using Python from the client side, that means you're actually
+
+212
+00:19:51,560 --> 00:19:56,560
+shipping three things. One, you need to ship a native app that's compliant with the platform's
+
+213
+00:19:56,560 --> 00:19:59,760
+app model. Now, that's a complicated way of saying that on Windows you need to ship a
+
+214
+00:19:59,760 --> 00:20:04,760
+.exe and on Mac you need to ship a .app. Second, you need to ship a Python interpreter, so
+
+215
+00:20:04,760 --> 00:20:09,040
+something to run Python with your app. And then third, you need to compile your Python
+
+216
+00:20:09,040 --> 00:20:13,000
+source code to byte code and then you need to ship that too. So we view our app as being
+
+217
+00:20:13,160 --> 00:20:17,840
+this sort of Russian doll of all of these three things. Now, on desktop, this is usually
+
+218
+00:20:17,840 --> 00:20:24,840
+done by popular tools called freezers. Shout out to PyInstaller or Py.app. Those are the
+
+219
+00:20:24,840 --> 00:20:31,040
+ones we've used before. Now, as part of this project, though, now, so we used our freezers
+
+220
+00:20:31,040 --> 00:20:38,040
+for a decade, but we actually decided not to do that anymore. We call this project antifreeze.
+
+221
+00:20:38,160 --> 00:20:44,480
+So why would we want to do this? Well, first, in the beginning, Python 3 support was not
+
+222
+00:20:44,480 --> 00:20:47,520
+actually very widespread in the freezer tool, so PyInstaller at the time didn't support
+
+223
+00:20:47,520 --> 00:20:52,240
+it, though it does now. Shout out. Second, we actually rely quite a bit on native tool
+
+224
+00:20:52,240 --> 00:20:55,640
+chains now. So as you can imagine, Dropbox integrates pretty deeply with each operating
+
+225
+00:20:55,640 --> 00:21:01,280
+system and if you take Mac as an example, there's some features now on Mac OS that require
+
+226
+00:21:01,280 --> 00:21:05,400
+you to use Xcode to take advantage of them. But since the freezers hide all of that from
+
+227
+00:21:05,400 --> 00:21:09,280
+you, it can become difficult to tap into those features. And for some of those features,
+
+228
+00:21:09,280 --> 00:21:14,280
+they were very important to us. And finally, Python's not alone in our code base anymore.
+
+229
+00:21:14,280 --> 00:21:17,800
+So where the first version of Dropbox was just Python, we now have a whole bunch of
+
+230
+00:21:17,800 --> 00:21:24,080
+Objective-C and Rust and C and C++, and since freezers are very deeply embedded in the Python
+
+231
+00:21:24,080 --> 00:21:28,680
+environment, they're basically setup tools. And setup tools isn't quite good enough as
+
+232
+00:21:28,680 --> 00:21:34,680
+a build system to wrangle all of these things together. So to us, it was just more advantageous
+
+233
+00:21:34,680 --> 00:21:38,920
+to control our native entry points. Shout out to the Py installer. We think it's really
+
+234
+00:21:38,920 --> 00:21:44,360
+good. Dropbox kind of became too complex for that. The way we actually implemented this
+
+235
+00:21:44,360 --> 00:21:50,100
+is we just used the C API directly. So even there, actually, Python 3 made improvements
+
+236
+00:21:50,100 --> 00:21:54,560
+and provided generally better isolation from other Pythons installed in the system. Like
+
+237
+00:21:54,560 --> 00:21:59,920
+Py set path comes to mind. So back to our problem. So we want to be able to get Python
+
+238
+00:21:59,920 --> 00:22:04,200
+3 in the hands of our users, but we need to do this gradually. We can't just turn it on
+
+239
+00:22:04,200 --> 00:22:06,680
+for everybody at once because there would be a whole bunch of bugs and people would
+
+240
+00:22:06,680 --> 00:22:11,480
+be angry. So how do we do this? Well, we need to enable Python 3 for very specific groups
+
+241
+00:22:11,480 --> 00:22:15,840
+of users. And how do we do that? Well, now that we control the main function, now that
+
+242
+00:22:15,840 --> 00:22:20,560
+we control the entry points, we can actually do whatever we want. We can now ship more
+
+243
+00:22:20,560 --> 00:22:24,680
+than one Python runtime. And that's exactly what we did. We actually shipped two. So we
+
+244
+00:22:24,680 --> 00:22:29,720
+had a Python 2 runtime and Python 2 bytecode and a Python 3 runtime with Python 3 bytecode.
+
+245
+00:22:29,720 --> 00:22:33,280
+And then what we would do is we would choose at runtime which one to use. We called this
+
+246
+00:22:33,280 --> 00:22:40,120
+project Hydra because multiple snake heads. So the point here is that to get the granularity
+
+247
+00:22:40,120 --> 00:22:45,200
+that we needed and to target very specific user populations, we needed to ship a hybrid
+
+248
+00:22:45,200 --> 00:22:50,760
+application. It wasn't just it wasn't good enough to just have hybrid source. So let's
+
+249
+00:22:50,760 --> 00:22:53,480
+look at the last step. So how do we all the pieces are interplaced. How do we bring it
+
+250
+00:22:53,480 --> 00:22:59,960
+all together and actually complete the transition? So there will be bugs. That's we fully expected
+
+251
+00:23:00,720 --> 00:23:04,600
+we didn't know about and that we would discover halfway. But we needed a process to deal with
+
+252
+00:23:04,600 --> 00:23:11,520
+them. Now, we know that we can actually give selectively Python 3 to some of our users.
+
+253
+00:23:11,520 --> 00:23:15,660
+We need clear criteria to grow that population. So we can't just how do we add more people
+
+254
+00:23:15,660 --> 00:23:20,120
+to that group? And we knew that we needed one capability. And that's to recover very
+
+255
+00:23:20,120 --> 00:23:25,000
+gracefully if Python 3 breaks. So in a way, we'd want to be able to try Python 3. And
+
+256
+00:23:25,000 --> 00:23:29,940
+if something breaks, bail out. And that actually means that you need to be able to move back
+
+257
+00:23:29,940 --> 00:23:34,700
+and forth between Python 2 and Python 3 seamlessly. And that's important because of what Damian
+
+258
+00:23:34,700 --> 00:23:38,220
+said earlier, especially when you persist data locally, you need to make sure that you're
+
+259
+00:23:38,220 --> 00:23:42,380
+writing and reading consistently on both versions of the language. Otherwise, you'll corrupt
+
+260
+00:23:42,380 --> 00:23:48,900
+the state. So how do we do this? We designed a fail safe initialization process. So basically,
+
+261
+00:23:48,900 --> 00:23:54,620
+we'd always start out in Python 2. And if we would check in with our servers, and then
+
+262
+00:23:54,620 --> 00:23:59,460
+we'd say, hey, am I allowed to run Python 3? No, yes. If so, we would restart ourselves
+
+263
+00:23:59,580 --> 00:24:03,460
+in Python 3 mode. And that actually was implemented through a command line flag. So you would launch
+
+264
+00:24:03,460 --> 00:24:11,180
+literally draw box.xz slash Py3. That was the flag. And then if an app crash would happen,
+
+265
+00:24:11,180 --> 00:24:15,340
+because the normal initialization is without any arguments, you would always just restart
+
+266
+00:24:15,340 --> 00:24:20,380
+in Python 2. So the default was always Python 2. And that ensured that users never remained
+
+267
+00:24:20,380 --> 00:24:26,060
+in a broken state. We also had a logic to detect if we crashed repeatedly and then just
+
+268
+00:24:26,060 --> 00:24:32,900
+stop trying for a little while. Okay. So now that we can introduce new users, that we feel
+
+269
+00:24:32,900 --> 00:24:36,860
+relatively confident about that, how do we actually release? So we decided to do that
+
+270
+00:24:36,860 --> 00:24:41,300
+in three stages. And those roughly matched how we released draw box itself. We would
+
+271
+00:24:41,300 --> 00:24:46,660
+start with something we call internal alpha. And that's for draw box employees. So we basically
+
+272
+00:24:46,660 --> 00:24:51,260
+ate our own dog food. Then we would move on to the beta stage. And the beta stage is for
+
+273
+00:24:51,260 --> 00:24:54,980
+users who explicitly signed up for bleeding edge. And they're generally okay with a little
+
+274
+00:24:54,980 --> 00:24:59,820
+bit more instability. And finally, we'd go to stable. And stable is just the entire population
+
+275
+00:24:59,820 --> 00:25:06,780
+of all draw box users. What we'd do is we'd slowly kind of move the dial within each stage.
+
+276
+00:25:06,780 --> 00:25:11,660
+And we would never move from one stage to the next unless every last Python 3 bug or
+
+277
+00:25:11,660 --> 00:25:18,540
+crash or exception was investigated and marked as being green. This was very conservative.
+
+278
+00:25:18,540 --> 00:25:22,860
+And it actually took us nine months to fully roll this out. Because remember, every commit
+
+279
+00:25:22,860 --> 00:25:27,340
+takes six weeks to make it to a user. So let's take a look at how the rollout actually
+
+280
+00:25:27,340 --> 00:25:31,940
+worked. I don't know if you can see this well. But green represents the Python 2 population.
+
+281
+00:25:31,940 --> 00:25:36,480
+Orange represents Python 3. And then we moved in increments of 10%. The longer pauses show
+
+282
+00:25:36,480 --> 00:25:41,300
+places where we had tougher bugs that took a longer time to investigate. But we would
+
+283
+00:25:41,300 --> 00:25:46,380
+never grow the population until the bug was resolved. And we never went to 100%. Can anyone
+
+284
+00:25:46,780 --> 00:25:53,780
+me why we never went to 100% here? Want to hazard a guess? That's good. No, the actual
+
+285
+00:25:55,900 --> 00:25:59,660
+reason is we didn't want to regress Python 2. So this whole time we were paranoid and
+
+286
+00:25:59,660 --> 00:26:03,500
+we were thinking, what if this goes, it's like a catastrophe and it goes horribly wrong
+
+287
+00:26:03,500 --> 00:26:07,540
+and we want to undo all of this tomorrow? The worst thing we could do is send everyone
+
+288
+00:26:07,540 --> 00:26:11,460
+to Python 3 and then regress Python 2 because then we wouldn't be able to go back. And so
+
+289
+00:26:11,460 --> 00:26:18,100
+we always kept at least 10% at each stage running Python 2 just to be sure. And this
+
+290
+00:26:18,100 --> 00:26:21,660
+is a stable rollout. This one is a bit more abrupt. And what we did is we initially went
+
+291
+00:26:21,660 --> 00:26:26,180
+to 10%, gave it a bunch of time, looked out for all of our metrics, all of our exceptions,
+
+292
+00:26:26,180 --> 00:26:29,540
+and when no bugs appeared, we then made a release that removed Hydra and only shipped
+
+293
+00:26:29,540 --> 00:26:35,300
+Python 3. And then we were basically done. So this conservative approach basically meant
+
+294
+00:26:35,300 --> 00:26:40,340
+that the vast majority of migration bugs were actually found in the first stage. In fact,
+
+295
+00:26:40,340 --> 00:26:43,860
+there was one bug we found afterward and that was where we briefly broke proxy support,
+
+296
+00:26:43,860 --> 00:26:50,500
+but that was fixed really quickly. So dogfooding works. Now, in conclusion, so all of this
+
+297
+00:26:50,500 --> 00:26:54,620
+to say that client software can be unique here, we think we succeeded because we gave
+
+298
+00:26:54,620 --> 00:26:58,860
+ourselves complete flexibility to migrate users because we made it really easy for developers
+
+299
+00:26:58,860 --> 00:27:05,020
+to join in, we made it hard to actually regress the winnings that we'd get, and we very conservatively
+
+300
+00:27:06,020 --> 00:27:12,220
+left any stone unturned. In fact, exclusive, we just moved from Python 3.5 to 3.7 and it
+
+301
+00:27:12,220 --> 00:27:17,060
+took one engineer two weeks to do so. Many of the processes we actually came up with
+
+302
+00:27:17,060 --> 00:27:24,060
+are still in place today. And with that, we'll open it up for questions. Thank you. All right.
+
+303
+00:27:24,700 --> 00:27:31,700
+So I'm told we can do two questions. So anyone want to hazard a question for us? Hi.
+
+304
+00:27:31,700 --> 00:27:38,840
+ianr enough attention and content with trying to take your time and work with your client,
+
+305
+00:28:01,700 --> 00:28:05,300
+So, if you just got bugs and you didn't even go,
+
+306
+00:28:05,300 --> 00:28:07,740
+you could have just gone to the Pop Box
+
+307
+00:28:07,740 --> 00:28:10,660
+because they would actually use it as a site
+
+308
+00:28:10,660 --> 00:28:13,860
+and they would be off the way.
+
+309
+00:28:13,860 --> 00:28:14,900
+So, we're lucky in that way.
+
+310
+00:28:14,900 --> 00:28:17,140
+So, the question was, how do we detect bugs internally?
+
+311
+00:28:17,140 --> 00:28:18,500
+Like, did the population at DrawBox
+
+312
+00:28:18,500 --> 00:28:19,460
+actually use the software?
+
+313
+00:28:19,460 --> 00:28:20,300
+And the answer is yes.
+
+314
+00:28:20,300 --> 00:28:22,900
+So, all DrawBoxers run the desktop client.
+
+315
+00:28:22,900 --> 00:28:25,060
+That's kind of pre-installed on all of our machines.
+
+316
+00:28:25,060 --> 00:28:26,700
+And so, the population was really good.
+
+317
+00:28:26,700 --> 00:28:29,460
+And yet, we were lucky in that way
+
+318
+00:28:29,460 --> 00:28:30,780
+in that everyone used the product
+
+319
+00:28:30,780 --> 00:28:33,940
+and so we were able to get most of the bugs that way.
+
+320
+00:28:33,940 --> 00:28:35,780
+Yeah, so, do I?
+
+321
+00:28:35,780 --> 00:28:36,620
+Yeah, it's working.
+
+322
+00:28:36,620 --> 00:28:38,580
+So, the other thing is like,
+
+323
+00:28:38,580 --> 00:28:40,980
+is DrawBoxers add DrawBox,
+
+324
+00:28:40,980 --> 00:28:43,740
+but they also get the same build at home.
+
+325
+00:28:43,740 --> 00:28:47,060
+So, for example, that's how we got a lot of Windows issues.
+
+326
+00:28:47,060 --> 00:28:50,020
+So, most folks use Mac at work, things like that.
+
+327
+00:28:50,020 --> 00:28:54,420
+And we have a lot of very old Windows machines at home.
+
+328
+00:28:54,420 --> 00:28:57,340
+So, that's how we caught a bunch actually of these issues
+
+329
+00:28:57,340 --> 00:28:58,660
+is at home.
+
+330
+00:28:58,660 --> 00:29:01,420
+Okay, I think you were in line, yeah.
+
+331
+00:29:01,420 --> 00:29:04,540
+So, you said you had a lot of issues
+
+332
+00:29:04,540 --> 00:29:06,260
+when you were working in Pi 2,
+
+333
+00:29:06,260 --> 00:29:09,420
+which caused you to migrate to Pi 3.
+
+334
+00:29:09,420 --> 00:29:14,420
+Why did you, well, did you decide to move to Pi 3
+
+335
+00:29:14,860 --> 00:29:19,620
+before checking out other Pi 2 interpreters like Pi Pi?
+
+336
+00:29:19,620 --> 00:29:20,540
+Oh, that's a good question.
+
+337
+00:29:20,540 --> 00:29:22,740
+I think it was less about,
+
+338
+00:29:22,740 --> 00:29:25,260
+so, language features did play into it,
+
+339
+00:29:25,260 --> 00:29:27,900
+but it was primarily a compiler thing.
+
+340
+00:29:27,940 --> 00:29:32,060
+And so, I wasn't extremely aware of,
+
+341
+00:29:32,060 --> 00:29:34,100
+I'm not super aware of Pi Pis
+
+342
+00:29:34,100 --> 00:29:36,300
+or the other sort of compilers tool chains
+
+343
+00:29:36,300 --> 00:29:39,020
+and those requirements of other interpreters.
+
+344
+00:29:39,020 --> 00:29:40,660
+But we had used CPython for so long
+
+345
+00:29:40,660 --> 00:29:42,100
+and we relied on it so deeply.
+
+346
+00:29:42,100 --> 00:29:43,780
+We had made a bunch of changes to it
+
+347
+00:29:43,780 --> 00:29:46,060
+that it didn't seem,
+
+348
+00:29:46,060 --> 00:29:48,820
+it seemed like it would be another extra step of migration
+
+349
+00:29:48,820 --> 00:29:50,140
+to try another interpreter.
+
+350
+00:29:50,140 --> 00:29:52,420
+And we weren't sure whether we could sort of maintain
+
+351
+00:29:52,420 --> 00:29:57,340
+the same sort of compiler tool chains as before.
+
+352
+00:29:57,380 --> 00:29:58,740
+But that's a good question.
+
+353
+00:29:58,740 --> 00:30:01,300
+I don't know that we very deeply explored that option,
+
+354
+00:30:01,300 --> 00:30:02,140
+but we kind of assumed
+
+355
+00:30:02,140 --> 00:30:03,940
+that we wanted to keep using CPython.
+
+356
+00:30:05,820 --> 00:30:06,660
+All right.
+
+357
+00:30:08,660 --> 00:30:09,740
+We can catch up.
+
+358
+00:30:09,740 --> 00:30:10,940
+I'm sorry.
+
+359
+00:30:10,940 --> 00:30:12,540
+I think we have to run, but thank you.
+
+360
+00:30:12,540 --> 00:30:13,620
+All right. Thank you.
+
+361
+00:30:13,620 --> 00:30:14,700
+Thank you.
+

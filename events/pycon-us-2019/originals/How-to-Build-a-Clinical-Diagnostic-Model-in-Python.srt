@@ -1,0 +1,1164 @@
+1
+00:00:00,000 --> 00:00:07,000
+Hello and welcome to this afternoon's session which is basically actually the last one for
+
+2
+00:00:07,000 --> 00:00:08,760
+today here.
+
+3
+00:00:08,760 --> 00:00:15,000
+And now we're going to be listening from Jill Kate how to build clinical diagnostic model
+
+4
+00:00:15,000 --> 00:00:16,000
+using Python.
+
+5
+00:00:16,000 --> 00:00:21,600
+There's something in this presentation won't have Q&A but she will be available in the
+
+6
+00:00:21,600 --> 00:00:25,040
+corridor for any questions that you have after the talk.
+
+7
+00:00:25,040 --> 00:00:28,360
+Let's give a let's give a welcome applause to Jill Kate.
+
+8
+00:00:28,360 --> 00:00:29,360
+Thank you.
+
+9
+00:00:35,360 --> 00:00:36,360
+Hi everyone.
+
+10
+00:00:36,360 --> 00:00:41,360
+My name is Jill Kate and I'm a data scientist at a company called Biosymmetrics in Toronto,
+
+11
+00:00:41,360 --> 00:00:42,360
+Canada.
+
+12
+00:00:42,360 --> 00:00:47,360
+This is my first time in Cleveland and my first PyCon so I'm really excited to be here.
+
+13
+00:00:47,360 --> 00:00:52,360
+Today I'll be talking about how to build a clinical diagnostic model in Python.
+
+14
+00:00:52,360 --> 00:00:57,360
+Before we get into the details though, what is a clinical diagnosis?
+
+15
+00:00:57,360 --> 00:01:02,360
+The formal definition of a diagnosis is the process of determining the disease or conditions
+
+16
+00:01:02,360 --> 00:01:06,360
+that under underlie a person's symptoms or signs.
+
+17
+00:01:06,360 --> 00:01:12,360
+So it requires expert knowledge of the physician and years of medical training in order for
+
+18
+00:01:12,360 --> 00:01:17,360
+them to assess all of the patient data and make an informed decision on what the patient
+
+19
+00:01:17,360 --> 00:01:20,360
+has before proceeding to treatment.
+
+20
+00:01:20,360 --> 00:01:25,360
+But what if we could replicate this complex decision process using a machine learning
+
+21
+00:01:25,360 --> 00:01:26,360
+model?
+
+22
+00:01:26,360 --> 00:01:32,360
+Recent efforts in machine learning have focused on building tools like these to triage low
+
+23
+00:01:32,360 --> 00:01:38,360
+risk versus high risk patients, identify early onset disease, and also reduce the risk of
+
+24
+00:01:38,360 --> 00:01:42,360
+misdiagnosis with the end goal of improving patient safety.
+
+25
+00:01:42,360 --> 00:01:48,360
+So diagnostic models can save time and money allowing doctors to see and treat more patients
+
+26
+00:01:48,360 --> 00:01:51,360
+on the job.
+
+27
+00:01:51,360 --> 00:01:56,360
+In this talk we're going to be building our own clinical diagnostic model and we'll use
+
+28
+00:01:56,360 --> 00:02:01,360
+sepsis as our case study because it's an extremely expensive and deadly condition that can actually
+
+29
+00:02:01,360 --> 00:02:08,360
+be treated with a good prognosis if identified early on.
+
+30
+00:02:08,360 --> 00:02:10,360
+So what is sepsis?
+
+31
+00:02:10,360 --> 00:02:15,360
+Sepsis is a life threatening condition caused by the body's response to an infection.
+
+32
+00:02:15,360 --> 00:02:22,360
+It's typically caused by an inflammatory immune response and can be triggered by pneumonia,
+
+33
+00:02:22,360 --> 00:02:27,360
+the flu, or even an infected pimple.
+
+34
+00:02:27,360 --> 00:02:32,360
+Sepsis is a leading cause of death in the intensive care unit and it's responsible for
+
+35
+00:02:32,360 --> 00:02:34,360
+one in three hospital deaths.
+
+36
+00:02:34,360 --> 00:02:35,360
+It's very expensive.
+
+37
+00:02:35,360 --> 00:02:42,360
+It costs around $20.3 billion each year and it's also very time sensitive.
+
+38
+00:02:42,360 --> 00:02:48,360
+So each hour without treatment increases a patient's risk of death by 4 to 8 percent.
+
+39
+00:02:48,360 --> 00:02:54,360
+So clearly detecting sepsis early on can save lives.
+
+40
+00:02:54,360 --> 00:02:59,360
+That being said, early stages of sepsis can be hard to detect and while there are some
+
+41
+00:02:59,360 --> 00:03:04,360
+risk factors for sepsis, it's very difficult for a physician to predict who will get sepsis
+
+42
+00:03:04,360 --> 00:03:08,360
+and who will not upon admission.
+
+43
+00:03:08,360 --> 00:03:12,360
+In this case study, we propose a model that predicts a patient's likelihood of getting
+
+44
+00:03:12,360 --> 00:03:16,360
+sepsis during their stay in the intensive care unit.
+
+45
+00:03:16,360 --> 00:03:21,360
+If we can reliably identify which patients are at high risk versus low risk, the hope
+
+46
+00:03:21,360 --> 00:03:30,360
+is that these clinicians can make more informed decisions in their practice.
+
+47
+00:03:30,360 --> 00:03:35,360
+Here's a big picture view of our pipeline, which can be broken down into three parts.
+
+48
+00:03:35,360 --> 00:03:40,360
+So we have data preparation, data modeling, and post-processing of results.
+
+49
+00:03:40,360 --> 00:03:45,360
+A big part of this talk though will be focused on data pre-processing since medical data
+
+50
+00:03:45,360 --> 00:03:48,360
+is very messy.
+
+51
+00:03:48,360 --> 00:03:54,360
+As some of you probably already know, healthcare data is known for being fragmented and decentralized.
+
+52
+00:03:54,360 --> 00:03:58,360
+There are hundreds of electronic medical record systems out there.
+
+53
+00:03:58,360 --> 00:04:04,360
+And while all of these systems store the same type of data, their interfaces and data schemas
+
+54
+00:04:04,360 --> 00:04:09,360
+can be extremely difficult, or extremely different.
+
+55
+00:04:09,360 --> 00:04:14,360
+To make things even more complicated, electronic medical records contain disparate data types,
+
+56
+00:04:14,360 --> 00:04:21,360
+including unstructured text from clinical notes, 2D and 3D medical images, time series signals
+
+57
+00:04:21,360 --> 00:04:28,360
+such as EEG and ECG, as well as genomic data.
+
+58
+00:04:28,360 --> 00:04:33,360
+These discrepancies across EMRs need to be taken care of, and they can be taken care
+
+59
+00:04:33,360 --> 00:04:38,360
+of through a process called data harmonization.
+
+60
+00:04:38,360 --> 00:04:46,360
+So data harmonization involves mapping data from various EMR sources into a common data format.
+
+61
+00:04:46,360 --> 00:04:53,360
+There are a couple of different data models out there, but a very popular one is the OMOP
+
+62
+00:04:53,360 --> 00:04:57,360
+Common Data Model, which was developed by an international group of researchers called
+
+63
+00:04:57,360 --> 00:05:00,360
+OHDSI, or Odyssey.
+
+64
+00:05:00,360 --> 00:05:05,360
+The OMOP Data Model has a predefined schema with a set of standardized data tables,
+
+65
+00:05:05,360 --> 00:05:13,360
+and is currently being used to harmonize all data across UC hospitals in California.
+
+66
+00:05:13,360 --> 00:05:19,360
+This whole process that precedes the pipeline is called ETL, or Extract-Transform Load,
+
+67
+00:05:19,360 --> 00:05:25,360
+because we extract the data from its source, we transform it into a common data format,
+
+68
+00:05:25,360 --> 00:05:31,360
+and then we load it into a clean centralized database.
+
+69
+00:05:31,360 --> 00:05:37,360
+All right, now that we have all of our data in one place, we can start cleaning our data.
+
+70
+00:05:37,360 --> 00:05:41,360
+I'm going to be covering two types of data cleaning in this walkthrough.
+
+71
+00:05:41,360 --> 00:05:47,360
+So the first one is handling missing values, and the second one is standardizing inconsistencies
+
+72
+00:05:47,360 --> 00:05:50,360
+in medical terms.
+
+73
+00:05:50,360 --> 00:05:54,360
+To assess the amount of missing values in our data set, we can use a package called
+
+74
+00:05:54,360 --> 00:05:58,360
+Missing No, which gives you a big picture view of which features are sparse versus
+
+75
+00:05:58,360 --> 00:06:01,360
+which features are dense.
+
+76
+00:06:01,360 --> 00:06:06,360
+So as you can see in this figure, the outer columns are very dense, while the inner columns
+
+77
+00:06:06,360 --> 00:06:11,360
+are very sparse, which means that there are a lot of missing values.
+
+78
+00:06:11,360 --> 00:06:14,360
+There are many different ways for us to handle missing values.
+
+79
+00:06:14,360 --> 00:06:20,360
+We can do case deletion or some form of imputation.
+
+80
+00:06:20,360 --> 00:06:25,360
+But in order for us to choose the right imputation method, we first need to identify the data's
+
+81
+00:06:25,360 --> 00:06:30,360
+mechanism of missingness.
+
+82
+00:06:30,360 --> 00:06:33,360
+So there are three possible mechanisms of missingness.
+
+83
+00:06:33,360 --> 00:06:37,360
+The first mechanism is missing completely at random.
+
+84
+00:06:37,360 --> 00:06:40,360
+In this situation, there's no reason for the data to be missing.
+
+85
+00:06:40,360 --> 00:06:42,360
+It's just totally random.
+
+86
+00:06:42,360 --> 00:06:48,360
+An example of this is when a nurse forgets to record a patient's blood pressure.
+
+87
+00:06:48,360 --> 00:06:51,360
+The second mechanism is called missing at random.
+
+88
+00:06:51,360 --> 00:06:56,360
+There might be differences between the missing and observed blood pressures, but these can
+
+89
+00:06:56,360 --> 00:07:03,360
+be explained through other variables like age, gender, or a patient's history of cardiovascular disease.
+
+90
+00:07:03,360 --> 00:07:08,360
+So in this example, younger patients with no risk of cardiovascular disease tend to
+
+91
+00:07:08,360 --> 00:07:13,360
+have blood pressure missing and will tend to have lower blood pressure than older patients
+
+92
+00:07:13,360 --> 00:07:15,360
+with cardiovascular disease.
+
+93
+00:07:15,360 --> 00:07:20,360
+So the data here is missing and it's conditional on age and whether or not the patient has
+
+94
+00:07:20,360 --> 00:07:23,360
+cardiovascular disease.
+
+95
+00:07:23,360 --> 00:07:29,360
+The third mechanism is called missing not at random, which is when there are differences
+
+96
+00:07:29,360 --> 00:07:34,360
+between the missing and observed blood pressures, even when all of the other variables are
+
+97
+00:07:34,360 --> 00:07:39,360
+accounted for in the patient population.
+
+98
+00:07:39,360 --> 00:07:44,360
+One way to deal with data that are missing completely at random is to just drop all
+
+99
+00:07:44,360 --> 00:07:46,360
+observations with a missing value.
+
+100
+00:07:46,360 --> 00:07:51,360
+So you can do this using Panda's drop NA method.
+
+101
+00:07:51,360 --> 00:07:58,360
+If you're dealing with time series data, you can use the approach of last value carried forward,
+
+102
+00:07:58,360 --> 00:08:02,360
+where essentially you're backfilling missing values with the last observed values.
+
+103
+00:08:02,360 --> 00:08:09,360
+Panda's also has a method for this and it's called fill NA.
+
+104
+00:08:09,360 --> 00:08:13,360
+There are many more robust methods for handling missing values.
+
+105
+00:08:13,360 --> 00:08:18,360
+You can use a package called fancy impute to perform standard imputation methods like
+
+106
+00:08:18,360 --> 00:08:21,360
+k nearest neighbors and matrix factorization.
+
+107
+00:08:21,360 --> 00:08:27,360
+Stats models also has an imputation method, which lets you perform techniques like Bayesian
+
+108
+00:08:27,360 --> 00:08:33,360
+multiple imputation and MICE, which stands for multiple imputation with chained equations.
+
+109
+00:08:33,360 --> 00:08:40,360
+And these are much more robust than the previous examples I showed.
+
+110
+00:08:40,360 --> 00:08:47,360
+A very important part of cleaning patient data is standardizing all of the medical terms.
+
+111
+00:08:47,360 --> 00:08:53,360
+Each clinician has their own naming convention when writing prescription drugs and diagnoses.
+
+112
+00:08:53,360 --> 00:08:57,360
+For example, when doctors write some doctors write Tylenol while other doctors write a
+
+113
+00:08:57,360 --> 00:08:58,360
+scene a medifin.
+
+114
+00:08:58,360 --> 00:09:01,360
+But these are essentially the same drug.
+
+115
+00:09:01,360 --> 00:09:06,360
+Intravenous normal saline is commonly given to patients in the ICU.
+
+116
+00:09:06,360 --> 00:09:12,360
+But some notes say NS, which stands for normal saline, while others say 0.9 percent sodium
+
+117
+00:09:12,360 --> 00:09:15,360
+chloride, which is essentially the same thing.
+
+118
+00:09:15,360 --> 00:09:19,360
+Another example is morphine, which we can see in this table here.
+
+119
+00:09:19,360 --> 00:09:22,360
+There are all these different variations of describing morphine.
+
+120
+00:09:22,360 --> 00:09:27,360
+So you can say morphine sulfate, morphine S, morphine all caps.
+
+121
+00:09:27,360 --> 00:09:34,360
+And as part of our pre-processing, we need to standardize all of these drug names.
+
+122
+00:09:34,360 --> 00:09:42,360
+Two common drug naming standards are RXNorm and the National Drug Code, or NDC.
+
+123
+00:09:42,360 --> 00:09:47,360
+So sticking with the morphine example, we can map all variations of morphine to a single
+
+124
+00:09:47,360 --> 00:09:50,360
+drug code, as shown here.
+
+125
+00:09:50,360 --> 00:09:57,360
+You can use open source APIs like OpenFDA and RXNAV to map drug names to their appropriate
+
+126
+00:09:57,360 --> 00:10:01,360
+codes.
+
+127
+00:10:01,360 --> 00:10:06,360
+Inconsistent terms, though, expand beyond drug names and can be found in clinical notes
+
+128
+00:10:06,360 --> 00:10:09,360
+describing a disease or symptom.
+
+129
+00:10:09,360 --> 00:10:14,360
+Here are some examples of medical synonyms that can be used interchangeably.
+
+130
+00:10:14,360 --> 00:10:19,360
+For example, myocardial infarction is another term for heart attack.
+
+131
+00:10:19,360 --> 00:10:22,360
+Bruise can also be described as contusion.
+
+132
+00:10:22,360 --> 00:10:29,360
+And Lou Gehrig's disease is commonly referred to as amyotrophic lateral sclerosis, or ALS.
+
+133
+00:10:29,360 --> 00:10:35,360
+We can standardize these terms into common unique identifiers using the Unified Medical
+
+134
+00:10:35,360 --> 00:10:38,360
+Language System, or UMLS.
+
+135
+00:10:38,360 --> 00:10:43,360
+This is a metathesaurus framework supported by the US National Library of Medicine, and
+
+136
+00:10:43,360 --> 00:10:53,360
+it's extremely powerful for doing any type of NLP project involving medical data.
+
+137
+00:10:53,360 --> 00:10:58,360
+Once we have our clean data, the next step is to engineer our features.
+
+138
+00:10:58,360 --> 00:11:05,360
+We can use classification systems like MeSH or ATC to extract properties from drug names.
+
+139
+00:11:05,360 --> 00:11:11,360
+So, medical subject headings, or MeSH, is useful for categorizing drugs by property.
+
+140
+00:11:11,360 --> 00:11:17,360
+You can think of them as hashtags or descriptors that describe a medical term.
+
+141
+00:11:17,360 --> 00:11:24,360
+In this example, morphine has three MeSH terms, so analgesic, opioid, narcotics, and it gives
+
+142
+00:11:24,360 --> 00:11:31,360
+us a general sense of what morphine is used for in a medical context.
+
+143
+00:11:31,360 --> 00:11:35,360
+For our sepsis model, we need to know if a patient was given antibiotics, which we'll
+
+144
+00:11:35,360 --> 00:11:37,360
+get into more details later on.
+
+145
+00:11:37,360 --> 00:11:41,360
+So, identifying all prescriptions with the MeSH term antibacterial agents is going to
+
+146
+00:11:41,360 --> 00:11:45,360
+be very important for us.
+
+147
+00:11:45,360 --> 00:11:52,360
+ATC is another drug classification system that categorizes drugs by anatomical, therapeutic,
+
+148
+00:11:52,360 --> 00:11:53,360
+and chemical use.
+
+149
+00:11:53,360 --> 00:11:59,360
+So, here's an example of morphine's ATC code, which can be parsed into four sections, and
+
+150
+00:11:59,360 --> 00:12:07,360
+each section represents a different property of the drug in increasing detail.
+
+151
+00:12:07,360 --> 00:12:08,360
+All right.
+
+152
+00:12:08,360 --> 00:12:17,360
+So, to standardize diagnoses, we can use the International Statistical Classification of
+
+153
+00:12:18,360 --> 00:12:22,360
+and health-related problems, also known as ICD.
+
+154
+00:12:22,360 --> 00:12:27,360
+At the end of a patient's stay, the physician will typically report the patient's primary
+
+155
+00:12:27,360 --> 00:12:32,360
+diagnosis, as well as relevant comorbidities in the form of ICD codes.
+
+156
+00:12:32,360 --> 00:12:40,360
+These also get used for billing purposes, so the more complex the ICD code, the higher
+
+157
+00:12:40,360 --> 00:12:42,360
+the bill.
+
+158
+00:12:42,360 --> 00:12:45,360
+Here's an example of some ICD codes.
+
+159
+00:12:45,360 --> 00:12:50,360
+It's a real-life example of a patient with severe sepsis.
+
+160
+00:12:50,360 --> 00:12:55,360
+So, at the top is their primary diagnosis of severe sepsis, but we can also see a long
+
+161
+00:12:55,360 --> 00:13:05,360
+list of their comorbidities, for example, acute kidney failure and urinary tract infection.
+
+162
+00:13:05,360 --> 00:13:09,360
+Ideally, we'd like to include these comorbidities as features in our model.
+
+163
+00:13:09,360 --> 00:13:13,360
+However, it doesn't make sense for us to do this with raw ICD codes, because there
+
+164
+00:13:13,360 --> 00:13:15,360
+are thousands of them.
+
+165
+00:13:15,360 --> 00:13:20,360
+So we need to collapse our ICD codes into more descriptive comorbidity groups.
+
+166
+00:13:20,360 --> 00:13:26,360
+And we can use either the Charlson or Alexhouser Comorbidity Index, which buckets an ICD code
+
+167
+00:13:26,360 --> 00:13:29,360
+into its appropriate category.
+
+168
+00:13:29,360 --> 00:13:35,360
+For example, all of these ICD codes fall under liver disease, which can be represented as
+
+169
+00:13:35,360 --> 00:13:41,360
+a feature in our model.
+
+170
+00:13:41,360 --> 00:13:45,360
+So let's assume we have x-ray images in our patient data set.
+
+171
+00:13:45,360 --> 00:13:50,360
+We can do some processing of these images and generate new features that identify whether
+
+172
+00:13:50,360 --> 00:13:53,360
+or not an x-ray has a lung opacity.
+
+173
+00:13:53,360 --> 00:13:57,360
+Having a lung opacity is a sign that a patient might have an infection.
+
+174
+00:13:57,360 --> 00:14:03,360
+And if we want to create more granular features, we can also identify or predict what the
+
+175
+00:14:03,360 --> 00:14:10,360
+infection size is, assuming that the size could be correlated to the severity of infection.
+
+176
+00:14:10,360 --> 00:14:16,360
+Note that generating these features from images is an entirely separate model in itself that
+
+177
+00:14:16,360 --> 00:14:25,360
+requires its own pre-processing, modeling, hyperparameter tuning, and evaluation.
+
+178
+00:14:25,360 --> 00:14:30,360
+Another very important data type in the electronic medical record is clinical notes.
+
+179
+00:14:30,360 --> 00:14:35,360
+So these notes are dictated by the treating physician and contain very helpful information
+
+180
+00:14:35,360 --> 00:14:38,360
+like symptoms and past medical history.
+
+181
+00:14:38,360 --> 00:14:43,360
+A single hospital admission can have dozens of different notes from the admission note
+
+182
+00:14:43,360 --> 00:14:48,360
+to a consult to a discharge summary.
+
+183
+00:14:48,360 --> 00:14:53,360
+The biggest challenge with clinical notes is converting the unstructured data to structured data.
+
+184
+00:14:53,360 --> 00:14:58,360
+So let's say we want to include symptoms as a feature, and we need to extract them from
+
+185
+00:14:58,360 --> 00:14:59,360
+our admission note.
+
+186
+00:14:59,360 --> 00:15:06,360
+We can use a named entity recognition model to do this, which classifies medical terms
+
+187
+00:15:06,360 --> 00:15:16,360
+in unstructured text and to pre-define categories like symptom, anatomy, medication, so on and so forth.
+
+188
+00:15:16,360 --> 00:15:24,360
+This particular example, as you can see on the slide here, comes from the AWS Comprehend Medical API,
+
+189
+00:15:24,360 --> 00:15:31,360
+but I also recommend checking out open source packages like spaCy.
+
+190
+00:15:31,360 --> 00:15:38,360
+We need to be very mindful of ambiguous medical terms when we run our named entity recognition model
+
+191
+00:15:38,360 --> 00:15:42,360
+because there are some terms that have multiple meanings.
+
+192
+00:15:42,360 --> 00:15:49,360
+For example, Lou Gehrig's disease, which is commonly known as ALS, could be interpreted as a patient name.
+
+193
+00:15:49,360 --> 00:15:56,360
+Dermatome could mean an area of the skin, or it could also be a surgical instrument for skin grafting.
+
+194
+00:15:56,360 --> 00:15:59,360
+And pelvis, believe it or not, has two meanings.
+
+195
+00:15:59,360 --> 00:16:04,360
+It can mean pelvis as in hip bone or renal pelvis, which is a part of the kidney.
+
+196
+00:16:04,360 --> 00:16:10,360
+When we train our model, we need to account for the many medical abbreviations and ambiguous terms
+
+197
+00:16:10,360 --> 00:16:16,360
+that could be misinterpreted for something else.
+
+198
+00:16:16,360 --> 00:16:20,360
+So now that we have a clean data set and we've constructed some features,
+
+199
+00:16:20,360 --> 00:16:23,360
+we're very close to being able to start training our model.
+
+200
+00:16:23,360 --> 00:16:27,360
+However, there's one crucial step we need to do first.
+
+201
+00:16:27,360 --> 00:16:30,360
+We need to define our target variable.
+
+202
+00:16:30,360 --> 00:16:32,360
+There are three approaches that we can take.
+
+203
+00:16:32,360 --> 00:16:41,360
+So the first one is to look at the explicit diagnosis of the physician from the ICD codes that they list at the end of the stay.
+
+204
+00:16:41,360 --> 00:16:48,360
+The issue is that we're trusting that diagnoses were accurately reported, which might not always be the case.
+
+205
+00:16:48,360 --> 00:16:52,360
+There's a phenomenon called up coding and down coding in health care,
+
+206
+00:16:52,360 --> 00:17:02,360
+where ICD codes are intentionally left out from the report for billing purposes.
+
+207
+00:17:02,360 --> 00:17:10,360
+So the second approach is to look at clinical notes and try to interpret whether the clinician said that the patient had sepsis.
+
+208
+00:17:10,360 --> 00:17:16,360
+We can't rely on naive parsing, though, because even though a note may say sepsis,
+
+209
+00:17:16,360 --> 00:17:22,360
+it's possible that it was described in their past medical history or perhaps it was explored but then ruled out.
+
+210
+00:17:22,360 --> 00:17:29,360
+So we'll need to apply assertion classification to these notes to identify the context surrounding sepsis.
+
+211
+00:17:29,360 --> 00:17:37,360
+So was it a positive assertion? Was it a negative assertion? Or was it speculated without a concrete assertion?
+
+212
+00:17:37,360 --> 00:17:46,360
+Lastly, the third approach is to use severity scores, which are calculated from a patient's vital signs and laboratory results.
+
+213
+00:17:46,360 --> 00:17:55,360
+So these scores include the sequential organ failure assessment, or SOFA, the systemic inflammatory response syndrome, or SERS,
+
+214
+00:17:56,360 --> 00:18:00,360
+and the logistic organ dysfunction system, also known as LODs.
+
+215
+00:18:00,360 --> 00:18:05,360
+For our particular sepsis model, we're going to be using the SOFA score.
+
+216
+00:18:05,360 --> 00:18:15,360
+SOFA looks at vitals, blood test results, and urine test results to calculate the degree of dysfunction of six major organs in the body.
+
+217
+00:18:15,360 --> 00:18:24,360
+A patient's SOFA score can range from 0 to 24, with 24 representing maximum organ dysfunction.
+
+218
+00:18:25,360 --> 00:18:33,360
+Using this score, we define sepsis as an acute change in SOFA by two points or more upon suspicion of infection.
+
+219
+00:18:33,360 --> 00:18:39,360
+And here we say that suspicion of infection is assumed when two things happen.
+
+220
+00:18:39,360 --> 00:18:47,360
+So first, a lab culture is ordered, and second, antibiotics are prescribed within a specified window.
+
+221
+00:18:47,360 --> 00:18:57,360
+Our recent studies showed that regardless of a patient's baseline SOFA score, it's really their delta in SOFA score over time that's the strongest indicator of sepsis.
+
+222
+00:19:02,360 --> 00:19:07,360
+So we're now ready to select our algorithm for our clinical diagnostic model.
+
+223
+00:19:07,360 --> 00:19:09,360
+There are two approaches that we can take with our model.
+
+224
+00:19:09,360 --> 00:19:17,360
+So the first one is a global binary classification, where we're basically asking, did patients get sepsis during their hospital stay?
+
+225
+00:19:17,360 --> 00:19:26,360
+Or we can do a more detailed time series approach, where we ask, at what point during their hospital stay did the patient get sepsis?
+
+226
+00:19:26,360 --> 00:19:35,360
+So for the first approach, we can use a classic binary classification algorithm, like random forest or logistic regression.
+
+227
+00:19:35,360 --> 00:19:46,360
+For the time series approach, we might want to consider using a fixed or random effects model or a multivariate LSTM or Bayesian networks.
+
+228
+00:19:49,360 --> 00:19:55,360
+While there are some algorithms that are known to perform well, it's really important to keep in mind the no free lunch theorem.
+
+229
+00:19:55,360 --> 00:20:02,360
+This theorem basically states that there is no best model that performs well in everything.
+
+230
+00:20:02,360 --> 00:20:05,360
+It really depends on the type of data that we have.
+
+231
+00:20:05,360 --> 00:20:11,360
+So while there is some intuition behind choosing which model to use for our particular data set,
+
+232
+00:20:11,360 --> 00:20:17,360
+we should definitely test out several models and choose the one that gives us the best performance.
+
+233
+00:20:18,360 --> 00:20:23,360
+Speaking of performance, we also need to choose an evaluation metric.
+
+234
+00:20:23,360 --> 00:20:26,360
+There are a variety of metrics that we can choose from.
+
+235
+00:20:26,360 --> 00:20:30,360
+So the ones listed here are options for binary classification.
+
+236
+00:20:30,360 --> 00:20:34,360
+The metric that we choose, though, depends on what we want to optimize.
+
+237
+00:20:34,360 --> 00:20:40,360
+So for example, if we want to optimize the number of patients who are incorrectly classified as having sepsis,
+
+238
+00:20:40,360 --> 00:20:43,360
+this means we're trying to minimize our false positive rate.
+
+239
+00:20:43,360 --> 00:20:56,360
+And if you can see in the precision equation, we can see that having a lower false positive rate can result in a higher precision score.
+
+240
+00:20:56,360 --> 00:20:59,360
+So precision would be a good metric to use.
+
+241
+00:21:00,360 --> 00:21:03,360
+If we wanted to minimize the number of undetected patients with sepsis,
+
+242
+00:21:03,360 --> 00:21:08,360
+we could choose recall, which is good at optimizing false negative rates.
+
+243
+00:21:12,360 --> 00:21:13,360
+All right.
+
+244
+00:21:13,360 --> 00:21:19,360
+When we're building models with patient data, it's really important to assess the diversity of our data set,
+
+245
+00:21:19,360 --> 00:21:24,360
+which is usually done in the exploratory analysis phase of our project.
+
+246
+00:21:24,360 --> 00:21:30,360
+So let's say that our data set represents a patient population that was 70 percent white male.
+
+247
+00:21:30,360 --> 00:21:35,360
+Our model will be very good at predicting sepsis in white men,
+
+248
+00:21:35,360 --> 00:21:43,360
+but it might not actually be good on women or other ethnicities, assuming that their physiologies could be different.
+
+249
+00:21:45,360 --> 00:21:49,360
+Demographic bias is especially prevalent in clinical trials.
+
+250
+00:21:49,360 --> 00:21:54,360
+So in 2004, there was a study that analyzed the patient recruitment in over 100 trials,
+
+251
+00:21:54,360 --> 00:21:59,360
+and they found that on average, 25 percent of clinical subjects were women.
+
+252
+00:21:59,360 --> 00:22:04,360
+So under-representation of women in these drug trials is very dangerous,
+
+253
+00:22:04,360 --> 00:22:07,360
+because while a drug may be considered safe for men,
+
+254
+00:22:07,360 --> 00:22:13,360
+we don't actually know how it will behave in women and what the side effects might be.
+
+255
+00:22:15,360 --> 00:22:18,360
+We also need to be cautious of what our ground truth is.
+
+256
+00:22:18,360 --> 00:22:21,360
+So our model is only as good as the data that we feed it.
+
+257
+00:22:21,360 --> 00:22:24,360
+If we're working with annotated medical images,
+
+258
+00:22:24,360 --> 00:22:29,360
+we're relying on the opinion of the radiologist to know whether that patient has pneumonia.
+
+259
+00:22:29,360 --> 00:22:32,360
+But different radiologists have different opinions.
+
+260
+00:22:32,360 --> 00:22:38,360
+So while we may have a pretty good pneumonia prediction model, or we think it's good,
+
+261
+00:22:38,360 --> 00:22:42,360
+it could be complete garbage if our labels were incorrectly defined.
+
+262
+00:22:42,360 --> 00:22:47,360
+A scary phenomenon of machine learning is something called adversarial attacks.
+
+263
+00:22:47,360 --> 00:22:52,360
+So a couple of years ago, OpenAI showed this example of a neural network
+
+264
+00:22:52,360 --> 00:22:56,360
+that could correctly identify a panda and an image.
+
+265
+00:22:56,360 --> 00:23:02,360
+But if you overlay an adversarial input, which looks just like noise,
+
+266
+00:23:02,360 --> 00:23:08,360
+it could fool the machine into thinking that the panda was actually a gibbon with 99 percent confidence.
+
+267
+00:23:08,360 --> 00:23:12,360
+So the adversarial input may look like an array of random pixels,
+
+268
+00:23:12,360 --> 00:23:18,360
+but it's actually been optimized to find small manipulations that can fool the model.
+
+269
+00:23:20,360 --> 00:23:23,360
+Adversarial attacks can also happen in medicine,
+
+270
+00:23:23,360 --> 00:23:29,360
+which is a particularly vulnerable industry with competing interests in healthcare
+
+271
+00:23:29,360 --> 00:23:31,360
+and billions of dollars at stake.
+
+272
+00:23:31,360 --> 00:23:35,360
+For example, a group of researchers at Harvard and Harvard University
+
+273
+00:23:35,360 --> 00:23:40,360
+showed that making subtle transformations to an image of a mole
+
+274
+00:23:40,360 --> 00:23:44,360
+changed the classification label from being benign to malignant.
+
+275
+00:23:44,360 --> 00:23:49,360
+So to mitigate the risk of these attacks, we should make sure that our data is secure.
+
+276
+00:23:49,360 --> 00:23:56,360
+And also, we can periodically retrain and reevaluate our model on a validation set
+
+277
+00:23:56,360 --> 00:24:00,360
+to see if there are suspicious changes in the performance scores.
+
+278
+00:24:00,360 --> 00:24:03,360
+Lastly, to build a clinical diagnostic model,
+
+279
+00:24:03,360 --> 00:24:06,360
+we need buy-in and collaboration from clinicians.
+
+280
+00:24:06,360 --> 00:24:10,360
+When artificial intelligence became a hot topic,
+
+281
+00:24:10,360 --> 00:24:13,360
+there was a lot of talk about doctors versus robots
+
+282
+00:24:13,360 --> 00:24:16,360
+and clinicians someday being out of a job.
+
+283
+00:24:16,360 --> 00:24:24,360
+But it's important to note that clinicians are the end users of our model,
+
+284
+00:24:24,360 --> 00:24:27,360
+and it's the doctors who are the end users of our model.
+
+285
+00:24:27,360 --> 00:24:31,360
+So getting doctors involved in the process and getting their buy-in and validation
+
+286
+00:24:31,360 --> 00:24:35,360
+are so crucial for implementing our models in a real-life clinical setting.
+
+287
+00:24:38,360 --> 00:24:41,360
+So that's the end of my talk. Thank you everyone for coming.
+
+288
+00:24:41,360 --> 00:24:46,360
+If you have any questions about how to pre-process medical data
+
+289
+00:24:46,360 --> 00:24:49,360
+or how to build your own clinical diagnostic models,
+
+290
+00:24:49,360 --> 00:24:52,360
+feel free to send them to us at the end of the session.
+
+291
+00:24:52,360 --> 00:24:53,360
+Thank you.
+

@@ -1,0 +1,1488 @@
+1
+00:00:00,000 --> 00:00:08,880
+Hello, everybody. Up next is understanding Python debugging internals with Liran Hamovitch.
+
+2
+00:00:08,880 --> 00:00:11,880
+Thank you.
+
+3
+00:00:11,880 --> 00:00:24,200
+Hi, everyone. So my name is Liran, and I'll be talking today about Python debugging internals,
+
+4
+00:00:24,200 --> 00:00:29,560
+how does it work behind the scenes, and what can we do about it. This is my first time
+
+5
+00:00:29,560 --> 00:00:35,280
+at PyCon, and my first time giving this talk, so I'd appreciate any feedback you have on
+
+6
+00:00:35,280 --> 00:00:50,160
+it. So sorry about that. So start by introducing myself. My name is Liran Hamovitch, and I'm
+
+7
+00:00:50,160 --> 00:00:58,240
+a co-founder at CT8 Rookout. Before founding Rookout, I spent about a decade doing cybersecurity.
+
+8
+00:00:58,240 --> 00:01:02,840
+Now in the cybersecurity space, much of what we do is reverse engineer software, trying
+
+9
+00:01:02,840 --> 00:01:08,760
+to figure out how it works, how can we stretch it to the limit and beyond, and how can we
+
+10
+00:01:08,760 --> 00:01:15,720
+change its behavior of what it was originally meant to do. So Rookout is a platform for
+
+11
+00:01:15,720 --> 00:01:22,720
+live data collection and delivery. It allows you to debug applications anywhere. And my
+
+12
+00:01:22,720 --> 00:01:28,520
+background in cybersecurity, much of our employees, helps us a great deal here. Rookout
+
+13
+00:01:28,520 --> 00:01:33,520
+allows you to attach to a process running anywhere in the world, not only on your machine,
+
+14
+00:01:33,520 --> 00:01:38,240
+it can run in the cloud, it can run in Kubernetes, it can run in serverless, and we allow you
+
+15
+00:01:38,240 --> 00:01:44,960
+to set non-breaking breakpoints in those applications and get variable state, get stack traces,
+
+16
+00:01:44,960 --> 00:01:49,720
+get anything you want from the application without writing more code, restarting the
+
+17
+00:01:50,480 --> 00:01:56,880
+application or redeploying it. Now, as I was writing the Rookout SDK for Python, I learned
+
+18
+00:01:56,880 --> 00:02:03,880
+quite a lot about how Python debuggers work behind the scene and how does it actually
+
+19
+00:02:05,160 --> 00:02:11,520
+function. So now I want to share with you some of what I've learned. So what's your
+
+20
+00:02:11,520 --> 00:02:18,520
+favorite debugger? Actually, GDB does have support for Python debugging. So I'm going
+
+21
+00:02:19,720 --> 00:02:26,720
+to show you a few. Yeah, that's two different debuggers. You have GDB support for Python
+
+22
+00:02:28,160 --> 00:02:35,160
+and you have the PDB, which PDB is a debugger built into the Python standard library. I've
+
+23
+00:02:36,080 --> 00:02:41,840
+heard outside, I didn't know it, that Python includes now two new debuggers, the breakpoint,
+
+24
+00:02:41,840 --> 00:02:46,480
+which was released in one of the latest versions, and it's also people have been talking a lot
+
+25
+00:02:46,480 --> 00:02:52,360
+about IPDB, which I haven't heard about. You have the Python debugger, which might
+
+26
+00:02:52,360 --> 00:02:58,400
+be the most popular one out there, both PyCharm, which have a booth outside, and Eclipse use
+
+27
+00:02:58,400 --> 00:03:03,640
+Python debugger behind the scenes. Rookout supports debugging Python as well as Node
+
+28
+00:03:03,640 --> 00:03:10,640
+and JVM. Python idle, ATOM, each of their own built-in debuggers. And I'm sure there
+
+29
+00:03:10,720 --> 00:03:16,200
+are others out there. What almost all of those debuggers have in common is that they are
+
+30
+00:03:16,200 --> 00:03:23,200
+based on the csetrace function. This function, I'm not expecting you to read this documentation.
+
+31
+00:03:24,480 --> 00:03:29,600
+Those are the official docs for csetrace in the Python manual. I think that's 2.7, but
+
+32
+00:03:29,600 --> 00:03:34,760
+I'm not sure where I took the screenshot from. Anyway, this just might be the most complicated
+
+33
+00:03:34,760 --> 00:03:40,520
+function in the Python standard library. And while the documentation for it has improved
+
+34
+00:03:40,520 --> 00:03:44,600
+quite a lot since I got to know it two and some years ago, I'm going to walk you through
+
+35
+00:03:44,600 --> 00:03:51,600
+it step by step. So what does csetrace do? What does csetrace do? What is it all about?
+
+36
+00:03:57,160 --> 00:04:02,480
+Well, with csetrace, you register a callback for the Python interpreter, and whenever the
+
+37
+00:04:02,480 --> 00:04:07,480
+interpreter decides something important is about to happen, it's going to call your callback
+
+38
+00:04:07,480 --> 00:04:14,480
+and notify you just before it does. What are those events? Function call, line execution,
+
+39
+00:04:15,320 --> 00:04:20,840
+function return, and exception raised. Before any of those events, you're going to get a
+
+40
+00:04:20,840 --> 00:04:27,840
+callback. Let's take a look at a quick example. Here we have a very simple tracer callback.
+
+41
+00:04:27,840 --> 00:04:34,360
+It's called simple tracer, and it accepts three arguments. Frame, which provides you
+
+42
+00:04:34,360 --> 00:04:39,880
+with a window into the interpreter's state. Frame is what the interpreter, what's the
+
+43
+00:04:39,880 --> 00:04:45,480
+state of the interpreter just before the next event is about to happen. Let's say if the
+
+44
+00:04:45,480 --> 00:04:50,600
+event is line execution, then frame is going to be what's going on just before the line
+
+45
+00:04:50,600 --> 00:04:56,200
+was executed. Where in the code we are, what's the line number, what are the local variables,
+
+46
+00:04:56,240 --> 00:05:03,240
+what's up the stack, and so on. Event is a string describing the events that we are just
+
+47
+00:05:03,240 --> 00:05:10,240
+receiving. It's going to be either call, line, return, or exception. And R is an additional
+
+48
+00:05:10,320 --> 00:05:16,080
+argument that provides us a bit more information about the event. What does our simple tracer
+
+49
+00:05:16,080 --> 00:05:21,560
+does? It starts by collecting information on the frame. It collects the function name
+
+50
+00:05:21,560 --> 00:05:27,440
+and line number. And then it prints the event, function name, and line number to the standard
+
+51
+00:05:27,440 --> 00:05:34,440
+output. Finally, our tracer returns itself, which we'll discuss a bit more later. Let's
+
+52
+00:05:34,440 --> 00:05:41,440
+take a look what happens when we run this example callback against a sample Python code.
+
+53
+00:05:41,920 --> 00:05:48,920
+This is our example. Method A returns B multiplied by 2. Function B returns response from B.
+
+54
+00:05:52,400 --> 00:05:59,400
+And C setrace, simple tracer, we call setrace and set our tracer as the callback, and we
+
+55
+00:05:59,400 --> 00:06:06,400
+invoke A. What's the standard output for that? C setrace has no output. Neither does A. But
+
+56
+00:06:08,920 --> 00:06:15,120
+once we invoke A, our callback is executed for the first time. We get a call event, which
+
+57
+00:06:15,120 --> 00:06:20,200
+means a frame is about to be created, a function is about to be invoked. The function name
+
+58
+00:06:20,200 --> 00:06:27,200
+is A, and the line number is 1. The next event is line. Line number 2 is about to be executed
+
+59
+00:06:28,400 --> 00:06:35,400
+as part of function A. Now we get the third event. Function B is about to be called. Line
+
+60
+00:06:36,240 --> 00:06:43,240
+number is 4. And line 5 is about to be executed as part of function B. Next, we are going
+
+61
+00:06:44,120 --> 00:06:51,120
+to get a return event. We return from B with line number 5, and we return from A with line
+
+62
+00:06:51,880 --> 00:06:58,880
+number 2. So that's a very simple flow of what happens with the tracer. We get every
+
+63
+00:07:00,160 --> 00:07:05,120
+time a function is invoked, a line is executed, and the function is about to return, we get
+
+64
+00:07:05,120 --> 00:07:12,120
+notified, as well as exceptions, which I've left out from these examples. Now, I've mentioned
+
+65
+00:07:13,000 --> 00:07:19,080
+that simple tracer return itself. If you were to look at the debugger implementation of
+
+66
+00:07:19,080 --> 00:07:24,760
+all those debuggers we mentioned earlier, you would see that they often return the function
+
+67
+00:07:24,760 --> 00:07:31,760
+at the end of its function. Not always, but sometimes. Why is that? Well, there are actually
+
+68
+00:07:32,120 --> 00:07:39,120
+multiple callbacks working here behind the scenes. When you call syssetrace, you register
+
+69
+00:07:39,440 --> 00:07:44,960
+a global trace callback. This global trace belongs to the thread you are in, and is going
+
+70
+00:07:44,960 --> 00:07:51,960
+to be invoked any time a new function is about to be executed. So whenever a new function
+
+71
+00:07:52,520 --> 00:07:56,920
+is about to be executed, whenever a new frame is about to be created, the interpreter will
+
+72
+00:07:56,920 --> 00:08:02,600
+call our callback. Now, the return value for that callback is going to determine the local
+
+73
+00:08:02,600 --> 00:08:09,600
+trace for that function. And the local trace will be the one receiving the local events.
+
+74
+00:08:10,240 --> 00:08:16,840
+So line return and exception are only being received by the local trace. If the global
+
+75
+00:08:16,840 --> 00:08:23,080
+trace will return none, then there is going to be no local trace for that function, and
+
+76
+00:08:23,080 --> 00:08:30,080
+the local events won't be triggered at all. A few more things that are important to know.
+
+77
+00:08:30,440 --> 00:08:36,840
+That the global trace is the one determining the local trace. Whenever you're in a function,
+
+78
+00:08:36,840 --> 00:08:41,900
+regardless if there is a local trace, or there isn't a local trace, or what's the local trace,
+
+79
+00:08:41,900 --> 00:08:45,920
+the global trace is the one that's going to be invoked in order to determine what's the
+
+80
+00:08:45,920 --> 00:08:52,080
+local trace for it. And the last thing to keep in mind is that Python offers no way
+
+81
+00:08:52,080 --> 00:08:57,400
+to determine the local trace once a frame is started. So if there is a long-running
+
+82
+00:08:57,400 --> 00:09:03,560
+function that has been invoked before you have called setTrace, there is no clean way
+
+83
+00:09:03,560 --> 00:09:10,560
+to set the tracer for it. Now, let's go back to our example and see when are those traces
+
+84
+00:09:13,500 --> 00:09:20,500
+are created. When you call c setTrace, the global tracer is created and set a simple
+
+85
+00:09:20,980 --> 00:09:27,980
+trace. When a is started, we return simple tracer so it is set as the tracer for function
+
+86
+00:09:29,780 --> 00:09:36,780
+a. And when we call b, that tracer will be set. The reason Python gives us this power
+
+87
+00:09:36,820 --> 00:09:43,820
+is because the local tracing has a significant performance impact. So Python allows us to
+
+88
+00:09:43,820 --> 00:09:48,300
+decide which functions we want to monitor and which ones we want to skip so that we
+
+89
+00:09:48,300 --> 00:09:55,300
+can minimize the performance overhead for the debugging. Now, I'm sure you're... As
+
+90
+00:09:57,580 --> 00:10:04,580
+I've mentioned, the setTrace sets the trace function for the current thread. How do you
+
+91
+00:10:04,580 --> 00:10:10,580
+handle multithreading? Well, lucky for us, the threading module provides a setTrace function
+
+92
+00:10:10,580 --> 00:10:17,580
+of its own. The threading setTrace functions allow us to pass a callback that will be registered
+
+93
+00:10:17,860 --> 00:10:22,540
+as the global trace function for that thread, for any new thread created by the threading
+
+94
+00:10:22,540 --> 00:10:29,540
+module. Essentially, after you run equal threading setTrace, whenever threading creates a new
+
+95
+00:10:29,580 --> 00:10:36,580
+thread, it will call c setTrace on your behalf with the value you have provided. Now, a couple
+
+96
+00:10:38,380 --> 00:10:43,500
+of things to keep in mind here is that if you want to debug a multithreading application,
+
+97
+00:10:43,500 --> 00:10:49,140
+you want to call threading setTrace as early as possible. Once the thread is started, there
+
+98
+00:10:49,140 --> 00:10:56,140
+is no easy way to set the global trace function for it. The second thing to keep in mind is
+
+99
+00:10:56,180 --> 00:11:00,420
+that this is part of the threading module. If somebody is using the underlying thread
+
+100
+00:11:00,420 --> 00:11:06,300
+module or a different approach to multithreading, then that's not going to help you and you
+
+101
+00:11:06,300 --> 00:11:12,540
+need to figure out a different way to do it. On a happier note, if the application you
+
+102
+00:11:12,540 --> 00:11:19,540
+are debugging is using an event loop-based concurrency model, such as gvent or eventlet,
+
+103
+00:11:20,020 --> 00:11:25,500
+then for all Python curves, there is only one thread. So as soon as you've called c
+
+104
+00:11:25,500 --> 00:11:32,500
+setTrace, you are set, and all the greenlets will show your global trace function. Now,
+
+105
+00:11:36,020 --> 00:11:40,500
+this might be a bit intimidating, everything we've been talking about so far, and it might
+
+106
+00:11:40,540 --> 00:11:46,020
+make you wonder how hard it is to build your own debugger. Well, there is a quick shortcut
+
+107
+00:11:46,020 --> 00:11:50,060
+I'm going to teach you that allows you to build your own debugger in just three simple
+
+108
+00:11:50,060 --> 00:11:57,060
+steps. Well, we've mentioned earlier Python PDB, the Python debugger. Well, PDB is built
+
+109
+00:11:59,740 --> 00:12:06,260
+on the top of a lower level package inside the Python standard module, which is called
+
+110
+00:12:06,260 --> 00:12:13,020
+BDB, the base debugger. The easiest way to build a Python debugger is to inherit from
+
+111
+00:12:13,020 --> 00:12:20,020
+BDB and customize it to your own needs. So what does our debugger look like? A class
+
+112
+00:12:21,420 --> 00:12:27,020
+debugger which inherits from BDB and does really simple things in its constructor. We
+
+113
+00:12:27,020 --> 00:12:32,940
+call the underlying BDB constructor to initialize the class we inherited from. We create a dictionary
+
+114
+00:12:32,980 --> 00:12:39,500
+for breakpoints, we want to keep track of, and we call setTrace. What setTrace does is
+
+115
+00:12:39,500 --> 00:12:46,500
+it actually has BDB registers its own trace function as the c setTrace function. So BDB
+
+116
+00:12:49,140 --> 00:12:56,140
+calls c setTrace on your behalf, registers its built-in trace function. Next, we add
+
+117
+00:12:56,780 --> 00:13:02,780
+our set breakpoint method. We accept the file name and line number we want to set the breakpoint
+
+118
+00:13:03,180 --> 00:13:08,940
+on, and we get a method. This is the method we want to execute as a callback whenever
+
+119
+00:13:08,940 --> 00:13:15,940
+the breakpoint is triggered. We call setSetBreak, which is a function we inherited from BDB
+
+120
+00:13:16,020 --> 00:13:22,260
+that have BDB sets the breakpoint in its own internal data structure, and we update our
+
+121
+00:13:22,260 --> 00:13:29,260
+breakpoint dictionary with a list of methods to be called. So if there is no method, we
+
+122
+00:13:30,220 --> 00:13:34,820
+go to the key error exception clause and add a list with a single element. If there is
+
+123
+00:13:34,820 --> 00:13:41,820
+already a list, we just add our method to it. And last but not least, we override user
+
+124
+00:13:42,900 --> 00:13:49,900
+line. User line is a BDB method that says nothing but pass. But whenever BDB wants to
+
+125
+00:13:52,340 --> 00:13:58,540
+inform us that the user line is about to be executed, it calls user line. So all we have
+
+126
+00:13:58,620 --> 00:14:05,620
+to do is override it, and we get notified of any breakpoints and other significant events.
+
+127
+00:14:06,020 --> 00:14:11,140
+The only argument for user line is frame, which we've mentioned earlier. It provides
+
+128
+00:14:11,140 --> 00:14:17,340
+the state of the interpreter just before our breakpoint is hit. What does our user line
+
+129
+00:14:17,340 --> 00:14:24,340
+do? It starts by checking if break here. BDB will occasionally notify you on events besides
+
+130
+00:14:24,980 --> 00:14:29,020
+breakpoints you have set. So if you want to make sure a breakpoint is actually on this
+
+131
+00:14:29,020 --> 00:14:34,980
+line, you call break here. It turns to a false. And in this case, if there is no breakpoint,
+
+132
+00:14:34,980 --> 00:14:41,340
+we just return. We then get the file name and line number from the inspect module of
+
+133
+00:14:41,340 --> 00:14:48,340
+the frame. I'm going to talk about inspect a bit later in this talk. And then we get
+
+134
+00:14:48,500 --> 00:14:53,660
+from the breakpoints the callbacks that have been registered for this file name and line
+
+135
+00:14:53,660 --> 00:15:00,220
+number, and we execute each of them with the frame object. That's it. In those three
+
+136
+00:15:00,220 --> 00:15:07,220
+simple steps, we've built a breakpoint-oriented debugger for Python. Now, you may be wondering
+
+137
+00:15:10,740 --> 00:15:15,220
+how fast is it going to go? What's going to be the performance impact on my application
+
+138
+00:15:15,220 --> 00:15:22,220
+using this debugger? Well, as I mentioned, Rookout is a general-purpose data collector
+
+139
+00:15:22,860 --> 00:15:29,100
+that aims to run in production. So we are obviously aiming for a very, very low overhead.
+
+140
+00:15:29,100 --> 00:15:36,100
+So what we went and after building that simple debugger, we went and tested it. Here is the
+
+141
+00:15:36,660 --> 00:15:41,780
+simple performance benchmarks we've done. We've written two very simple methods, one
+
+142
+00:15:41,780 --> 00:15:48,780
+that does nothing and non-hesitant 10 assignment statements, and we are going to execute each
+
+143
+00:15:48,780 --> 00:15:55,620
+of those functions 16 million times. And then we are going to see how much time does it
+
+144
+00:15:55,620 --> 00:16:00,860
+take in four different scenarios. The first, how long does it take without a debugger?
+
+145
+00:16:00,860 --> 00:16:07,140
+How fast is Python in executing those functions so that we can have some baseline? Second,
+
+146
+00:16:07,140 --> 00:16:13,060
+we are going to run it with a debugger but no breakpoints. Third, we are going to run
+
+147
+00:16:13,060 --> 00:16:18,540
+it with a debugger, setting the breakpoint in a different file. And fourth, we are going
+
+148
+00:16:18,780 --> 00:16:23,820
+to run it with a debugger, setting the breakpoint in the same file. It's important to keep in
+
+149
+00:16:23,820 --> 00:16:30,340
+mind that in all cases, the breakpoint is never going to get hit. We are never measuring
+
+150
+00:16:30,340 --> 00:16:35,820
+the overhead of the breakpoint itself, but the global overhead of how slow are we making
+
+151
+00:16:35,820 --> 00:16:42,820
+the software. So here are the initial results. If somebody can't read for far, that's very
+
+152
+00:16:42,980 --> 00:16:49,980
+bad. Without a debugger, each function takes an average way under a millisecond. But once
+
+153
+00:16:51,340 --> 00:16:58,340
+we turn up debugging, then performance is about 100x slower. Not very good for us. So
+
+154
+00:17:00,100 --> 00:17:06,460
+how can we optimize this? There are three major avenues you need to consider when optimizing
+
+155
+00:17:06,460 --> 00:17:12,220
+the debugger. First, as I've mentioned, local tracing is much more expensive than global
+
+156
+00:17:12,220 --> 00:17:18,620
+tracing. You get notified on a lot more events. So as much as we can avoid local tracing,
+
+157
+00:17:18,620 --> 00:17:23,740
+as smart as we can be about deciding where we want to local trace, and as we're not
+
+158
+00:17:23,740 --> 00:17:30,740
+to local trace, the better we are at pruning out those functions we don't care about, the
+
+159
+00:17:30,860 --> 00:17:37,340
+faster it's going to go. The second part is optimizing the call events. Whenever the global
+
+160
+00:17:37,340 --> 00:17:41,420
+interpreter, the global trace function is called to determine whether or not we should
+
+161
+00:17:41,420 --> 00:17:47,100
+trace a function, we need to make the decision as fast as possible. The faster we make it,
+
+162
+00:17:47,100 --> 00:17:53,580
+the less overhead we have. And third but not least, once we've gone into local tracing,
+
+163
+00:17:53,580 --> 00:17:58,180
+once we're looking at a specific function, we want to determine very fast if this line
+
+164
+00:17:58,180 --> 00:18:04,060
+is a break point or not. If it is, we need to stop. If it's not, we need to resume execution
+
+165
+00:18:04,060 --> 00:18:11,060
+as fast as possible. So we went through the BDB source code for
+
+166
+00:18:11,420 --> 00:18:16,580
+the hot branches, walked it to the side, removed a lot of unnecessary features, simplified
+
+167
+00:18:16,580 --> 00:18:23,580
+the code, and optimized for hot branches. What were the results? That's much better.
+
+168
+00:18:24,620 --> 00:18:30,100
+Especially on the left side, where we managed to avoid local tracing, you can see the performance
+
+169
+00:18:30,100 --> 00:18:35,740
+impact is still significant but nowhere near where it was. But on the right side, while
+
+170
+00:18:35,740 --> 00:18:42,740
+we still have local tracing, then the performance overhead is quite huge. How many of you are
+
+171
+00:18:42,740 --> 00:18:49,740
+familiar with Cyton? Oh, that's a lot. So Cyton is a pretty cool project. It allows
+
+172
+00:18:50,820 --> 00:18:57,820
+you to take your Python code out of the box and as is transpile it into C, compile that
+
+173
+00:18:57,820 --> 00:19:04,820
+C code, and place the generated shared object or DLL as an exact filler of the code.
+
+174
+00:19:05,740 --> 00:19:11,900
+That's the filler for the Python code you have dropped. So that Cyton essentially allows
+
+175
+00:19:11,900 --> 00:19:18,900
+you to create a much faster replacement of Python code with virtually no code changes.
+
+176
+00:19:19,260 --> 00:19:25,140
+If you want, you can even do additional optimization based on Cyton features that will push the
+
+177
+00:19:25,140 --> 00:19:32,140
+performance even faster. So we went around and did that. And as you
+
+178
+00:19:32,340 --> 00:19:39,020
+can see, Cyton gave us a pretty big performance boost, about two and a half times faster,
+
+179
+00:19:39,020 --> 00:19:46,020
+which is nice, significant. But seeing this graph, I was getting desperate. I mean, we
+
+180
+00:19:46,820 --> 00:19:53,580
+are looking for a performance grade debugging solution, something that will have somewhere
+
+181
+00:19:53,580 --> 00:20:00,580
+between no overhead to maybe, I don't know, 5%. And that's not 5%. So I took a minute
+
+182
+00:20:01,220 --> 00:20:08,220
+to stop and think about what I was doing. So it's quite clear that Python BDB is very
+
+183
+00:20:09,260 --> 00:20:16,260
+naive. It was never optimized for speed, and we can improve it by a lot. But the more we
+
+184
+00:20:18,180 --> 00:20:25,180
+improve it, the harder it gets to keep improving it, the harder it gets to make it even faster.
+
+185
+00:20:25,700 --> 00:20:30,300
+And we are pretty far from where we want to be right now. So what happens if you set an
+
+186
+00:20:30,340 --> 00:20:37,340
+empty tracer? How fast is local tracing going to be if we do nothing? We get called, we
+
+187
+00:20:37,900 --> 00:20:44,900
+return, no processing at all. It won't do much. It obviously won't provide us the functionality
+
+188
+00:20:44,900 --> 00:20:51,900
+we need, but it's going to give us some benchmark about how fast can we make it. So this is
+
+189
+00:20:52,900 --> 00:20:59,900
+what I ended up with. Even with an empty tracer, performance takes a big hit, especially once
+
+190
+00:21:02,100 --> 00:21:09,100
+you turn on local tracing. Now, there are still, seeing this, I decided to take a step
+
+191
+00:21:12,460 --> 00:21:17,700
+back and take another look at the C Python source code to understand what's going on
+
+192
+00:21:17,780 --> 00:21:23,300
+behind the scenes. I'm not going to belabor you with everything I've learned. I'm just
+
+193
+00:21:23,300 --> 00:21:29,180
+going to show you some of the top insights. So turning on tracing sets up C Python for
+
+194
+00:21:29,180 --> 00:21:35,260
+extra work. Some of that extra work happens in Python. Since for every instruction that's
+
+195
+00:21:35,260 --> 00:21:40,860
+about to be executed, we'll be running additional Python code. And this is where most of our
+
+196
+00:21:40,860 --> 00:21:46,380
+optimizations have been focused on. This is what we can change. Unfortunately, some of
+
+197
+00:21:46,380 --> 00:21:50,820
+the performance penalty comes from the C code of the Python interpreter itself. For
+
+198
+00:21:50,820 --> 00:21:54,620
+instance, here's a screenshot of maybe call line trace. I'm not expecting you to read
+
+199
+00:21:54,620 --> 00:22:01,340
+it. But what maybe call line trace does once you turn on tracing is that after every instruction
+
+200
+00:22:01,340 --> 00:22:06,860
+is executed before the next instruction, the interpreter has to go and figure out is this
+
+201
+00:22:06,860 --> 00:22:12,460
+a new line event? Is this something I want to notify you about? This is just one of the
+
+202
+00:22:12,620 --> 00:22:19,620
+cases where C Python has to do a lot of extra work for the debugging mechanism regardless
+
+203
+00:22:19,980 --> 00:22:26,980
+of what you do on your end. Now, as optimizing this code is definitely possible, but it would
+
+204
+00:22:26,980 --> 00:22:32,980
+require a pull request to the Python source code. And even worse, it would require new
+
+205
+00:22:32,980 --> 00:22:37,980
+releases. And we obviously want to support customers without having them change the Python
+
+206
+00:22:37,980 --> 00:22:44,980
+interpreter. We kind of gave up on the tracing mechanism. It's very awesome. Mostly Python
+
+207
+00:22:45,820 --> 00:22:52,820
+debuggers out there use it, but it just wasn't good enough for us, not for what we had in
+
+208
+00:22:52,820 --> 00:22:57,820
+mind. So to explain what we did, I'm going to take a step back. How many of you are familiar
+
+209
+00:22:57,820 --> 00:23:04,820
+with the Python bytecode? That's tougher. Yeah. So here is the Wikipedia definition
+
+210
+00:23:05,820 --> 00:23:11,820
+for bytecode. It's a form and instruction set designed for efficient execution by a
+
+211
+00:23:11,820 --> 00:23:17,820
+software interpreter. Essentially, Python compiles our sources into its bytecode and
+
+212
+00:23:17,820 --> 00:23:24,580
+executes that rather than our own original source code. Let me give you an example. Here
+
+213
+00:23:24,580 --> 00:23:31,580
+is a very simple method. Def multiply AB, result equals A times B, return results. Do
+
+214
+00:23:32,220 --> 00:23:39,220
+any of you have any idea what's the bytecode for that going to look like? That's close.
+
+215
+00:23:45,220 --> 00:23:52,220
+Yeah, that's exactly what he said. To be fair, that's exactly what he said, and even I can't
+
+216
+00:23:54,620 --> 00:24:00,980
+read that. But bytecode is just a buffer. In Python 2, buffers are strings, so we get
+
+217
+00:24:00,980 --> 00:24:06,260
+a nice string. It has a set of instruction set. It's much shorter than our string with
+
+218
+00:24:06,260 --> 00:24:13,260
+the def multiply stuff, but instead of going through syntax, cyclexing, and syntax trees,
+
+219
+00:24:14,620 --> 00:24:21,620
+and so on, the Python interpreter stores that. I'm sure all of you know the PYC files, so
+
+220
+00:24:22,940 --> 00:24:29,180
+that's the content of the PYC files. It's just the bytecode generated from your code.
+
+221
+00:24:30,180 --> 00:24:35,740
+Once we disassemble this string, we get something that's quite more readable, which is quite
+
+222
+00:24:35,740 --> 00:24:42,100
+far, quite close to what the gentleman said. Load into the stack A, load into the stack
+
+223
+00:24:42,100 --> 00:24:49,100
+B, binary multiply the both of them, store it in a variable called result, load result
+
+224
+00:24:49,540 --> 00:24:55,780
+back onto the stack, and return it. Now, if we take a look back at what the interpreter
+
+225
+00:24:55,780 --> 00:25:02,700
+is actually doing, it looks a bit like this. There are two main stages. The first is compile.
+
+226
+00:25:02,700 --> 00:25:07,100
+During the compile stage, the interpreter goes through our source code, figure out what
+
+227
+00:25:07,100 --> 00:25:13,380
+it all means, and builds the bytecode, which is a string like what we've seen, stores it
+
+228
+00:25:13,380 --> 00:25:20,380
+in PYC files or just in memory, and then comes the second step, the execution step. During
+
+229
+00:25:21,260 --> 00:25:26,860
+the execution step, the so-called interpreter loop is literally looping through our bytecode
+
+230
+00:25:26,860 --> 00:25:33,860
+and doing it one step at a time. Now, there was actually a lecture about an hour ago about
+
+231
+00:25:37,780 --> 00:25:42,740
+the gil, which is the dreaded gil everybody's been speaking of. That's the interpreter
+
+232
+00:25:42,740 --> 00:25:49,740
+loop. The gil is about the interpreter being able to execute one set of bytecode at a time.
+
+233
+00:25:50,860 --> 00:25:57,060
+It can run multiple threads of the interpreter loop. And everything we've seen so far about
+
+234
+00:25:57,060 --> 00:26:03,020
+the C setrace and the tracing mechanism, it all takes place during the interpreter loop.
+
+235
+00:26:03,020 --> 00:26:07,580
+So whenever the interpreter does something that we might care about as a debugger, call
+
+236
+00:26:07,580 --> 00:26:12,380
+a new function, execute a new line, return for a function, and so on, the interpreter
+
+237
+00:26:12,380 --> 00:26:18,740
+has to notify us. And that's what the performance overhead we've seen happens. Every time the
+
+238
+00:26:19,140 --> 00:26:26,140
+interpreter does something, it has to notify us. And that's expensive. So Rookout is taking
+
+239
+00:26:26,140 --> 00:26:32,260
+a different approach. Rookout goes back to the bytecode that we've seen. It finds the
+
+240
+00:26:32,260 --> 00:26:38,380
+line of code that belongs. We find the instruction, the specific instruction that maps the line
+
+241
+00:26:38,380 --> 00:26:44,800
+of code using the debug information, and we insert our breakpoint. We literally set, we
+
+242
+00:26:44,800 --> 00:26:50,440
+just insert a call instruction into the bytecode. So the interpreter doesn't really care about
+
+243
+00:26:50,440 --> 00:26:56,120
+Rookout. The interpreter just goes through the code happily, not aware of tracing or
+
+244
+00:26:56,120 --> 00:27:00,760
+any debugging mechanism. But when it sees that call instruction, which is the same as
+
+245
+00:27:00,760 --> 00:27:06,000
+any other call instruction it might have, it calls it. And that's when Rookout gets
+
+246
+00:27:06,000 --> 00:27:11,660
+notified, and this is where we defer from all the other debuggers out there. We don't
+
+247
+00:27:12,300 --> 00:27:18,180
+work with the interpreter step by step, tracing everything it does. We try to avoid the interpreter
+
+248
+00:27:18,180 --> 00:27:25,180
+being aware of us at all, just being there when it needs to be. While bytecode manipulation
+
+249
+00:27:26,100 --> 00:27:31,820
+is a big topic and might deserve its own lecture, I do want to give you some resources about
+
+250
+00:27:31,820 --> 00:27:37,700
+where you can read more about it. So the Python standard library is two important package
+
+251
+00:27:37,740 --> 00:27:44,740
+that can definitely help you with byte manipulation. The first is inspect. Inspect is a package
+
+252
+00:27:45,620 --> 00:27:49,420
+that allows you to see into the interpreter, take a look and see what the interpreter
+
+253
+00:27:49,420 --> 00:27:55,940
+is doing. Among its other useful functionality, inspect allows you to extract the bytecode
+
+254
+00:27:55,940 --> 00:28:01,820
+for any function or class you have in memory, and it was used when I showed you. For me
+
+255
+00:28:01,820 --> 00:28:08,820
+showing you the bytecode I used inspect. The second package is this. This is short for
+
+256
+00:28:08,820 --> 00:28:13,700
+this assembly, and it allows you to take those ugly strings we've seen and make them into
+
+257
+00:28:13,700 --> 00:28:20,700
+something a bit more human readable. Now, unfortunately, Python does not offer any way
+
+258
+00:28:21,660 --> 00:28:27,620
+to write bytecode in memory. So you can read it, but you can't write it, you can't edit
+
+259
+00:28:27,700 --> 00:28:32,700
+it, you can't change it. In order to do that, you need a native extension that bypasses
+
+260
+00:28:32,700 --> 00:28:39,700
+the Python standard interfaces and interacts with the C APIs. If you're interested in that,
+
+261
+00:28:40,380 --> 00:28:45,300
+Google has an open source project called Cloud Debug Python that does a bit of it, and you
+
+262
+00:28:45,300 --> 00:28:52,300
+can take a look at that. Now, so far we've discussed how do you know when to break? How
+
+263
+00:28:53,300 --> 00:28:59,420
+do you decide which line you care about, when do you stop the application and take a look?
+
+264
+00:28:59,420 --> 00:29:04,940
+But what happens after you break? How do you take a look at a running application and understand
+
+265
+00:29:04,940 --> 00:29:11,940
+what its state, what it's doing? So if you remember, the frame, as I mentioned throughout
+
+266
+00:29:13,820 --> 00:29:18,820
+the talk, is our window into the interpreter. It allows us to see exactly what is going
+
+267
+00:29:18,820 --> 00:29:25,820
+on. Additionally, the inspect built-in module is quite well documented, it's easy to use,
+
+268
+00:29:27,660 --> 00:29:34,660
+it allows you to see the line numbers, file names, stack traces, and so on. And unlike
+
+269
+00:29:34,660 --> 00:29:39,540
+what I've shown you earlier in this talk, everything here is very, very fast. Performance
+
+270
+00:29:39,540 --> 00:29:44,860
+is awesome due to the simple fact that everything we're doing here through the inspect module
+
+271
+00:29:44,860 --> 00:29:49,980
+is quite similar to what the interpreter is doing behind the scene. So when the interpreter
+
+272
+00:29:49,980 --> 00:29:55,140
+is working with your code, is running your code, it's using the same data structures
+
+273
+00:29:55,140 --> 00:30:02,140
+and the same functions we are discussing here. So here is a simple example. Function test
+
+274
+00:30:05,460 --> 00:30:11,860
+frame info, frame equals inspect current frame. Now, inspect current frame is one of the coolest
+
+275
+00:30:11,860 --> 00:30:17,580
+functions out there. It allows you to literally get the frame of the code you're currently
+
+276
+00:30:17,580 --> 00:30:22,580
+executing. This is some production users, which we might cover a bit later, but it's
+
+277
+00:30:22,580 --> 00:30:28,500
+also the most useful function you can have if you're testing or experimenting with the
+
+278
+00:30:28,500 --> 00:30:34,660
+byte code and the Python interpreter. As you get on the fly, you can just get the frame
+
+279
+00:30:34,660 --> 00:30:40,020
+and then you can see what it's doing and even run most of our unit tests are built using
+
+280
+00:30:40,020 --> 00:30:47,020
+that function. So this is the output for it. You get the file name, frame inspect.py, which
+
+281
+00:30:47,940 --> 00:30:54,940
+I'll show you the repo for a bit later. Line number 16, function name, code context, index
+
+282
+00:30:55,140 --> 00:30:59,500
+show where we are in the stack trace. Since we are currently executing, the index is zero,
+
+283
+00:30:59,500 --> 00:31:06,500
+but we can also traverse the stack trace and go up. And the second example, let's take
+
+284
+00:31:07,500 --> 00:31:14,500
+a look at how do we access local variables. My str is a string, my dict a dictionary,
+
+285
+00:31:14,860 --> 00:31:21,860
+my list is a list, and here we print f locals, part of the current frame. Does anybody have
+
+286
+00:31:22,060 --> 00:31:29,060
+any idea what's that going to do? So turns out that behind the scenes, the local variables
+
+287
+00:31:29,980 --> 00:31:35,580
+are stored in a dictionary, just a regular Python dictionary, and that's f locals. So
+
+288
+00:31:35,780 --> 00:31:42,780
+once we print it, we get a dictionary. Variable names are keys. Variable values are the values
+
+289
+00:31:43,980 --> 00:31:50,980
+of the dictionary. So my dict dictionary, my str string, and my list list. Quite easy,
+
+290
+00:31:53,700 --> 00:31:59,580
+unlike what I've shown you earlier. So what can you do with what I've been showing you
+
+291
+00:31:59,580 --> 00:32:03,740
+so far? First of all, you can show off your Python skills. That's definitely useful if
+
+292
+00:32:03,740 --> 00:32:09,740
+you're here at Python. You can get source information. Have you ever wondered how does
+
+293
+00:32:09,740 --> 00:32:16,740
+the logging module know the file name and line number you are writing the log from?
+
+294
+00:32:16,740 --> 00:32:22,900
+So the logging module uses inspect.conf frame and walks up the stack to find who called
+
+295
+00:32:22,900 --> 00:32:29,900
+it. And from that frame gets the file name, function name, line number, and that's how
+
+296
+00:32:30,900 --> 00:32:36,900
+you get that information in your logs. You can also walk up the stack. If you're looking
+
+297
+00:32:36,900 --> 00:32:41,700
+at profiling or you just want to get that extra variable somebody forgot to give you,
+
+298
+00:32:41,700 --> 00:32:48,700
+the interface, you can always go up and get it. Or you can build your own debugger. So
+
+299
+00:32:50,020 --> 00:32:57,020
+I've placed most of the source code that this lecture is based on at our public repo. So
+
+300
+00:32:57,020 --> 00:33:04,020
+feel free to go ahead and browse it. And that's kind of about it. Feel free to check us out
+
+301
+00:33:08,300 --> 00:33:15,300
+at rukka.com and ask me more. And yeah. So now would be a good time for questions if
+
+302
+00:33:16,620 --> 00:33:23,620
+you have any of what I've shown you.
+
+303
+00:33:28,020 --> 00:33:35,020
+Great presentation. Thank you. I wonder about the byte code manipulation. Can you manipulate
+
+304
+00:33:37,300 --> 00:33:39,540
+the byte code which has been loaded into memory?
+
+305
+00:33:39,540 --> 00:33:40,140
+Yes.
+
+306
+00:33:40,140 --> 00:33:47,140
+Okay. And if you do that, like, what do you need to, like, there are any security which
+
+307
+00:33:47,780 --> 00:33:50,420
+you have to pass to do that? Or, I mean, how does this work?
+
+308
+00:33:50,420 --> 00:33:56,060
+So Python doesn't have any built-in security module. Everything running in the application
+
+309
+00:33:56,060 --> 00:34:03,060
+is at the same level of isolation and security and trust. So all you have to do is use this
+
+310
+00:34:03,140 --> 00:34:08,620
+native CIPI that are not exposed to Python and you can use them to edit.
+
+311
+00:34:08,620 --> 00:34:12,980
+So you said you can do remote debugging. So I don't have to do anything on the remote
+
+312
+00:34:12,980 --> 00:34:15,820
+machine to be able to modify that byte code?
+
+313
+00:34:15,820 --> 00:34:22,460
+No. So that's, to do byte code manipulation, you need to be in the same process. What Ruko
+
+314
+00:34:22,540 --> 00:34:28,900
+does is that you install an SDK. You install an SDK that connects back to our service and
+
+315
+00:34:28,900 --> 00:34:35,900
+then only you can access that machine remotely and debug it.
+
+316
+00:34:43,500 --> 00:34:50,500
+When would you use inspect, when would you use flocals instead of just the locals function?
+
+317
+00:34:53,020 --> 00:34:59,540
+I knew that once. I can't remember right now. But they're essentially the same. The locals
+
+318
+00:34:59,540 --> 00:35:01,100
+function returns you that dictionary.
+
+319
+00:35:01,100 --> 00:35:04,100
+Okay. That's all I needed.
+
+320
+00:35:04,100 --> 00:35:11,100
+Hey. It was a great presentation. I was wondering if you had any performance numbers with the
+
+321
+00:35:11,860 --> 00:35:12,860
+byte code way of doing?
+
+322
+00:35:12,860 --> 00:35:16,860
+Yeah. I have some. I can show you.
+
+323
+00:35:16,860 --> 00:35:20,860
+I was just wondering how much faster it is compared to what we were looking at earlier.
+
+324
+00:35:20,980 --> 00:35:24,900
+The global overhead is nothing because the interpreter doesn't see anything or doesn't
+
+325
+00:35:24,900 --> 00:35:31,340
+care anything. Even the breakpoint itself takes under a millisecond to execute. So I have
+
+326
+00:35:31,340 --> 00:35:34,340
+some performance metrics if you want to see on my laptop.
+
+327
+00:35:34,340 --> 00:35:38,660
+All right. Thank you.
+
+328
+00:35:38,660 --> 00:35:43,420
+When you manipulate the byte code there, are you doing a insert in place and then a jump
+
+329
+00:35:43,420 --> 00:35:47,780
+table somewhere for the extra bytes or are you just actually extending the whole thing
+
+330
+00:35:47,780 --> 00:35:48,780
+so it's longer?
+
+331
+00:35:49,180 --> 00:35:55,100
+You have to expand. You have to expand. But you have to keep in mind that unlike more
+
+332
+00:35:55,100 --> 00:36:02,100
+traditional languages such as C, Python doesn't build just one big buffer of code. It builds
+
+333
+00:36:02,740 --> 00:36:07,700
+a lot of small buffers. So you just have to expand the specific buffer you're editing.
+
+334
+00:36:07,700 --> 00:36:11,220
+And over there you have to expand it because there are pointers for jump instructions and
+
+335
+00:36:11,220 --> 00:36:13,580
+loops and debug information and so on.
+
+336
+00:36:13,580 --> 00:36:18,500
+Okay. So the cost penalty for actually doing all the mem copy and that, you don't worry
+
+337
+00:36:18,500 --> 00:36:20,500
+about it. It's low.
+
+338
+00:36:20,500 --> 00:36:21,980
+It's copying a few bytes of memory.
+
+339
+00:36:21,980 --> 00:36:22,980
+Yeah. Okay.
+
+340
+00:36:22,980 --> 00:36:23,980
+It's nanoseconds.
+
+341
+00:36:23,980 --> 00:36:37,980
+Hey. If you are in a debugging session, then your code calls subprocess call. And I cannot
+
+342
+00:36:37,980 --> 00:36:44,980
+really go into the process that I call in to continue to debug. I just wonder if you
+
+343
+00:36:44,980 --> 00:36:46,980
+have any tip.
+
+344
+00:36:47,460 --> 00:36:54,020
+Again, so most of this talk has been about Python debugging in general. For Rookout,
+
+345
+00:36:54,020 --> 00:37:00,460
+you install the SDK into your application. And once you install the application, then
+
+346
+00:37:00,460 --> 00:37:05,460
+you can debug that process because it creates a network connection.
+
+347
+00:37:05,460 --> 00:37:06,460
+Okay.
+
+348
+00:37:06,460 --> 00:37:09,460
+I can show you later.
+
+349
+00:37:09,940 --> 00:37:20,940
+Hi. Thank you very much for your talk. Just out of curiosity, have you ever tried to use
+
+350
+00:37:20,940 --> 00:37:29,940
+all your knowledge to kind of set a bunch of checkpoints in a malicious code that you
+
+351
+00:37:29,940 --> 00:37:36,940
+know is malicious? Is it even safe to do it? Probably not. I don't know.
+
+352
+00:37:37,420 --> 00:37:42,420
+You actually had that talk with a few security professionals about setting breakpoints in
+
+353
+00:37:42,420 --> 00:37:51,420
+a malicious code they want to debug. I haven't seen much rise from it yet, but it doesn't
+
+354
+00:37:51,420 --> 00:37:56,420
+make any difference from a technological standpoint. Just like you debug a piece of code you don't
+
+355
+00:37:56,420 --> 00:38:01,420
+know. It doesn't matter if it's malicious or not. It's not very different from running
+
+356
+00:38:01,900 --> 00:38:08,900
+a malicious piece of code with WinBug or GDB or whatever it is. You can do it.
+
+357
+00:38:08,900 --> 00:38:15,900
+So that's safe, right? I can use it to, let's say I have a piece of malware and I can use
+
+358
+00:38:15,900 --> 00:38:18,900
+your approach to analyze bytecode of this malware?
+
+359
+00:38:18,900 --> 00:38:23,900
+Yeah. If you have malware written in Java, Node or Python, you can definitely use Rookout
+
+360
+00:38:23,900 --> 00:38:24,900
+to debug it.
+
+361
+00:38:24,900 --> 00:38:25,900
+Thanks.
+
+362
+00:38:25,900 --> 00:38:30,900
+Which would definitely help regards if they have anti-debugging tools and so on. There
+
+363
+00:38:31,380 --> 00:38:34,380
+are probably not going to detect it.
+
+364
+00:38:34,380 --> 00:38:41,380
+I had a lot of trouble using, performance issues using the inspect library. When I was
+
+365
+00:38:43,380 --> 00:38:50,380
+trying to build something similar it was slowing things down a lot compared to using the sys
+
+366
+00:38:50,380 --> 00:38:57,380
+library to get the frame. Yeah, I ended up giving up on it. Is there a reason to do it?
+
+367
+00:38:57,380 --> 00:39:03,900
+Is there a reason to do it? Do you have to use the inspect library as opposed to other
+
+368
+00:39:03,900 --> 00:39:06,900
+ways of getting a current frame?
+
+369
+00:39:06,900 --> 00:39:13,900
+It's all the same as long as you get the current frame that's good. Inspec does offer a bit
+
+370
+00:39:14,220 --> 00:39:20,140
+of overhead and we generally try to use it a bit less when we are actually running production
+
+371
+00:39:20,140 --> 00:39:27,140
+code but I'm not sure.
+
+372
+00:39:27,380 --> 00:39:34,380
+Thank you everyone.
+

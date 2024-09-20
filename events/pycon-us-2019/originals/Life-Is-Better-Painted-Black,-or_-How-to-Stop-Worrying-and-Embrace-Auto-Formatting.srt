@@ -1,0 +1,1708 @@
+1
+00:00:00,000 --> 00:00:07,520
+So our next speaker will be Lucas he will tell us about black and why we should stop worrying and embrace auto formatting
+
+2
+00:00:07,520 --> 00:00:11,800
+And there won't be any Q&A afterwards, but please give him a warm welcome
+
+3
+00:00:18,980 --> 00:00:21,220
+Hi life is better painted black
+
+4
+00:00:21,760 --> 00:00:27,040
+We're gonna talk about all the formatting black or as Raymond put it lack of color
+
+5
+00:00:27,920 --> 00:00:33,200
+My name is Woukash. I come from the internet. You can find me on github Facebook Twitter
+
+6
+00:00:34,560 --> 00:00:36,560
+Email if you if you want
+
+7
+00:00:37,000 --> 00:00:40,020
+So yeah, like I'm happy to hear about synthesizers
+
+8
+00:00:40,840 --> 00:00:42,840
+fallout and other RPGs
+
+9
+00:00:43,120 --> 00:00:46,200
+And obviously all the formatting and the future of Python
+
+10
+00:00:46,760 --> 00:00:51,340
+But today we're gonna go around the problem of all the formatting
+
+11
+00:00:51,340 --> 00:00:56,640
+So first we're gonna define like why all the format code at all like what that does what does that give you?
+
+12
+00:00:57,080 --> 00:00:59,440
+What do we do about doing it? Right and
+
+13
+00:01:00,280 --> 00:01:08,120
+What do we know about doing it wrong? We're gonna go and talk about syntax trees. How does a computer interpret programming languages? Why does?
+
+14
+00:01:09,160 --> 00:01:11,160
+modifying source code
+
+15
+00:01:11,560 --> 00:01:13,720
+You know help us and how is it done safely?
+
+16
+00:01:14,280 --> 00:01:18,600
+We're gonna talk about how I actually implemented black like the older formatter
+
+17
+00:01:18,720 --> 00:01:21,980
+And how you could implement a tool like it if you decided to do it yourself
+
+18
+00:01:22,400 --> 00:01:25,180
+Obviously, it's not the only way but I'm just gonna show how I did it
+
+19
+00:01:25,260 --> 00:01:30,820
+And then finally we're gonna go and talk about some fun problems that I didn't anticipate on day one
+
+20
+00:01:31,580 --> 00:01:38,380
+So let's start with the problem statement and the problem statement in the words of my dear friend Jack Dietrich is that code is the enemy
+
+21
+00:01:39,220 --> 00:01:43,020
+He says I I hate code and I wish we can have as little of it as possible
+
+22
+00:01:43,860 --> 00:01:47,880
+And I agree right on the code is complexity
+
+23
+00:01:47,880 --> 00:01:53,380
+It's very hard to see how all those pieces connect together in fact at my time at Facebook
+
+24
+00:01:53,660 --> 00:01:59,660
+When you were dealing with millions of lines of code you clearly see that there is no way a single person can actually
+
+25
+00:01:59,900 --> 00:02:01,660
+Understand the entire thing
+
+26
+00:02:01,660 --> 00:02:04,160
+So you want to remove as much?
+
+27
+00:02:05,380 --> 00:02:09,360
+Confusion from reading code as possible and this is where code style
+
+28
+00:02:10,220 --> 00:02:17,580
+Comes in so what is it? Well code style is pretty much an agreement between a group of people on a team
+
+29
+00:02:17,580 --> 00:02:22,900
+How certain you know parts of the code which are not important for the computer?
+
+30
+00:02:23,380 --> 00:02:25,860
+Should be expressed so that they're easier for humans
+
+31
+00:02:26,140 --> 00:02:32,580
+One of Greedo ski insights was that code is much more red than written much more often red than written
+
+32
+00:02:32,580 --> 00:02:34,580
+So that includes code review, right?
+
+33
+00:02:35,180 --> 00:02:40,020
+So the code style that you have should accelerate code review and not slow it down
+
+34
+00:02:40,020 --> 00:02:45,500
+So it should decrease the round trips between the author of the change and between the code reviewer
+
+35
+00:02:45,500 --> 00:02:47,740
+It should remove noise so that we can actually
+
+36
+00:02:48,460 --> 00:02:54,340
+Focus on the logic behind the code and not on things that are inconsequential and
+
+37
+00:02:55,340 --> 00:02:58,020
+This should be as small as possible which helps in both
+
+38
+00:02:59,180 --> 00:03:05,700
+But I'm talking about teams, but you are also not the same person in time right so at the team of one
+
+39
+00:03:06,260 --> 00:03:11,900
+Is important as well because if you're maintaining a piece of code over time like in six months or 18 months
+
+40
+00:03:12,260 --> 00:03:14,260
+You might be kind of surprised by
+
+41
+00:03:14,620 --> 00:03:22,060
+Some decisions that you made in time and having differences in formatting at the same time just creates
+
+42
+00:03:22,060 --> 00:03:23,820
+You know more
+
+43
+00:03:23,820 --> 00:03:27,940
+Tension and more friction for you to understand like what the hell was I thinking at the time?
+
+44
+00:03:28,740 --> 00:03:33,580
+So maintaining a consistent code style just makes the code transparent that way
+
+45
+00:03:34,140 --> 00:03:37,940
+Which means you can focus on the actual logic on the things that are hard
+
+46
+00:03:38,580 --> 00:03:43,340
+So we have pep8 right so obviously everything is solved and we can just move on with our lives
+
+47
+00:03:44,540 --> 00:03:46,100
+well
+
+48
+00:03:46,100 --> 00:03:54,220
+Pepe it was a style guide for the Python song library was written in 2001 revised a few times most recently in 2013 and 2016
+
+49
+00:03:54,860 --> 00:04:02,460
+But it's a style guide for Python. It's not like a framework for creating code styles it in fact itself suggests
+
+50
+00:04:02,660 --> 00:04:04,580
+multiple ways of
+
+51
+00:04:04,580 --> 00:04:08,740
+You know folding code that is too long and how you can do certain things
+
+52
+00:04:09,180 --> 00:04:15,700
+And it is self-like it focuses mostly on the fact that a foolish consistency is the hobgoblin of little minds
+
+53
+00:04:15,700 --> 00:04:20,620
+So in particular a style guide is about consistency with this you know
+
+54
+00:04:21,260 --> 00:04:25,180
+Document but more important with a project and even more important
+
+55
+00:04:25,380 --> 00:04:29,740
+You know you have to be consistent within a file or a function
+
+56
+00:04:30,300 --> 00:04:35,460
+So what do we do about that well we argue right because we have pep8 now
+
+57
+00:04:35,460 --> 00:04:38,180
+But even within pep8 that there's so many ways to do things
+
+58
+00:04:39,260 --> 00:04:41,260
+so to go from a
+
+59
+00:04:41,380 --> 00:04:46,740
+Style guide to a code style. We need to kind of settle on a subset like what are we gonna do?
+
+60
+00:04:47,860 --> 00:04:53,580
+We can settle on a subset by documenting what that subset is in practice most people don't really do that
+
+61
+00:04:53,860 --> 00:04:56,300
+What they sometimes do they put?
+
+62
+00:04:57,020 --> 00:05:04,460
+Some wiki page and wiki is this Polynesian word for where information goes to die so they just put it there nobody follows it
+
+63
+00:05:04,700 --> 00:05:06,700
+but the most often
+
+64
+00:05:07,460 --> 00:05:13,380
+Taken approaches just to you know have a word of mouth like oh, we don't do things around here like this
+
+65
+00:05:14,100 --> 00:05:21,380
+Like you know so how do you enforce it so that it helps you know other developers have your same style?
+
+66
+00:05:21,580 --> 00:05:26,460
+Well you can either engage humans which are expensive and fallible
+
+67
+00:05:26,900 --> 00:05:31,500
+During code review to maintain a code style or we can use linters and editors and CI
+
+68
+00:05:31,500 --> 00:05:38,980
+All right, which is I think still the most popular approach, but linters are not really solving the problem. I like human code review
+
+69
+00:05:40,420 --> 00:05:46,860
+Sucks for code style enforcement it literally sucks time and effort out of humans
+
+70
+00:05:46,860 --> 00:05:52,300
+So people get tired just you know arguing about inconsequential stuff, and they miss the forest for the trees
+
+71
+00:05:52,900 --> 00:05:55,420
+But linters suck even more right they slow you down
+
+72
+00:05:55,500 --> 00:06:00,180
+They're too dumb to actually understand that oh there's an edge case here, and they really want the thing
+
+73
+00:06:00,660 --> 00:06:05,620
+They're too dumb to always tell you consistency that I think that the thing is wrong
+
+74
+00:06:05,820 --> 00:06:10,300
+But mostly they're just disappointing because they will tell you that a thing is wrong
+
+75
+00:06:10,300 --> 00:06:14,340
+But very rarely and especially in the Python world they will fix a thing for you
+
+76
+00:06:15,300 --> 00:06:20,780
+So all the formatting is way better right because it removes code style enforcement
+
+77
+00:06:21,060 --> 00:06:28,260
+From the equation right you don't have to be conscious about co-signal anymore. There is no linter that slows you down during editing
+
+78
+00:06:28,660 --> 00:06:32,140
+there is no linter that slows you down during pull requests submission and
+
+79
+00:06:32,580 --> 00:06:36,920
+Reviewers don't have to comment about style transgressions and slow you down
+
+80
+00:06:36,920 --> 00:06:43,600
+So you don't have to slow down yourself by formatting code when you are typing it you can just write code
+
+81
+00:06:43,600 --> 00:06:47,400
+That is ugly and then on save. It's just gonna turn nice again
+
+82
+00:06:48,440 --> 00:06:50,440
+so if
+
+83
+00:06:50,600 --> 00:06:59,380
+Automatic formatting is so great then why doesn't everybody use it well the simplest answer is that if automatic formatting feels too destructive
+
+84
+00:07:00,000 --> 00:07:06,080
+Then it is not used like you are tied to like you liked how you formatted things or yourself
+
+85
+00:07:06,080 --> 00:07:08,880
+And you wish for a tool not to break
+
+86
+00:07:09,520 --> 00:07:11,520
+That you know tidily
+
+87
+00:07:12,480 --> 00:07:14,200
+Organized code
+
+88
+00:07:14,200 --> 00:07:21,800
+But one of the nicest insights that come from the go community is that uniformity trumps perfection
+
+89
+00:07:22,400 --> 00:07:28,780
+The good enough uniform formatting style is better than having lots of different formats that are locally better
+
+90
+00:07:29,040 --> 00:07:31,040
+But they're now inconsistent
+
+91
+00:07:31,600 --> 00:07:36,400
+So the value of style guide is just to provide that uniformity for you
+
+92
+00:07:36,480 --> 00:07:43,080
+And the more people think about their own formatting style the more they get attached to it and we're back to square one where people
+
+93
+00:07:43,080 --> 00:07:48,000
+Have to like enforce the style manually because there is no way to automate it so
+
+94
+00:07:48,520 --> 00:07:53,660
+Go has go format which pretty much resolves the issue there
+
+95
+00:07:54,640 --> 00:07:59,280
+JavaScript has prettier I used to actually work on the same floor with the author of prettier
+
+96
+00:07:59,800 --> 00:08:02,720
+He had a lot of input early on in blacks design
+
+97
+00:08:02,800 --> 00:08:09,140
+And you know kind of questions about community adoption whatnot, so I'm like eternally grateful for the guy like he's great. Hi Christopher
+
+98
+00:08:09,680 --> 00:08:14,280
+Hi, Christopher if you're watching it yeah, and then there's black that I wrote for Python
+
+99
+00:08:14,480 --> 00:08:17,800
+So how does that work and why can you even use it well?
+
+100
+00:08:18,560 --> 00:08:20,560
+Let's talk about trees for a second
+
+101
+00:08:21,240 --> 00:08:25,920
+like a why can we even write safe code transformation tools well because
+
+102
+00:08:26,800 --> 00:08:28,800
+we have
+
+103
+00:08:28,800 --> 00:08:36,740
+Grammars and those grammars tell us exactly what a given piece of code can do and what does it mean it's a context free
+
+104
+00:08:36,740 --> 00:08:42,880
+Meaning every time a piece of code is read by the computer is gonna understand it the same way
+
+105
+00:08:43,160 --> 00:08:50,640
+So the notation we're gonna use for this like very short example here is the actual notation used by Python 3 7 sources to generate the
+
+106
+00:08:50,640 --> 00:08:51,920
+parser
+
+107
+00:08:51,920 --> 00:08:53,760
+programming language grammar
+
+108
+00:08:53,760 --> 00:08:59,860
+Consists of two kinds of symbols right there are tokens. Those are all caps here and non terminal symbols
+
+109
+00:08:59,860 --> 00:09:06,200
+So these are all the others so the tokens are atoms. These are the ones that are actually read from your file and
+
+110
+00:09:06,840 --> 00:09:12,840
+Fed to the parser like the tokenizer just sees like oh, this is a string here is a string like he's a number
+
+111
+00:09:13,040 --> 00:09:18,440
+Here's a number and the non terminal symbols are produced with the rules
+
+112
+00:09:19,080 --> 00:09:21,080
+like the one on the slide right and
+
+113
+00:09:21,640 --> 00:09:27,560
+The production really looks like this like the thing on the left colon is produced from the things on the right
+
+114
+00:09:28,160 --> 00:09:35,000
+The first production that we have in a grammar file is called the start symbol and as you can clearly read here like oh
+
+115
+00:09:35,000 --> 00:09:41,460
+File input so that's the entire file and what do files consist of well statements and new lines
+
+116
+00:09:41,460 --> 00:09:49,640
+so that's kind of you know easy to read and if that production that we have always has just one name on one side and
+
+117
+00:09:49,760 --> 00:09:57,400
+Productions that are either non terminal symbols or tokens on the right side. We call those things context free grammar CFG's
+
+118
+00:09:58,200 --> 00:10:00,200
+That makes it you know deterministic
+
+119
+00:10:00,560 --> 00:10:07,520
+So just quickly following can we actually go from here to just the terminal symbols the tokens?
+
+120
+00:10:08,040 --> 00:10:11,920
+Just to see this one branch to the leaves in
+
+121
+00:10:12,480 --> 00:10:17,320
+That tree of the Python grammar like let's try to go through it and see what happens
+
+122
+00:10:17,360 --> 00:10:24,840
+So as I said a file is consisting of statements and new lines, so what is a statement? Well, it can be either simple or compound
+
+123
+00:10:25,080 --> 00:10:29,860
+So if it's simple, what does that mean? Well, there's gonna be a bunch of small statements
+
+124
+00:10:31,120 --> 00:10:33,120
+delimited with
+
+125
+00:10:33,640 --> 00:10:40,800
+Semicolons right cool. So what are small statements their expressions deletes passes flow statements imports, whatever right?
+
+126
+00:10:40,800 --> 00:10:43,520
+So what are expression statements were they are?
+
+127
+00:10:44,480 --> 00:10:46,920
+Lists of star expressions and tests and
+
+128
+00:10:47,560 --> 00:10:53,400
+What are those like well you have annotated assignments augmented assignments and you clearly kind of see like oh
+
+129
+00:10:54,320 --> 00:11:01,120
+Composes together and the most fun thing about this is that soon enough you're gonna get to more to a moment where you see
+
+130
+00:11:01,120 --> 00:11:06,600
+Oh, there's operators. There's or and and and not and if you read from top to bottom
+
+131
+00:11:06,600 --> 00:11:11,640
+You know that oh, this is actually operator precedence and it's implemented right there in the grammar
+
+132
+00:11:11,640 --> 00:11:17,200
+So it's not even like, you know something that Python has to think about because there's just one way to read the file
+
+133
+00:11:17,400 --> 00:11:24,160
+If you go even deeper to the expressions, you're gonna see that there's even more operators and again, this is their precedence
+
+134
+00:11:24,160 --> 00:11:27,220
+Which is pretty cool. And finally we get to
+
+135
+00:11:28,040 --> 00:11:34,280
+Tokens, right? So that's the grammar that we're gonna operate in like there's no reason why I'm so showing you this and
+
+136
+00:11:34,560 --> 00:11:36,560
+It's gonna be obvious in a second
+
+137
+00:11:37,120 --> 00:11:42,080
+So, yeah, like note that in our short journey we didn't even touch compound statements, right
+
+138
+00:11:42,080 --> 00:11:48,080
+Which include if if LFL statements and for and while loops and try accept statements and so on
+
+139
+00:11:48,200 --> 00:11:52,680
+So we didn't get to function calls and function definitions and classes and so on
+
+140
+00:11:52,840 --> 00:11:56,240
+So grammars for real programming languages tend to be really big
+
+141
+00:11:57,160 --> 00:12:04,280
+So how does Python actually parse those files if we were to create a parser for a grammar like this manually?
+
+142
+00:12:04,720 --> 00:12:08,440
+Writing all those if-else statements ourselves, I'll be super error prone
+
+143
+00:12:09,360 --> 00:12:13,040
+Like nobody has been doing this like since the 70s instead
+
+144
+00:12:13,120 --> 00:12:17,920
+We are generating a parser from the grammar, which is a bunch of generated code
+
+145
+00:12:17,960 --> 00:12:23,960
+But generator is written in Python what it generates is a bunch of C in case of CPython
+
+146
+00:12:24,880 --> 00:12:26,560
+All right
+
+147
+00:12:26,560 --> 00:12:28,560
+so to show you how
+
+148
+00:12:29,120 --> 00:12:32,100
+Python the interpreter actually sees the
+
+149
+00:12:32,580 --> 00:12:35,540
+Source code that we are dealing with let's just see like some
+
+150
+00:12:37,020 --> 00:12:40,440
+Example code right so this code it has just this main
+
+151
+00:12:41,300 --> 00:12:47,660
+Function which opens a file and then uses a visitor to just print lines in that file simple enough
+
+152
+00:12:48,220 --> 00:12:53,340
+so an ASD that we're gonna use and you see the ASD on the right like
+
+153
+00:12:53,980 --> 00:12:58,860
+Is the actual object oriented version of the lines that we have?
+
+154
+00:12:58,860 --> 00:13:04,860
+So there's a module which has an import that import has an alias. Obviously we are not using the alias
+
+155
+00:13:04,860 --> 00:13:11,100
+There is no ass name. So that's none, but it does have a name ASD. So import ASD is that import
+
+156
+00:13:11,300 --> 00:13:15,580
+There's the import from that it follows right and from the first level
+
+157
+00:13:15,580 --> 00:13:19,600
+We have this module simple visitor and we import names from it
+
+158
+00:13:19,600 --> 00:13:24,580
+We can import many but in this case we just import one and so on and so on when we get to a function definition
+
+159
+00:13:24,820 --> 00:13:30,220
+We see that oh, yeah, it has arguments and whatnot and then we get to the body of the function which starts with
+
+160
+00:13:30,500 --> 00:13:36,660
+With statement and so on and so on and so on right so finally just like this for loop
+
+161
+00:13:36,660 --> 00:13:40,540
+You can see like oh, there's a for loop and it has an expression that you know is now
+
+162
+00:13:41,220 --> 00:13:43,220
+We iterate over and whatnot
+
+163
+00:13:43,940 --> 00:13:48,460
+At the very end the thing that I wanted to tell you and I wanted to show is that
+
+164
+00:13:48,780 --> 00:13:54,140
+This is an abstract syntax tree. What that means is like it's this beautiful
+
+165
+00:13:55,060 --> 00:13:57,060
+operational thing that
+
+166
+00:13:57,380 --> 00:14:01,320
+specializes nodes for every possible construct in a language
+
+167
+00:14:02,220 --> 00:14:07,580
+They throw away insignificant details like whitespace optional parentheses comments
+
+168
+00:14:07,780 --> 00:14:12,500
+So we can just focus on the things that Python is actually going to be running right, but hang on
+
+169
+00:14:13,620 --> 00:14:17,080
+Formatter actually has to know about those insignificant details, right?
+
+170
+00:14:17,080 --> 00:14:23,340
+Like this is the ones that we care about whitespace optional parentheses and comments. So what should we do about that? Well, uh
+
+171
+00:14:23,900 --> 00:14:29,960
+We don't use an abstract syntax tree. We use a concrete syntax tree and in Python we ship one
+
+172
+00:14:30,420 --> 00:14:32,420
+part of lip two to three
+
+173
+00:14:32,700 --> 00:14:36,500
+There is a concrete text tree implementation that we can use and black is using it
+
+174
+00:14:37,180 --> 00:14:40,540
+The output of it looks quite different if you look at the same file
+
+175
+00:14:40,620 --> 00:14:44,720
+You're gonna see it there's file input and there's a simple statement import name
+
+176
+00:14:44,980 --> 00:14:51,100
+That name is Lily import and then there's another name that follows that has a bunch of whitespace and says AST
+
+177
+00:14:51,260 --> 00:14:55,420
+So it's simply just a bunch of containers and
+
+178
+00:14:56,100 --> 00:15:01,340
+Tokens that just have content and it may be some whitespace calm before the token
+
+179
+00:15:01,580 --> 00:15:08,480
+So there's a very little specialization here and the thing that I really wanted to like express is how even things like deaf
+
+180
+00:15:08,480 --> 00:15:12,140
+In the function definition is just a name that is, you know
+
+181
+00:15:12,620 --> 00:15:18,060
+Prepended by a bunch of empty lines and this is literally just says a deaf and then there's a space and there's main
+
+182
+00:15:18,260 --> 00:15:22,340
+So we no longer know for sure like what does the code mean?
+
+183
+00:15:22,340 --> 00:15:28,540
+Like we are not operating on a logical piece of source code anymore as an abstract syntax tree
+
+184
+00:15:28,540 --> 00:15:35,340
+We're operating on like the tokens as they go and just organize them in containers so that we don't lose the information about
+
+185
+00:15:37,380 --> 00:15:43,820
+Comments and whitespace. So this is the kind of low-level thing that I had to operate with writing black
+
+186
+00:15:43,900 --> 00:15:49,380
+It is way more verbose so like it takes way more time to just scroll through this so we're not gonna do this
+
+187
+00:15:49,540 --> 00:15:56,780
+Well, what I wanted to show you really is that like we do have a concrete syntax tree that we can use and a fun thing
+
+188
+00:15:56,780 --> 00:16:02,860
+That you can see in this particular slide is that there is an indent and D dent token that we are using
+
+189
+00:16:03,180 --> 00:16:07,180
+So if you really really squint, you know that Python doesn't have braces
+
+190
+00:16:07,820 --> 00:16:15,180
+But it does right like indent and D dent tokens are really just you know braces in hiding that we just used
+
+191
+00:16:15,740 --> 00:16:20,700
+Significant indentation for but it's the same kind of thing in the resulting syntax tree
+
+192
+00:16:21,020 --> 00:16:25,260
+Alright, so enough of about trees like how did you actually write the thing?
+
+193
+00:16:25,740 --> 00:16:28,900
+How can we manipulate that syntax tree to output something?
+
+194
+00:16:29,180 --> 00:16:35,340
+Right, so we're gonna talk about how I did it in particularly in black, which is one of the possibilities. It's not
+
+195
+00:16:36,060 --> 00:16:38,340
+The the one possible way right?
+
+196
+00:16:38,340 --> 00:16:43,020
+I'm just telling about the story of how I wrote the thing if you're just interested in using it
+
+197
+00:16:43,020 --> 00:16:45,020
+You can install it like right now and whatnot
+
+198
+00:16:45,500 --> 00:16:47,140
+but for me
+
+199
+00:16:47,140 --> 00:16:50,700
+let me try to convince you first before we get to the trees like
+
+200
+00:16:51,500 --> 00:16:56,820
+Why did I want to write a new all the formatter in 2018? Isn't that crazy? We already had a few right?
+
+201
+00:16:56,820 --> 00:17:02,420
+We had all of a paid we had the app, you know IDs like pie charm implement their own all the formatting
+
+202
+00:17:02,420 --> 00:17:04,680
+It's like why would you create yet a new one?
+
+203
+00:17:06,300 --> 00:17:11,020
+There should be only one right like you know, if you think about this enough Python
+
+204
+00:17:11,100 --> 00:17:16,380
+So my design goals were as follows like I didn't want to have a configurable one
+
+205
+00:17:16,380 --> 00:17:22,260
+I wanted to have one that just formats things the same way every time so I wanted it to be
+
+206
+00:17:22,500 --> 00:17:28,940
+Opinionated I wanted it to be consistent so that it is easy to explain why it did a thing instead of like having it
+
+207
+00:17:28,940 --> 00:17:31,580
+Just be a black box that you cannot really inspect
+
+208
+00:17:31,740 --> 00:17:35,860
+I wanted it to be deterministic. What I mean by this is that if you are running
+
+209
+00:17:36,700 --> 00:17:40,220
+An all the formatter over the same file twice in
+
+210
+00:17:41,060 --> 00:17:47,780
+Succession like right after like one run after the other you want the result to be always the same
+
+211
+00:17:48,300 --> 00:17:54,400
+And in all the pet aid any app that's not true. Like sometimes the second run might actually yield a different result
+
+212
+00:17:54,900 --> 00:17:59,860
+And I want it to be fast obviously, you know, like reasonably fast, but what I mean is
+
+213
+00:18:00,420 --> 00:18:06,420
+Back at Facebook some of the files that we're dealing with are megabytes big because they're generated by some automation
+
+214
+00:18:06,420 --> 00:18:13,780
+There are configuration that we're dealing with and all the formatting those files had to finish and sensible time. Otherwise, it's just useless
+
+215
+00:18:14,780 --> 00:18:16,780
+Right. So what are the actual?
+
+216
+00:18:17,940 --> 00:18:22,420
+Parts of a code style that I wanted to be opinionated and consistent
+
+217
+00:18:23,260 --> 00:18:25,660
+There's like four parts to it really if you think about this
+
+218
+00:18:26,220 --> 00:18:31,320
+Let's go through like all of them now so you can see, you know how the black code style
+
+219
+00:18:31,320 --> 00:18:34,720
+Which is like a subset of pep8 solves all of those four things
+
+220
+00:18:35,500 --> 00:18:42,800
+So horizontal white space is kind of easy because it's when to put spaces and when to avoid them
+
+221
+00:18:42,800 --> 00:18:47,580
+Like one example that I like to give is this you should put spaces around equal signs
+
+222
+00:18:48,740 --> 00:18:50,740
+unless it's a
+
+223
+00:18:51,060 --> 00:18:53,900
+You know a default value of an argument and don't
+
+224
+00:18:54,900 --> 00:18:58,440
+Unless that argument is type then do it
+
+225
+00:18:58,820 --> 00:19:03,940
+So like there's rules that we have to literally implement in black that just like if else if else
+
+226
+00:19:03,940 --> 00:19:09,420
+I can do that and some of them are surprising and people to this day sometimes would report issues on this
+
+227
+00:19:09,620 --> 00:19:14,300
+But pep8 really says this that if you have a non trivial
+
+228
+00:19:15,220 --> 00:19:19,300
+Side of a slice you should put the slice Collins
+
+229
+00:19:19,820 --> 00:19:27,540
+With spaces around them, so that's what the base says and this is what we do vertical white space kind of easy to write
+
+230
+00:19:27,540 --> 00:19:32,780
+It's like what tokens always to break on what tokens never to break on how many empty lines to use?
+
+231
+00:19:32,980 --> 00:19:37,260
+So the simple thing is this like I always break after columns like that, right?
+
+232
+00:19:37,260 --> 00:19:41,080
+So it's we're gonna always do this and then between functions
+
+233
+00:19:41,080 --> 00:19:47,140
+Well, if you are module level just put two new lines if you are in a class just put one new line
+
+234
+00:19:47,140 --> 00:19:48,180
+So that's easy
+
+235
+00:19:48,180 --> 00:19:54,020
+But the non easy thing and the one that people are very often opinionated against and they're like this is so weird is
+
+236
+00:19:54,340 --> 00:19:56,100
+the sad face
+
+237
+00:19:56,100 --> 00:20:03,220
+So the sad face is what is produced by having a function signature being long enough that now you have this dedented
+
+238
+00:20:03,820 --> 00:20:05,820
+closing parentheses and
+
+239
+00:20:06,020 --> 00:20:10,380
+Colon, oh, why do we do this? Well, like I thought about this
+
+240
+00:20:10,380 --> 00:20:15,260
+I was actually writing code manually like this before I wrote black and the reason why is that
+
+241
+00:20:15,740 --> 00:20:18,540
+This is the same kind of formatting as we would apply to
+
+242
+00:20:19,220 --> 00:20:25,340
+Dictionary lists topo literals. This is how you you know format your data structures
+
+243
+00:20:25,340 --> 00:20:28,700
+Anyway, so doing this is actually very useful
+
+244
+00:20:28,700 --> 00:20:36,060
+It has this nice property that it splits visibly the function signature from the function body
+
+245
+00:20:36,060 --> 00:20:42,020
+And you can get away with this without introducing additional indentation
+
+246
+00:20:42,100 --> 00:20:48,820
+Just moving stuff around just so that it's clear where the function signature ends and when the function body begins
+
+247
+00:20:49,540 --> 00:20:52,060
+So this is why we have this hot face
+
+248
+00:20:52,140 --> 00:20:55,900
+It is a weird for a while if you just are introduced to this style
+
+249
+00:20:55,980 --> 00:21:01,380
+But you'll forget about it soon enough and it provides consistency across all those language constructs
+
+250
+00:21:01,700 --> 00:21:02,360
+All right
+
+251
+00:21:02,360 --> 00:21:03,380
+So that's it
+
+252
+00:21:03,380 --> 00:21:09,780
+Like one thing that you can see like, you know in red here is that we have this trailing comma those training commas
+
+253
+00:21:10,260 --> 00:21:15,380
+Are only possible when you're using variadic arguments in Python 3 6 and newer
+
+254
+00:21:15,380 --> 00:21:16,940
+So blackill is gonna
+
+255
+00:21:16,940 --> 00:21:20,100
+Detect whether you're using Python 3 6 features in your file
+
+256
+00:21:20,100 --> 00:21:22,500
+And then it's gonna put the trailing comma if not
+
+257
+00:21:22,500 --> 00:21:27,620
+Then it's gonna play it safe and not do it because otherwise the grammar which is not accepted it will just say syntax error
+
+258
+00:21:27,980 --> 00:21:31,980
+So line length that's easy, right? Which one should we use 80 or 120?
+
+259
+00:21:32,540 --> 00:21:34,260
+Well neither
+
+260
+00:21:34,260 --> 00:21:39,100
+We're using nine years. Raymond Hattinger had this wonderful talk called beyond pep 8
+
+261
+00:21:39,300 --> 00:21:45,120
+Where he uses, you know the wealth of his experience to just say that you know in his
+
+262
+00:21:46,420 --> 00:21:52,940
+Practice as a teacher and as a consultant and big companies. We are just missing a few characters to be happy, right?
+
+263
+00:21:53,460 --> 00:22:01,140
+We usually have a module that has a class those classes have methods those methods gonna have some if statements
+
+264
+00:22:01,140 --> 00:22:07,180
+And finally you lost enough levels of indentation that there's not much space for your logic anymore
+
+265
+00:22:07,220 --> 00:22:09,540
+And just adding like just
+
+266
+00:22:10,500 --> 00:22:14,780
+You know a few characters beyond the 79 that pep 8 says
+
+267
+00:22:16,140 --> 00:22:21,440
+Solves the problem entirely and I was like, okay, I trust you Raymond, but let's test it not Facebook
+
+268
+00:22:21,440 --> 00:22:24,920
+I had access to like, you know tens of millions of Python code. So
+
+269
+00:22:25,540 --> 00:22:30,700
+Lines of Python code so I ran like black with different kinds of configuration
+
+270
+00:22:30,700 --> 00:22:33,780
+Like what if we do 79? What if we do 80? What if we do 88?
+
+271
+00:22:33,820 --> 00:22:38,260
+What if we do 120 and I was looking for how long?
+
+272
+00:22:38,660 --> 00:22:45,140
+The files are gonna be in terms of how many lines are reproducing and it turns out that like after 88 the difference is really
+
+273
+00:22:45,140 --> 00:22:46,260
+small
+
+274
+00:22:46,260 --> 00:22:52,700
+Like it's mostly those few missing characters that cause those ugly formatting to appear everywhere and those
+
+275
+00:22:53,580 --> 00:23:00,540
+Big folds to appear everywhere. So 90 ish it is and then like I said, I wanted everything to be consistent
+
+276
+00:23:00,540 --> 00:23:05,760
+So we have trailing commas and we're standardizing on one kind of string
+
+277
+00:23:06,460 --> 00:23:11,660
+Quote because like if you have this like is this an empty string or is it a double quote character?
+
+278
+00:23:11,660 --> 00:23:13,660
+Well, you will never know if I don't tell you
+
+279
+00:23:14,540 --> 00:23:15,860
+now like
+
+280
+00:23:15,860 --> 00:23:20,220
+We standardized on double quotes double quotes are nice because they anticipate
+
+281
+00:23:21,500 --> 00:23:26,260
+Apostrophes in your text. They're already what you were what you were using for doc strings
+
+282
+00:23:26,260 --> 00:23:30,020
+And they're the same in C and you interact with C a lot when you write Python
+
+283
+00:23:30,540 --> 00:23:36,460
+So to see how we actually implemented black like we have to think about like what does it actually do?
+
+284
+00:23:36,460 --> 00:23:40,900
+And what is it that it is formatting? Well, it's formatting like lines, right?
+
+285
+00:23:40,900 --> 00:23:47,940
+Those lines can be 120 lines long 20 characters long or 80 or whatnot. But what is a liner really?
+
+286
+00:23:47,940 --> 00:23:49,700
+right, so
+
+287
+00:23:49,700 --> 00:23:55,220
+When I was thinking about this originally, I kind of liked was what yap is
+
+288
+00:23:55,700 --> 00:24:03,180
+Doing for the same purpose, which is that each line is this theoretical line that we would put you know
+
+289
+00:24:03,700 --> 00:24:05,420
+our single
+
+290
+00:24:05,420 --> 00:24:11,140
+Statement or expression or whatever else like this single fragment that we would use if there was no
+
+291
+00:24:11,220 --> 00:24:17,460
+Limit or for the columns that we want to use right? So sometimes it's gonna be like three characters sometimes eight and sometimes
+
+292
+00:24:18,660 --> 00:24:20,660
+279 so it's this theoretical
+
+293
+00:24:21,500 --> 00:24:24,180
+Line that we would use if there were no column limits
+
+294
+00:24:24,180 --> 00:24:29,740
+So we produce this one first from this visitor that just like feeds from your initial file
+
+295
+00:24:29,780 --> 00:24:34,700
+We read it and then the super simplify logarithm goes like this we create a
+
+296
+00:24:35,700 --> 00:24:39,100
+Concrete syntax tree from this input file within the tree
+
+297
+00:24:39,100 --> 00:24:45,220
+We generate those theoretical lines and when a new line is generated and its length requires splitting
+
+298
+00:24:45,620 --> 00:24:50,100
+We do split that magic is gonna be explained a bit later and for each split
+
+299
+00:24:50,220 --> 00:24:56,280
+We still look like is that fitting now that column limit and if not
+
+300
+00:24:56,280 --> 00:24:57,580
+We just split it again
+
+301
+00:24:57,580 --> 00:25:03,260
+And then we track blank lines because separately we need to know like how many blank lines to put in a given place
+
+302
+00:25:04,060 --> 00:25:05,180
+and
+
+303
+00:25:05,180 --> 00:25:08,260
+We also like track comments and stuff like this
+
+304
+00:25:08,860 --> 00:25:13,700
+But the rule is this like a line once from Adam and emitted externally is not touched again
+
+305
+00:25:13,700 --> 00:25:20,020
+So we just do one pass that makes it predictably fast and linear right now in non quadratic
+
+306
+00:25:20,300 --> 00:25:21,780
+so
+
+307
+00:25:21,780 --> 00:25:23,180
+The thing that you know
+
+308
+00:25:23,180 --> 00:25:27,140
+I always like to mention about black is that it doesn't really look at your pre-existing formatting
+
+309
+00:25:27,380 --> 00:25:33,100
+Like with the obvious exception of empty lines will preserve if you had like two like somewhere or if you had one
+
+310
+00:25:33,100 --> 00:25:37,420
+It's not gonna remove this one between statements. I'm just gonna leave it same with comments
+
+311
+00:25:37,420 --> 00:25:41,020
+It really tries hard to like, you know keep comments where you where you wanted them
+
+312
+00:25:41,060 --> 00:25:46,460
+Which is not super easy, but the most like the most I don't know
+
+313
+00:25:47,140 --> 00:25:52,900
+Value added of black is really just splitting the lines. So what kind of splitting does black do?
+
+314
+00:25:53,140 --> 00:25:56,420
+there are actually two kinds of splits that you can use and
+
+315
+00:25:58,020 --> 00:25:59,700
+We're gonna just like go through them
+
+316
+00:25:59,700 --> 00:26:05,240
+So the first one is bracket split meaning if you have a line and there are there's some pair of brackets in it
+
+317
+00:26:06,240 --> 00:26:12,600
+How should you break them well either you can break after the first bracket the opening bracket that you found or
+
+318
+00:26:12,920 --> 00:26:18,340
+You can break after the last bracket on the line and it turns out that breaking on the last bracket
+
+319
+00:26:18,340 --> 00:26:24,140
+So the right hand side split it just looks better for for humans because humans write code from left to right
+
+320
+00:26:24,280 --> 00:26:30,280
+They go as far as the column limit will let them and only then they will realize that oh, I'm at 80 now
+
+321
+00:26:30,280 --> 00:26:35,160
+So I have to split so they will split and this is how most code in real life is written
+
+322
+00:26:35,280 --> 00:26:39,220
+Which is why people really like to read code written that way
+
+323
+00:26:39,720 --> 00:26:47,900
+However, there are certain cases like function signatures where the left-hand side formatting is simply way faster and just produces better results
+
+324
+00:26:47,900 --> 00:26:54,740
+So we use this too, but in a very limited setting almost everything is the right hand side split and then the okay
+
+325
+00:26:54,740 --> 00:26:56,760
+Once you already split on brackets
+
+326
+00:26:56,760 --> 00:27:03,180
+You have this massive body inside but still might be way too many characters on a line
+
+327
+00:27:03,220 --> 00:27:08,220
+So we do is we are looking for delimiters now are there any delimiters and what are those well?
+
+328
+00:27:08,660 --> 00:27:12,380
+operators come as spaces between consecutive string literals
+
+329
+00:27:12,820 --> 00:27:17,020
+standalone comments like so that comments that are just appear on their own on the line and
+
+330
+00:27:17,220 --> 00:27:19,620
+Like we discover them they have priorities
+
+331
+00:27:19,620 --> 00:27:26,340
+So like certain ones like just are more important than others and there's at least two of a kind like then we're gonna split
+
+332
+00:27:26,780 --> 00:27:29,700
+And check whether that now fits a line
+
+333
+00:27:30,660 --> 00:27:35,740
+So those split lines are still valid Python even though they look weird, you know, if you just look at this one line
+
+334
+00:27:36,660 --> 00:27:39,340
+Because they are within a bracket pair. So
+
+335
+00:27:40,260 --> 00:27:42,740
+Significant indentation in Python does not apply to them
+
+336
+00:27:43,100 --> 00:27:48,560
+So going back to this, you know, and I don't really expect you to read this like now like we visit the tree
+
+337
+00:27:48,560 --> 00:27:53,080
+Right, we still put at most one statement per line. We split, you know
+
+338
+00:27:53,080 --> 00:27:58,180
+We are attempting either the brackets for splits or the delimiter splits
+
+339
+00:27:58,660 --> 00:28:03,060
+But we visit the tree right? So how does the visitor work in black code?
+
+340
+00:28:03,300 --> 00:28:06,980
+Well, the visitor is essentially a generator it will generate
+
+341
+00:28:07,820 --> 00:28:11,100
+like, you know lines one by one and then
+
+342
+00:28:11,780 --> 00:28:15,900
+Like so this is the actual like abstract visitor implementation that I'm using
+
+343
+00:28:16,860 --> 00:28:22,020
+Then for example the debug visitor that I used to do this graphical representation that we looked at before
+
+344
+00:28:22,300 --> 00:28:25,940
+Like you just just fit in one slide. I don't expect you to read it now
+
+345
+00:28:25,940 --> 00:28:32,100
+Just I was just wanting I just wanted to show you that like it's rather easy and usable in practice
+
+346
+00:28:32,380 --> 00:28:34,380
+Especially that on the user side
+
+347
+00:28:34,540 --> 00:28:38,540
+You just iterate over the call to the visit method
+
+348
+00:28:38,540 --> 00:28:42,440
+So this is actual code from black where you go like, you know
+
+349
+00:28:43,140 --> 00:28:48,840
+For every line we're gonna do things, right? So maybe we should have some empty lines before and after
+
+350
+00:28:49,300 --> 00:28:55,580
+Right, we're gonna add some contents from those empty lines and then we're gonna just split so for a line and split line
+
+351
+00:28:56,060 --> 00:29:00,860
+Let's just go and add things to destination contents and later on we're just gonna emit them to a file
+
+352
+00:29:01,020 --> 00:29:03,820
+So that is the core of it and now, you know how black works
+
+353
+00:29:03,820 --> 00:29:06,780
+So we could just look at the code and if something is surprising you
+
+354
+00:29:07,300 --> 00:29:10,380
+It shouldn't anymore because that is really how it works
+
+355
+00:29:10,380 --> 00:29:17,380
+Like the entire thing including all the edge cases and handling of multi processing and whatever is 3500 lines
+
+356
+00:29:17,380 --> 00:29:22,620
+It is really, you know possible for us to understand how it does the thing it does
+
+357
+00:29:23,140 --> 00:29:25,140
+There are other possible algorithms
+
+358
+00:29:25,500 --> 00:29:30,300
+Some of which might be like what the app is doing and what not like but I won't cover them
+
+359
+00:29:31,380 --> 00:29:35,500
+Just going to the fun problems the most fun problem with a project like this is users
+
+360
+00:29:36,220 --> 00:29:37,620
+so
+
+361
+00:29:37,620 --> 00:29:43,780
+Users are lovely and most of them. Thank you a lot. They report actual bugs. They are patient considerate like it's amazing, right?
+
+362
+00:29:44,280 --> 00:29:49,080
+Some users disagree with your choices because it's an opinionated formatter and that is okay
+
+363
+00:29:49,420 --> 00:29:51,560
+It's fine for you to disagree with an opinion
+
+364
+00:29:51,560 --> 00:29:55,340
+That is fine because there's no head truth to what I'm doing
+
+365
+00:29:55,340 --> 00:29:58,800
+I have some reasoning for things but it's fine for you to disagree with me
+
+366
+00:29:58,880 --> 00:30:02,880
+but some people are offended by your choices they demand change and
+
+367
+00:30:03,520 --> 00:30:10,840
+They submit unsolicited poll requests and make scenes when you decide against merging them and that is sort of kind of you know
+
+368
+00:30:11,360 --> 00:30:13,360
+Brings you down. That is as annoying
+
+369
+00:30:14,080 --> 00:30:19,000
+Some demand configuration and I gave some of the reasonable I guess
+
+370
+00:30:19,320 --> 00:30:24,320
+Once but people always demand more even though they love your product because it is not configurable
+
+371
+00:30:24,320 --> 00:30:27,120
+So, you know you cannot have it both
+
+372
+00:30:27,640 --> 00:30:33,320
+Some don't read the documentation if it's too short then you're like you don't have it in the documentation if it's too long
+
+373
+00:30:33,320 --> 00:30:35,320
+Then they're like too long didn't read
+
+374
+00:30:36,120 --> 00:30:40,440
+So open source is really a labor of love when I first released black at Facebook
+
+375
+00:30:40,960 --> 00:30:44,280
+Actually, most people were happy about this. I was very happy
+
+376
+00:30:45,400 --> 00:30:47,400
+But not everybody was happy
+
+377
+00:30:47,800 --> 00:30:50,640
+So you can decide that if you are one of those like
+
+378
+00:30:51,800 --> 00:30:57,960
+324 you're this one person here, but it seems like the project is popular. It is actually you know, like
+
+379
+00:30:59,640 --> 00:31:04,200
+Almost reached 10,000 star stars on github. Please help me get there
+
+380
+00:31:04,200 --> 00:31:10,400
+Like obviously github, you know, like sends a cake to people that get 10,000 stars like so or so I heard
+
+381
+00:31:11,320 --> 00:31:15,100
+It is downloaded pretty often and who downloads it?
+
+382
+00:31:15,140 --> 00:31:20,060
+Well, pi test talks pyramid the Django channels hypothesis adders poetry pipe
+
+383
+00:31:20,060 --> 00:31:24,980
+He a applications like warehouse PIP and virtual and many others soon
+
+384
+00:31:24,980 --> 00:31:30,260
+Maybe Django twisted and flask from what I've heard just in the hallway track. So that's pretty cool
+
+385
+00:31:30,980 --> 00:31:32,940
+But not all is easy
+
+386
+00:31:32,940 --> 00:31:36,140
+Handling comments was very hard because comments are not part of the grammar
+
+387
+00:31:36,140 --> 00:31:38,540
+They're part of this white space that you just throw away
+
+388
+00:31:38,820 --> 00:31:44,520
+So making sure that they're still there were the human thought they put them
+
+389
+00:31:44,560 --> 00:31:49,040
+Is actually very hard because they're not sticky to the place a human thought
+
+390
+00:31:49,040 --> 00:31:53,080
+They just come after some token and before some other token. So
+
+391
+00:31:53,600 --> 00:31:56,480
+This required like rather tricky
+
+392
+00:31:57,120 --> 00:31:58,680
+You know
+
+393
+00:31:58,680 --> 00:32:01,840
+Heuristics optional parentheses. What do they mean? Well in
+
+394
+00:32:02,600 --> 00:32:06,520
+Python for example an if test doesn't have to have parentheses around it
+
+395
+00:32:06,520 --> 00:32:10,180
+But it might and sometimes that will format things better. So
+
+396
+00:32:10,300 --> 00:32:13,380
+Should I put them or should I not put them well
+
+397
+00:32:14,380 --> 00:32:17,580
+This is tricky as well, right? So that was a thing
+
+398
+00:32:18,060 --> 00:32:21,660
+Sometimes you have a legitimate reason not to format a bunch of code
+
+399
+00:32:21,660 --> 00:32:25,100
+So there's format off and format on that was also tricky to
+
+400
+00:32:26,140 --> 00:32:28,380
+Implement and finally the terminism
+
+401
+00:32:29,380 --> 00:32:33,940
+We are safe to use black is safe to use because it will actually format your file twice
+
+402
+00:32:33,940 --> 00:32:39,020
+Internally and check whether the results are the same if they're not is gonna raise an error that there's a bug
+
+403
+00:32:39,020 --> 00:32:45,260
+There's an internal bug that should not have happened. So the terminism actually had some issues there accidental quadratic behavior
+
+404
+00:32:45,780 --> 00:32:52,660
+I was you know annoying so those kinds of projects tend to be very complicated in the most unexpected places
+
+405
+00:32:52,660 --> 00:32:56,340
+So what is the status of black? Should you use it today? Should you wait?
+
+406
+00:32:56,340 --> 00:33:01,420
+Well, the plan the grand plan for the project is something like this. Oh, not this light
+
+407
+00:33:02,220 --> 00:33:03,660
+Yeah, so
+
+408
+00:33:03,660 --> 00:33:05,660
+Stable right?
+
+409
+00:33:06,300 --> 00:33:10,620
+And we are literally here at the sprints after the conference
+
+410
+00:33:10,620 --> 00:33:14,860
+I'm gonna build a stable version and we're gonna be done so you can use it. Is it safe to use?
+
+411
+00:33:15,380 --> 00:33:18,780
+Yes, it not only checks whether the
+
+412
+00:33:19,380 --> 00:33:23,220
+formatting is deterministic what it also is doing is it's
+
+413
+00:33:24,060 --> 00:33:26,060
+going to
+
+414
+00:33:26,100 --> 00:33:31,620
+It's going to check that the AST so the abstract syntax tree is the same before and after
+
+415
+00:33:31,780 --> 00:33:39,220
+So it didn't break any code Python still sees exactly the same thing so quickly because I'm over time already tips and tricks for adoption
+
+416
+00:33:39,460 --> 00:33:41,520
+Get hyper blame lets you
+
+417
+00:33:42,660 --> 00:33:44,600
+Ignore and bypass certain comments
+
+418
+00:33:44,600 --> 00:33:52,320
+So if you are adopting black create a massive comment that formats everything and then use get hyper blame to
+
+419
+00:33:53,180 --> 00:33:55,900
+See blame as if nothing ever happened
+
+420
+00:33:56,660 --> 00:34:01,260
+Then if you have pull requests that were open in the moment that you migrated to black
+
+421
+00:34:01,660 --> 00:34:08,400
+There is a button that you can press command line instructions that will show you how you can pull the pull requests locally
+
+422
+00:34:08,700 --> 00:34:15,940
+You know formatted with black and push it back and then use pre-commit so that your code stays blackened
+
+423
+00:34:15,940 --> 00:34:20,100
+Even if you have many contributors, I don't take any questions now because I'm already over time
+
+424
+00:34:20,380 --> 00:34:25,260
+But I'm gonna have a poster on Sunday morning and I have stickers with it
+
+425
+00:34:25,260 --> 00:34:31,040
+So if you want to share some love or hate, please do it on Sunday morning. Thank you very much
+
+426
+00:34:31,120 --> 00:34:33,120
+My name is oka slanga
+
+427
+00:34:39,560 --> 00:34:42,020
+Thank You Lukas, so no Q&A
+

@@ -1,0 +1,2164 @@
+1
+00:00:00,000 --> 00:00:06,120
+All right. Hope you had a fantastic lunch and you're ready to learn. Our speaker today
+
+2
+00:00:06,120 --> 00:00:11,200
+is Matthew Seal. He works at Netflix and he's going to teach us about how to control Jupyter
+
+3
+00:00:11,200 --> 00:00:13,200
+notebooks with Python.
+
+4
+00:00:13,200 --> 00:00:15,200
+Thanks.
+
+5
+00:00:15,200 --> 00:00:22,920
+All right. So first thing, just a little bit, if you want to follow along with these slides
+
+6
+00:00:22,920 --> 00:00:25,840
+later or go look at anything in more depth because I'm going to be going through a lot
+
+7
+00:00:25,840 --> 00:00:29,960
+of slides, there's a tiny URL here and then the very last page will have it too. So you
+
+8
+00:00:29,960 --> 00:00:32,840
+will be able to see what was up here.
+
+9
+00:00:32,840 --> 00:00:38,880
+So we're going to be talking today about programmatic notebooks with Papermill. Papermill is a library
+
+10
+00:00:38,880 --> 00:00:44,320
+and it's in Jupyter space and I'll talk about what that means in a minute. So first off,
+
+11
+00:00:44,320 --> 00:00:51,320
+who am I? My name is Matthew Seal. It's the intro very kindly stated. And then I work
+
+12
+00:00:51,320 --> 00:00:56,500
+at the big data platform team at Netflix. In particular, I work on scheduling and orchestration
+
+13
+00:00:57,060 --> 00:01:00,460
+and we have a big overlap of that with notebooks because we actually do a bunch of scheduled
+
+14
+00:01:00,460 --> 00:01:05,020
+notebooks and we kind of make that easy for our users to do.
+
+15
+00:01:05,020 --> 00:01:10,260
+So that kind of leads me into, well, you said you're a big data platform team member. What
+
+16
+00:01:10,260 --> 00:01:15,500
+does that mean? Not everyone knows what that means, including some people on data platform
+
+17
+00:01:15,500 --> 00:01:20,900
+teams. We were like, what am I doing to help people? So the way I like to kind of state
+
+18
+00:01:20,900 --> 00:01:25,940
+this is we're helping build these data platform services that help people kind of get out
+
+19
+00:01:25,940 --> 00:01:30,140
+of the way of people doing their job. So we have lots of data inputs from events, from
+
+20
+00:01:30,140 --> 00:01:36,100
+users, from system metrics, and the user needs to be able to collect those up, say something
+
+21
+00:01:36,100 --> 00:01:39,940
+about them, either put them in another system so someone can live query them faster, build
+
+22
+00:01:39,940 --> 00:01:44,780
+a report, do some machine learning on it, feed it back into another ETL system. All
+
+23
+00:01:44,780 --> 00:01:49,660
+these things, they need tools to do this because it's a complicated problem, but the conceptual
+
+24
+00:01:49,660 --> 00:01:53,340
+problem that the user's trying to solve is relatively simple. I want data from A to B.
+
+25
+00:01:53,500 --> 00:01:56,460
+Why is it so hard not to work? So we try to make it easy so they don't have to come ask
+
+26
+00:01:56,460 --> 00:02:02,180
+us why nothing works. And so some of these tools, these things I'm talking about, this
+
+27
+00:02:02,180 --> 00:02:07,700
+is all open source stuff that we use to help make that possible. So in the short version
+
+28
+00:02:07,700 --> 00:02:15,700
+of this, the data platform tries to open doors for folks, just not that door because it's
+
+29
+00:02:15,700 --> 00:02:22,620
+scary. Everything that I'm presenting here is open source projects, so you can go see
+
+30
+00:02:22,820 --> 00:02:27,020
+the contributions there. I'm a maintainer in both the Jupiter space and the Interact
+
+31
+00:02:27,020 --> 00:02:31,260
+space, and I do the releases for paper mills, so if you have paper mill specific things,
+
+32
+00:02:31,260 --> 00:02:36,420
+definitely I can help you or point you to the right discourses. And all these things
+
+33
+00:02:36,420 --> 00:02:41,340
+have been contributed by Netflix, so we have a notebooks team which contributes a lot of
+
+34
+00:02:41,340 --> 00:02:44,980
+code in this space, and then I also contribute a few other members that aren't on those teams
+
+35
+00:02:44,980 --> 00:02:50,340
+specifically contribute. All right, so first thing is, how many of you know what a notebook
+
+36
+00:02:50,340 --> 00:02:55,740
+is? That's awesome. That means I can go faster. How many of you know what a Jupyter notebook
+
+37
+00:02:55,740 --> 00:03:04,740
+is than a Zeppelin notebook? Yeah, like 5% of you. Cool. That's part of why I'm here.
+
+38
+00:03:04,740 --> 00:03:09,420
+A little bit talking about the Jupiter specific things and what the ecosystem allows to enable
+
+39
+00:03:09,420 --> 00:03:14,540
+this kind of functionality that I'm about to describe. So a Jupyter notebook, in its
+
+40
+00:03:14,540 --> 00:03:19,200
+most basic form, something like this, you see notebooks, but the Jupyter ecosystem as
+
+41
+00:03:19,200 --> 00:03:23,120
+opposed to some of the other notebook ecosystems that have similar functionality is really
+
+42
+00:03:23,120 --> 00:03:28,900
+about the specs that enable the protocol between a client and the actual run time that's running
+
+43
+00:03:28,900 --> 00:03:35,440
+your code. So there's a lot of APIs that have been established on which these systems talk
+
+44
+00:03:35,440 --> 00:03:41,980
+to each other. What this means is that in a notebook like this when you're working on
+
+45
+00:03:41,980 --> 00:03:47,440
+one with a rendered repel of some sort like Python or Scala, because in Jupyter everything
+
+46
+00:03:47,440 --> 00:03:52,480
+is going over this communication protocol that has a fixed standard about how to execute
+
+47
+00:03:52,480 --> 00:03:58,240
+code and markdown and other things, it means you can make kernels in many different languages.
+
+48
+00:03:58,240 --> 00:04:01,840
+The kernel is the piece that actually runs the code in the back end. It also means you
+
+49
+00:04:01,840 --> 00:04:06,140
+make clients of many types. So I'm showing you here this is a UI from an interact which
+
+50
+00:04:06,140 --> 00:04:09,860
+is a kind of place that builds a bunch of components for using in notebooks and they
+
+51
+00:04:09,860 --> 00:04:13,800
+have a collection of those components that makes a UI. Similarly, there's Jupyter lab
+
+52
+00:04:13,800 --> 00:04:18,840
+and Jupyter classic are both UIs on Jupyter and a lot of platforms have their own proprietary
+
+53
+00:04:18,840 --> 00:04:23,800
+UIs that talk on the same protocols and they can provide a look and feel matching their
+
+54
+00:04:23,800 --> 00:04:29,040
+platform. So a little bit on what a notebook is. I'll go quickly here because you all kind
+
+55
+00:04:29,040 --> 00:04:36,280
+of know, but it's basically rendering the interactions with a repel. A repel being a
+
+56
+00:04:36,280 --> 00:04:40,720
+realtime interactive process where you're sending it strings and it gives you back executed
+
+57
+00:04:40,720 --> 00:04:46,720
+code results. And notebooks in this space are really handy because it gives you a place
+
+58
+00:04:46,720 --> 00:04:51,720
+where there's code, logs, documentation, execution results all in the same interface. And not
+
+59
+00:04:51,720 --> 00:04:57,360
+just the same interface, in the Jupyter ecosystem, it's also in the same file. So the file format
+
+60
+00:04:57,360 --> 00:05:02,760
+that gets saved when you're running a notebook or saving a notebook is saving into an IPMYB
+
+61
+00:05:02,760 --> 00:05:09,720
+file which is basically a glorified JSON file with a schema. So I'm going to skip through
+
+62
+00:05:09,720 --> 00:05:12,840
+the breakdown a little bit because I think most of you said you're familiar with notebooks,
+
+63
+00:05:12,840 --> 00:05:16,800
+but here's some kind of high level concepts here. You have a saving indicator, a code
+
+64
+00:05:16,800 --> 00:05:21,360
+cell that generates some displayed outputs. In this case, we generate a graph from some
+
+65
+00:05:21,360 --> 00:05:24,520
+code and it's all saved in the same document. If I share this document with someone, that
+
+66
+00:05:24,520 --> 00:05:31,960
+document embeds this information inside of it. And the places where notebooks actually
+
+67
+00:05:31,960 --> 00:05:37,000
+have good wins is they're shareable, they're pretty easy to read, you get this documentation
+
+68
+00:05:37,000 --> 00:05:42,880
+of code pairing and outputs are associated with that code as well. And it's also a familiar
+
+69
+00:05:42,880 --> 00:05:46,440
+interface for many users. It's gotten enough popularity that you can give someone a notebook
+
+70
+00:05:46,440 --> 00:05:49,600
+and they kind of know what to do and how it works, even if they don't know that particular
+
+71
+00:05:49,600 --> 00:05:54,480
+flavor of notebook. And notebooks are growing even more in a multi-language sense. So while
+
+72
+00:05:54,480 --> 00:05:57,960
+everything I'm showing here is going to be Python, there's also other languages that
+
+73
+00:05:57,960 --> 00:06:02,560
+can run notebook code in the background, including multi-language kernels, which are kind of a
+
+74
+00:06:03,560 --> 00:06:08,440
+fun thing if you're ever looking into it. So how does a Jupyter notebook actually execute
+
+75
+00:06:08,440 --> 00:06:12,000
+code? We're going to talk about this a little bit first so that we can explain how the tools
+
+76
+00:06:12,000 --> 00:06:17,900
+we use work. So a very high level. It's more complex than this, but this gives you a kind
+
+77
+00:06:17,900 --> 00:06:21,880
+of visual idea of what's going on. As a user, when you're typically using a Jupyter UI of
+
+78
+00:06:21,880 --> 00:06:26,840
+some sort, you're talking to your UI in a browser. That is talking back to a server,
+
+79
+00:06:26,840 --> 00:06:31,960
+which is hosting the UI and some basic APIs for it. And then that server is responsible
+
+80
+00:06:31,960 --> 00:06:36,080
+for ferrying messages to and from this thing called a kernel. Now, a kernel is a terrible
+
+81
+00:06:36,080 --> 00:06:39,800
+name for what this wrapper is, because if you're in machine learning, there's a different
+
+82
+00:06:39,800 --> 00:06:43,520
+thing that's a kernel. If you're in OS, there's another thing called a kernel. There's a lot
+
+83
+00:06:43,520 --> 00:06:46,120
+of kernels. In this case, when we're talking about kernel, we're always going to refer
+
+84
+00:06:46,120 --> 00:06:50,920
+to a Jupyter kernel, which is basically a command that wraps the REPL that accepts the
+
+85
+00:06:50,920 --> 00:06:56,520
+communication protocol that Jupyter has defined. All right. So we're going to talk a little
+
+86
+00:06:56,520 --> 00:06:59,840
+about traditionally where notebooks come from, because it's important about where it's
+
+87
+00:06:59,840 --> 00:07:06,080
+going and what it's being used for now. So back when I first started using Jupyter notebooks,
+
+88
+00:07:06,080 --> 00:07:11,200
+which is before I knew I'd be involved in Jupyter, a long time ago, it was around in
+
+89
+00:07:11,200 --> 00:07:14,780
+data science. It was really popular. And the reason why was because you could explore and
+
+90
+00:07:14,780 --> 00:07:18,600
+analyze not really knowing what your end result needed to be, but knowing you need to try
+
+91
+00:07:18,600 --> 00:07:22,880
+a bunch of things and that they were expensive computations that you needed to do. So the
+
+92
+00:07:22,880 --> 00:07:26,440
+really good things about notebooks are you get quick iteration cycles. I can run just
+
+93
+00:07:26,440 --> 00:07:30,200
+one snippet of code on the same live context over and over again until I get it right or
+
+94
+00:07:30,200 --> 00:07:34,760
+until I find the right data or until the model I chose did the right thing. You can leave
+
+95
+00:07:34,760 --> 00:07:38,240
+all your expensive queries higher up in the context, and they're sitting there, the results
+
+96
+00:07:38,240 --> 00:07:41,080
+are sitting there in memory, and I don't have to recompute them. I don't have to refetch
+
+97
+00:07:41,080 --> 00:07:48,720
+my 10 gigabytes of data to run my whole code again. And it also records what you did, so
+
+98
+00:07:48,720 --> 00:07:52,480
+it's really handy when like, oh, geez, what was the outcome of that other code cell or
+
+99
+00:07:52,480 --> 00:07:55,760
+the other execution the last time I ran this? You don't have to go search or lose a log
+
+100
+00:07:55,760 --> 00:08:00,520
+file. It's always inside the notebook that you ran. And they're pretty easy to modify.
+
+101
+00:08:00,520 --> 00:08:04,160
+You don't even, non-technical users can even modify an existing notebook because you can
+
+102
+00:08:04,160 --> 00:08:08,160
+even make interfaces within notebooks that hide some of the code or even make very simple
+
+103
+00:08:08,160 --> 00:08:14,280
+code like SQL that any user could do minimal learning, get into without being a full-blown
+
+104
+00:08:14,280 --> 00:08:20,080
+software engineer. But there are some things that are not so good about using Jupyter notebooks.
+
+105
+00:08:21,080 --> 00:08:26,320
+In particular, in the past, a lack of history. I may have changed a cell and I click save.
+
+106
+00:08:26,320 --> 00:08:30,160
+Oops, I don't remember what that cell was. And you close your browser, you're not getting
+
+107
+00:08:30,160 --> 00:08:36,040
+that back probably. They're pretty difficult to test in the sense that I have a bunch of
+
+108
+00:08:36,040 --> 00:08:40,800
+code and cells. It's kind of a glorified script in many ways. And if you don't structure it
+
+109
+00:08:40,800 --> 00:08:46,120
+well or have a placeholder to run unit tests, that can be difficult. It's a mutable document,
+
+110
+00:08:46,120 --> 00:08:50,920
+so you're changing in place what's happening. So if you make a run and you save your outcomes
+
+111
+00:08:50,920 --> 00:08:54,760
+and you rerun it, those outcomes can get lost because you overwrite the outcomes with the
+
+112
+00:08:54,760 --> 00:08:59,320
+next run. So maybe if you do an experiment and you found a really good result and then
+
+113
+00:08:59,320 --> 00:09:02,440
+you tried a different experiment and forgot what you did to get that good result, you
+
+114
+00:09:02,440 --> 00:09:06,440
+could lose that information, which is kind of frustrating. And then live collaboration
+
+115
+00:09:06,440 --> 00:09:12,200
+only really exists in a few niche corners of Jupyter. In reality, if two people try
+
+116
+00:09:12,200 --> 00:09:15,880
+and touch the same notebook at the same time, bad things happen in the future. We hope that
+
+117
+00:09:15,880 --> 00:09:23,360
+will not be true. So one thing we did when approaching this notebook space was we actually
+
+118
+00:09:23,360 --> 00:09:28,680
+wanted to help start filling some of the gaps. In particular, we really liked the results
+
+119
+00:09:28,680 --> 00:09:33,840
+linked to code, the visualizations being coupled with the execution context, and the ease of
+
+120
+00:09:33,840 --> 00:09:37,640
+sharing. Like we had a lot of users who loved these aspects of notebooks even outside of
+
+121
+00:09:37,640 --> 00:09:43,040
+data science. But some things that really needed to be improved. Versioning was pretty
+
+122
+00:09:43,800 --> 00:09:47,200
+rough. You know, you didn't know what you ran last time you ran this notebook or three
+
+123
+00:09:47,200 --> 00:09:52,960
+times ago. The mutable state kind of leads into that. The fact that, you know, when you
+
+124
+00:09:52,960 --> 00:09:56,400
+want to use a production setting, you have to really be able to audit what happened,
+
+125
+00:09:56,400 --> 00:10:02,120
+how did I execute it, what did I do, who authored this. And then templating. Most of the time,
+
+126
+00:10:02,120 --> 00:10:06,080
+templating before paper mill came along was I share this notebook with another person
+
+127
+00:10:06,080 --> 00:10:09,920
+and I give them instructions as a document at the top that says change this cell this
+
+128
+00:10:09,920 --> 00:10:15,840
+way and rerun everything and it will run the way you want. Paper mill helps solve that.
+
+129
+00:10:15,840 --> 00:10:19,080
+So we're going to talk about paper mill. Paper mill is a library which is gaining a lot of
+
+130
+00:10:19,080 --> 00:10:22,760
+popularity. It's actually kind of just a lightweight wrapper on things that were already there.
+
+131
+00:10:22,760 --> 00:10:27,080
+But it has a stronger opinion about how to do things. It's in a project called interact
+
+132
+00:10:27,080 --> 00:10:33,460
+which is a collection of notebook repositories that are notebook projects which all add little
+
+133
+00:10:33,460 --> 00:10:39,140
+enhancements to notebooks or make different components or things like that. So what's
+
+134
+00:10:39,140 --> 00:10:44,660
+paper mill and how does it do anything different? So one thing that paper mill does is actually
+
+135
+00:10:44,660 --> 00:10:49,460
+isolates the inputs from the outputs. It's a Python library that has a command line interface
+
+136
+00:10:49,460 --> 00:10:55,060
+which lets you give an input notebook path. It will compute that notebook and then after
+
+137
+00:10:55,060 --> 00:10:58,260
+it's done computing or hits an error, it will store that notebook to a totally different
+
+138
+00:10:58,260 --> 00:11:02,340
+place. It won't touch the input notebook unless you point the output notebook back to the
+
+139
+00:11:02,340 --> 00:11:06,740
+input. So what this means is you can get some isolation between when you execute the notebook
+
+140
+00:11:06,740 --> 00:11:11,740
+what the template source was and what the outcome was. In this case we see run one,
+
+141
+00:11:11,740 --> 00:11:15,700
+two, three, four. So we were just iterating through maybe a loop and we just saved each
+
+142
+00:11:15,700 --> 00:11:21,500
+output to a different place and then we can see what each execution actually did. All
+
+143
+00:11:21,500 --> 00:11:28,820
+right. So how does this look in Python a bit maybe? So in Python it's a pretty simple interface.
+
+144
+00:11:28,820 --> 00:11:33,900
+You import paper mill. You say execute notebook, input path, output path. If you do this very
+
+145
+00:11:34,100 --> 00:11:38,420
+simple thing, it will work and then you can actually see your outputs in the folder. In
+
+146
+00:11:38,420 --> 00:11:42,380
+this case I've put all the outputs in the outputs directory and just given it the date
+
+147
+00:11:42,380 --> 00:11:49,380
+int as a prefix so I can sort by the date I ran this. You can also add parameters. This
+
+148
+00:11:50,180 --> 00:11:55,260
+is the templating aspect we were talking about with notebooks. In particular here maybe we
+
+149
+00:11:55,260 --> 00:12:00,580
+have a notebook which runs some sort of analysis on let's say how many people are viewing a
+
+150
+00:12:00,980 --> 00:12:07,340
+particular site on particular types of devices. So here we've said well this notebook can
+
+151
+00:12:07,340 --> 00:12:11,500
+take region and devices so we're going to give it some inputs. What this will do when
+
+152
+00:12:11,500 --> 00:12:17,060
+you actually execute this is inside the notebook you're going to see a we'll have a section
+
+153
+00:12:17,060 --> 00:12:21,540
+there. This cell execution two is something we defined. We said hey here's the region
+
+154
+00:12:21,540 --> 00:12:26,380
+and here's the device PC and then we calculate date sense. This is the default parameters
+
+155
+00:12:26,380 --> 00:12:31,100
+that that cell has been tagged as this is my default. And then when paper executes it'll
+
+156
+00:12:31,100 --> 00:12:34,460
+inject a new code cell right below it with this it'll look exactly like this. It'll say
+
+157
+00:12:34,460 --> 00:12:40,180
+parameters region California and then devices phone, tablet. So we took our input JSON like
+
+158
+00:12:40,180 --> 00:12:45,180
+object in the input and made it into code inside the actual notebook. So when it executes
+
+159
+00:12:45,180 --> 00:12:49,200
+it looks like someone typed in an extra code cell and injected in all the parameterizations
+
+160
+00:12:49,200 --> 00:12:56,200
+after your defaults. And you can do the same type of input from a CLI. In fact we used
+
+161
+00:12:56,460 --> 00:13:01,300
+this most often in kind of like any system that can call out to the command line can
+
+162
+00:13:01,300 --> 00:13:05,500
+execute paper mail through the base almost the identical interface. In this case we gave
+
+163
+00:13:05,500 --> 00:13:10,540
+it region as a parameter with dash P and then we gave dash Y for YAML and just pass some
+
+164
+00:13:10,540 --> 00:13:17,540
+JSON to give it all of this stuff. So you see a little bit what this looks like if you
+
+165
+00:13:17,540 --> 00:13:23,160
+actually execute it in a CLI. Here you see we have a file up here. If you can't see the
+
+166
+00:13:23,160 --> 00:13:27,280
+red text I made it as bright as I could before this but the lighting is a little rough. If
+
+167
+00:13:27,280 --> 00:13:30,920
+you can't see things please do go look at the slides afterwards and you can see a little
+
+168
+00:13:30,920 --> 00:13:34,960
+better on your screen. So here we're executing paper mail and you'll see like this is the
+
+169
+00:13:34,960 --> 00:13:39,400
+default behavior it'll print out the input path, the output path, it'll do a status bar
+
+170
+00:13:39,400 --> 00:13:43,640
+as it goes. You can configure these things and control what it's going to output. And
+
+171
+00:13:43,640 --> 00:13:47,320
+we can do the same thing where we're going to give it these inputs and you'll see essentially
+
+172
+00:13:47,320 --> 00:13:51,960
+the identical input. Here we're giving it some conference, PyCon, and it'll print out
+
+173
+00:13:51,960 --> 00:13:57,120
+a fifth cell here. So you see I have five out of five instead of four out of four. So
+
+174
+00:13:57,120 --> 00:14:03,320
+how would this look in Python? Similar thing, we're actually using a notebook to run a notebook.
+
+175
+00:14:03,320 --> 00:14:07,420
+So this is kind of a fun thing you can do. And here I'm showing you the input notebook.
+
+176
+00:14:07,420 --> 00:14:11,560
+This is the input notebook we were running before. It has some really basic things. It
+
+177
+00:14:11,560 --> 00:14:15,480
+prints out an image and it has some parameters called paper and mill and it adds them together
+
+178
+00:14:15,480 --> 00:14:19,000
+to print out a string. The most basic Hello World notebook thing I could come up with
+
+179
+00:14:19,000 --> 00:14:22,440
+that demonstrated everything. And here we have another notebook which is going to run
+
+180
+00:14:22,440 --> 00:14:26,440
+the paper mill execute notebook. You'll notice when you're running paper mill from a notebook,
+
+181
+00:14:26,440 --> 00:14:31,040
+you get this nicer progress bar that's HTML. And here we're going to add a parameter in
+
+182
+00:14:31,040 --> 00:14:37,200
+here. So we're going to change that mill parameter that defaulted to mill two. Now we run this,
+
+183
+00:14:37,200 --> 00:14:42,280
+same type of execution. And if you go look at the outcome, you'll see this is the notebook
+
+184
+00:14:42,280 --> 00:14:47,400
+output two that we made and it has that parameter mill replaced with mill two which overwrote
+
+185
+00:14:47,400 --> 00:14:51,200
+the cell execution three. And now when it printed, it printed paper mill two instead
+
+186
+00:14:51,200 --> 00:14:58,600
+of paper mill. So that's kind of the basic interface. There's a whole bunch of other
+
+187
+00:14:58,600 --> 00:15:01,960
+components in there that we'll dig into. But how does this change the picture that we had
+
+188
+00:15:01,960 --> 00:15:08,080
+before where we had Jupyter being executed by users in a notebook server in a kernel?
+
+189
+00:15:08,080 --> 00:15:13,480
+Well, it acts just like any other client in a sense. The paper mill execution is just
+
+190
+00:15:13,480 --> 00:15:18,560
+like a UI client. It's following the same protocols your browser server is taking to
+
+191
+00:15:18,560 --> 00:15:24,080
+talk to Jupyter. And in this case, paper mill here is reading in an input notebook, storing
+
+192
+00:15:24,080 --> 00:15:29,280
+it in memory, and then it's sending each cell one by one through the kernel manager it launches
+
+193
+00:15:29,280 --> 00:15:32,920
+to the kernel that actually executes the code. And it collects the results just like your
+
+194
+00:15:32,920 --> 00:15:36,160
+browser would and then saves them into the notebook just like your browser would. So
+
+195
+00:15:36,160 --> 00:15:39,040
+at the end of the day, you can make all sorts of different types of clients that aren't
+
+196
+00:15:39,040 --> 00:15:40,680
+that simple. And then you can also use the notebooks that can interface with kernels
+
+197
+00:15:40,680 --> 00:15:47,440
+in a way that's creative. And paper mill just takes advantage of that. You know, a little
+
+198
+00:15:47,440 --> 00:15:52,040
+bit deeper into what's inside paper mill that makes it work. It's just a slightly more complicated
+
+199
+00:15:52,040 --> 00:15:55,800
+picture than the first one we showed with the input output. You have notebook sources,
+
+200
+00:15:55,800 --> 00:16:00,280
+which can be of many different schemes. And then it takes that source notebook. It has
+
+201
+00:16:00,280 --> 00:16:04,440
+a register for how do I load this in the memory. It'll load that JSON document in the memory.
+
+202
+00:16:04,440 --> 00:16:08,520
+And then the parameters will come in and it'll convert those into a dict in memory. And then
+
+203
+00:16:08,600 --> 00:16:12,720
+it knows how to translate that dict for a variety of languages. And then it'll splat
+
+204
+00:16:12,720 --> 00:16:18,280
+that back in as code in the execution. And then it launches this runtime manager, which
+
+205
+00:16:18,280 --> 00:16:22,520
+actually goes and launches the runtime process, which is the kernel. So each time you're on
+
+206
+00:16:22,520 --> 00:16:27,040
+paper mill, unlike in a notebook, you actually it launches a whole kernel and shuts it down
+
+207
+00:16:27,040 --> 00:16:31,560
+at the end. So it won't have a shared context between executions. And it'll isolate memory
+
+208
+00:16:31,560 --> 00:16:35,820
+and everything. And it'll clean up at the end because it's actually closing that process.
+
+209
+00:16:35,820 --> 00:16:40,140
+In a notebook, when you're running a notebook, it sits in the background and holds memory
+
+210
+00:16:40,140 --> 00:16:44,300
+for a while until you either kill it or it decides you aren't using it anymore. In this
+
+211
+00:16:44,300 --> 00:16:48,580
+case, you don't have that problem. But on the flip side is you can't reattach that kernel.
+
+212
+00:16:48,580 --> 00:16:53,820
+There are ways to change that or extend it. And then the output, you get these notebook
+
+213
+00:16:53,820 --> 00:17:00,660
+sinks where you can save out to the same type of sources that you drew from. So now paper
+
+214
+00:17:00,660 --> 00:17:04,940
+mill actually lets you do things like maybe have a notebook that does something like analyzes
+
+215
+00:17:04,940 --> 00:17:08,980
+a confusion matrix over some machine learning process and says, hey, which one did the best?
+
+216
+00:17:08,980 --> 00:17:13,220
+You can actually parallelize that execution and ship it out to a whole bunch of notebook
+
+217
+00:17:13,220 --> 00:17:17,300
+executions with the same base template with slight variations on the input. This makes
+
+218
+00:17:17,300 --> 00:17:21,980
+notebooks actually look a lot like a black box function. And then maybe you have a DAG
+
+219
+00:17:21,980 --> 00:17:28,220
+that continues past this point. All right. So we can talk about what paper mill did and
+
+220
+00:17:28,220 --> 00:17:31,660
+what in essence it tries to achieve. It's a really simple library. It actually only
+
+221
+00:17:31,660 --> 00:17:36,140
+has like 2,000 lines of code and 4,000 lines of tests. So you can actually just read all
+
+222
+00:17:36,140 --> 00:17:44,260
+the source code. It's pretty simple. But what this actually changed for us at Netflix and
+
+223
+00:17:44,260 --> 00:17:49,420
+for other groups in the world is that now the story about using notebooks can expand
+
+224
+00:17:49,420 --> 00:17:53,980
+to more use cases. In particular, we had seen analytics engineers and data engineers and
+
+225
+00:17:53,980 --> 00:17:59,420
+even platform engineers start to use notebooks for various tasks. And then the story was,
+
+226
+00:17:59,420 --> 00:18:02,940
+oh, you wrote a notebook and did the same. Cool. That's great. Rewrite it over here in
+
+227
+00:18:02,940 --> 00:18:07,620
+this other library in this other way. And that was a pretty high friction point that
+
+228
+00:18:07,620 --> 00:18:11,180
+we kept seeing with our users. They had a tool they liked and then we told them to abandon
+
+229
+00:18:11,180 --> 00:18:16,140
+that tool when they actually wanted to share it or use it in the platform itself. And so
+
+230
+00:18:16,140 --> 00:18:20,340
+paper mill was kind of an effort to sort of bridge that gap some and start reusing the
+
+231
+00:18:20,340 --> 00:18:24,100
+technology and integrating the technology they like to use rather than complaining that
+
+232
+00:18:24,100 --> 00:18:30,020
+it doesn't do what we like. And in this case, now these larger, wider group of users can
+
+233
+00:18:30,020 --> 00:18:33,100
+actually use notebooks where they would have traditionally just written some Python script
+
+234
+00:18:33,100 --> 00:18:36,700
+and threw it away someplace. Now they have a notebook which gives a more structured way
+
+235
+00:18:36,700 --> 00:18:41,460
+of executing and a way they can share the code with engineers or their colleagues better.
+
+236
+00:18:41,460 --> 00:18:46,620
+And it also is able to integrate into platforms. So a lot of platforms now support paper mill
+
+237
+00:18:46,620 --> 00:18:50,660
+as a notebook execution. So you can do things like schedule your notebook without rewriting
+
+238
+00:18:50,660 --> 00:18:58,700
+anywhere else. The other nice thing with paper mill is it's a very plug and play. So it actually
+
+239
+00:18:58,700 --> 00:19:03,580
+supports all these schemes out of the box. So if you have a Google Cloud store, any of
+
+240
+00:19:03,580 --> 00:19:09,420
+the Microsoft Azure stores, S3, even HTTPS, which isn't shown here, you can connect to
+
+241
+00:19:09,420 --> 00:19:17,900
+those and actually pull and read and write from those locations and it just works. And
+
+242
+00:19:17,900 --> 00:19:24,500
+as I said with a plug and play, the really important thing with paper mill is it's designed so that
+
+243
+00:19:24,500 --> 00:19:29,380
+it can be extensible to use cases we haven't thought of. So every single component of the library
+
+244
+00:19:29,380 --> 00:19:34,460
+is actually a registered component by some key name that it goes and looks up what to do just
+
+245
+00:19:34,460 --> 00:19:40,700
+in time in executing. So what this means is let's say we want to implement SFTP. You think, oh,
+
+246
+00:19:40,700 --> 00:19:44,860
+well, I've got to fork this library and add a bunch of code and then figure out how to source
+
+247
+00:19:44,860 --> 00:19:49,540
+code it back. Maybe it's something more proprietary like an internal system you would never share back
+
+248
+00:19:49,540 --> 00:19:54,300
+what you need to figure out how to make it work. This is all the code you would have to write if
+
+249
+00:19:54,300 --> 00:20:00,380
+you implemented read and write to add SFTP to paper mill. And you wouldn't even have to install
+
+250
+00:20:00,380 --> 00:20:06,900
+a new CLI. So what this code basically reads as, you just need to make this handler for the input,
+
+251
+00:20:06,900 --> 00:20:10,180
+the source or sinks. If you implement read, you can read. If you implement write, you can write.
+
+252
+00:20:10,180 --> 00:20:16,580
+And then inside of your own package, you can use set up tools and use the entry points to add a new
+
+253
+00:20:16,580 --> 00:20:22,300
+entry point and then it automatically gets registered into the IO register of paper mill.
+
+254
+00:20:22,300 --> 00:20:27,100
+And then if you run the command at the very bottom where you say, okay, now I want to execute SFTP,
+
+255
+00:20:27,100 --> 00:20:31,860
+you can point it at some SFTP server and read and write from it. So how we implemented all those
+
+256
+00:20:31,860 --> 00:20:36,540
+other schemes, actually teams from those cloud providers oftentimes just made a PR and said,
+
+257
+00:20:36,540 --> 00:20:42,540
+hey, could we add this? And it was really easy. So other aspects of the library work a very similar way.
+
+258
+00:20:42,540 --> 00:20:49,620
+All right. So we're going to dig into where some more value with using notebooks and places you
+
+259
+00:20:49,620 --> 00:20:54,220
+wouldn't traditionally use notebooks. Failed notebooks in the ecosystem, like in a mature
+
+260
+00:20:54,220 --> 00:20:58,100
+ecosystem, are actually really, really valuable. This is probably the number one thing that has
+
+261
+00:20:58,100 --> 00:21:03,820
+added value to introducing notebooks into our platform. And you may be thinking, like, okay,
+
+262
+00:21:04,020 --> 00:21:09,180
+I'm not sure why that would help. But let's say you had that same fan out parallelization that we're
+
+263
+00:21:09,180 --> 00:21:15,620
+executing and job number three here failed. So we scheduled this notebook template, we ran it a bunch of places.
+
+264
+00:21:15,620 --> 00:21:20,300
+And number three failed. Okay. What's the traditional story for how you debug and fix this?
+
+265
+00:21:20,300 --> 00:21:24,300
+Well, hopefully you have some tools that point you to some places and you look at some logs and you
+
+266
+00:21:24,300 --> 00:21:28,260
+look at what code actually ran. And maybe you have to go like jump through some links and find what
+
+267
+00:21:28,260 --> 00:21:32,300
+actually happened. Here, when we actually run a notebook, even if the notebook is just setting up
+
+268
+00:21:32,700 --> 00:21:39,380
+templating for another, some other script to run, the output is actually a full encapsulation of
+
+269
+00:21:39,380 --> 00:21:44,300
+exactly how it executed and how it failed and associates all the logs with the individual code cells
+
+270
+00:21:44,300 --> 00:21:53,500
+that actually ran. So if we look at, you know, something like the script on the right, we have some
+
+271
+00:21:53,500 --> 00:21:57,180
+execution that we're doing where we, the code doesn't really matter. I'm going to jump by this.
+
+272
+00:21:57,180 --> 00:22:01,140
+But let's say you're trying to create some table in SQL and you have some code that helps you run
+
+273
+00:22:01,140 --> 00:22:06,060
+that in Spark and it blows up. Well, the thing is, as you're prepping that code, you can print out
+
+274
+00:22:06,060 --> 00:22:09,500
+useful messages and things like that. You traditionally do this in good software engineering.
+
+275
+00:22:09,500 --> 00:22:13,460
+And then you would go read the logs. But maybe as an end user, that end user doesn't know how to get
+
+276
+00:22:13,460 --> 00:22:17,860
+to the logs or doesn't know how to associate lines in that log or the five log files to the code that
+
+277
+00:22:17,860 --> 00:22:21,260
+actually ran. It can be a pretty complicated process for anyone who isn't used to these systems.
+
+278
+00:22:21,260 --> 00:22:27,500
+So now if you had that notebook run and then you had this exception happen, which is a connection error,
+
+279
+00:22:27,500 --> 00:22:34,940
+you couldn't connect to a host genie.typo and you exceeded max retries. In this case, you actually get
+
+280
+00:22:34,940 --> 00:22:39,780
+an execution failure. And you can actually take that notebook, clone it into your notebook dev
+
+281
+00:22:39,780 --> 00:22:45,820
+cluster, execute it with any variation you want, find the issue, fix it, and then you can send that
+
+282
+00:22:45,820 --> 00:22:50,540
+back. And you've actually got a full, like, enclosed circle of, I had a notebook outcome that was
+
+283
+00:22:50,540 --> 00:22:57,140
+immutably saved, and I can clone that and run it exactly the way it ran elsewhere. And I also can
+
+284
+00:22:57,140 --> 00:23:01,820
+see exactly how it failed and which parts of the code failed. And that's hugely, hugely valuable.
+
+285
+00:23:01,820 --> 00:23:06,420
+It saves a ton of time in debugging. And I mean, it gets to the point where even we've had people
+
+286
+00:23:06,420 --> 00:23:10,700
+who haven't touched code in years who ended up on call and then something went wrong and they just
+
+287
+00:23:10,700 --> 00:23:13,420
+said, hey, there was this link, I saw there was a notebook, I clicked it, and it was already clear
+
+288
+00:23:13,420 --> 00:23:17,900
+what was wrong. And I figured out, oh, our table name changed. I saw the table name error right in
+
+289
+00:23:17,900 --> 00:23:21,460
+the notebook, so I just went and changed it and everything fixed. It's really handy for a lot of
+
+290
+00:23:21,460 --> 00:23:29,460
+users. So what this execution, like, separation of inputs and outputs and templatizing has done is
+
+291
+00:23:29,460 --> 00:23:35,540
+it's really added isolation for making immutable inputs and immutable outputs if you set up your
+
+292
+00:23:35,540 --> 00:23:39,700
+system the way you like or the way you should. And it also allows for the parameterization of
+
+293
+00:23:39,700 --> 00:23:44,420
+notebook runs and the configurable sourcing and sync is really valuable, too. So, like, for example,
+
+294
+00:23:44,420 --> 00:23:50,220
+when we run our scheduled notebooks, we default the output path to always be to a output path that
+
+295
+00:23:50,220 --> 00:23:55,140
+has a unique ID based on the run and the date and all those other things in a GUID. So we have, like,
+
+296
+00:23:55,140 --> 00:24:00,380
+a collection of all the history of a particular notebook's execution in one place that we kind of
+
+297
+00:24:00,380 --> 00:24:05,660
+look through and can read and see what happened. It also gives a lot better control of notebooks
+
+298
+00:24:05,660 --> 00:24:10,180
+via library calls. Because Papermill is a Python library here that you can just import and manipulate
+
+299
+00:24:10,180 --> 00:24:14,140
+in other ways, you can do more fancy things, like even replace how it executes to do other things,
+
+300
+00:24:14,140 --> 00:24:17,660
+like maybe you want to save it to another location before it actually runs all the execution, or
+
+301
+00:24:17,980 --> 00:24:23,580
+perhaps you really want to do something after it finishes running, or you want to inject more than
+
+302
+00:24:23,580 --> 00:24:29,860
+just the input cell for the parameters. For example, there's one extension that takes it and says,
+
+303
+00:24:29,860 --> 00:24:32,980
+oh, I don't really like keeping the default parameter cell. I always want to replace it and
+
+304
+00:24:32,980 --> 00:24:38,100
+just put a new cell there so they, like, 20 lines of Python code were able to change the behavior of
+
+305
+00:24:38,100 --> 00:24:45,700
+Papermill without, you know, forking and rewriting. And this is kind of leads into how notebooks are
+
+306
+00:24:45,700 --> 00:24:50,620
+helping us integrate. So one thing I do want to make really clear, notebooks don't make good
+
+307
+00:24:50,620 --> 00:24:59,900
+libraries. They're really good as an integration tool. And they have a lot of applications. They're
+
+308
+00:24:59,900 --> 00:25:05,500
+strictly better in most cases than just making a Python script and throwing it in your favorite
+
+309
+00:25:05,500 --> 00:25:10,220
+file store and then praying that that works in the future. You get more visibility and things like
+
+310
+00:25:10,220 --> 00:25:15,420
+that. So it is a strict upgrade in many cases, but I'm not going to, like, play down that if you
+
+311
+00:25:15,420 --> 00:25:19,620
+make a really complicated notebook, it is going to be problematic for you because the unit testing
+
+312
+00:25:19,620 --> 00:25:26,660
+space is not super great in this context. But notebooks are really good at, you know, building
+
+313
+00:25:26,660 --> 00:25:31,220
+a result, taking much actions on various pieces of technology, and then kind of summarizing what
+
+314
+00:25:31,220 --> 00:25:35,380
+happened and collecting errors and things like that. So it makes a really good integration tool
+
+315
+00:25:35,380 --> 00:25:42,340
+for real production systems. So some development guidelines to keep if you're using notebooks in a
+
+316
+00:25:42,340 --> 00:25:46,500
+critical path as opposed to maybe just enabling the user to not have to rewrite their things. So we
+
+317
+00:25:46,500 --> 00:25:51,100
+use these kind of guidelines in writing notebooks for actual production execution for critical
+
+318
+00:25:51,100 --> 00:25:57,780
+things. And this would be you want to keep a low branching factor. It's difficult to test a notebook
+
+319
+00:25:57,780 --> 00:26:02,220
+if it has many branches because you don't have the unit testing abstraction like baked first class
+
+320
+00:26:02,220 --> 00:26:07,980
+into notebooks. Short and simple is better. This is kind of true of all code. Keep one primary
+
+321
+00:26:07,980 --> 00:26:11,660
+outcome. If you think of the notebook almost like a black box function, you should kind of have one
+
+322
+00:26:11,660 --> 00:26:16,380
+result that you're trying to achieve. Kind of follow functional programming paradigms, leaves you in a
+
+323
+00:26:16,380 --> 00:26:21,780
+better place. And then really try to leave library functions and libraries. I'm guilty of not doing
+
+324
+00:26:21,780 --> 00:26:27,420
+this as much as I should, so do as I say and not as I do all the time. But it's a good indicator if
+
+325
+00:26:27,420 --> 00:26:32,180
+you're seeing a problem with a notebook, for example, we have a template that runs and occasionally
+
+326
+00:26:32,180 --> 00:26:37,100
+it has issues because we've got some functions in there that are fairly complicated. It's like, oh,
+
+327
+00:26:37,100 --> 00:26:41,100
+well, if this is important and we're running the issues and it wasn't tested very well, we should
+
+328
+00:26:41,100 --> 00:26:45,300
+probably pull that out into its own library. So in that process when you see these critical notebooks,
+
+329
+00:26:45,300 --> 00:26:49,860
+you can slowly move things into like a utilities library or a library that's associated with the
+
+330
+00:26:49,860 --> 00:26:54,060
+notebook that you're running. And then you can do the proper unit testing there and then make your
+
+331
+00:26:54,060 --> 00:27:01,260
+notebook more and more of just an integration of libraries and API calls. So one place where we do
+
+332
+00:27:01,260 --> 00:27:05,900
+also get a benefit where we didn't have good testing before is integration testing. So end-to-end
+
+333
+00:27:05,900 --> 00:27:10,660
+testing of a notebook is actually really easy. You just call paper mill on it with some dummy inputs.
+
+334
+00:27:10,660 --> 00:27:16,780
+So here's an example where we're going to run paper mill and we're going to use this spark template
+
+335
+00:27:16,780 --> 00:27:23,100
+notebook that we were looking at before. And then maybe we'll save all our test run outputs to some
+
+336
+00:27:23,100 --> 00:27:28,460
+test run ID path. And then we're going to put in some fake things. So in this case, we're going to
+
+337
+00:27:28,460 --> 00:27:36,420
+see how many people on the particular day from the moon watched our show. That number should be zero,
+
+338
+00:27:36,420 --> 00:27:40,260
+but in the case of tests, you can do these kind of dummy tests and make tables that have data that
+
+339
+00:27:40,260 --> 00:27:44,700
+don't make sense just to prove that the execution works. So here are our parameters we actually get
+
+340
+00:27:44,700 --> 00:27:50,460
+injected into the notebook are going to be region Luna, run date 2018-04-02 because I think I wrote
+
+341
+00:27:50,460 --> 00:27:55,700
+that sometime around then. And then debug equals true. You can do things like say drive run if you
+
+342
+00:27:55,700 --> 00:28:00,260
+want to avoid certain API calls or things like that. And then we actually run your SQL, maybe your
+
+343
+00:28:00,260 --> 00:28:03,380
+SQL statement that's inside your notebook is something like this where you're inserting into a
+
+344
+00:28:03,380 --> 00:28:08,780
+table where some run date is equal to the run date and you're in the region that you actually want to
+
+345
+00:28:08,780 --> 00:28:13,380
+run. And here we're putting in our debug information. We can do things like target our test DBs,
+
+346
+00:28:13,380 --> 00:28:17,820
+target test data that we don't care about. So we don't really care about like did we get all the data
+
+347
+00:28:17,820 --> 00:28:21,980
+and it moved over in this execution. We're caring that hey, it can spark execute successfully. If we
+
+348
+00:28:21,980 --> 00:28:26,460
+did care also about is the outcome accurate because maybe it does some calculation in the notebook
+
+349
+00:28:26,460 --> 00:28:30,700
+that's the notebook's responsibility, you can follow this by another job right after that would
+
+350
+00:28:30,700 --> 00:28:37,100
+validate the results or put a test notebook that would validate alongside the actual execution.
+
+351
+00:28:37,100 --> 00:28:44,220
+So another thing I want to kind of talk about and dig into is some of the other ecosystem goodies.
+
+352
+00:28:44,220 --> 00:28:49,460
+So as I said, Jupiter, since it defines a protocol and a spec, it actually has a wide collection of
+
+353
+00:28:49,460 --> 00:28:54,100
+other libraries that help you do different tasks. And putting these things together is oftentimes
+
+354
+00:28:54,100 --> 00:28:58,860
+the work of your notebook team at your particular company where they'll try and get these pieces
+
+355
+00:28:58,860 --> 00:29:04,940
+that fit the business needs that you have to support various actions. So these are a few.
+
+356
+00:29:04,940 --> 00:29:10,300
+There's a ton, ton more. I just threw a few that I've worked on or use a lot. MBConvert is a
+
+357
+00:29:10,700 --> 00:29:16,140
+conversion tool we use that Papermill actually uses during the execution. Commuter is a read-only
+
+358
+00:29:16,140 --> 00:29:21,100
+interface for notebooks. Can't say how much, how useful that is. We put all of our output defaults
+
+359
+00:29:21,100 --> 00:29:26,780
+into a bucket prefix that is read-only in the sense that we can launch and render these things
+
+360
+00:29:26,780 --> 00:29:31,180
+for our users and they can't edit the outcome. So they can just read what's happening there.
+
+361
+00:29:31,180 --> 00:29:36,460
+I'll show you what that looks like in a minute. And then we have MBFormat, Bookstore, Scrapbook is
+
+362
+00:29:37,100 --> 00:29:43,020
+another fun project. And that's around saving outcomes. So these are things on more the compute
+
+363
+00:29:43,020 --> 00:29:47,340
+side and rendering, but there's also lots of other things on the front-end side about different
+
+364
+00:29:47,340 --> 00:29:54,220
+component libraries and integration of different tools. So I'll talk really quickly just about one
+
+365
+00:29:54,220 --> 00:29:58,380
+of these goodies called Scrapbook, which originally was functionality. It was in the early versions of
+
+366
+00:29:58,380 --> 00:30:04,940
+Papermill and we pulled into its own library. And what Scrapbook does is it lets you basically
+
+367
+00:30:04,940 --> 00:30:08,860
+save the results, the data results, into the notebook object. So you can actually make the
+
+368
+00:30:08,860 --> 00:30:13,420
+notebook also store what was the result in a programmatic way. And here I'll show you what
+
+369
+00:30:13,420 --> 00:30:17,180
+this does. So it's only a few lines of code, much like Papermill. It's not a super complicated
+
+370
+00:30:17,180 --> 00:30:21,500
+interface. But here we're going to import Scrapbook inside of our notebook and we're going to say
+
+371
+00:30:21,500 --> 00:30:25,900
+Scrapbook.Glu and we're going to say model result. So you have a model execution and the model result
+
+372
+00:30:25,900 --> 00:30:30,460
+is some accuracy value. I'm using a lot of machine learning metaphors only because the
+
+373
+00:30:30,620 --> 00:30:35,740
+data science space has been really strong in notebooks. So it translates to some real-world use
+
+374
+00:30:35,740 --> 00:30:41,100
+cases you might have users asking to do. In this case, we save the model results into the notebook
+
+375
+00:30:41,100 --> 00:30:45,980
+and then later, outside of that notebook, we can go read the results of that notebook with this one
+
+376
+00:30:45,980 --> 00:30:51,420
+line of code. So we can go read the notebook which ran, some ML experiment run 71, and we can ask it
+
+377
+00:30:51,420 --> 00:30:55,340
+for its scraps, which are all the things we glued into it, like our metaphor game here.
+
+378
+00:30:55,420 --> 00:31:02,460
+And the scraps that we get here are the model results. We can ask for that by key name. So you
+
+379
+00:31:02,460 --> 00:31:05,980
+could glue a whole bunch of things, model results, graphs. Matter of fact, in the bottom one here,
+
+380
+00:31:05,980 --> 00:31:09,500
+you could actually put performance graph, or why did we pick that model? What was the information
+
+381
+00:31:09,500 --> 00:31:12,780
+around it? You can save a whole PNG on the notebook and then re-reference it this way and
+
+382
+00:31:12,780 --> 00:31:17,260
+re-render it elsewhere. And that's just a kind of nice little utility if you're interested in kind
+
+383
+00:31:17,260 --> 00:31:20,940
+of getting functional data results out of notebooks, I would encourage taking a look at that.
+
+384
+00:31:21,020 --> 00:31:27,020
+We'd love more contributors for various use cases we haven't supported yet. And then commuter is the
+
+385
+00:31:27,020 --> 00:31:32,140
+read-only interface I was talking about. This is the commuter interface. This is actually our
+
+386
+00:31:32,860 --> 00:31:37,340
+integration template for running Presto jobs. That's the whole thing. Fits on one page. It's
+
+387
+00:31:37,340 --> 00:31:43,660
+nice and simple. And this has a read-only interface when the user executes this notebook. This is the
+
+388
+00:31:43,660 --> 00:31:47,660
+template they would see if they go click on the link for how's my job input look. If you look at
+
+389
+00:31:47,660 --> 00:31:51,420
+the output, it would be this, but with all the actual log out pumps right alongside it.
+
+390
+00:31:52,220 --> 00:31:56,220
+In this case, too, you don't need a really expensive server or runtime launching. It
+
+391
+00:31:56,220 --> 00:32:04,380
+just needs a server with basic JavaScript rendering. So a quick thing about notebooks at Netflix and
+
+392
+00:32:04,940 --> 00:32:09,500
+how we use them, because I'm talking about the open source side more. One thing we did when
+
+393
+00:32:10,300 --> 00:32:14,700
+we started this project about a year and a half ago to really deep dive into notebooks is there
+
+394
+00:32:14,700 --> 00:32:19,420
+was this kind of strategic bet that notebooks is becoming a common interface for many of our
+
+395
+00:32:19,420 --> 00:32:24,780
+users. We had lots and lots of analysts, lots and lots of data scientists, and more data engineers.
+
+396
+00:32:24,780 --> 00:32:29,020
+They were starting to use notebooks and then having friction when they came to using them.
+
+397
+00:32:29,020 --> 00:32:32,300
+So we invested in a lot of areas of notebook infrastructure and tried to get really involved
+
+398
+00:32:32,300 --> 00:32:37,420
+in the community and hire people from that community in order to foster the open source
+
+399
+00:32:37,420 --> 00:32:44,060
+approach to how to solve these things. And since then, we now run over 10,000 jobs a day
+
+400
+00:32:44,060 --> 00:32:50,620
+on notebooks. They run like 150,000 queries or more at this point. And all of those are running
+
+401
+00:32:50,620 --> 00:32:55,980
+on notebooks. And the way we've achieved that is by actually making it like a simple templating
+
+402
+00:32:55,980 --> 00:33:00,540
+of how they run a normal job. It maps into our notebook templates instead of into like a
+
+403
+00:33:00,540 --> 00:33:03,980
+traditional scheduler template you might see. So when they say I want to run a Spark job,
+
+404
+00:33:03,980 --> 00:33:07,260
+here's my query, we say great, we'll take that. And when it actually runs and they want to see
+
+405
+00:33:07,260 --> 00:33:10,220
+what happened or debug why it failed, there's a notebook link that shows them, hey, this is
+
+406
+00:33:10,220 --> 00:33:15,580
+what we did. And as we've gradually brought users into cases where notebooks are useful for them,
+
+407
+00:33:15,580 --> 00:33:19,180
+they can also just schedule their own input path notebook and works the same way.
+
+408
+00:33:20,540 --> 00:33:25,500
+So that's what I wanted to kind of share with you all and definitely encourage you to go look at
+
+409
+00:33:25,500 --> 00:33:29,820
+the open source projects we referenced. And the slides I believe are going to be, yeah,
+
+410
+00:33:29,820 --> 00:33:33,500
+the slide link will be here, so I'll leave this up if you want to copy that. And here's a few
+
+411
+00:33:34,140 --> 00:33:39,260
+interfaces to come talk to some of the open source groups on these topics. Thank you.
+
+412
+00:33:40,220 --> 00:33:51,100
+Thank you, Matthew. We have some time for questions. So if you have a question,
+
+413
+00:33:51,100 --> 00:33:55,660
+please step up to one of these audience microphones. Please make sure to keep your
+
+414
+00:33:55,660 --> 00:33:59,980
+questions directed at the speaker. If you have longer questions or comments, you can find them
+
+415
+00:33:59,980 --> 00:34:06,860
+in the hall afterwards. Hi, go ahead.
+
+416
+00:34:06,860 --> 00:34:12,780
+Hey. So if you have engineers and stuff and they want to spin up a cluster and attach a notebook
+
+417
+00:34:12,780 --> 00:34:18,940
+to it, how does that work? Do you run notebooks locally usually or is there some way to spin up
+
+418
+00:34:18,940 --> 00:34:24,780
+a notebook in a spark cluster that you have automated? Yeah, so the question was around
+
+419
+00:34:25,820 --> 00:34:29,740
+how do you connect when someone asks for a notebook, what do we do? In our case,
+
+420
+00:34:31,020 --> 00:34:35,500
+we have container launching service which launches a Jupyter notebook server for the user
+
+421
+00:34:36,140 --> 00:34:40,700
+and they can connect to that. Whenever they want to launch, we connect them. If not, we make them
+
+422
+00:34:41,260 --> 00:34:45,980
+an instance and it comes up with the notebook infrastructure. And then it mounts the file
+
+423
+00:34:45,980 --> 00:34:49,340
+systems that are shared between the systems. So if the user is saving things, they'll see it in
+
+424
+00:34:49,340 --> 00:34:54,700
+their dev home directory as well. So we just kind of give them an experience there. And then the
+
+425
+00:34:54,700 --> 00:35:00,860
+other thing we do is for those URLs and paths for hitting their custom notebook server, if they
+
+426
+00:35:00,860 --> 00:35:06,220
+provide those to the scheduler or another tool, we can translate via paper mill, a wrapper on
+
+427
+00:35:06,220 --> 00:35:12,780
+paper mill to translate those schemes and paths into the source of the file. So the user can give
+
+428
+00:35:12,780 --> 00:35:19,420
+us the URL and we'll run it in other places. Sounds awesome. Is that open source? Yeah,
+
+429
+00:35:19,420 --> 00:35:23,820
+you can do things with Jupyter hub is a good first starting point to go look and it has
+
+430
+00:35:24,460 --> 00:35:28,700
+really, really good tutorials they've made now for how to get Jupyter hub launched in one or
+
+431
+00:35:28,700 --> 00:35:33,500
+two pages on all sorts of cloud platforms. So there was a group at Berkeley that did a whole
+
+432
+00:35:33,500 --> 00:35:39,500
+bunch of work around that. I would encourage looking at that. Hey, great talk. Quick question.
+
+433
+00:35:40,140 --> 00:35:44,620
+For testing notebooks, I see the use case a lot of times for programmatic testing of Python outputs
+
+434
+00:35:44,620 --> 00:35:49,660
+because that's more quantitative in nature. My question is if you want to test say graph outputs
+
+435
+00:35:49,660 --> 00:35:55,260
+where it's an image and you want to, that's something that you as a human qualitatively assert,
+
+436
+00:35:55,260 --> 00:36:00,060
+how would you go about asserting that from an automation standpoint or even taking it further
+
+437
+00:36:00,060 --> 00:36:04,620
+like a JavaScript widget as an output for inside a notebook? How would you go about testing those
+
+438
+00:36:04,620 --> 00:36:08,700
+things? Yeah, so what I would actually say in that case, if it's isolated all the way inside the
+
+439
+00:36:08,700 --> 00:36:13,580
+notebook, I would look at maybe combining paper mill and scrapbook and you save the data results,
+
+440
+00:36:13,580 --> 00:36:17,580
+the data frame or whatever input you built the graph with and the visualization and then you
+
+441
+00:36:17,580 --> 00:36:22,700
+could run your test to say, hey, fetch the result out of the notebook. If it matches my assertions,
+
+442
+00:36:22,700 --> 00:36:27,500
+great. If not, render maybe the graph as well so you can see what it actually did or the link to
+
+443
+00:36:27,500 --> 00:36:31,500
+the notebook. We do a lot of integration tests where we actually run and then we'll link it to
+
+444
+00:36:31,500 --> 00:36:34,700
+the run, the exact run that ran with the commuter link and then the user could just go look at the
+
+445
+00:36:34,700 --> 00:36:38,460
+notebook. So it's always going to be qualitative in its nature but just making that easier so that
+
+446
+00:36:38,460 --> 00:36:42,620
+way it's just a few clicks to qualitatively assert it. I think there's always a human involved when
+
+447
+00:36:42,620 --> 00:36:46,620
+your test fails but to assert, I would look at saving data with scrapbook if you don't already
+
+448
+00:36:46,620 --> 00:36:52,460
+have a place to save your outcomes. Okay, great. Thank you so much. Hello, I'm just kind of wondering
+
+449
+00:36:52,700 --> 00:36:58,140
+great talk by the way. I'm wondering sort of what best practices you guys use for doing things like
+
+450
+00:36:58,140 --> 00:37:03,660
+dependency management when you're running notebooks. Yeah, so dependency management is
+
+451
+00:37:03,660 --> 00:37:07,660
+another sticky point in notebooks. I think it'll be better in the future. There's been a lot of
+
+452
+00:37:07,660 --> 00:37:13,100
+push to make it more natural in notebooks to define dependencies. Today what we do to get
+
+453
+00:37:13,100 --> 00:37:19,180
+around this pain is we actually have like a single image that we maintain as a team that has the
+
+454
+00:37:19,180 --> 00:37:23,820
+majority of the dependencies for our users and we do this not to satisfy dependency needs but we
+
+455
+00:37:23,820 --> 00:37:28,700
+actually do it so that our users get a consistent experience. So if they're running in their dev
+
+456
+00:37:28,700 --> 00:37:32,540
+server or they're running in the scheduler or they're running someplace else, their notebook
+
+457
+00:37:32,540 --> 00:37:36,700
+will have the same set of base dependencies and then we give them tools for defining extra packages
+
+458
+00:37:36,700 --> 00:37:44,460
+they want to use if they want to install them just in time or as they run. Thanks. Yeah. Hey,
+
+459
+00:37:45,180 --> 00:37:53,980
+you go first. A file format that takes the essentially plain python file that just has the cell
+
+460
+00:37:53,980 --> 00:37:59,580
+breaks as comments in the python file. Does Papermill consume that as well as a regular notebook? It
+
+461
+00:37:59,580 --> 00:38:05,180
+does not today. It'd be pretty easy to add it and I think a lot of the tools that do that cell separation
+
+462
+00:38:05,180 --> 00:38:10,940
+are adding in notebook export as well. So like hydrogen and VS code are both either have beta
+
+463
+00:38:10,940 --> 00:38:15,500
+versions of that or will have it fully soon. So it could integrate pretty easily but yeah,
+
+464
+00:38:15,500 --> 00:38:21,740
+make an open source contribution and we'll add it. Cool, thanks. Hey, great talk. One of the issues
+
+465
+00:38:21,740 --> 00:38:26,540
+that our team has had with notebooks is version control like committing things to git and do you
+
+466
+00:38:26,540 --> 00:38:31,020
+guys do anything to kind of do that especially during the development process? Yeah, so one place
+
+467
+00:38:31,020 --> 00:38:35,020
+I would look is the version control story and git isn't so great because you're diffing json,
+
+468
+00:38:35,020 --> 00:38:41,260
+not because the diffs are bad. There's a few things you can yeah. I think that the integration
+
+469
+00:38:41,260 --> 00:38:44,780
+story there like everyone wants to solve this problem and there's lots of people trying to
+
+470
+00:38:44,780 --> 00:38:49,740
+work on it right now. I do say there's a few things to look at today. Jupiter slash nbdime
+
+471
+00:38:49,740 --> 00:38:55,340
+is a really good library for doing notebook diffs. It's not integrated in all the stacks and that's
+
+472
+00:38:55,340 --> 00:39:00,700
+partially because things like bit bucket and git labs still need to add some extensions to their
+
+473
+00:39:00,700 --> 00:39:06,700
+API to make it work within the UI. But if you're on git hub there's also some open source and
+
+474
+00:39:06,700 --> 00:39:14,140
+closed source options that do extensions so that you can see rendered like two pain diffs of
+
+475
+00:39:14,140 --> 00:39:17,740
+notebooks where it's like highlighting the code in a notebook format. It's pretty nice.
+
+476
+00:39:19,500 --> 00:39:22,460
+What's that? Do you have any idea if that's what Databricks is using when they have version
+
+477
+00:39:22,460 --> 00:39:25,740
+control connected to it? I am not sure what Databricks is using. I haven't looked recently
+
+478
+00:39:26,380 --> 00:39:30,460
+but likely they're using one of those two or three options that are out there.
+
+479
+00:39:33,660 --> 00:39:39,900
+Hi. Good talk. I was wondering you mentioned about testing these notebooks. Does PaperMill
+
+480
+00:39:39,900 --> 00:39:47,420
+have any sort of programmatic API for getting the test result errors or which cells are erroring out
+
+481
+00:39:47,420 --> 00:39:51,980
+or any sort of that kind of information? Yeah. When PaperMill executes it injects a whole bunch
+
+482
+00:39:51,980 --> 00:39:55,980
+of metadata into the JSON document it's saving. So when it errors it will actually save that
+
+483
+00:39:55,980 --> 00:40:01,260
+document one last time. It actually saves as each cell executes and if the cell fails it also saves
+
+484
+00:40:01,260 --> 00:40:05,500
+and it will inject a whole bunch of error info and run time info into the notebook object in
+
+485
+00:40:05,500 --> 00:40:09,420
+the metadata and that's the first place you can look and then if it's more specific I would look
+
+486
+00:40:09,420 --> 00:40:15,340
+into like saving the data results of something like scrapbook. Thank you. Hey. So I think you
+
+487
+00:40:15,340 --> 00:40:21,580
+make a I think this makes a pretty good case for how to run notebooks for analytical data science
+
+488
+00:40:21,580 --> 00:40:28,220
+type use cases. I'm wondering if you guys are using this approach for maybe more like production
+
+489
+00:40:28,220 --> 00:40:33,980
+data engineering like ETL jobs or jobs which are going to have like customer impact or if you know
+
+490
+00:40:33,980 --> 00:40:41,020
+your teams are still using maybe traditional you know type jobs for those. So yeah I would say so
+
+491
+00:40:41,020 --> 00:40:45,660
+actually when I said that scheduler project almost all of our ETL is now running on notebooks even
+
+492
+00:40:45,660 --> 00:40:49,980
+if the users don't know it. So we've made a pretty big commitment to it like we run millions of
+
+493
+00:40:49,980 --> 00:40:55,020
+notebooks now as if you consider each run a different one. So that's definitely like taken
+
+494
+00:40:55,020 --> 00:40:59,260
+off and done really well for us. I would say like users developing their own notebooks there was
+
+495
+00:40:59,260 --> 00:41:03,420
+some history there that story's a little bit better but I would say it's not a dominant pattern to do
+
+496
+00:41:03,420 --> 00:41:09,180
+all your ETL work in a notebook purely but we do try to like translate that into a notebook execution
+
+497
+00:41:09,180 --> 00:41:13,580
+so that it's easy to see what happened. So like a lot of really important critical systems are running
+
+498
+00:41:13,580 --> 00:41:18,540
+on notebooks now. I would say some of the more custom notebooks there's a few that do also do
+
+499
+00:41:18,620 --> 00:41:20,140
+like their whole dev notebook style.
+
+500
+00:41:23,100 --> 00:41:27,740
+Hi so I come from a scientific background and scientists really want to collaborate on notebooks
+
+501
+00:41:27,740 --> 00:41:32,940
+and have shared workspaces. Can you comment a little bit more on that? On collaboration? Yes.
+
+502
+00:41:32,940 --> 00:41:36,700
+Do you mean like multiple collaboration on the same notebook while they're working? Yes. Yeah so
+
+503
+00:41:36,700 --> 00:41:41,020
+that's actually probably something that will be coming. There's been a lot of discussion within
+
+504
+00:41:41,020 --> 00:41:45,660
+the community and there's a direction to go. There is one tool out there which already has
+
+505
+00:41:45,900 --> 00:41:51,260
+real-time collaboration called CoCalc. It's really oriented towards academic use so it's more like
+
+506
+00:41:51,260 --> 00:41:56,540
+classroom type learning setting. So it has a few things that wouldn't work as well in a production
+
+507
+00:41:56,540 --> 00:42:01,020
+like engineering space but the model they have is really good and we're probably going to push for
+
+508
+00:42:01,020 --> 00:42:08,700
+pushing that model into Jupiter Core. Hi I'd like to follow up on the version control question with
+
+509
+00:42:08,700 --> 00:42:14,940
+ETL. I'm blown away by your description that most of the ETL has been moved over to notebooks.
+
+510
+00:42:15,820 --> 00:42:23,260
+What in practice are you doing in terms of storing and managing the source notebooks? Yeah so it's
+
+511
+00:42:23,260 --> 00:42:28,540
+a mix. So all our templates that we use to say hey you can use this template like Spark, Presto,
+
+512
+00:42:28,540 --> 00:42:32,140
+and Transport, things like that, they're all checked in the git and then we have a big
+
+513
+00:42:32,140 --> 00:42:37,340
+integration suite which runs pay-per-mill against all of those every time anything changes from any
+
+514
+00:42:37,340 --> 00:42:43,180
+source and then we kind of promote those towards standard asset promotion pattern you see with any
+
+515
+00:42:43,340 --> 00:42:47,660
+code asset and then those become the default template they can use and then we can pin back
+
+516
+00:42:47,660 --> 00:42:51,500
+the old version so it looks a lot like any kind of other dependency management
+
+517
+00:42:52,940 --> 00:42:58,060
+sort of asset pipeline for non-managed notebooks like in the sense of just the user's notebook.
+
+518
+00:42:59,260 --> 00:43:03,260
+We do encourage putting it in git and then just referencing but we also don't block people because
+
+519
+00:43:03,260 --> 00:43:06,940
+we have a lot of analysts that don't quite know git yet or people that aren't familiar with it or
+
+520
+00:43:06,940 --> 00:43:10,300
+don't have a team that's using it and in those cases we've been trying to work on a project
+
+521
+00:43:10,300 --> 00:43:14,620
+called Bookstore which is the new thing which helps give you linear versioning automatically
+
+522
+00:43:14,620 --> 00:43:19,420
+by every time you save it kicks off a unique version into S3 and just saves it there so you
+
+523
+00:43:19,420 --> 00:43:24,940
+can always go back and look at old versions and then when we schedule notebooks one thing we do
+
+524
+00:43:24,940 --> 00:43:29,820
+is we copy that notebook in the S3 for that version and we copy all the assets you reference
+
+525
+00:43:29,820 --> 00:43:34,140
+so if you say hey I need this file and this file and this file from git we copy all of those and
+
+526
+00:43:34,140 --> 00:43:38,140
+bundle them into an asset bundle for the scheduled job that won't change even if the git changes and
+
+527
+00:43:38,140 --> 00:43:43,660
+we associate back to that git commit. So if I understand you're when promoted you're mirroring
+
+528
+00:43:43,660 --> 00:43:50,300
+at templates and assets from git hub to S3? Yeah we mirror to the git commit that that code came from.
+
+529
+00:43:50,300 --> 00:43:55,900
+Okay cool thank you. I'm just wondering if you had any special tricks around authentication
+
+530
+00:43:55,900 --> 00:44:01,100
+particularly passing kind of auth tokens or other kind of credentials when you're calling one
+
+531
+00:44:01,100 --> 00:44:08,620
+notebook from another or does everything kind of run in a single authentication context when
+
+532
+00:44:08,620 --> 00:44:14,060
+you're accessing different kind of data? Yeah so what we encourage and try to build tools to help
+
+533
+00:44:14,060 --> 00:44:19,980
+with is we try to make it so that they can add secrets to their execution context without having
+
+534
+00:44:19,980 --> 00:44:24,540
+it be in the notebook so they might refer to a tool that's going to go try and load the credentials
+
+535
+00:44:24,540 --> 00:44:28,940
+that need to be made and we try to keep people from putting anything plain text or even encrypted
+
+536
+00:44:28,940 --> 00:44:34,300
+into the inputs as parameters because those are pretty prevalently visible. In general for us
+
+537
+00:44:35,980 --> 00:44:39,420
+usually there's already tools for doing that in our platform so we just integrate with those
+
+538
+00:44:39,420 --> 00:44:43,260
+tools that are already there and make sure that the API calls you're making just kind of fall into
+
+539
+00:44:43,260 --> 00:44:50,300
+those. There is some work on a few cloud teams that are doing to make interfaces that do this for you
+
+540
+00:44:50,300 --> 00:44:55,980
+in a way in the notebook. There's not too many open source versions of that yet. Thanks. Yeah.
+
+541
+00:44:55,980 --> 00:45:00,940
+All right so could we please get another round of applause for Matthew.
+

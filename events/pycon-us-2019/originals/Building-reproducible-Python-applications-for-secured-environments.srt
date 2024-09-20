@@ -1,0 +1,2396 @@
+1
+00:00:00,000 --> 00:00:02,200
+Hello, Pythonistas.
+
+2
+00:00:02,200 --> 00:00:06,400
+This is a welcome to the last session of the day.
+
+3
+00:00:06,400 --> 00:00:08,800
+Here is Kushal Das.
+
+4
+00:00:08,800 --> 00:00:13,080
+He's going to talk today about building reproducible Python
+
+5
+00:00:13,080 --> 00:00:16,760
+application for secure dev environments.
+
+6
+00:00:16,760 --> 00:00:20,120
+So the stage is yours, Kushal.
+
+7
+00:00:20,120 --> 00:00:20,960
+Thank you.
+
+8
+00:00:20,960 --> 00:00:25,680
+Hello.
+
+9
+00:00:25,680 --> 00:00:26,400
+Can you hear me?
+
+10
+00:00:26,400 --> 00:00:27,720
+Well, OK.
+
+11
+00:00:27,760 --> 00:00:30,080
+Before I start talking, I want to give a shout out
+
+12
+00:00:30,080 --> 00:00:34,360
+to my friends at Chicago Python User Group.
+
+13
+00:00:34,360 --> 00:00:35,880
+Hi, all my friends there.
+
+14
+00:00:35,880 --> 00:00:38,560
+And let's start.
+
+15
+00:00:38,560 --> 00:00:42,040
+Before anything else, a little bit about myself.
+
+16
+00:00:42,040 --> 00:00:44,360
+I'm a public interest technologist
+
+17
+00:00:44,360 --> 00:00:46,960
+with a small nonprofit called Freedom of the Press
+
+18
+00:00:46,960 --> 00:00:51,760
+Foundation, where we try to protect, defend, and empower
+
+19
+00:00:51,760 --> 00:00:53,480
+public interest journalism.
+
+20
+00:00:53,480 --> 00:00:55,880
+So we mostly work with different kind of media orgs.
+
+21
+00:00:55,880 --> 00:00:57,920
+We do digital security training.
+
+22
+00:00:57,920 --> 00:00:58,880
+We write software.
+
+23
+00:00:58,880 --> 00:01:02,000
+We help them to make their security better.
+
+24
+00:01:02,000 --> 00:01:05,720
+I'm also heavily involved with various other nonprofits
+
+25
+00:01:05,720 --> 00:01:09,280
+and open slash free software projects.
+
+26
+00:01:09,280 --> 00:01:11,800
+One of them is something we all know here,
+
+27
+00:01:11,800 --> 00:01:13,440
+Python Software Foundation.
+
+28
+00:01:13,440 --> 00:01:15,960
+I'm a director at Python Software Foundation,
+
+29
+00:01:15,960 --> 00:01:19,120
+also a co-developer of the CPython, the programming
+
+30
+00:01:19,120 --> 00:01:20,400
+language itself.
+
+31
+00:01:20,400 --> 00:01:25,200
+And I'm also a core member of another nonprofit slash project
+
+32
+00:01:25,200 --> 00:01:29,080
+known as Tor, where we try to make sure
+
+33
+00:01:29,080 --> 00:01:31,880
+that our human rights can get defended
+
+34
+00:01:31,880 --> 00:01:35,840
+and we can maintain our privacy.
+
+35
+00:01:35,840 --> 00:01:39,280
+So I'm going to start the actual materials of the talk now.
+
+36
+00:01:39,280 --> 00:01:41,360
+So I'm going to guess that many of us
+
+37
+00:01:41,360 --> 00:01:42,840
+are here, Python developers.
+
+38
+00:01:46,000 --> 00:01:48,400
+But you're going to learn about one thing,
+
+39
+00:01:48,400 --> 00:01:50,880
+that this whole talk, we're not going
+
+40
+00:01:50,880 --> 00:01:54,360
+to talk about anything new tools or new systems.
+
+41
+00:01:54,360 --> 00:01:55,780
+We're going to make sure that we're
+
+42
+00:01:55,780 --> 00:01:59,640
+going to reuse whatever is already available to us
+
+43
+00:01:59,640 --> 00:02:00,600
+from the community.
+
+44
+00:02:03,760 --> 00:02:06,240
+So a very simple Python application.
+
+45
+00:02:06,240 --> 00:02:08,360
+I'm going to just use it as an example.
+
+46
+00:02:08,360 --> 00:02:15,240
+And as developers, we always think it works on my laptop.
+
+47
+00:02:15,240 --> 00:02:18,040
+And job done.
+
+48
+00:02:18,040 --> 00:02:22,080
+But as we know that organizations and companies
+
+49
+00:02:22,080 --> 00:02:25,240
+do not work in the same way.
+
+50
+00:02:25,240 --> 00:02:29,000
+So for the same Python application,
+
+51
+00:02:29,000 --> 00:02:31,280
+we may run it on one server.
+
+52
+00:02:31,280 --> 00:02:35,280
+We may execute slash run it on different servers,
+
+53
+00:02:35,280 --> 00:02:40,120
+or this magical thing also known as Cloud.
+
+54
+00:02:40,120 --> 00:02:42,640
+There are different ways these applications get
+
+55
+00:02:42,640 --> 00:02:46,560
+into this server slash computer slash cloud.
+
+56
+00:02:46,560 --> 00:02:49,800
+One of the easiest step is to use the source code management
+
+57
+00:02:49,800 --> 00:02:51,800
+system itself.
+
+58
+00:02:51,800 --> 00:02:53,380
+I'm going to mention git, because that's
+
+59
+00:02:53,380 --> 00:02:56,640
+one of the most highest used these days commonly.
+
+60
+00:02:56,640 --> 00:02:59,640
+Then if you're on a Debian slash Ubuntu world,
+
+61
+00:02:59,640 --> 00:03:04,680
+you may want to use .deb, Debian packages.
+
+62
+00:03:04,680 --> 00:03:07,560
+If you are coming from a Fedora slash CentOS slash Red Hat
+
+63
+00:03:07,560 --> 00:03:10,560
+world, you may want to use RPM to deploy
+
+64
+00:03:10,560 --> 00:03:14,000
+your final application.
+
+65
+00:03:14,000 --> 00:03:16,380
+At this moment, many of you must be
+
+66
+00:03:16,380 --> 00:03:19,520
+thinking that there is another way of deploying
+
+67
+00:03:19,520 --> 00:03:21,200
+in the modern world.
+
+68
+00:03:21,200 --> 00:03:24,240
+Sadly, this is not the right talk for the.
+
+69
+00:03:24,240 --> 00:03:27,160
+I'm going to talk mostly related to things on the Python world.
+
+70
+00:03:30,400 --> 00:03:32,640
+A little bit about the actual project.
+
+71
+00:03:32,640 --> 00:03:34,680
+So I'm a maintainer for a project known
+
+72
+00:03:34,680 --> 00:03:39,720
+as SecureDrop, which is an open source whistleblower platform.
+
+73
+00:03:39,720 --> 00:03:45,080
+It means anyone can securely and privately leak information
+
+74
+00:03:45,080 --> 00:03:49,120
+to different media orgs so that they don't get caught by,
+
+75
+00:03:49,120 --> 00:03:52,360
+let's say, their respective governments or any three
+
+76
+00:03:52,360 --> 00:03:54,840
+or four letter government agencies.
+
+77
+00:03:54,840 --> 00:03:58,480
+SecureDrop is deployed over 75 media orgs,
+
+78
+00:03:58,480 --> 00:04:01,160
+including New York Times, Washington Post, Guardian,
+
+79
+00:04:01,160 --> 00:04:05,520
+Intercept, and various other orgs.
+
+80
+00:04:05,520 --> 00:04:08,640
+So this is what the sources see when they go and try
+
+81
+00:04:08,640 --> 00:04:12,520
+to leak any information over to our browser.
+
+82
+00:04:12,520 --> 00:04:15,440
+The journalists in those organizations,
+
+83
+00:04:15,440 --> 00:04:19,800
+they have to get into a locked room inside their org
+
+84
+00:04:19,800 --> 00:04:23,920
+and boot a Tails operating system based laptop where
+
+85
+00:04:23,920 --> 00:04:27,160
+they will see something like this.
+
+86
+00:04:27,160 --> 00:04:30,040
+You can think like this as an inbox, correct,
+
+87
+00:04:30,040 --> 00:04:32,320
+where you can see different random names, where
+
+88
+00:04:32,320 --> 00:04:37,120
+you can click and download any of the material or messages.
+
+89
+00:04:37,120 --> 00:04:40,160
+But the part of the story is these all documents
+
+90
+00:04:40,160 --> 00:04:42,400
+are encrypted with a key, which is not
+
+91
+00:04:42,400 --> 00:04:44,680
+available on the same laptop, which
+
+92
+00:04:44,680 --> 00:04:48,000
+is there in a second computer, which is air gapped.
+
+93
+00:04:48,000 --> 00:04:52,280
+Means now the journalist has to somehow take those documents
+
+94
+00:04:52,280 --> 00:04:58,320
+using either a USB key or write once CD-ROM slash DVD drive
+
+95
+00:04:58,320 --> 00:05:02,440
+and then bring it to the next computer
+
+96
+00:05:02,440 --> 00:05:07,520
+and decrypt those files and then view the documents.
+
+97
+00:05:07,520 --> 00:05:10,080
+And this whole process is kind of taking time.
+
+98
+00:05:10,080 --> 00:05:13,440
+It takes almost like 40 to 45 minutes for every journalist
+
+99
+00:05:13,440 --> 00:05:14,560
+to go through the documents.
+
+100
+00:05:14,560 --> 00:05:16,520
+They want to view.
+
+101
+00:05:16,520 --> 00:05:21,080
+So it brings up a question between security
+
+102
+00:05:21,080 --> 00:05:22,840
+and usability.
+
+103
+00:05:22,840 --> 00:05:27,640
+In our case, the nature of the kind of post or project
+
+104
+00:05:27,640 --> 00:05:29,680
+secure drop works.
+
+105
+00:05:29,680 --> 00:05:33,920
+Nation state actors are always a pretty good advisories
+
+106
+00:05:33,920 --> 00:05:36,640
+for this project.
+
+107
+00:05:36,640 --> 00:05:38,400
+So we have to choose between two.
+
+108
+00:05:38,400 --> 00:05:41,120
+And in this particular case, we should always
+
+109
+00:05:41,120 --> 00:05:43,960
+try to get some help from professionals.
+
+110
+00:05:43,960 --> 00:05:45,680
+Luckily for secure drop project, we
+
+111
+00:05:45,680 --> 00:05:48,240
+got someone named Nina who really helped
+
+112
+00:05:48,240 --> 00:05:50,800
+us to build the next steps.
+
+113
+00:05:50,800 --> 00:05:53,320
+And we have something like this, which
+
+114
+00:05:53,320 --> 00:05:55,800
+is in the alpha level, which is a desktop application
+
+115
+00:05:55,800 --> 00:05:57,000
+for the journalist.
+
+116
+00:05:57,000 --> 00:05:58,880
+And from the look and view, you can understand
+
+117
+00:05:58,880 --> 00:06:01,960
+it's just another normal application.
+
+118
+00:06:01,960 --> 00:06:04,120
+But that's get deployed on a special operating
+
+119
+00:06:04,120 --> 00:06:06,440
+system known as cubes.
+
+120
+00:06:06,440 --> 00:06:10,200
+Cubes-os.org is the website.
+
+121
+00:06:10,200 --> 00:06:12,720
+Cubes is a reasonably secure operating system
+
+122
+00:06:12,720 --> 00:06:18,360
+which uses Fedora slash Zen to build up such a system where
+
+123
+00:06:18,360 --> 00:06:22,800
+each and every application may run in different VMs.
+
+124
+00:06:22,800 --> 00:06:25,880
+And within the same laptop or desktop,
+
+125
+00:06:25,880 --> 00:06:29,000
+you can actually have air gap VMs where you can store
+
+126
+00:06:29,000 --> 00:06:31,400
+your private keys and details.
+
+127
+00:06:31,400 --> 00:06:35,640
+So this really brings in both worlds a little bit nearby,
+
+128
+00:06:35,640 --> 00:06:37,880
+the security and usability.
+
+129
+00:06:37,880 --> 00:06:40,320
+And that's the future we're looking at.
+
+130
+00:06:40,360 --> 00:06:44,080
+And we particularly deploy this application
+
+131
+00:06:44,080 --> 00:06:46,080
+in using Debian packages.
+
+132
+00:06:46,080 --> 00:06:47,800
+So for the rest of the talk, when
+
+133
+00:06:47,800 --> 00:06:50,960
+I will say Debian packages or Debian,
+
+134
+00:06:50,960 --> 00:06:55,360
+that means a Debian VM inside of Cubes-os in a computer.
+
+135
+00:06:58,240 --> 00:07:01,000
+Now the question is, what all things can go wrong security
+
+136
+00:07:01,000 --> 00:07:01,840
+wise?
+
+137
+00:07:01,840 --> 00:07:04,440
+I'm sure all of you have different ideas
+
+138
+00:07:04,440 --> 00:07:05,760
+and different stories.
+
+139
+00:07:05,760 --> 00:07:09,120
+I'm going to take a few of those which recently came in my mind
+
+140
+00:07:09,120 --> 00:07:10,280
+to share with all of you.
+
+141
+00:07:14,760 --> 00:07:17,400
+A few months ago, Asus figured out
+
+142
+00:07:17,400 --> 00:07:21,760
+that their signing keys were taken over by some attackers,
+
+143
+00:07:21,760 --> 00:07:24,200
+and they managed to sign some malware
+
+144
+00:07:24,200 --> 00:07:27,160
+and pushed across to multiple millions of people's computer,
+
+145
+00:07:27,160 --> 00:07:28,720
+I guess.
+
+146
+00:07:28,720 --> 00:07:32,220
+There is another example in another programming language
+
+147
+00:07:32,740 --> 00:07:40,300
+where is a really important used library got malware.
+
+148
+00:07:40,300 --> 00:07:44,580
+And in our Python world, if we see,
+
+149
+00:07:44,580 --> 00:07:47,580
+last year in 2018, there were some tries
+
+150
+00:07:47,580 --> 00:07:51,340
+to put in malwares using some typosquatting,
+
+151
+00:07:51,340 --> 00:07:54,580
+where people wrote a project which is almost similar name
+
+152
+00:07:54,580 --> 00:07:56,020
+of a known project.
+
+153
+00:07:56,020 --> 00:07:59,260
+And they tried to put in some malware, which in turn
+
+154
+00:07:59,260 --> 00:08:03,860
+tried to steal Bitcoin wallet addresses and details.
+
+155
+00:08:03,860 --> 00:08:06,940
+Those are the three examples I put in here.
+
+156
+00:08:06,940 --> 00:08:10,900
+But this is not the end of our attack sites.
+
+157
+00:08:10,900 --> 00:08:15,940
+A few years ago, this particular gentleman, Mr. Edward Snowden,
+
+158
+00:08:15,940 --> 00:08:20,340
+also talked about a document, iHuntSysAdmins.
+
+159
+00:08:20,340 --> 00:08:23,900
+That particular document is about few,
+
+160
+00:08:23,900 --> 00:08:26,380
+let's say, three letter government agency folks,
+
+161
+00:08:26,380 --> 00:08:28,740
+who loves to visit different conferences.
+
+162
+00:08:28,740 --> 00:08:32,060
+And at the same time, try to find sysadmins
+
+163
+00:08:32,060 --> 00:08:35,820
+to various infrastructure and get their credentials,
+
+164
+00:08:35,820 --> 00:08:40,380
+so that in turn, they can own those infrastructure
+
+165
+00:08:40,380 --> 00:08:43,380
+and figure out and decide whom to kill next, part
+
+166
+00:08:43,380 --> 00:08:45,500
+of the mission.
+
+167
+00:08:45,500 --> 00:08:46,980
+I don't know to make you paranoid,
+
+168
+00:08:46,980 --> 00:08:50,900
+but it might so happen that such people may be sitting just
+
+169
+00:08:50,900 --> 00:08:52,540
+beside you or behind you.
+
+170
+00:08:52,540 --> 00:08:53,540
+The threats.
+
+171
+00:08:53,540 --> 00:08:55,980
+So all the points I mentioned one after,
+
+172
+00:08:55,980 --> 00:09:00,020
+we can summarize them into four simple points.
+
+173
+00:09:00,020 --> 00:09:02,660
+The source can contain malware.
+
+174
+00:09:02,660 --> 00:09:05,100
+Let's say that someone got access to the developer's
+
+175
+00:09:05,100 --> 00:09:08,900
+laptop and changed some code which developer never noticed
+
+176
+00:09:08,900 --> 00:09:10,500
+of our dependencies.
+
+177
+00:09:10,500 --> 00:09:13,660
+Or the source is totally changed.
+
+178
+00:09:13,660 --> 00:09:16,460
+Binaries can be replaced with malware.
+
+179
+00:09:16,460 --> 00:09:19,020
+If the address is not there, the source
+
+180
+00:09:19,020 --> 00:09:20,860
+can be replaced with malware.
+
+181
+00:09:21,020 --> 00:09:22,980
+If the adversary is powerful, they
+
+182
+00:09:22,980 --> 00:09:26,140
+can do man in the middle attacks while you are downloading
+
+183
+00:09:26,140 --> 00:09:28,460
+the source of binary.
+
+184
+00:09:28,460 --> 00:09:31,340
+The storage of the web server, or in case,
+
+185
+00:09:31,340 --> 00:09:33,580
+let's say, the whole infrastructure
+
+186
+00:09:33,580 --> 00:09:34,540
+can be compromised.
+
+187
+00:09:34,540 --> 00:09:35,060
+Correct?
+
+188
+00:09:35,060 --> 00:09:38,060
+And we all know some stories about these things.
+
+189
+00:09:38,060 --> 00:09:41,020
+So we're going to see how we can mitigate these issues.
+
+190
+00:09:44,460 --> 00:09:48,780
+The simplest solution to that starts with one point.
+
+191
+00:09:48,780 --> 00:09:53,420
+One point, review your dependencies.
+
+192
+00:09:53,420 --> 00:09:55,260
+It's important.
+
+193
+00:09:55,260 --> 00:09:58,460
+I'm going to get into that more.
+
+194
+00:09:58,460 --> 00:10:01,300
+So as I said, we are a Python project.
+
+195
+00:10:01,300 --> 00:10:03,340
+We use PPNB a lot.
+
+196
+00:10:03,340 --> 00:10:07,620
+So PPNB can help us, or P-Pen, whichever
+
+197
+00:10:07,620 --> 00:10:09,500
+way you want to pronounce, P-Pen helps
+
+198
+00:10:09,500 --> 00:10:11,980
+us to create a requirements.txt, which
+
+199
+00:10:11,980 --> 00:10:14,180
+will look something like this, where
+
+200
+00:10:14,180 --> 00:10:19,340
+we mention the project or slash dependency name and the version.
+
+201
+00:10:19,340 --> 00:10:21,660
+But we do not want to use this.
+
+202
+00:10:21,660 --> 00:10:24,900
+Instead, we want to use something like this.
+
+203
+00:10:24,900 --> 00:10:27,820
+Sorry for the size thing, because it will not
+
+204
+00:10:27,820 --> 00:10:28,980
+fit in one line.
+
+205
+00:10:28,980 --> 00:10:33,340
+So it's basically the project name, the version number,
+
+206
+00:10:33,340 --> 00:10:37,260
+and a SAR256 sum of a binary wheel.
+
+207
+00:10:37,260 --> 00:10:40,500
+Wheels are the binary package built from the source
+
+208
+00:10:40,500 --> 00:10:41,820
+ter evolves.
+
+209
+00:10:41,820 --> 00:10:43,380
+In our case, we want to make sure
+
+210
+00:10:43,380 --> 00:10:47,620
+that we can use only the wheels which are built by us.
+
+211
+00:10:47,620 --> 00:10:51,700
+That's the end goal part of it.
+
+212
+00:10:51,700 --> 00:10:54,300
+Now, to do so, as I mentioned in the beginning,
+
+213
+00:10:54,300 --> 00:10:55,940
+we never created a new tool.
+
+214
+00:10:55,940 --> 00:10:58,340
+Instead, we have a make file.
+
+215
+00:10:58,340 --> 00:11:00,940
+You can understand long-time Linux users,
+
+216
+00:11:00,940 --> 00:11:03,700
+and also a few bash slash Python scripts,
+
+217
+00:11:03,700 --> 00:11:06,340
+which help us to create all of this.
+
+218
+00:11:06,340 --> 00:11:09,140
+One of the steps there is called build-wheels.
+
+219
+00:11:09,140 --> 00:11:12,100
+And wheels.
+
+220
+00:11:12,100 --> 00:11:13,740
+This is the step.
+
+221
+00:11:13,740 --> 00:11:16,420
+You can see that it has four different commands,
+
+222
+00:11:16,420 --> 00:11:18,620
+different scripts it's actually running.
+
+223
+00:11:18,620 --> 00:11:20,900
+The last script just creates a URL
+
+224
+00:11:20,900 --> 00:11:23,420
+of all the ter evolves and the source,
+
+225
+00:11:23,420 --> 00:11:26,380
+sorry, binary wheels we created.
+
+226
+00:11:26,380 --> 00:11:32,300
+The first script, verify hyphen SAR256 sum hyphen signature,
+
+227
+00:11:32,300 --> 00:11:36,940
+that verifies that it exactly matches with our signatures
+
+228
+00:11:36,940 --> 00:11:37,460
+or not.
+
+229
+00:11:44,900 --> 00:11:46,900
+And the build and sync wheels, now we
+
+230
+00:11:46,900 --> 00:11:50,620
+are going to go in depth to see what we do there.
+
+231
+00:11:50,620 --> 00:11:56,580
+So we also have a separate file known as pfile.lock.
+
+232
+00:11:56,580 --> 00:12:01,340
+It has the source hasses and all the recursive dependencies.
+
+233
+00:12:01,340 --> 00:12:04,660
+So what we do is that we create a temporary requirements.txt
+
+234
+00:12:04,660 --> 00:12:07,060
+with only source ter evolve hasses.
+
+235
+00:12:10,340 --> 00:12:14,700
+And then in our script, we execute this pip3 command,
+
+236
+00:12:14,700 --> 00:12:18,300
+which only downloads the source ter evolves.
+
+237
+00:12:18,300 --> 00:12:19,820
+You can see that we are telling it,
+
+238
+00:12:19,820 --> 00:12:22,620
+do not download any binary wheels.
+
+239
+00:12:22,620 --> 00:12:24,500
+Get me all the source ter evolves.
+
+240
+00:12:24,500 --> 00:12:26,180
+And then we re-verify that.
+
+241
+00:12:26,180 --> 00:12:30,500
+And because we are passing hyphen hyphen require hyphen hasses,
+
+242
+00:12:30,500 --> 00:12:32,820
+it re-verifies that all the hasses match.
+
+243
+00:12:35,260 --> 00:12:40,740
+Then another pip3 command helps us to build this into wheels.
+
+244
+00:12:40,740 --> 00:12:43,140
+These are standard commands from pip.
+
+245
+00:12:43,140 --> 00:12:48,780
+And we rebuild all of those ter evolves into wheels now.
+
+246
+00:12:48,780 --> 00:12:51,280
+At this moment, because we have freshly built wheels
+
+247
+00:12:51,280 --> 00:12:55,620
+on the system, we can now create this requirements.txt file,
+
+248
+00:12:55,620 --> 00:13:02,020
+which has the SAR256 sums of the wheels which we built.
+
+249
+00:13:02,020 --> 00:13:04,740
+And the maintainer of the Python project, that is us,
+
+250
+00:13:04,740 --> 00:13:07,580
+we can create a source ter evolve of our own,
+
+251
+00:13:07,580 --> 00:13:10,300
+setup.py sdist.
+
+252
+00:13:10,300 --> 00:13:12,220
+This will have a requirements.txt
+
+253
+00:13:12,220 --> 00:13:15,340
+with our own wheel signature.
+
+254
+00:13:15,340 --> 00:13:20,700
+At this moment, many of you may have the question,
+
+255
+00:13:20,700 --> 00:13:23,540
+we never check the dependency source code, correct?
+
+256
+00:13:23,540 --> 00:13:27,900
+We just happily assumed whatever came from pip is valid.
+
+257
+00:13:27,900 --> 00:13:33,340
+So to actually rectify this step, we have a rule.
+
+258
+00:13:33,340 --> 00:13:37,500
+And to follow on the rule, we use a tool called diffoscope,
+
+259
+00:13:37,500 --> 00:13:40,340
+which helps us to create a diff between two
+
+260
+00:13:40,340 --> 00:13:42,260
+different ter evolves.
+
+261
+00:13:42,260 --> 00:13:47,340
+And then at least two human beings, two developers,
+
+262
+00:13:47,340 --> 00:13:51,420
+manually go through the diff of the whole change
+
+263
+00:13:51,420 --> 00:13:55,380
+to verify that this particular source code ter evolve doesn't
+
+264
+00:13:55,380 --> 00:13:58,500
+have any malware or any code which
+
+265
+00:13:58,500 --> 00:14:01,020
+is connecting to random sockets on internet
+
+266
+00:14:01,020 --> 00:14:03,500
+or tries to download code or, let's say,
+
+267
+00:14:03,500 --> 00:14:06,500
+doesn't have base64 encoded lot of data,
+
+268
+00:14:06,500 --> 00:14:08,380
+which is not supposed to have.
+
+269
+00:14:08,380 --> 00:14:11,820
+So we verify all these steps and then only
+
+270
+00:14:11,820 --> 00:14:15,620
+allow any changes in the updates or the dependencies
+
+271
+00:14:15,620 --> 00:14:19,900
+for each and every dependency.
+
+272
+00:14:19,900 --> 00:14:22,100
+And we actually stored those dependencies
+
+273
+00:14:22,100 --> 00:14:26,180
+in a file called Sa256sums.txt.
+
+274
+00:14:26,180 --> 00:14:29,580
+You can imagine from the name that it's just
+
+275
+00:14:29,580 --> 00:14:32,260
+names of all ter evolves and wheels.
+
+276
+00:14:32,260 --> 00:14:34,940
+At the same time, the Sa256sums.
+
+277
+00:14:34,940 --> 00:14:38,340
+And then we sign it with our keys,
+
+278
+00:14:38,340 --> 00:14:39,620
+which are not on the system.
+
+279
+00:14:39,620 --> 00:14:43,820
+All are always either on air gap computers or on hardware
+
+280
+00:14:43,820 --> 00:14:44,780
+tokens.
+
+281
+00:14:44,780 --> 00:14:46,820
+And we keep the same file, signed file,
+
+282
+00:14:46,820 --> 00:14:49,220
+there so that anyone can verify.
+
+283
+00:14:49,220 --> 00:14:52,300
+And our tools verify the same couple of times.
+
+284
+00:14:56,860 --> 00:14:59,220
+At this moment, we have our source ter evolves.
+
+285
+00:14:59,220 --> 00:15:00,460
+We have the wheels.
+
+286
+00:15:00,460 --> 00:15:03,620
+Now we have to make sure that we can consume those wheels.
+
+287
+00:15:03,620 --> 00:15:06,340
+There are different amazing technologies.
+
+288
+00:15:06,340 --> 00:15:08,860
+But luckily for us, in Python world,
+
+289
+00:15:08,860 --> 00:15:12,780
+we can just use a simple old technology also
+
+290
+00:15:12,780 --> 00:15:15,300
+known as HTML files.
+
+291
+00:15:15,300 --> 00:15:17,940
+We can create some index.html files,
+
+292
+00:15:17,940 --> 00:15:21,740
+which can enable us to create a private repository,
+
+293
+00:15:21,740 --> 00:15:23,740
+or says our own repository, which
+
+294
+00:15:23,740 --> 00:15:30,620
+will provide the source ter evolves and binary wheels.
+
+295
+00:15:30,620 --> 00:15:32,460
+And PIP will work.
+
+296
+00:15:32,460 --> 00:15:34,260
+If you want to know more, later at home,
+
+297
+00:15:34,260 --> 00:15:37,220
+you can search about this PIP 503.
+
+298
+00:15:37,220 --> 00:15:40,740
+This has all things in details.
+
+299
+00:15:40,740 --> 00:15:42,780
+Here are two examples.
+
+300
+00:15:42,780 --> 00:15:46,380
+This is the index, top index page.
+
+301
+00:15:46,380 --> 00:15:49,980
+You can see it has just links to different projects.
+
+302
+00:15:49,980 --> 00:15:51,980
+And if you go into any of the projects,
+
+303
+00:15:51,980 --> 00:15:56,780
+it will have URLs to each ter ball and the wheel file.
+
+304
+00:15:56,780 --> 00:16:00,380
+Static files, which we can verify, commit to GitHub,
+
+305
+00:16:00,380 --> 00:16:02,540
+and deploy anywhere we want.
+
+306
+00:16:02,540 --> 00:16:03,580
+Static files, correct?
+
+307
+00:16:08,860 --> 00:16:11,620
+Up to this, we managed to get source code.
+
+308
+00:16:11,620 --> 00:16:14,580
+We managed to build them into wheels.
+
+309
+00:16:14,580 --> 00:16:17,380
+Now let's talk about deploying the actual application.
+
+310
+00:16:17,380 --> 00:16:18,620
+How do you want to do this?
+
+311
+00:16:22,180 --> 00:16:27,380
+You can raise your hand about how many of us
+
+312
+00:16:27,380 --> 00:16:31,420
+already saw this before in life or did this.
+
+313
+00:16:31,420 --> 00:16:33,260
+And we can always say that this is dangerous,
+
+314
+00:16:33,260 --> 00:16:38,140
+because a Python dependency will change things into your system
+
+315
+00:16:38,140 --> 00:16:39,500
+Python libraries.
+
+316
+00:16:39,500 --> 00:16:44,060
+And this may go very bad or sad at the same time.
+
+317
+00:16:44,060 --> 00:16:49,700
+So for a remedy, we know about virtual environment, correct?
+
+318
+00:16:49,700 --> 00:16:52,580
+We use it to develop our applications.
+
+319
+00:16:52,580 --> 00:16:56,060
+What about just packaging the whole virtual environment
+
+320
+00:16:56,060 --> 00:16:57,500
+instead?
+
+321
+00:16:57,500 --> 00:17:00,300
+And then we figured out in the last PyCon
+
+322
+00:17:00,300 --> 00:17:03,860
+that we are not the only people who are thinking about this.
+
+323
+00:17:03,860 --> 00:17:06,180
+And Donald Stubb actually pointed us
+
+324
+00:17:06,180 --> 00:17:11,260
+to a project named dh-virtualenv,
+
+325
+00:17:11,260 --> 00:17:15,100
+which is coming from Spotify, an open source project which
+
+326
+00:17:15,100 --> 00:17:19,300
+modifies and adds some extra layers on top of Debian
+
+327
+00:17:19,300 --> 00:17:24,420
+packaging so that you can install, build, and package
+
+328
+00:17:24,420 --> 00:17:27,700
+a whole virtualenv for your Python application.
+
+329
+00:17:27,700 --> 00:17:31,020
+In that way, you can actually now control all the Python
+
+330
+00:17:31,020 --> 00:17:33,140
+dependencies of your application.
+
+331
+00:17:33,140 --> 00:17:35,540
+And you can install it easily in a virtualenv,
+
+332
+00:17:35,540 --> 00:17:37,860
+and you can still package it automatically.
+
+333
+00:17:37,860 --> 00:17:40,300
+Here is an example of the rules files.
+
+334
+00:17:40,300 --> 00:17:42,780
+There is too much of text, but if I just
+
+335
+00:17:42,780 --> 00:17:45,020
+try to click this line, you can see
+
+336
+00:17:45,020 --> 00:17:48,300
+that we are saying we are using Python 3.5, setup.tools.
+
+337
+00:17:51,380 --> 00:17:54,940
+And the index, this is the index we use at SecureDrop.
+
+338
+00:17:54,940 --> 00:17:57,340
+So you can actually open it up in your computer later on
+
+339
+00:17:57,340 --> 00:17:59,180
+and find it out.
+
+340
+00:17:59,180 --> 00:18:01,580
+And you'll also find that this particular Mac file
+
+341
+00:18:01,580 --> 00:18:05,300
+has four separate commands at the end, a couple of finds
+
+342
+00:18:05,300 --> 00:18:09,380
+So using those things, we try to achieve the next level,
+
+343
+00:18:09,380 --> 00:18:12,620
+that is reproducible builds.
+
+344
+00:18:12,620 --> 00:18:14,980
+This is actually enabled from Debian stretch
+
+345
+00:18:14,980 --> 00:18:17,780
+onwards, all Debian versions, where
+
+346
+00:18:17,780 --> 00:18:21,180
+it will help us or anyone else to be
+
+347
+00:18:21,180 --> 00:18:24,980
+able to produce the exact same artifact from the exact same
+
+348
+00:18:24,980 --> 00:18:26,020
+source code.
+
+349
+00:18:26,020 --> 00:18:28,420
+So it doesn't matter if I'm building the Debian package
+
+350
+00:18:28,420 --> 00:18:31,220
+today in my laptop or in our production system
+
+351
+00:18:31,220 --> 00:18:34,100
+or if I'm building it in my laptop or in our production
+
+352
+00:18:34,260 --> 00:18:36,780
+system, or if tomorrow you want to try to build
+
+353
+00:18:36,780 --> 00:18:41,540
+the same package again, we will get the exact same final output.
+
+354
+00:18:44,460 --> 00:18:49,740
+All of these things together help
+
+355
+00:18:49,740 --> 00:18:54,940
+us to create a secure, usable, reproducible builds.
+
+356
+00:18:54,940 --> 00:18:59,620
+The things it has are authenticity.
+
+357
+00:18:59,620 --> 00:19:02,860
+You can actually check who made those builds.
+
+358
+00:19:02,860 --> 00:19:05,460
+Those are signed with our keys.
+
+359
+00:19:05,460 --> 00:19:08,500
+You can have auditability.
+
+360
+00:19:08,500 --> 00:19:11,180
+You can have reproducibility to have
+
+361
+00:19:11,180 --> 00:19:13,700
+exact same build and outcome that whatever
+
+362
+00:19:13,700 --> 00:19:17,220
+software you are installing for your secured environment
+
+363
+00:19:17,220 --> 00:19:20,260
+are exactly what it's supposed to be, not anything fancy.
+
+364
+00:19:23,980 --> 00:19:26,100
+Now, these steps together can help
+
+365
+00:19:26,100 --> 00:19:30,980
+us to mitigate those threats we started from.
+
+366
+00:19:30,980 --> 00:19:33,620
+The first threat, source contains malware.
+
+367
+00:19:33,620 --> 00:19:36,940
+So this is the step where we do the human review
+
+368
+00:19:36,940 --> 00:19:40,420
+to make sure that the source tarball is what it should be.
+
+369
+00:19:40,420 --> 00:19:47,620
+And then we store and sign the SAR256 sums with GPG keys.
+
+370
+00:19:47,620 --> 00:19:50,180
+Now, that also helps us because we also
+
+371
+00:19:50,180 --> 00:19:54,180
+store the SAR256 sums of the binary wheels.
+
+372
+00:19:54,180 --> 00:19:56,220
+That means binary cannot be replaced.
+
+373
+00:19:56,220 --> 00:19:58,300
+And throughout our build process,
+
+374
+00:19:58,300 --> 00:20:00,700
+there are many places where we double check or triple
+
+375
+00:20:00,860 --> 00:20:05,820
+check the same keys and the values of the SAR256 sums.
+
+376
+00:20:09,180 --> 00:20:12,180
+Man in the middle attack, it's taken
+
+377
+00:20:12,180 --> 00:20:13,660
+care by two different things.
+
+378
+00:20:13,660 --> 00:20:16,140
+Again, HTTPS, which is the standard thing everyone
+
+379
+00:20:16,140 --> 00:20:19,380
+should now use, plus the SAR256 sums,
+
+380
+00:20:19,380 --> 00:20:22,180
+so that the final thing which comes down to a computer,
+
+381
+00:20:22,180 --> 00:20:24,020
+and Debian packages also, they make sure
+
+382
+00:20:24,020 --> 00:20:25,700
+that it's the exact same thing.
+
+383
+00:20:25,700 --> 00:20:29,700
+Because none of the signing keys are there on a network
+
+384
+00:20:29,700 --> 00:20:32,860
+connected box anywhere, we also make sure
+
+385
+00:20:32,860 --> 00:20:35,700
+that just in case our infrastructure
+
+386
+00:20:35,700 --> 00:20:39,940
+slash web application slash web server gets compromised,
+
+387
+00:20:39,940 --> 00:20:42,420
+that no one will get access to those keys,
+
+388
+00:20:42,420 --> 00:20:46,900
+that they can replace the actual any of those signed files.
+
+389
+00:20:46,900 --> 00:20:47,980
+This is the way, correct?
+
+390
+00:20:47,980 --> 00:20:51,220
+One can try to push a new malware or new source
+
+391
+00:20:51,220 --> 00:20:52,700
+into our system.
+
+392
+00:20:52,700 --> 00:20:56,340
+And on top of it, using the reproducible builds guidelines,
+
+393
+00:20:56,340 --> 00:20:59,900
+we managed to create the reproducible builds, which
+
+394
+00:20:59,900 --> 00:21:04,420
+at the end give us a certain amount of secured idea,
+
+395
+00:21:04,420 --> 00:21:09,700
+where we can really say that these reproducible builds
+
+396
+00:21:09,700 --> 00:21:13,180
+helps us to verify what we are finally running.
+
+397
+00:21:13,180 --> 00:21:15,380
+And I can tell you one thing honestly,
+
+398
+00:21:15,380 --> 00:21:19,220
+that it sounds a lot of steps, but it's not.
+
+399
+00:21:19,740 --> 00:21:27,100
+But even before this talk today at PyCon, for the last few days,
+
+400
+00:21:27,100 --> 00:21:29,340
+I was showing the slides and the ideas
+
+401
+00:21:29,340 --> 00:21:34,060
+to various other people in this conference, who actually
+
+402
+00:21:34,060 --> 00:21:36,580
+are much more better experts than me on this.
+
+403
+00:21:36,580 --> 00:21:40,060
+And all of us actually agreed that this step looks much more
+
+404
+00:21:40,060 --> 00:21:42,900
+centered to make sure that we can reduce those threats.
+
+405
+00:21:46,660 --> 00:21:47,820
+Here are a few links.
+
+406
+00:21:47,820 --> 00:21:50,500
+Freedom.press is the website of our organization.
+
+407
+00:21:50,500 --> 00:21:55,820
+Securedrop.org is the primary website for Securedrop project.
+
+408
+00:21:55,820 --> 00:21:59,740
+Those URLs, where you can find those scripts and all
+
+409
+00:21:59,740 --> 00:22:02,660
+the other scripts slash make file.
+
+410
+00:22:02,660 --> 00:22:06,380
+And it also contains the update policy on us.
+
+411
+00:22:06,380 --> 00:22:08,500
+And because this is available only for Debian,
+
+412
+00:22:08,500 --> 00:22:10,740
+I wrote a similar thing for RPM packages,
+
+413
+00:22:10,740 --> 00:22:12,740
+just in case any one of you want to deploy
+
+414
+00:22:12,740 --> 00:22:15,780
+the similar thing for RPM-based operating systems,
+
+415
+00:22:15,780 --> 00:22:18,940
+say Fedora CentOS REL, you can use the same thing.
+
+416
+00:22:22,580 --> 00:22:23,540
+Thank you.
+
+417
+00:22:23,540 --> 00:22:25,380
+I'll be open up for questions now.
+
+418
+00:22:25,380 --> 00:22:25,820
+[?
+
+419
+00:22:25,820 --> 00:22:34,940
+Applause. ?]
+
+420
+00:22:34,940 --> 00:22:35,860
+Any questions, anyone?
+
+421
+00:22:39,180 --> 00:22:41,460
+Yep, here.
+
+422
+00:22:41,460 --> 00:22:43,780
+I'll repeat.
+
+423
+00:22:43,780 --> 00:22:44,300
+I can repeat.
+
+424
+00:22:44,300 --> 00:22:44,780
+You tell me.
+
+425
+00:22:45,780 --> 00:22:50,260
+Have you ever heard about the NICs package manager?
+
+426
+00:22:50,260 --> 00:22:53,740
+Because didn't he incorporate some of these verification
+
+427
+00:22:53,740 --> 00:22:56,740
+process and it's not a part of the OPM?
+
+428
+00:22:56,740 --> 00:22:58,620
+Yes, we know about NICs.
+
+429
+00:22:58,620 --> 00:23:01,180
+But the idea is that because we are so much depend already
+
+430
+00:23:01,180 --> 00:23:04,220
+into the whole idea of using Debian slash Ubuntu-based
+
+431
+00:23:04,220 --> 00:23:08,140
+systems, and the kind of small team we have,
+
+432
+00:23:08,140 --> 00:23:11,060
+we cannot make a lot of changes at the same time.
+
+433
+00:23:11,060 --> 00:23:14,540
+So the idea was like, let's try to do what we can do or achieve
+
+434
+00:23:14,540 --> 00:23:17,500
+within staying the same operating system level where
+
+435
+00:23:17,500 --> 00:23:20,580
+we are, and something which just works out of the box.
+
+436
+00:23:20,580 --> 00:23:23,140
+That's why we chose to add all of this inside the Debian
+
+437
+00:23:23,140 --> 00:23:26,740
+package we installed.
+
+438
+00:23:26,740 --> 00:23:28,460
+Any other questions, anything?
+
+439
+00:23:28,460 --> 00:23:29,660
+Yes.
+
+440
+00:23:29,660 --> 00:23:30,220
+Hi.
+
+441
+00:23:30,220 --> 00:23:34,140
+So first, [? cure drop. ?] I'm curious as to what went
+
+442
+00:23:34,140 --> 00:23:36,780
+into the decision to set it up the way that you did,
+
+443
+00:23:36,780 --> 00:23:40,020
+as opposed to considering things like a blockchain
+
+444
+00:23:40,020 --> 00:23:43,300
+or trusted execution environments.
+
+445
+00:23:43,300 --> 00:23:46,660
+OK, number one point, I'm not a blockchain expert at all,
+
+446
+00:23:46,660 --> 00:23:48,020
+number one.
+
+447
+00:23:48,020 --> 00:23:51,620
+Number two, our idea was, again, as I said,
+
+448
+00:23:51,620 --> 00:23:53,860
+we want to use the tools and technologies already
+
+449
+00:23:53,860 --> 00:23:56,060
+available to us, which is being consumed all
+
+450
+00:23:56,060 --> 00:23:57,860
+across the Python environments.
+
+451
+00:23:57,860 --> 00:24:01,820
+And as I said, we found this is the most common thing
+
+452
+00:24:01,820 --> 00:24:03,540
+which we can use.
+
+453
+00:24:03,540 --> 00:24:06,300
+And there are a few times where people came and told,
+
+454
+00:24:06,300 --> 00:24:07,940
+I know me personally, that, oh, you
+
+455
+00:24:07,940 --> 00:24:10,720
+can use blockchain to solve all your security problems.
+
+456
+00:24:10,720 --> 00:24:12,900
+And my general answer to them is,
+
+457
+00:24:12,900 --> 00:24:15,140
+why don't you come back with a PR?
+
+458
+00:24:15,140 --> 00:24:17,020
+So I don't know anything about blockchain
+
+459
+00:24:17,020 --> 00:24:21,180
+other than it's a database, some sort of.
+
+460
+00:24:21,180 --> 00:24:23,740
+Sorry, that's my answer.
+
+461
+00:24:23,740 --> 00:24:25,940
+Next question, please.
+
+462
+00:24:25,940 --> 00:24:28,300
+You have, you're hosting your own PyPI server.
+
+463
+00:24:31,700 --> 00:24:33,900
+So you're building a virtual environment
+
+464
+00:24:33,900 --> 00:24:35,420
+and you're packaging that up.
+
+465
+00:24:35,420 --> 00:24:38,200
+So the end user is receiving a Debian package,
+
+466
+00:24:38,200 --> 00:24:40,860
+but they're not actually from installing that,
+
+467
+00:24:40,860 --> 00:24:42,660
+interacting direct with that PyPI server.
+
+468
+00:24:42,660 --> 00:24:43,660
+Is that correct?
+
+469
+00:24:43,660 --> 00:24:44,160
+Correct.
+
+470
+00:24:44,160 --> 00:24:48,180
+So the virtual end already has all things installed.
+
+471
+00:24:48,180 --> 00:24:52,020
+Your PyPI server is just internal at this point, right?
+
+472
+00:24:52,020 --> 00:24:54,660
+Are you exposing that as well, such that people can,
+
+473
+00:24:54,660 --> 00:24:56,420
+for transparency purposes?
+
+474
+00:24:56,420 --> 00:24:56,920
+Yes.
+
+475
+00:24:56,920 --> 00:25:00,740
+So this is the URL of the server which we are using now,
+
+476
+00:25:00,740 --> 00:25:03,620
+dev-bin.ops.secure-drub.org.
+
+477
+00:25:03,620 --> 00:25:05,700
+And any one of you can actually open that URL,
+
+478
+00:25:05,700 --> 00:25:07,580
+slash simple, I mean, that URL.
+
+479
+00:25:07,580 --> 00:25:09,500
+So it's public, but it's only used
+
+480
+00:25:09,500 --> 00:25:13,260
+while building the Debian package instead of end users.
+
+481
+00:25:13,260 --> 00:25:15,780
+So end users just use the Debian package, which is already
+
+482
+00:25:15,780 --> 00:25:17,940
+ready for consumption.
+
+483
+00:25:17,940 --> 00:25:20,140
+But everything is public because the idea is
+
+484
+00:25:20,140 --> 00:25:22,980
+you should not have to trust us or what you get from internet.
+
+485
+00:25:22,980 --> 00:25:25,700
+You are supposed to be able to verify and audit
+
+486
+00:25:25,700 --> 00:25:26,700
+what you are using.
+
+487
+00:25:26,700 --> 00:25:27,220
+Yeah.
+
+488
+00:25:27,220 --> 00:25:28,300
+Yep.
+
+489
+00:25:28,300 --> 00:25:31,500
+And then just one more quick question.
+
+490
+00:25:31,500 --> 00:25:35,200
+You're doing PGP encryption on the text file containing
+
+491
+00:25:35,200 --> 00:25:36,980
+all of your checksums.
+
+492
+00:25:36,980 --> 00:25:38,280
+Was there kind of a process where
+
+493
+00:25:38,280 --> 00:25:43,720
+you experimented with signing the tarballs
+
+494
+00:25:43,720 --> 00:25:46,920
+or signing different portions of it,
+
+495
+00:25:46,920 --> 00:25:50,320
+such that putting all the checksums into a text file
+
+496
+00:25:50,320 --> 00:25:54,360
+and signing that was the most efficient or simple?
+
+497
+00:25:54,360 --> 00:25:58,960
+Yes, because we stored that file inside our Git repository.
+
+498
+00:25:58,960 --> 00:26:04,680
+And we trust the standard HTTPS thing we are doing.
+
+499
+00:26:04,680 --> 00:26:07,920
+And instead of trying to reintroduce or redevelop
+
+500
+00:26:07,920 --> 00:26:11,400
+anything new, and because we trust also our GPG as a tool
+
+501
+00:26:11,400 --> 00:26:15,040
+for the whole project, we just go with GPG.
+
+502
+00:26:15,040 --> 00:26:16,800
+Thank you.
+
+503
+00:26:16,800 --> 00:26:18,600
+Next.
+
+504
+00:26:18,600 --> 00:26:19,360
+OK.
+
+505
+00:26:19,360 --> 00:26:20,600
+So great talk.
+
+506
+00:26:20,600 --> 00:26:22,120
+Thank you.
+
+507
+00:26:22,120 --> 00:26:24,120
+So I just wanted to give a suggestion
+
+508
+00:26:24,120 --> 00:26:28,160
+that there's a tool called FPM that you
+
+509
+00:26:28,160 --> 00:26:31,880
+can use to specify the type of package that you want.
+
+510
+00:26:31,880 --> 00:26:35,920
+And when you run it in any folder,
+
+511
+00:26:35,920 --> 00:26:39,600
+it packages up the whole thing into an RPM or a DEP
+
+512
+00:26:39,600 --> 00:26:41,440
+or whatever you want.
+
+513
+00:26:41,440 --> 00:26:45,040
+So we at work, we basically do the same thing that you do.
+
+514
+00:26:45,040 --> 00:26:49,880
+But instead of using different tools for different types,
+
+515
+00:26:49,880 --> 00:26:52,840
+we just use FPM that gives you a lot of flexibility.
+
+516
+00:26:52,840 --> 00:26:54,520
+Thanks for the suggestion.
+
+517
+00:26:54,520 --> 00:26:57,440
+That's an open source tool, so you can check it out.
+
+518
+00:26:57,440 --> 00:27:01,280
+Yeah, I mean, I am coming from a Fedora packaging background.
+
+519
+00:27:01,280 --> 00:27:03,200
+I spend my life with the Fedora project.
+
+520
+00:27:03,200 --> 00:27:05,760
+And I also package things for Debian and Ubuntu
+
+521
+00:27:05,760 --> 00:27:07,520
+in a different capacity.
+
+522
+00:27:07,520 --> 00:27:09,640
+My personal finding as a packager,
+
+523
+00:27:09,640 --> 00:27:12,840
+I found having separate package builds for every system
+
+524
+00:27:12,840 --> 00:27:14,000
+works really well.
+
+525
+00:27:14,000 --> 00:27:15,040
+Next question, this side.
+
+526
+00:27:17,720 --> 00:27:20,920
+So when you're making your builds for Debian,
+
+527
+00:27:20,920 --> 00:27:23,440
+do you have a separate process to make the builds for Ubuntu?
+
+528
+00:27:23,440 --> 00:27:28,680
+Because I use a DH virtual env to create builds for Ubuntu,
+
+529
+00:27:28,680 --> 00:27:30,440
+and they never work on Debian.
+
+530
+00:27:30,440 --> 00:27:32,100
+Or I can create them on Debian, and then
+
+531
+00:27:32,100 --> 00:27:33,240
+they don't work on Ubuntu.
+
+532
+00:27:33,240 --> 00:27:34,200
+Have you run into that?
+
+533
+00:27:34,200 --> 00:27:37,000
+Or are you trying to support both?
+
+534
+00:27:37,000 --> 00:27:40,040
+So the idea is that you make sure
+
+535
+00:27:40,040 --> 00:27:41,560
+that your build environment matches
+
+536
+00:27:41,560 --> 00:27:42,920
+with what you are running in.
+
+537
+00:27:42,920 --> 00:27:46,360
+So if you are running, say, building for Debian 9 stretch
+
+538
+00:27:46,360 --> 00:27:49,320
+and latest Ubuntu, whatever version number,
+
+539
+00:27:49,320 --> 00:27:50,880
+you have to build two separate packages,
+
+540
+00:27:50,880 --> 00:27:53,200
+because they will not be compatible with each other.
+
+541
+00:27:53,200 --> 00:27:56,960
+And if they contain ASO files, that is, like, binaries,
+
+542
+00:27:56,960 --> 00:27:58,200
+it will not work, basically.
+
+543
+00:27:58,200 --> 00:28:00,720
+So that's the way to work.
+
+544
+00:28:00,720 --> 00:28:01,960
+Thanks.
+
+545
+00:28:01,960 --> 00:28:03,120
+Hi, thank you for the talk.
+
+546
+00:28:03,160 --> 00:28:06,960
+I've noticed that you consume from PyPI on the source packages
+
+547
+00:28:06,960 --> 00:28:10,200
+intentionally, which means that in your Debian build
+
+548
+00:28:10,200 --> 00:28:12,400
+depends who will be required to provide
+
+549
+00:28:12,400 --> 00:28:15,000
+all of the build dependencies of all the PIP packages
+
+550
+00:28:15,000 --> 00:28:17,600
+that you have, all of the C extension packages
+
+551
+00:28:17,600 --> 00:28:19,240
+that you have.
+
+552
+00:28:19,240 --> 00:28:21,200
+Has it been a problem in any way?
+
+553
+00:28:21,200 --> 00:28:23,760
+Was it a concern?
+
+554
+00:28:23,760 --> 00:28:26,000
+Did you have to have a build depends
+
+555
+00:28:26,000 --> 00:28:28,480
+of the C extension packages that you consume from PyPI
+
+556
+00:28:28,480 --> 00:28:30,680
+to be in your build depends list?
+
+557
+00:28:30,680 --> 00:28:33,280
+The question is, did you get into any kind of trouble
+
+558
+00:28:33,280 --> 00:28:35,640
+while building any kind of C extensions?
+
+559
+00:28:35,640 --> 00:28:39,360
+Till now, no, because the biggest C-based thing,
+
+560
+00:28:39,360 --> 00:28:40,600
+we have two.
+
+561
+00:28:40,600 --> 00:28:42,480
+One is cryptography.
+
+562
+00:28:42,480 --> 00:28:45,240
+And I think PyML also has now C extension.
+
+563
+00:28:45,240 --> 00:28:49,040
+And no, so I think we required only one of the dependencies
+
+564
+00:28:49,040 --> 00:28:52,160
+which we added as a build requires for the package.
+
+565
+00:28:52,160 --> 00:28:53,560
+Make sure that it exists.
+
+566
+00:28:53,560 --> 00:28:56,040
+Thank you.
+
+567
+00:28:56,040 --> 00:28:58,520
+For DiffaScope, have you found anything interesting
+
+568
+00:28:58,520 --> 00:28:59,920
+while reviewing all those changes?
+
+569
+00:28:59,920 --> 00:29:02,560
+And a second question, in reviewing all of those changes
+
+570
+00:29:02,560 --> 00:29:05,320
+in your dependencies, do you run into review fatigue?
+
+571
+00:29:05,320 --> 00:29:07,360
+And how do you deal with that?
+
+572
+00:29:07,360 --> 00:29:09,320
+Correct, so the question is about DiffaScope.
+
+573
+00:29:09,320 --> 00:29:11,080
+Have we noticed anything special?
+
+574
+00:29:11,080 --> 00:29:15,720
+No, it's just that a long set of text one has to go through,
+
+575
+00:29:15,720 --> 00:29:16,840
+which creates the problem.
+
+576
+00:29:16,840 --> 00:29:20,080
+And we're talking to more and more projects, less people.
+
+577
+00:29:20,080 --> 00:29:22,120
+We found that many other companies also
+
+578
+00:29:22,120 --> 00:29:23,980
+do the same internally.
+
+579
+00:29:23,980 --> 00:29:25,880
+So one of the things I'm planning to work on,
+
+580
+00:29:25,880 --> 00:29:28,640
+maybe just after sprints or during sprint,
+
+581
+00:29:28,640 --> 00:29:32,560
+is we'll try to create a way where different projects,
+
+582
+00:29:32,560 --> 00:29:36,880
+less people whom we can trust can publish this information.
+
+583
+00:29:36,880 --> 00:29:42,480
+Right now at SecureDrop, we are publishing it in our GitHub.
+
+584
+00:29:42,480 --> 00:29:48,320
+So github.com slash freedom of the press.
+
+585
+00:29:48,320 --> 00:29:52,040
+In the Debian packaging, the actual repo,
+
+586
+00:29:52,040 --> 00:29:55,360
+I am signing the whole change with my GPG keys
+
+587
+00:29:55,360 --> 00:29:58,440
+and putting it up in the wiki, which is not working right now
+
+588
+00:29:58,440 --> 00:30:00,880
+here, network.
+
+589
+00:30:00,880 --> 00:30:03,440
+But yeah, it's going to create a lot of pressure.
+
+590
+00:30:03,440 --> 00:30:06,120
+But the more people I talk to, everyone
+
+591
+00:30:06,120 --> 00:30:08,680
+says manually reviewing the source code
+
+592
+00:30:08,680 --> 00:30:11,320
+is the only way to make sure that the source is clean.
+
+593
+00:30:11,320 --> 00:30:13,280
+So we have to find out a way as a community
+
+594
+00:30:13,280 --> 00:30:16,800
+so that we can actually start trusting it more.
+
+595
+00:30:16,800 --> 00:30:17,360
+Thank you.
+
+596
+00:30:17,360 --> 00:30:17,860
+Thank you.
+
+597
+00:30:20,640 --> 00:30:22,200
+OK, I guess no more questions.
+
+598
+00:30:22,200 --> 00:30:22,800
+Thank you.
+
+599
+00:30:22,800 --> 00:30:24,360
+Thank you.
+

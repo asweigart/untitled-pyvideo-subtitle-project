@@ -1,0 +1,1180 @@
+1
+00:00:00,000 --> 00:00:11,880
+Good morning, everyone. We're going to get started. So today we have David,
+
+2
+00:00:11,880 --> 00:00:21,120
+pardon, we have David Wollever. He is the founder of PyCon Canada. He will be
+
+3
+00:00:21,120 --> 00:00:27,680
+talking about floats, our friends making the most of IEEE 754. We will not be
+
+4
+00:00:27,680 --> 00:00:34,000
+taking Q&A. If you have questions, he will be outside the door after the talk.
+
+5
+00:00:34,000 --> 00:00:38,440
+Please give a warm welcome to David.
+
+6
+00:00:41,920 --> 00:00:48,640
+Yeah, hey folks. So my name is David Wollever and I am super excited to be
+
+7
+00:00:48,640 --> 00:00:54,440
+here today to talk to all of you about floating point numbers. I'm really
+
+8
+00:00:54,440 --> 00:00:57,360
+curious though, what the heck are you doing here? There's lots of other great
+
+9
+00:00:57,360 --> 00:01:01,560
+talks. Why do you want to hear about floats? If you don't mind sending me a
+
+10
+00:01:01,560 --> 00:01:06,480
+tweet right there and just letting me know what brought you to this talk as
+
+11
+00:01:06,480 --> 00:01:11,800
+opposed to any of the other great talks, I'd really like to hear it. The second
+
+12
+00:01:11,800 --> 00:01:15,400
+small thing for the folks up front, if you don't mind grabbing a photo or two of me,
+
+13
+00:01:15,400 --> 00:01:22,240
+I'd love to have something to show my mom. Thank you. And finally, I need to
+
+14
+00:01:22,280 --> 00:01:28,560
+apologize for the artistic license that I took with the talk title. 754 can be
+
+15
+00:01:28,560 --> 00:01:39,160
+exactly represented in floating point. I'm sorry. So over the course of this talk,
+
+16
+00:01:39,160 --> 00:01:44,520
+I'd like to tell you a bit more about what floats are, how they work, and why
+
+17
+00:01:44,520 --> 00:01:49,600
+they do the weird things that they do. Because they definitely aren't the best,
+
+18
+00:01:50,480 --> 00:01:58,080
+but also they're not the absolute worst. And regardless of any of that, we are
+
+19
+00:01:58,080 --> 00:02:04,000
+absolutely stuck with them. So hopefully by the end of this talk, I don't expect
+
+20
+00:02:04,000 --> 00:02:07,240
+you to like them, but at least I hope you'll understand them a little bit
+
+21
+00:02:07,240 --> 00:02:13,960
+better. So to understand floats, we need to take a step back and look at why
+
+22
+00:02:13,960 --> 00:02:18,960
+floats exist. And to understand that, we need to look at how numbers are
+
+23
+00:02:18,960 --> 00:02:24,800
+represented in computers. So whole numbers, integers, those are pretty
+
+24
+00:02:24,800 --> 00:02:30,480
+straightforward. We take a chunk of memory, and within that chunk of memory,
+
+25
+00:02:30,480 --> 00:02:34,920
+there's a nice one-to-one mapping between the binary numbers we can represent there
+
+26
+00:02:34,920 --> 00:02:38,520
+and the whole numbers that we're used to dealing with every day, our ones, our
+
+27
+00:02:38,520 --> 00:02:47,080
+twos, our fives, et cetera. And the way we do that representation is more or less
+
+28
+00:02:47,120 --> 00:02:53,520
+what you're used to if you've done any reading on binary notation. Now, one thing
+
+29
+00:02:53,520 --> 00:02:59,760
+you'll notice is in this example, I'm not including any negative numbers. And
+
+30
+00:02:59,760 --> 00:03:03,920
+those are done with a representation called twos complement. Twos complement is,
+
+31
+00:03:03,920 --> 00:03:08,000
+in my opinion, an absolute thing of beauty, and I'd really suggest you go look
+
+32
+00:03:08,000 --> 00:03:12,000
+it up after the talk, but unfortunately, this is about floats, so we can't get
+
+33
+00:03:12,000 --> 00:03:19,600
+into that here. Anyway, whole numbers, integers, and computers, those turn out
+
+34
+00:03:19,600 --> 00:03:25,160
+to work pretty well. With a 32-bit int, we get to represent numbers between about
+
+35
+00:03:25,160 --> 00:03:31,800
+2 billion and negative 2 billion. And then if we pump that up to a 64-bit long,
+
+36
+00:03:31,800 --> 00:03:37,400
+we can go up to 9 quadrillion. And it turns out that for the integers, for the
+
+37
+00:03:37,400 --> 00:03:41,320
+whole numbers that we deal with data programmers, the numbers that occur in the
+
+38
+00:03:41,320 --> 00:03:45,720
+real world, that range is actually really sufficient. We don't often need to go
+
+39
+00:03:45,720 --> 00:03:52,240
+bigger or smaller than that. When we start moving into fractional numbers,
+
+40
+00:03:52,240 --> 00:03:59,200
+though, things get a little bit more difficult. To understand why, imagine how
+
+41
+00:03:59,200 --> 00:04:04,400
+you might implement fractional numbers. Well, we might say we got that chunk of
+
+42
+00:04:04,400 --> 00:04:10,000
+memory, and let's split it in half, and we'll say, okay, the first half is going to
+
+43
+00:04:10,040 --> 00:04:13,600
+be the integral component, and the second half is going to be the fractional
+
+44
+00:04:13,600 --> 00:04:20,160
+component. And that might look a little something like this. So we could have, if
+
+45
+00:04:20,160 --> 00:04:27,240
+we have a 1 in the fractional component, that's 1 over 2 to the 8, so 0.125. If we
+
+46
+00:04:27,240 --> 00:04:34,400
+have a 2 in the fractional component, that would give us 1 over 4, 0.25, and so on.
+
+47
+00:04:34,400 --> 00:04:43,840
+But one of the things you'll notice here is with this representation, we don't
+
+48
+00:04:43,840 --> 00:04:48,040
+actually get a very large range of numbers that we can work with. If we're
+
+49
+00:04:48,040 --> 00:04:53,520
+only using 32 bits, the smallest number that we could represent is 1.5 times 10
+
+50
+00:04:53,520 --> 00:04:58,240
+to the negative 5, so that's like a decimal place, four zeros and a 1 and a 5.
+
+51
+00:04:59,080 --> 00:05:09,280
+And the largest number is a measly 131,000. We could go up and use, say, 64
+
+52
+00:05:09,280 --> 00:05:12,480
+bits instead, where we have 32 bits before the decimal place and 32 bits
+
+53
+00:05:12,480 --> 00:05:17,120
+after the decimal place, and that will buy us quite a bit more space. We can go
+
+54
+00:05:17,120 --> 00:05:21,000
+down to 10 decimal places of precision, approximately, and we could go up to
+
+55
+00:05:21,000 --> 00:05:27,440
+numbers as big as about 4 billion. But, I mean, the first caveat there is this is
+
+56
+00:05:27,440 --> 00:05:37,520
+completely ignoring negative numbers. And the second caveat is in the real
+
+57
+00:05:37,520 --> 00:05:41,840
+world, it turns out that when we're representing things with real numbers,
+
+58
+00:05:41,840 --> 00:05:46,520
+the things we're representing tend to be on a much larger scale. You know, we have
+
+59
+00:05:46,520 --> 00:05:51,840
+to deal with things like the distance to Pluto, that's 7.5 billion kilometers, and
+
+60
+00:05:51,840 --> 00:05:55,000
+we might want to represent things that are really small, like the size of a
+
+61
+00:05:55,000 --> 00:06:02,000
+water molecule, three-tenths of a nanometer. And in this naive system that
+
+62
+00:06:02,000 --> 00:06:07,360
+we had just talked through, this system where we're taking a certain
+
+63
+00:06:07,360 --> 00:06:11,200
+amount of bits and we're fixing the position of the decimal place, a fixed
+
+64
+00:06:11,200 --> 00:06:15,920
+point number, if you will, we're going to run into some problems because that
+
+65
+00:06:15,920 --> 00:06:20,920
+range we can represent is fixed, and it's not going to, in practice, be able to
+
+66
+00:06:20,920 --> 00:06:27,240
+handle a lot of the numbers that we have to deal with in the real world. So I'm
+
+67
+00:06:27,240 --> 00:06:30,080
+sure you're all smart programmers, your brains are worrying figuring out how
+
+68
+00:06:30,080 --> 00:06:34,880
+you're going to fix this, and probably what you're coming up with is a system
+
+69
+00:06:34,880 --> 00:06:37,600
+that will look a little bit like this, where we say, okay, we've got the number,
+
+70
+00:06:37,600 --> 00:06:43,600
+and alongside that number, let's store a scaling factor. So with the distance to
+
+71
+00:06:43,600 --> 00:06:47,320
+Pluto, that's going to be 7.5, and we have a scale factor of 10, which is going to
+
+72
+00:06:47,320 --> 00:06:53,800
+push that 7.5 all the way off to the left. And then for the very small number,
+
+73
+00:06:53,800 --> 00:06:57,080
+like the size of a water molecule, we'll use a negative scale factor that'll push
+
+74
+00:06:57,080 --> 00:07:02,280
+it off to the right. So this would be a system you could say this moves the
+
+75
+00:07:02,280 --> 00:07:05,440
+decimal place around, it floats the decimal place around. It's almost like
+
+76
+00:07:05,440 --> 00:07:14,520
+we've got a floating point. And lo and behold, this is what floats do. Internally
+
+77
+00:07:14,520 --> 00:07:19,360
+in the computer, floating point numbers have three different components. The
+
+78
+00:07:19,360 --> 00:07:23,160
+first bit in them is the sign bit that controls whether they're positive or
+
+79
+00:07:23,160 --> 00:07:29,440
+negative. The second set of bits is the exponent. That's basically the shifting
+
+80
+00:07:29,440 --> 00:07:35,480
+or scaling factor we had just talked about. And finally, the third portion is
+
+81
+00:07:35,480 --> 00:07:41,120
+called the fraction. That's the actual number portion. It's also called the
+
+82
+00:07:41,120 --> 00:07:49,160
+mantissa if you're trying to sound fancy. So you calculate the value of the
+
+83
+00:07:49,160 --> 00:07:52,920
+floating point number by taking the sign, multiplying that by 2 to the power of the
+
+84
+00:07:52,920 --> 00:07:57,680
+exponent, and multiplying that by the fraction. If you've ever worked with
+
+85
+00:07:57,680 --> 00:08:01,520
+scientific notation before, this is exactly the same thing just in base 2.
+
+86
+00:08:01,520 --> 00:08:08,120
+This is just base 2 scientific notation. So to get concrete with an example here,
+
+87
+00:08:08,120 --> 00:08:11,760
+let's say we want to represent 0.5. 0.5 is a really nice easy fraction to
+
+88
+00:08:11,760 --> 00:08:19,720
+represent because it's 1 over 2 or 2 to the power of negative 1. So we're going
+
+89
+00:08:19,720 --> 00:08:23,840
+to have a sign of 0 because it's positive and an exponent of 4. Now the
+
+90
+00:08:23,840 --> 00:08:28,400
+exponent of 4 is a bit weird here and that's because exponents are what's
+
+91
+00:08:28,400 --> 00:08:34,640
+called biased. Since we need to represent both positive and negative exponents,
+
+92
+00:08:34,640 --> 00:08:40,240
+there's a fixed bias that we introduce. In this case we're going to use 3 and
+
+93
+00:08:40,240 --> 00:08:46,440
+that shows up pretty well. And we deduct whatever exponent is stored in the number
+
+94
+00:08:46,440 --> 00:08:52,440
+from that bias to get the actual value. And finally, we just want half so we
+
+95
+00:08:52,440 --> 00:08:59,640
+multiply it by 1. A couple other examples. 3.25, that would be 2 to the
+
+96
+00:08:59,640 --> 00:09:06,160
+power of negative 2, so 0.25 times 13. Or a negative number, we have a 1 in the
+
+97
+00:09:06,160 --> 00:09:13,160
+sign bit. We're trying to represent negative 88 so that the exponent is going
+
+98
+00:09:13,160 --> 00:09:20,120
+to be 4, which is 2 to the power of 4, 8, and multiply that by 11. Sorry, 2 to the
+
+99
+00:09:20,120 --> 00:09:29,280
+power of 3, excuse me. 4. Anyway, this is neat. So we've got this number system and
+
+100
+00:09:29,280 --> 00:09:33,800
+you can see how we can scale to represent numbers that are either very
+
+101
+00:09:33,800 --> 00:09:39,760
+small or very large. And to give you an idea of the actual practical range of
+
+102
+00:09:39,760 --> 00:09:46,680
+that system, 32-bit floats, so these are the kind of older-school floats that
+
+103
+00:09:46,680 --> 00:09:51,480
+systems used to use in the past. They've got an exponent that's 8
+
+104
+00:09:51,480 --> 00:09:57,680
+bits long and a fractional component that's 23 bits long. And 64-bit floats,
+
+105
+00:09:57,840 --> 00:10:01,600
+doubles, these are the default whenever you have a float in just about any
+
+106
+00:10:01,600 --> 00:10:06,440
+modern computer or programming language. They've got an 11-bit exponent and a
+
+107
+00:10:06,440 --> 00:10:10,600
+whole 52 bits of a fractional component. So they can represent numbers that are as
+
+108
+00:10:10,600 --> 00:10:17,800
+small as a decimal place with 300 zeros behind it and as large as a 1 with 300
+
+109
+00:10:17,800 --> 00:10:24,160
+zeros behind it. So this is pretty good. We've got a pretty large range of numbers
+
+110
+00:10:24,160 --> 00:10:28,360
+we can represent there, but as with everything, there is a trade-off here.
+
+111
+00:10:28,360 --> 00:10:33,200
+And the trade-off that floating-point numbers make is between precision, so
+
+112
+00:10:33,200 --> 00:10:40,120
+that is how small can our numbers get, and magnitude, how big can the numbers get.
+
+113
+00:10:40,120 --> 00:10:45,960
+So for instance, we can measure the distance to Pluto, but that measurement
+
+114
+00:10:45,960 --> 00:10:51,600
+won't necessarily be accurate and precise down to the meter. And we can
+
+115
+00:10:51,640 --> 00:10:55,920
+also very precisely measure the size of a water molecule, but we're going to run
+
+116
+00:10:55,920 --> 00:10:59,320
+into some trouble if we need to, say, measure a billion of them at the same time.
+
+117
+00:10:59,320 --> 00:11:05,560
+So to give you a concrete example of what that precision error might look like,
+
+118
+00:11:05,560 --> 00:11:12,680
+let's say we have a smallish number, a 1, and we have a very large number, 1e20.
+
+119
+00:11:12,680 --> 00:11:20,400
+Just the exponential notation there, the 1e20, means a 1 followed by 19 zeros.
+
+120
+00:11:20,400 --> 00:11:31,680
+And if we try to add 1 to a 1 with 19 zeros after it, you'll notice that the
+
+121
+00:11:31,680 --> 00:11:36,480
+magnitude of that large number just completely overshadows the precision of
+
+122
+00:11:36,480 --> 00:11:41,480
+the small number, and the 1 is completely lost. In fact, it's as if it never existed.
+
+123
+00:11:41,480 --> 00:11:49,320
+So what do you, as work-a-day programmers who don't want to get a degree in
+
+124
+00:11:49,320 --> 00:11:52,680
+numerical analysis just to add some numbers together, what are you going to do about this?
+
+125
+00:11:52,680 --> 00:11:59,240
+So the first rule of thumb that I want you to remember is that with a double,
+
+126
+00:11:59,240 --> 00:12:05,760
+so that's a 64-bit float, you get 15 significant decimal digits. That means 15
+
+127
+00:12:05,760 --> 00:12:09,320
+of the digits in your floating point number are generally going to be reliable.
+
+128
+00:12:09,320 --> 00:12:16,840
+But you're going to lose precision if you try and add or subtract numbers that are outside of,
+
+129
+00:12:17,800 --> 00:12:25,480
+that have different magnitudes. So for example, let's say I want to add 1, 2, 3, 4, 5 to 1e15.
+
+130
+00:12:25,480 --> 00:12:31,960
+So 1e15 has 15 digits. That's safe, and you'll notice that we get an exact result.
+
+131
+00:12:31,960 --> 00:12:40,960
+But as we move up, as we move up to 16 significant digits, we're going to start losing some precision.
+
+132
+00:12:40,960 --> 00:12:45,760
+And that problem only gets worse as the large number gets larger.
+
+133
+00:12:45,760 --> 00:12:50,800
+It is important to note, though, that multiplication and division are just fine.
+
+134
+00:12:50,800 --> 00:12:59,360
+They're not affected by this. And finally, if you are in the unfortunate situation of having to sum
+
+135
+00:12:59,360 --> 00:13:03,680
+lots of floats together, there are very good libraries to do this. And to show what they do,
+
+136
+00:13:03,680 --> 00:13:09,200
+consider first this naive sum. So we're going to take a very small number, like a very large
+
+137
+00:13:09,200 --> 00:13:15,440
+negative number, add 1 to it, and then add a very large positive number. Ideally, we'd get 1.
+
+138
+00:13:15,440 --> 00:13:21,920
+But because of that floating point rounding error, using Python's built-in sum, we get 0.
+
+139
+00:13:21,920 --> 00:13:28,800
+However, if we go and we use math.fsum, we're going to get the exact result. And this is because
+
+140
+00:13:28,800 --> 00:13:33,280
+math.fsum is doing something really neat under the hood. What it's doing is each time it performs an
+
+141
+00:13:33,280 --> 00:13:39,040
+addition, it's keeping track of the precision that was lost of that roundoff error and storing
+
+142
+00:13:39,040 --> 00:13:42,840
+that in a separate list. And then once we've summed up all the numbers in the main list,
+
+143
+00:13:43,080 --> 00:13:49,320
+we go back and sum up all the numbers in this roundoff list and add that in. So it's going to
+
+144
+00:13:49,320 --> 00:13:53,960
+get very precise. The tradeoff there, of course, is a runtime one. You're doing many more additions
+
+145
+00:13:53,960 --> 00:13:59,880
+and it's more computationally expensive. The other interesting one to look at is numpy's sum.
+
+146
+00:13:59,880 --> 00:14:04,440
+Now, in this case, numpy's sum actually gets it wrong. And that's because it's using an addition
+
+147
+00:14:04,440 --> 00:14:09,800
+algorithm called addition by parts, where it's going to take chunks of the list and sum them up
+
+148
+00:14:09,800 --> 00:14:14,600
+at a time. And then sum those sums and sum those sums kind of a divide and conquer type algorithm.
+
+149
+00:14:15,560 --> 00:14:19,640
+It doesn't have the strong guarantees that Python's fsum has, but it does have the advantage
+
+150
+00:14:19,640 --> 00:14:25,240
+of being much more efficient, which is why they use it by default. And finally, if you truly need
+
+151
+00:14:25,240 --> 00:14:30,520
+to do a lot of these, A, my heart goes out to you, and B, you might want to take a look at the
+
+152
+00:14:30,520 --> 00:14:39,480
+acupy library because they do this very fast and very accurately. The second tradeoff that I want
+
+153
+00:14:39,480 --> 00:14:45,320
+to talk about here is the fact that every real number can't be represented by floating point.
+
+154
+00:14:46,040 --> 00:14:50,760
+In some cases, it's kind of obvious why. We have real numbers that are infinite, like pi or e,
+
+155
+00:14:50,760 --> 00:14:55,240
+and obviously we just can't represent infinite numbers in a finite amount of memory.
+
+156
+00:14:58,760 --> 00:15:04,840
+The second more tricky kind of number, though, is the fact that since floating point uses a binary
+
+157
+00:15:04,840 --> 00:15:10,440
+fraction, there aren't binary fractional representations for all of the decimal
+
+158
+00:15:10,440 --> 00:15:14,280
+fractions that we expect, like common decimal fractions, like 0.1. 0.1's a good fraction.
+
+159
+00:15:15,080 --> 00:15:22,120
+But I'm sure this is a thing you have all run into. And just if you're curious and playing
+
+160
+00:15:22,120 --> 00:15:29,000
+along at home, when I'm showing these floating point numbers, I'm rounding them to 20 decimal
+
+161
+00:15:29,000 --> 00:15:38,200
+places, and this is the code you could use. So to understand a bit more why that, what's going on
+
+162
+00:15:38,200 --> 00:15:43,400
+here, consider this number line. The horizontal line is the continuous line of all the real numbers,
+
+163
+00:15:44,520 --> 00:15:51,000
+and each of the white vertical lines represents a single floating point number that can be
+
+164
+00:15:51,000 --> 00:15:58,280
+represented. So for instance, we might have 0.5, 1. Forgive my scale, that's way off, but hopefully
+
+165
+00:15:58,280 --> 00:16:04,840
+you'll understand the idea. So when we get a real number coming in, and we need to figure out
+
+166
+00:16:06,360 --> 00:16:11,240
+which floating point number is nearest to that number and use that nearest floating point as
+
+167
+00:16:11,240 --> 00:16:16,040
+an approximation. So in the case of 0.1, we can't represent that exactly, so we fall over to the
+
+168
+00:16:16,040 --> 00:16:23,480
+nearest float, which is 1.0005. Or if we're representing pi, that might have to round up
+
+169
+00:16:23,480 --> 00:16:31,240
+a little bit to like 1.146. And if you're curious to dig into this, the difference between that
+
+170
+00:16:31,240 --> 00:16:39,800
+real number and the nearest number that's being represented is measured using a technique called,
+
+171
+00:16:41,160 --> 00:16:45,720
+it's measured using the relative error, and you can go and look that up, and it's very interesting.
+
+172
+00:16:46,920 --> 00:16:52,360
+But again, to give you a really concrete example of what's going on here, let's say we have 0.1.
+
+173
+00:16:53,640 --> 00:17:01,640
+And 0.2. When we add them together though, notice that the floating point number we get by summing
+
+174
+00:17:01,640 --> 00:17:09,160
+0.1 and 0.2 is different from the floating point number that is nearest to 0.3. Similarly,
+
+175
+00:17:10,120 --> 00:17:15,720
+if we try to add 0.1 to itself 10 times, we don't actually get one. We get a number that's very
+
+176
+00:17:15,720 --> 00:17:21,640
+close to one, but it's definitely not one. Although fortunately, multiplication does typically work
+
+177
+00:17:21,640 --> 00:17:28,760
+a bit better. So what are you going to do about this? Well, the first thing that's important to
+
+178
+00:17:28,760 --> 00:17:33,480
+remember is each time you perform a floating point operation, some error is being introduced.
+
+179
+00:17:34,360 --> 00:17:39,640
+You do have that small roundoff error, and it's just going to accumulate. The only thing you can
+
+180
+00:17:39,640 --> 00:17:43,640
+really do about that is judiciously round your numbers, and that's the thing I'm going to be
+
+181
+00:17:43,640 --> 00:17:49,160
+talking about in a second. The second thing that you need to remember is to be really careful when
+
+182
+00:17:49,160 --> 00:17:55,080
+you're comparing floats to other floats. And instead of using a double equals equality,
+
+183
+00:17:55,080 --> 00:18:00,920
+use something like numPy is close, or even just write your own is close. That becomes especially
+
+184
+00:18:00,920 --> 00:18:05,560
+relevant when you're comparing numbers to 0. So for instance, if you're taking the dot product of
+
+185
+00:18:05,560 --> 00:18:11,080
+two vectors to figure out if they're perpendicular, the number you get back might not be 0. It might be
+
+186
+00:18:11,080 --> 00:18:14,120
+a very, very tiny number, but it's distinctly non-zero.
+
+187
+00:18:14,120 --> 00:18:18,280
+And the third and the very most important thing, if there's only one thing you take away from this
+
+188
+00:18:18,280 --> 00:18:23,240
+talk, this is the important one. It's that any time you're working with floats and you're displaying
+
+189
+00:18:23,240 --> 00:18:29,480
+them, so after you've performed computations, they need to be rounded. You need to have some notion of
+
+190
+00:18:29,480 --> 00:18:33,480
+how many decimal places are relevant and appropriate to show for your application,
+
+191
+00:18:35,240 --> 00:18:39,400
+and any floating point numbers need to be rounded to that number of decimal places. I was even
+
+192
+00:18:39,400 --> 00:18:42,760
+talking with a friend just over lunch yesterday, and he said, well, you know, I'm going to show
+
+193
+00:18:42,840 --> 00:18:46,440
+you a bunch of things that I've been doing with my friend just over lunch yesterday. And they were
+
+194
+00:18:46,440 --> 00:18:50,120
+telling me about a whole bunch of caching errors they were having. They were getting a bunch of
+
+195
+00:18:50,120 --> 00:18:54,200
+cache misses because they had a system that was caching based on a time code, and the time code
+
+196
+00:18:54,200 --> 00:18:59,480
+was being stored as a float, and that float was having exactly the kind of computational errors
+
+197
+00:19:00,200 --> 00:19:09,960
+that I've just talked about. So that's some of the more mathematical parts. Now, I want to get
+
+198
+00:19:09,960 --> 00:19:14,680
+to the next number of the most weird parts. The first weird part of the floating point standard
+
+199
+00:19:14,680 --> 00:19:21,240
+that I want to talk about is infinity. So the floating point standard does define a representation
+
+200
+00:19:21,240 --> 00:19:25,640
+for infinity and negative infinity. That's where all the exponent bits are set and the fractional
+
+201
+00:19:25,640 --> 00:19:31,880
+component is zero, and it's actually a really neat and kind of useful number. It does what you expect.
+
+202
+00:19:31,880 --> 00:19:38,840
+Infinity is larger than any other number, and I have actually used it a bunch if I have a loop,
+
+203
+00:19:38,840 --> 00:19:43,960
+say, that needs to find the smallest or the largest item in a list, and I need a good default
+
+204
+00:19:43,960 --> 00:19:50,680
+initial value. Infinity makes a really good default value. It'll also pop up if numbers that are very
+
+205
+00:19:50,680 --> 00:20:00,040
+large overflow or very large negative numbers overflow negative. And the last kind of exciting
+
+206
+00:20:00,040 --> 00:20:05,000
+thing about it is at least according to the standard, you get infinity or negative infinity
+
+207
+00:20:05,000 --> 00:20:13,720
+if you divide by zero. Now, fortunately, Python's got our back here, and they do,
+
+208
+00:20:13,720 --> 00:20:17,800
+Python does something a little bit more sensible. But this is important to know when you're working
+
+209
+00:20:17,800 --> 00:20:26,840
+in other languages that aren't quite as careful about raising exceptions. And to understand why
+
+210
+00:20:26,840 --> 00:20:33,720
+it might make sense that dividing by zero gives you infinity, I want you to consider if we were
+
+211
+00:20:33,720 --> 00:20:40,120
+writing a function that evaluates one over x. So as x is getting smaller and smaller and smaller,
+
+212
+00:20:40,120 --> 00:20:44,440
+the value of one over x is getting larger and larger and larger, and that is in math terms,
+
+213
+00:20:44,440 --> 00:20:49,480
+you say, converging to infinity. So if you imagine we're calculating this x and getting it smaller
+
+214
+00:20:49,480 --> 00:20:54,600
+and smaller and smaller, at some point, that value of x might underflow, and it might underflow to zero.
+
+215
+00:20:55,880 --> 00:21:01,320
+And it would be, when you squint it the right way, natural for that underflow to result in infinity
+
+216
+00:21:01,320 --> 00:21:08,360
+as opposed to a math error. And that brings us to the second interesting part of floating point.
+
+217
+00:21:09,640 --> 00:21:16,840
+We have negative zero. So if you remember the binary representation in memory, we have
+
+218
+00:21:16,840 --> 00:21:21,880
+all zeros is going to be a zero, but we still have that sign bit floating around. And if that sign bit
+
+219
+00:21:21,880 --> 00:21:29,880
+is set, we get a negative zero. It basically only comes up when you underflow a sufficiently small
+
+220
+00:21:29,880 --> 00:21:37,480
+number. And it can be actually kind of useful, again, when you squint things the right way,
+
+221
+00:21:38,440 --> 00:21:41,960
+to have the distinction between negative zero and positive zero. Because again, if you consider that
+
+222
+00:21:41,960 --> 00:21:49,640
+one over x function, as x is approaching zero from the negative side, it's going to be converging to
+
+223
+00:21:49,640 --> 00:21:54,520
+negative infinity. And when it underflows to negative zero, it's kind of useful to have the
+
+224
+00:21:54,520 --> 00:21:58,680
+result be negative infinity as opposed to positive infinity or something else.
+
+225
+00:22:00,840 --> 00:22:06,120
+And otherwise, negative zero behaves just like our good friend normal zero.
+
+226
+00:22:08,440 --> 00:22:14,280
+Now, finally, I want to talk about NaN. NaN is probably my favorite part of floating point.
+
+227
+00:22:14,840 --> 00:22:20,840
+NaN stands for not a number. And it's a number that, just like it says right there on the box,
+
+228
+00:22:20,840 --> 00:22:29,160
+is not a number. It's defined as being the result of mathematically undefined operations. So for
+
+229
+00:22:29,160 --> 00:22:34,760
+instance, dividing infinity by infinity, you'll get NaN. It's also defined as being the result of
+
+230
+00:22:34,760 --> 00:22:39,800
+operations like the square root of negative one. Although again, Python has got us covered here.
+
+231
+00:22:39,800 --> 00:22:45,720
+It's going to do something potentially a little bit more helpful. But NaN is really important to
+
+232
+00:22:45,720 --> 00:22:51,960
+know about because it's wild. It just breaks everything. It's the only value that is not
+
+233
+00:22:51,960 --> 00:22:55,800
+equal to itself. And this is true in every programming language, in every computer system.
+
+234
+00:22:56,600 --> 00:23:01,160
+It doesn't make any sense to compare it to things, so every comparison will return false.
+
+235
+00:23:02,120 --> 00:23:07,240
+And every mathematical operation that you try to perform with a NaN is going to give you back NaN.
+
+236
+00:23:07,240 --> 00:23:11,800
+It's kind of infectious, like a SQL null if you're familiar with that.
+
+237
+00:23:13,080 --> 00:23:17,240
+Although the one interesting Python tidbit that you can bust out to have fun at parties
+
+238
+00:23:17,240 --> 00:23:23,160
+is that in some situations, testing to see if NaN is in a list with a NaN will return true.
+
+239
+00:23:23,160 --> 00:23:30,840
+But that's left as an exercise to the reader. And actually, I kind of like NaN. It can be pretty
+
+240
+00:23:30,840 --> 00:23:36,120
+useful if you have, say, a large data set. Maybe you're taking measurements from an external system
+
+241
+00:23:36,120 --> 00:23:41,240
+or something like that. And you need to have a value in a particular place, but no value makes
+
+242
+00:23:41,240 --> 00:23:47,080
+sense. Using a NaN as a placeholder, kind of like a null, is actually kind of useful. So in this case,
+
+243
+00:23:47,080 --> 00:23:52,440
+imagine we have two lists of numbers that we want to divide by the number of values that we want to
+
+244
+00:23:52,840 --> 00:24:03,240
+divide by each other and then take the mean value of the result. Because one of the numbers will be
+
+245
+00:24:03,240 --> 00:24:09,160
+NaN, it will just be ignored when we use NumPy as a NaN mean. So NumPy as a NaN mean is like mean,
+
+246
+00:24:09,160 --> 00:24:18,200
+except it ignores NaNs. And it's also got NaN sum and so on. So this is really important to know
+
+247
+00:24:18,200 --> 00:24:22,200
+about, though. Because especially if you're building web systems that accept values from a
+
+248
+00:24:22,200 --> 00:24:26,840
+JavaScript front end, if any of you have worked in JavaScript, you know that it coughs out NaNs
+
+249
+00:24:26,840 --> 00:24:31,320
+all over the place. And now you know just how badly it's going to wreck all of your numerical code.
+
+250
+00:24:32,280 --> 00:24:38,600
+So the two best ways to test for it, either using math.isNaN or just checking if a thing is not
+
+251
+00:24:38,600 --> 00:24:42,360
+equal to itself. Because if a thing's not equal to itself, guaranteed it's going to be NaN.
+
+252
+00:24:42,440 --> 00:24:50,120
+So okay, pop quiz time. How many NaNs are there? One? I've heard one. I'm sorry, you're off by 52
+
+253
+00:24:50,120 --> 00:24:57,320
+binary orders of magnitude. There's actually two to the 52 NaNs. And that's because they're defined
+
+254
+00:24:57,320 --> 00:25:02,680
+as being any floating point value where the exponent is fully set and the fractional component
+
+255
+00:25:02,680 --> 00:25:09,320
+is just not zero. And you know, there were some smart programmers at one point who kind of realized
+
+256
+00:25:09,640 --> 00:25:14,360
+that's a bit of a waste. We've got all these values that are doing nothing. So why not just stuff some
+
+257
+00:25:14,360 --> 00:25:19,640
+pointers in there? And this is actually what happens in every modern JavaScript implementation.
+
+258
+00:25:19,640 --> 00:25:24,280
+Under the hood, when you're passing around a pointer to an object, that pointer can actually be
+
+259
+00:25:24,280 --> 00:25:34,280
+two things. If you mask it properly and the mask returns true, then it's interpreted as a double.
+
+260
+00:25:34,360 --> 00:25:39,000
+On the other hand, if the mask is false, then it's a pointer, which means that you can write
+
+261
+00:25:39,000 --> 00:25:43,320
+actually very interesting, efficient code. So this is a completely fictitious implementation, but
+
+262
+00:25:44,680 --> 00:25:49,240
+it's close enough to true where if we're adding two JavaScript objects together,
+
+263
+00:25:50,280 --> 00:25:53,560
+the first thing we need to do is if we can run this quick bit mask to check and see if they're
+
+264
+00:25:53,560 --> 00:25:59,400
+both doubles. And if they are, we can add them with just one machine instruction. So this is now much,
+
+265
+00:25:59,400 --> 00:26:02,600
+much more efficient than Python, say where we'd have to go and unbox those numbers.
+
+266
+00:26:02,600 --> 00:26:13,720
+And so on and so on. So, okay, we've talked about how the precision can be lost when numbers of
+
+267
+00:26:15,080 --> 00:26:20,120
+different magnitude are added and subtracted. We've talked about the problems that come when
+
+268
+00:26:20,120 --> 00:26:27,240
+we try to stuff binary decimal numbers into binary fractions. But I do want to offer you some hope.
+
+269
+00:26:29,000 --> 00:26:29,960
+The decimal module.
+
+270
+00:26:33,400 --> 00:26:39,080
+Per the documentation, the decimal module provides support for decimal floating point
+
+271
+00:26:39,080 --> 00:26:42,360
+arithmetic. And hopefully you have a bit of a notion of what those words mean now.
+
+272
+00:26:45,400 --> 00:26:50,040
+Because it's doing decimal arithmetic, we have exact representations of decimal numbers.
+
+273
+00:26:52,360 --> 00:26:57,000
+We're still going to have problems with that nearest number rounding problem. We still can't
+
+274
+00:26:57,000 --> 00:27:02,600
+represent pi exactly. But at least the representations will be more sensible.
+
+275
+00:27:02,600 --> 00:27:05,240
+They'll follow the same grade school rounding rules that you're used to.
+
+276
+00:27:07,640 --> 00:27:11,400
+And we still need to specify precision. We don't have unlimited memory.
+
+277
+00:27:13,560 --> 00:27:19,240
+But the default in decimal is 28 decimal places. And that's probably going to be enough for most
+
+278
+00:27:19,240 --> 00:27:25,720
+folk. And of course, if you need more, you can just turn it up. So to give a really quick example of
+
+279
+00:27:25,720 --> 00:27:30,600
+what decimal looks like, we could import it. We'll create a decimal value of .1.
+
+280
+00:27:31,640 --> 00:27:37,960
+And notice that when we add .1 to itself 10 times, we get the precise exact result of 1 as we'd expect.
+
+281
+00:27:40,200 --> 00:27:45,080
+Now, one interesting consequence is that when you load a floating point number into a decimal,
+
+282
+00:27:45,080 --> 00:27:52,360
+it will faithfully try and read in that entire number. But at some point, I don't know how well
+
+283
+00:27:52,360 --> 00:27:57,160
+you know pi. You'll notice that it does diverge. And that's because the floating point number can't
+
+284
+00:27:57,160 --> 00:28:05,160
+precisely represent pi. Now, there is, of course, a drawback. There is a tradeoff here.
+
+285
+00:28:05,160 --> 00:28:11,400
+And that's that decimals are significantly slower. In a quick test that I did here,
+
+286
+00:28:11,400 --> 00:28:19,320
+multiplying a number by itself, comparing a decimal to a float, found the decimal was about
+
+287
+00:28:20,120 --> 00:28:26,360
+10 orders of magnitude slower. It's a lot slower. Also, unlike floats,
+
+288
+00:28:28,520 --> 00:28:33,480
+floats are going to be the same size. They take up exactly 64 bits, no matter how big or small the
+
+289
+00:28:33,480 --> 00:28:41,960
+number is. That's not true of decimals. The size of a decimal is going to grow as you get more
+
+290
+00:28:41,960 --> 00:28:53,240
+decimal places or as the number gets larger. But that all said, decimal is great. And if you're
+
+291
+00:28:53,240 --> 00:28:59,160
+doing computations that need precision, so this is things like math, if you're doing math,
+
+292
+00:28:59,160 --> 00:29:05,160
+you need numbers. If you're doing math with money, for instance, it's absolutely a thing that's worth
+
+293
+00:29:05,240 --> 00:29:15,640
+using. So thank you for coming out and listening to me rant about floats. If you've got any
+
+294
+00:29:15,640 --> 00:29:19,960
+questions, I'd love to come chat with you in the back. After this talk, I'll just be hanging it
+
+295
+00:29:19,960 --> 00:29:24,760
+outside the hall. Thank you all so much.
+

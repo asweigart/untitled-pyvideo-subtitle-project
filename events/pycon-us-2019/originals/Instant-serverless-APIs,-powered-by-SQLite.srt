@@ -1,0 +1,4056 @@
+1
+00:00:00,000 --> 00:00:03,000
+Thank you for joining us.
+
+2
+00:00:03,000 --> 00:00:05,560
+Up next is Simon Willison, a co-creator of Django,
+
+3
+00:00:05,560 --> 00:00:08,200
+inventor of Ticker, and presenter of the next talk
+
+4
+00:00:08,200 --> 00:00:12,200
+on instance serverless APIs powered by SQLite.
+
+5
+00:00:12,200 --> 00:00:12,700
+OK.
+
+6
+00:00:12,700 --> 00:00:13,200
+OK.
+
+7
+00:00:13,200 --> 00:00:18,600
+Well, good afternoon, everyone.
+
+8
+00:00:18,600 --> 00:00:20,040
+Thank you very much for coming along.
+
+9
+00:00:20,040 --> 00:00:22,160
+I know there were some incredibly good talks
+
+10
+00:00:22,160 --> 00:00:26,480
+in this slot, so I feel honored that you chose to join me here.
+
+11
+00:00:26,480 --> 00:00:29,480
+So I have a bit of a confession, first of all.
+
+12
+00:00:29,480 --> 00:00:31,680
+I called this talk Instance Serverless APIs
+
+13
+00:00:31,680 --> 00:00:32,880
+Powered by SQLite.
+
+14
+00:00:32,880 --> 00:00:35,800
+I've actually submitted it to regional Python conferences
+
+15
+00:00:35,800 --> 00:00:38,000
+under a different name, and it wasn't accepted.
+
+16
+00:00:38,000 --> 00:00:39,600
+So for PyCon, I thought, sod it.
+
+17
+00:00:39,600 --> 00:00:40,960
+I'm going to throw in a buzzword.
+
+18
+00:00:40,960 --> 00:00:43,320
+I threw in the word serverless, and it got accepted.
+
+19
+00:00:43,320 --> 00:00:45,360
+And so now I feel honor bound to give you
+
+20
+00:00:45,360 --> 00:00:48,560
+a definition of serverless that isn't complete claptrap.
+
+21
+00:00:48,560 --> 00:00:51,400
+So my preferred definition of serverless,
+
+22
+00:00:51,400 --> 00:00:53,880
+the one that actually means something useful to me,
+
+23
+00:00:53,880 --> 00:00:55,840
+is scale to zero.
+
+24
+00:00:55,840 --> 00:00:58,200
+It's the idea that you only pay for the computing
+
+25
+00:00:58,240 --> 00:01:01,960
+resources you use, which means that you can run a web
+
+26
+00:01:01,960 --> 00:01:03,520
+application, and if no one visits it,
+
+27
+00:01:03,520 --> 00:01:05,080
+it doesn't cost you any money.
+
+28
+00:01:05,080 --> 00:01:07,520
+And as a investor at Tinkerer and somebody
+
+29
+00:01:07,520 --> 00:01:09,800
+who loves churning off new side projects,
+
+30
+00:01:09,800 --> 00:01:13,280
+this is a very useful capability to have.
+
+31
+00:01:13,280 --> 00:01:16,400
+And the serverless world got even more interesting
+
+32
+00:01:16,400 --> 00:01:20,200
+this month with the release of Google Cloud Run.
+
+33
+00:01:20,200 --> 00:01:22,680
+This came out, I think, just at the beginning of April.
+
+34
+00:01:22,680 --> 00:01:25,520
+And it's a fascinating thing.
+
+35
+00:01:25,520 --> 00:01:27,600
+It lets you define an application as a Docker
+
+36
+00:01:27,600 --> 00:01:30,520
+container, and then Google will run it when it gets traffic
+
+37
+00:01:30,520 --> 00:01:32,000
+and turn it off when it doesn't.
+
+38
+00:01:32,000 --> 00:01:34,520
+So it should ideally be incredibly inexpensive,
+
+39
+00:01:34,520 --> 00:01:38,040
+if not free, if you're not getting a lot of hits.
+
+40
+00:01:38,040 --> 00:01:41,560
+But if you look at the web page about Google Cloud Run,
+
+41
+00:01:41,560 --> 00:01:44,240
+it does say stateless in two different places
+
+42
+00:01:44,240 --> 00:01:45,680
+just on that home page.
+
+43
+00:01:45,680 --> 00:01:47,640
+And this is a very important characteristic
+
+44
+00:01:47,640 --> 00:01:51,120
+of most of these serverless offers, is they're stateless.
+
+45
+00:01:51,120 --> 00:01:52,720
+You can run code on them, but if you
+
+46
+00:01:52,720 --> 00:01:55,640
+want to have a database with stuff that changes,
+
+47
+00:01:55,640 --> 00:01:56,880
+that's going to cost you extra.
+
+48
+00:01:56,880 --> 00:01:59,480
+That's a whole new level of complexity,
+
+49
+00:01:59,480 --> 00:02:02,000
+which if you can avoid it, these things can
+
+50
+00:02:02,000 --> 00:02:03,400
+get really interesting.
+
+51
+00:02:03,400 --> 00:02:06,640
+So one of the questions that one of the techniques
+
+52
+00:02:06,640 --> 00:02:09,040
+that I've been experimenting with a lot over the past couple
+
+53
+00:02:09,040 --> 00:02:12,640
+of years is, OK, if I can't have a regular database,
+
+54
+00:02:12,640 --> 00:02:15,960
+what about if I ship static data as part of the application
+
+55
+00:02:15,960 --> 00:02:16,600
+itself?
+
+56
+00:02:16,600 --> 00:02:17,800
+We're dealing with Docker containers.
+
+57
+00:02:17,800 --> 00:02:19,920
+What if my Docker containers got a bunch of data
+
+58
+00:02:19,920 --> 00:02:21,080
+inside it already?
+
+59
+00:02:22,040 --> 00:02:25,720
+It turns out the SQLite database is the perfect tool
+
+60
+00:02:25,720 --> 00:02:28,120
+for bundling up data and shipping it
+
+61
+00:02:28,120 --> 00:02:29,480
+with the rest of your code.
+
+62
+00:02:29,480 --> 00:02:31,080
+But before we get into that, I wanted
+
+63
+00:02:31,080 --> 00:02:33,240
+to talk about some of the use cases for this.
+
+64
+00:02:33,240 --> 00:02:36,040
+How is a web app that doesn't accept rights at all,
+
+65
+00:02:36,040 --> 00:02:37,920
+how is that an interesting thing?
+
+66
+00:02:37,920 --> 00:02:41,840
+And for that, I'll dive back into my own career history
+
+67
+00:02:41,840 --> 00:02:44,160
+and talk a little bit about data journalism.
+
+68
+00:02:44,160 --> 00:02:48,800
+So data journalism is when programmers work for newspapers
+
+69
+00:02:48,800 --> 00:02:53,200
+and help analyze the data and discover facts about the world
+
+70
+00:02:53,200 --> 00:02:54,280
+through data analysis.
+
+71
+00:02:54,280 --> 00:02:56,080
+It's a really exciting field.
+
+72
+00:02:56,080 --> 00:02:59,840
+And I was lucky enough to get to do this back in 2008
+
+73
+00:02:59,840 --> 00:03:02,600
+through 2010 at The Guardian in London.
+
+74
+00:03:02,600 --> 00:03:04,360
+And so when I joined The Guardian,
+
+75
+00:03:04,360 --> 00:03:06,800
+they have this fantastic onboarding scheme
+
+76
+00:03:06,800 --> 00:03:09,320
+where you get to have coffee with random people
+
+77
+00:03:09,320 --> 00:03:11,120
+from around the company.
+
+78
+00:03:11,120 --> 00:03:14,160
+And I was expressing my interest in data stuff.
+
+79
+00:03:14,160 --> 00:03:16,680
+And a bunch of people said I needed to talk to a journalist
+
+80
+00:03:16,680 --> 00:03:18,080
+called Simon Rogers.
+
+81
+00:03:18,080 --> 00:03:21,280
+And Simon was the journalist and the person in the newsroom
+
+82
+00:03:21,280 --> 00:03:23,480
+responsible for the data behind the infographics.
+
+83
+00:03:23,480 --> 00:03:26,400
+If a newspaper publishes a map or a chart or a graph,
+
+84
+00:03:26,400 --> 00:03:28,280
+they'd better have good numbers behind it.
+
+85
+00:03:28,280 --> 00:03:30,400
+And so Simon was a dab hand with Excel.
+
+86
+00:03:30,400 --> 00:03:33,280
+And he knew who to call to get data about basically anything
+
+87
+00:03:33,280 --> 00:03:34,360
+you could think of.
+
+88
+00:03:34,360 --> 00:03:36,040
+And I got kind of excited talking to him.
+
+89
+00:03:36,040 --> 00:03:38,240
+I said, OK, so what do you do with all of these data
+
+90
+00:03:38,240 --> 00:03:39,440
+sets that you've collected?
+
+91
+00:03:39,440 --> 00:03:41,560
+And he said, oh, they're on here pointing at the desktop
+
+92
+00:03:41,560 --> 00:03:45,080
+underneath his desk, which had hundreds of beautifully
+
+93
+00:03:45,080 --> 00:03:48,120
+categorized Excel spreadsheets describing all sorts of facts
+
+94
+00:03:48,120 --> 00:03:49,240
+about the world.
+
+95
+00:03:49,240 --> 00:03:51,560
+So we started scheming together about how we could best
+
+96
+00:03:51,560 --> 00:03:54,560
+publish this data online, like share this data
+
+97
+00:03:54,560 --> 00:03:56,920
+and let people derive their own insights from it.
+
+98
+00:03:56,920 --> 00:03:58,560
+And in the end, we went with the simplest thing
+
+99
+00:03:58,560 --> 00:04:01,000
+that could possibly work, which is a blog.
+
+100
+00:04:01,000 --> 00:04:03,320
+We started The Guardian data blog.
+
+101
+00:04:03,320 --> 00:04:05,760
+And when The Guardian published a story against data,
+
+102
+00:04:05,760 --> 00:04:09,240
+they'd publish a spreadsheet of the underlying numbers.
+
+103
+00:04:09,240 --> 00:04:11,400
+And the tool we chose for publishing the data itself
+
+104
+00:04:11,400 --> 00:04:12,600
+was Google Spreadsheets.
+
+105
+00:04:12,600 --> 00:04:14,520
+Again, easiest thing that could possibly work.
+
+106
+00:04:14,520 --> 00:04:15,560
+It didn't cost anything.
+
+107
+00:04:15,560 --> 00:04:17,600
+And you can publish data in it.
+
+108
+00:04:17,600 --> 00:04:19,320
+Now, this worked.
+
+109
+00:04:19,320 --> 00:04:20,560
+It worked fantastically well.
+
+110
+00:04:20,560 --> 00:04:22,880
+The Guardian actually built up a community
+
+111
+00:04:22,880 --> 00:04:25,320
+of people around this data blog who
+
+112
+00:04:25,320 --> 00:04:27,280
+would do their own visualizations of data
+
+113
+00:04:27,280 --> 00:04:29,200
+that were published in Guardian stories.
+
+114
+00:04:29,200 --> 00:04:32,080
+But I was always left a little bit frustrated by this.
+
+115
+00:04:32,080 --> 00:04:34,760
+Is Google Sheets really the best possible way
+
+116
+00:04:34,760 --> 00:04:37,320
+to be sharing data with the world?
+
+117
+00:04:37,320 --> 00:04:40,280
+And so time passed, and I transitioned out
+
+118
+00:04:40,280 --> 00:04:42,560
+of data journalism into startup things
+
+119
+00:04:42,560 --> 00:04:45,720
+and kind of lost connection with that world.
+
+120
+00:04:45,720 --> 00:04:47,960
+Then a year and a half ago, I was thinking about this.
+
+121
+00:04:47,960 --> 00:04:52,440
+And I realized that the technologies
+
+122
+00:04:52,440 --> 00:04:54,640
+that you would need to do a better job of this data
+
+123
+00:04:54,640 --> 00:04:58,720
+publishing were now openly available.
+
+124
+00:04:58,720 --> 00:05:01,040
+And so I started building this open source project
+
+125
+00:05:01,040 --> 00:05:02,760
+called Dataset.
+
+126
+00:05:02,760 --> 00:05:05,680
+I describe it as a tool for exploring and publishing data.
+
+127
+00:05:05,680 --> 00:05:07,200
+But basically, it's the thing I wish
+
+128
+00:05:07,200 --> 00:05:10,240
+I'd had when I was at The Guardian working on these data
+
+129
+00:05:10,240 --> 00:05:11,680
+journalism stories.
+
+130
+00:05:11,680 --> 00:05:14,280
+And Dataset is best illustrated with a demo.
+
+131
+00:05:14,280 --> 00:05:19,600
+So I'll try and give you an idea of some of its capabilities.
+
+132
+00:05:19,600 --> 00:05:24,320
+Now, FiveThirtyEight are a blog that is basically data
+
+133
+00:05:24,320 --> 00:05:25,840
+journalism through and through.
+
+134
+00:05:25,840 --> 00:05:28,400
+Every story they publish is based on top of a Dataset.
+
+135
+00:05:28,400 --> 00:05:30,400
+And if you look closely at their stories,
+
+136
+00:05:30,400 --> 00:05:32,760
+you'll see there's this fascinating link that says,
+
+137
+00:05:32,760 --> 00:05:34,560
+get the data on GitHub.
+
+138
+00:05:34,560 --> 00:05:36,100
+If you click through to that, they've
+
+139
+00:05:36,100 --> 00:05:39,280
+got this giant GitHub repository full of CSV files.
+
+140
+00:05:39,280 --> 00:05:44,120
+And so this is a story about the number of charges
+
+141
+00:05:44,120 --> 00:05:47,840
+and convictions that came out of the recent Russia
+
+142
+00:05:47,840 --> 00:05:49,280
+investigation compared to Watergate
+
+143
+00:05:49,280 --> 00:05:50,720
+and a whole bunch of other things.
+
+144
+00:05:50,720 --> 00:05:55,120
+So this is 195 lines of CSV data on GitHub.
+
+145
+00:05:55,120 --> 00:05:58,880
+And what I've been doing is I set up a Travis CI automation
+
+146
+00:05:58,880 --> 00:06:02,320
+job, which once a day grabs everything from FiveThirtyEight,
+
+147
+00:06:02,320 --> 00:06:06,320
+like 450-odd CSV files, converts it into SQLite,
+
+148
+00:06:06,320 --> 00:06:10,040
+and then hosts it under my Dataset project up online.
+
+149
+00:06:10,040 --> 00:06:12,240
+So I'll actually pull up a demo and show you
+
+150
+00:06:12,240 --> 00:06:13,080
+what that looks like.
+
+151
+00:06:13,080 --> 00:06:15,920
+This is tethered off my mobile phone,
+
+152
+00:06:15,920 --> 00:06:17,920
+so I'm hoping this works well.
+
+153
+00:06:17,920 --> 00:06:21,620
+So this is every Dataset that FiveThirtyEight have created
+
+154
+00:06:21,620 --> 00:06:25,320
+converted to run under my Dataset application.
+
+155
+00:06:25,320 --> 00:06:28,480
+And if I click through to this Russia investigation CSV,
+
+156
+00:06:28,480 --> 00:06:29,560
+here's that raw data.
+
+157
+00:06:29,560 --> 00:06:31,480
+But I can start doing interesting things.
+
+158
+00:06:31,480 --> 00:06:35,680
+Like I can say, show me this by the current American president.
+
+159
+00:06:35,680 --> 00:06:39,360
+So there were 20 charges when Ronald Reagan was president,
+
+160
+00:06:39,360 --> 00:06:41,840
+72 for Nixon, 45 for Clinton.
+
+161
+00:06:41,840 --> 00:06:44,320
+I can say, show me the type of charge.
+
+162
+00:06:44,320 --> 00:06:47,040
+Was it a guilty plea, an indictment, or a conviction?
+
+163
+00:06:47,040 --> 00:06:49,240
+And then I can start digging in and say, OK, well,
+
+164
+00:06:49,240 --> 00:06:54,680
+under Bill Clinton, there were 18 guilty pleas.
+
+165
+00:06:54,680 --> 00:06:56,960
+And those 18 guilty pleas were these people.
+
+166
+00:06:56,960 --> 00:06:58,820
+And I can say, show me the investigation.
+
+167
+00:06:58,820 --> 00:07:02,840
+And this was 11 for Whitewater, four for Cisneros,
+
+168
+00:07:03,760 --> 00:07:05,960
+and three for eSpy, I guess.
+
+169
+00:07:05,960 --> 00:07:07,520
+But you get the idea.
+
+170
+00:07:07,520 --> 00:07:10,400
+This started life as a CSV file on FiveThirtyEight.
+
+171
+00:07:10,400 --> 00:07:12,220
+With zero configuration at all, I
+
+172
+00:07:12,220 --> 00:07:14,520
+converted that into a SQLite database.
+
+173
+00:07:14,520 --> 00:07:16,860
+And then Dataset is providing this interface
+
+174
+00:07:16,860 --> 00:07:18,320
+over the top of it.
+
+175
+00:07:18,320 --> 00:07:20,920
+But I promised you APIs in my talk title.
+
+176
+00:07:20,920 --> 00:07:23,320
+That was one of my other buzzwords.
+
+177
+00:07:23,320 --> 00:07:25,720
+If you click on JSON here, you get the same data
+
+178
+00:07:25,720 --> 00:07:27,840
+that we were just looking at back as JSON.
+
+179
+00:07:27,840 --> 00:07:30,920
+And in fact, you can also get it back as CSV.
+
+180
+00:07:30,920 --> 00:07:32,280
+This is quite fun.
+
+181
+00:07:32,280 --> 00:07:35,480
+This means you can slice and dice your data in any way
+
+182
+00:07:35,480 --> 00:07:38,040
+that you like, and then get max CSV subsets of just the things
+
+183
+00:07:38,040 --> 00:07:39,640
+that you're interested in.
+
+184
+00:07:39,640 --> 00:07:42,200
+And because this is running on top of SQLite,
+
+185
+00:07:42,200 --> 00:07:44,320
+and SQLite is a SQL database, there's
+
+186
+00:07:44,320 --> 00:07:46,440
+a link here that says View and Edit SQL.
+
+187
+00:07:46,440 --> 00:07:48,320
+And if I click that, I get this interface,
+
+188
+00:07:48,320 --> 00:07:51,720
+which is actually showing me the underlying SQL query that
+
+189
+00:07:51,720 --> 00:07:53,320
+was run to generate that page.
+
+190
+00:07:53,320 --> 00:07:54,280
+And I can even edit it.
+
+191
+00:07:54,280 --> 00:07:55,440
+So I can say, you know what?
+
+192
+00:07:55,440 --> 00:07:58,800
+I just want investigation, comma, name
+
+193
+00:07:58,800 --> 00:08:00,400
+from bloody, bloody, blah.
+
+194
+00:08:00,400 --> 00:08:02,800
+And now I'm getting back that subset of data,
+
+195
+00:08:02,800 --> 00:08:06,000
+which I can also get back as JSON or as CSV.
+
+196
+00:08:06,000 --> 00:08:08,080
+This seems kind of insane, because everyone
+
+197
+00:08:08,080 --> 00:08:10,280
+knows you don't allow random people to run
+
+198
+00:08:10,280 --> 00:08:11,760
+SQL against your data.
+
+199
+00:08:11,760 --> 00:08:13,720
+But there are two things in this favor.
+
+200
+00:08:13,720 --> 00:08:15,160
+Firstly, this is all public data.
+
+201
+00:08:15,160 --> 00:08:17,720
+It's not like they're going to select my password file.
+
+202
+00:08:17,720 --> 00:08:22,200
+And secondly, SQLite allows you to open files in read-only mode.
+
+203
+00:08:22,200 --> 00:08:24,080
+So if you tried to do an insert or an update,
+
+204
+00:08:24,080 --> 00:08:24,960
+it just won't work.
+
+205
+00:08:24,960 --> 00:08:26,040
+It'll be rejected.
+
+206
+00:08:26,040 --> 00:08:27,960
+So these are read-only SQL queries.
+
+207
+00:08:27,960 --> 00:08:30,320
+I put a one-second time limit on them, too.
+
+208
+00:08:30,320 --> 00:08:32,320
+So if you try to do something crazy expensive,
+
+209
+00:08:32,320 --> 00:08:34,240
+you'll just get an error after a second.
+
+210
+00:08:34,240 --> 00:08:36,600
+And it means it's shocking enough,
+
+211
+00:08:36,600 --> 00:08:41,960
+it's safe to expose data with SQL as your query language
+
+212
+00:08:41,960 --> 00:08:44,760
+and make that available through an API.
+
+213
+00:08:44,760 --> 00:08:47,440
+A really fun detail here, if you look at the JSON URL here,
+
+214
+00:08:47,440 --> 00:08:50,640
+you can see it's something.json?sql equals.
+
+215
+00:08:50,640 --> 00:08:54,320
+And I'm literally passing a SQL statement in as a parameter.
+
+216
+00:08:54,320 --> 00:08:56,480
+People get really excited about GraphQL
+
+217
+00:08:56,480 --> 00:09:00,880
+these days because GraphQL lets you specify exactly one.
+
+218
+00:09:00,880 --> 00:09:02,840
+SQL's GraphQL from the 70s, right?
+
+219
+00:09:02,840 --> 00:09:05,320
+It turns out it works great.
+
+220
+00:09:05,320 --> 00:09:10,800
+So there are a whole bunch of handy features.
+
+221
+00:09:10,800 --> 00:09:12,320
+You've got filtering and faceting.
+
+222
+00:09:12,320 --> 00:09:14,160
+So you have that interface where you can
+
+223
+00:09:14,160 --> 00:09:15,760
+facet by different columns.
+
+224
+00:09:15,760 --> 00:09:17,640
+You can filter by things where something is
+
+225
+00:09:17,640 --> 00:09:18,960
+greater than something else.
+
+226
+00:09:18,960 --> 00:09:20,960
+You can run these custom SQL queries.
+
+227
+00:09:20,960 --> 00:09:24,560
+And you've got this JSON API on top of everything that it does.
+
+228
+00:09:24,560 --> 00:09:27,040
+And really, the secret source to this whole project
+
+229
+00:09:27,040 --> 00:09:28,680
+is SQLite.
+
+230
+00:09:28,680 --> 00:09:33,720
+SQLite is this amazing little public domain licensed database.
+
+231
+00:09:33,720 --> 00:09:34,920
+It's absolutely tiny.
+
+232
+00:09:34,920 --> 00:09:37,680
+It's an embedded library which everyone in this room
+
+233
+00:09:37,680 --> 00:09:40,460
+has access to because it ships as part of the Python standard
+
+234
+00:09:40,460 --> 00:09:41,400
+library.
+
+235
+00:09:41,400 --> 00:09:43,720
+But it turns out it's ubiquitous to the point
+
+236
+00:09:43,720 --> 00:09:46,560
+that it's in mobile phones, it's in desktops.
+
+237
+00:09:46,560 --> 00:09:49,040
+My Apple Watch has a SQLite database on it
+
+238
+00:09:49,040 --> 00:09:51,280
+that records my steps, which I haven't
+
+239
+00:09:51,280 --> 00:09:55,640
+managed to get access to yet, which is really infuriating.
+
+240
+00:09:55,640 --> 00:09:58,080
+And one of the nicest characteristics of SQLite
+
+241
+00:09:58,080 --> 00:10:00,600
+is everything is a single database file, which means you
+
+242
+00:10:00,600 --> 00:10:02,560
+can back it up by copying it somewhere.
+
+243
+00:10:02,560 --> 00:10:04,280
+You can email them to people.
+
+244
+00:10:04,280 --> 00:10:06,200
+It's a really nice archival format
+
+245
+00:10:06,200 --> 00:10:10,600
+for any piece of data that will fit in a relational database,
+
+246
+00:10:10,600 --> 00:10:12,600
+which is everything.
+
+247
+00:10:12,600 --> 00:10:16,320
+The catch is SQLite famously doesn't scale well for writes.
+
+248
+00:10:16,320 --> 00:10:20,160
+That's why you wouldn't build a high traffic
+
+249
+00:10:20,160 --> 00:10:21,600
+interactive website with it.
+
+250
+00:10:21,600 --> 00:10:22,980
+But we're not dealing with writes.
+
+251
+00:10:22,980 --> 00:10:25,800
+If our data is read only, the one limitation of SQLite
+
+252
+00:10:25,800 --> 00:10:27,120
+just disappears.
+
+253
+00:10:27,120 --> 00:10:29,160
+And if you want to scale to handle millions of hits
+
+254
+00:10:29,160 --> 00:10:32,600
+a second, run 30 copies of the SQLite database
+
+255
+00:10:32,600 --> 00:10:33,840
+and load balance between them.
+
+256
+00:10:33,840 --> 00:10:35,560
+That's going to work just fine.
+
+257
+00:10:35,560 --> 00:10:37,320
+So what this lets you do is it lets
+
+258
+00:10:37,320 --> 00:10:40,460
+you ship both the data and the code in the same Docker
+
+259
+00:10:40,460 --> 00:10:43,040
+container or in the same environment, which
+
+260
+00:10:43,040 --> 00:10:45,160
+means all of these serverless platforms
+
+261
+00:10:45,160 --> 00:10:47,600
+are suddenly available for you to do all kinds of exciting
+
+262
+00:10:47,600 --> 00:10:49,440
+things with them.
+
+263
+00:10:49,440 --> 00:10:52,680
+So I'll show you another demo to illustrate quite
+
+264
+00:10:52,680 --> 00:10:55,160
+how ubiquitous SQLite is.
+
+265
+00:10:55,160 --> 00:10:57,800
+Dataset is Python 3 only, I think, in 2019.
+
+266
+00:10:57,800 --> 00:11:00,880
+That's not even something I need to mention anymore.
+
+267
+00:11:00,880 --> 00:11:04,280
+But what I'm going to do is I'm going to run a command which
+
+268
+00:11:04,280 --> 00:11:07,320
+searches my hard drive.
+
+269
+00:11:07,320 --> 00:11:10,080
+This is going to search my library folder on my hard drive
+
+270
+00:11:10,080 --> 00:11:12,840
+for any file ending in star.sqlite.
+
+271
+00:11:12,840 --> 00:11:15,760
+So it's a find command looking for names, star.sqlite.
+
+272
+00:11:15,760 --> 00:11:18,520
+And then I'm going to sort them with the biggest first.
+
+273
+00:11:18,520 --> 00:11:19,960
+So hang on.
+
+274
+00:11:19,960 --> 00:11:23,040
+Let's run that again.
+
+275
+00:11:23,040 --> 00:11:23,800
+Here we go.
+
+276
+00:11:23,800 --> 00:11:27,480
+The largest SQLite file that my computer has
+
+277
+00:11:27,480 --> 00:11:31,400
+is this mystery file called clsbusinesscategorycache.sqlite.
+
+278
+00:11:31,400 --> 00:11:34,360
+It's something to do with Apple photo analysis D.
+
+279
+00:11:34,360 --> 00:11:36,480
+So what I'm going to do now is I'm going to run Dataset
+
+280
+00:11:36,480 --> 00:11:37,000
+against it.
+
+281
+00:11:37,000 --> 00:11:38,680
+So Dataset, once you've installed it,
+
+282
+00:11:38,680 --> 00:11:39,720
+it's a command line tool.
+
+283
+00:11:39,720 --> 00:11:41,320
+You can give it a port, because I'm
+
+284
+00:11:41,320 --> 00:11:43,400
+thinking I'm already using the port it normally runs on.
+
+285
+00:11:43,400 --> 00:11:45,400
+And I'm going to give it the path for that file.
+
+286
+00:11:45,400 --> 00:11:46,720
+And it's going to start up.
+
+287
+00:11:46,720 --> 00:11:52,560
+And now if I visit this URL, here is that database.
+
+288
+00:11:52,560 --> 00:11:56,280
+This is now me browsing this mystery database
+
+289
+00:11:56,280 --> 00:11:57,720
+that I found on my computer.
+
+290
+00:11:57,720 --> 00:12:02,320
+It's got 189,000 rows in zbusinessitem.
+
+291
+00:12:02,320 --> 00:12:04,480
+They've got zlatitude and zlogitude,
+
+292
+00:12:04,480 --> 00:12:06,200
+which is suspicious.
+
+293
+00:12:06,200 --> 00:12:08,680
+So one of the things Dataset does
+
+294
+00:12:08,680 --> 00:12:10,320
+is it has plug-in support.
+
+295
+00:12:10,320 --> 00:12:12,160
+So you can write plug-ins for it.
+
+296
+00:12:12,160 --> 00:12:14,280
+And one of the plug-ins I wrote is one which says,
+
+297
+00:12:14,280 --> 00:12:16,400
+if there's a latitude and longitude column,
+
+298
+00:12:16,400 --> 00:12:17,600
+render them on a map.
+
+299
+00:12:17,600 --> 00:12:19,180
+Now this isn't latitude and longitude.
+
+300
+00:12:19,180 --> 00:12:21,080
+This is zlatitude and zlongitude.
+
+301
+00:12:21,080 --> 00:12:25,840
+So I'm going to do select zlatitudeaslatitude,
+
+302
+00:12:25,840 --> 00:12:32,320
+comma zlongitudeaslongitude, comma star from this.
+
+303
+00:12:32,320 --> 00:12:37,120
+And I'm going to get rid of the limit and hit Run SQL.
+
+304
+00:12:37,120 --> 00:12:39,880
+And so this is kind of creepy, because these are places
+
+305
+00:12:39,880 --> 00:12:42,240
+that I have been in the last couple of years.
+
+306
+00:12:42,240 --> 00:12:45,120
+I've been to South America, London, the East Coast,
+
+307
+00:12:45,120 --> 00:12:47,440
+the West Coast, and Mexico City.
+
+308
+00:12:47,440 --> 00:12:49,720
+In fact, if I order by this descending,
+
+309
+00:12:49,720 --> 00:12:54,440
+it'll show me the most recent places I've been, presumably.
+
+310
+00:12:54,440 --> 00:12:55,800
+So I've been in San Francisco.
+
+311
+00:12:55,800 --> 00:12:57,560
+And oh, look, Cleveland.
+
+312
+00:12:57,560 --> 00:12:59,560
+This is interesting.
+
+313
+00:12:59,560 --> 00:13:01,080
+Siri seems to have cut in.
+
+314
+00:13:01,080 --> 00:13:03,000
+So this is kind of fascinating.
+
+315
+00:13:03,000 --> 00:13:05,120
+There is a database on my computer
+
+316
+00:13:05,120 --> 00:13:06,900
+containing all kinds of locations
+
+317
+00:13:06,900 --> 00:13:08,760
+that I have been recently.
+
+318
+00:13:08,760 --> 00:13:13,000
+And so I searched Google for CLS business category cache.
+
+319
+00:13:13,000 --> 00:13:19,920
+And I got two hits, one of which was from the computer
+
+320
+00:13:19,920 --> 00:13:22,320
+forensics subreddit, where somebody's saying,
+
+321
+00:13:22,320 --> 00:13:23,680
+does anyone know what this thing is?
+
+322
+00:13:23,680 --> 00:13:25,880
+And if you zoom in, it says, one of the GPS coordinates
+
+323
+00:13:25,880 --> 00:13:27,200
+is the crime scene.
+
+324
+00:13:27,200 --> 00:13:30,600
+And to my utter frustration, there's no follow-ups on this.
+
+325
+00:13:30,600 --> 00:13:32,640
+This is all I've got to go on.
+
+326
+00:13:32,640 --> 00:13:36,760
+So I don't think anyone even replied with anything useful.
+
+327
+00:13:36,760 --> 00:13:39,200
+So there's a mystery for you.
+
+328
+00:13:39,200 --> 00:13:41,040
+I can't tell you any more than that,
+
+329
+00:13:41,040 --> 00:13:42,560
+but it's a fascinating thing.
+
+330
+00:13:42,560 --> 00:13:46,040
+I found by digging through my laptop looking
+
+331
+00:13:46,040 --> 00:13:48,960
+for SQLite databases.
+
+332
+00:13:48,960 --> 00:13:51,040
+So that's SQLite databases.
+
+333
+00:13:51,040 --> 00:13:52,360
+Turns out they're everywhere already.
+
+334
+00:13:52,360 --> 00:13:54,000
+The thing that we're going to want to do
+
+335
+00:13:54,000 --> 00:13:56,600
+is we're going to want to create new ones.
+
+336
+00:13:56,600 --> 00:13:58,560
+So I'm going to show you a couple of the tools
+
+337
+00:13:58,560 --> 00:14:02,680
+I've been working on that help create SQLite databases.
+
+338
+00:14:02,680 --> 00:14:06,560
+And the first one is a tool called CSVs to SQLite.
+
+339
+00:14:06,560 --> 00:14:09,600
+The reason I created this is about 10 years ago,
+
+340
+00:14:09,600 --> 00:14:11,920
+a whole bunch of people were really campaigning
+
+341
+00:14:11,920 --> 00:14:13,680
+for open data from governments.
+
+342
+00:14:13,680 --> 00:14:15,000
+We were saying, hey, governments,
+
+343
+00:14:15,000 --> 00:14:16,440
+you've got all this amazing data.
+
+344
+00:14:16,440 --> 00:14:18,440
+We, the taxpayers, have paid for you to collect it.
+
+345
+00:14:18,440 --> 00:14:19,880
+You should release it somewhere.
+
+346
+00:14:19,880 --> 00:14:22,160
+And to my utter surprise, it worked.
+
+347
+00:14:22,160 --> 00:14:25,840
+This is a map of open data portals around the world.
+
+348
+00:14:25,840 --> 00:14:27,360
+And this is from a year ago.
+
+349
+00:14:27,360 --> 00:14:30,400
+And there were 2,600 of them crossing
+
+350
+00:14:30,400 --> 00:14:31,960
+basically every country.
+
+351
+00:14:31,960 --> 00:14:33,840
+And when you actually start digging into this,
+
+352
+00:14:33,840 --> 00:14:35,920
+it's amazing what you can find.
+
+353
+00:14:35,920 --> 00:14:38,680
+The city of San Francisco publishes a CSV file
+
+354
+00:14:38,680 --> 00:14:43,040
+of every tree in the city, which is 190,000 rows of trees,
+
+355
+00:14:43,040 --> 00:14:45,120
+each with a latitude and longitude.
+
+356
+00:14:45,120 --> 00:14:49,040
+I found parking meters, data from a tiny little town
+
+357
+00:14:49,040 --> 00:14:49,840
+in Morocco.
+
+358
+00:14:49,840 --> 00:14:52,000
+There's all of this amazing stuff out there.
+
+359
+00:14:52,000 --> 00:14:53,480
+And the standard format that people
+
+360
+00:14:53,480 --> 00:14:55,880
+are publishing this stuff in is CSV,
+
+361
+00:14:55,880 --> 00:14:59,200
+which is it's good in that we can work with CSV.
+
+362
+00:14:59,200 --> 00:15:01,840
+It's bad in that it's easy to mess up your CSV files
+
+363
+00:15:01,840 --> 00:15:04,200
+and get escaping and such and like wrong.
+
+364
+00:15:04,200 --> 00:15:06,040
+So for today, I thought I'd have a quick look
+
+365
+00:15:06,040 --> 00:15:08,360
+at what's available around the state of Ohio
+
+366
+00:15:08,360 --> 00:15:09,320
+and Cleveland.
+
+367
+00:15:09,320 --> 00:15:13,400
+Ohio, I have to admit, is not great at open data.
+
+368
+00:15:13,400 --> 00:15:16,600
+San Francisco has 400 CSV files for the one city.
+
+369
+00:15:16,600 --> 00:15:19,280
+Ohio is a little bit further behind that.
+
+370
+00:15:19,280 --> 00:15:21,480
+But I did find this file, which is interesting.
+
+371
+00:15:21,480 --> 00:15:23,280
+This is the state properties.
+
+372
+00:15:23,280 --> 00:15:26,360
+It's properties owned by the state of Ohio.
+
+373
+00:15:26,360 --> 00:15:28,760
+And it's a CSV file, which you can
+
+374
+00:15:28,760 --> 00:15:30,520
+download from that website.
+
+375
+00:15:30,520 --> 00:15:34,200
+And luckily, it has those latitude and longitude columns
+
+376
+00:15:34,200 --> 00:15:35,120
+in it.
+
+377
+00:15:35,120 --> 00:15:39,080
+So let's actually, hang on.
+
+378
+00:15:39,080 --> 00:15:41,160
+Let's hit this thing up.
+
+379
+00:15:41,160 --> 00:15:41,960
+So I've got a file.
+
+380
+00:15:41,960 --> 00:15:44,600
+Oh, wrong folder.
+
+381
+00:15:44,600 --> 00:15:51,640
+Dropbox presentations, PyCon 2019, PyCon.
+
+382
+00:15:51,640 --> 00:15:56,000
+OK, so here's one I downloaded earlier, sorp2012.csv.
+
+383
+00:15:56,000 --> 00:15:58,800
+So I'm going to CSVs to SQLite that.
+
+384
+00:15:58,800 --> 00:16:01,520
+And I'm going to call it ahio.db.
+
+385
+00:16:01,520 --> 00:16:04,480
+So it's created ahio.db.
+
+386
+00:16:04,480 --> 00:16:12,480
+Now if I run data set on another random port, ahio.db,
+
+387
+00:16:12,480 --> 00:16:15,640
+here we are diving straight into that data.
+
+388
+00:16:15,640 --> 00:16:18,560
+Oh, again, we've got lon and lat.
+
+389
+00:16:18,560 --> 00:16:19,840
+You know what I'm going to do?
+
+390
+00:16:19,840 --> 00:16:23,080
+I'm actually going to edit that file.
+
+391
+00:16:23,080 --> 00:16:24,240
+What was that file called?
+
+392
+00:16:27,160 --> 00:16:28,040
+In fact, you know what?
+
+393
+00:16:28,040 --> 00:16:29,760
+I'm going to switch to a more exciting way
+
+394
+00:16:29,760 --> 00:16:30,960
+of working with this.
+
+395
+00:16:30,960 --> 00:16:35,200
+So there's this amazing product called Glitch,
+
+396
+00:16:35,200 --> 00:16:39,040
+which is a sort of learn to program environment
+
+397
+00:16:39,040 --> 00:16:40,880
+with live recoding and the ability
+
+398
+00:16:40,880 --> 00:16:42,400
+to remix other people's projects.
+
+399
+00:16:42,400 --> 00:16:44,800
+And it's a very interesting thing.
+
+400
+00:16:44,800 --> 00:16:46,760
+And I built something a couple of weeks ago on it
+
+401
+00:16:46,760 --> 00:16:50,840
+called data set CSVs, which is a demonstration of how
+
+402
+00:16:50,840 --> 00:16:55,440
+to use data sets and CSVs to SQLite to convert CSV files
+
+403
+00:16:55,440 --> 00:16:57,000
+and host them online.
+
+404
+00:16:57,040 --> 00:17:00,800
+So if anyone goes to glitch.com slash tilde data set
+
+405
+00:17:00,800 --> 00:17:03,720
+hyphen CSVs, you can click on remix
+
+406
+00:17:03,720 --> 00:17:05,840
+this to create your own copy of my project
+
+407
+00:17:05,840 --> 00:17:07,160
+and start editing it.
+
+408
+00:17:07,160 --> 00:17:09,640
+Glitch has a text editor in your browser.
+
+409
+00:17:09,640 --> 00:17:13,120
+It's running a container with your code in.
+
+410
+00:17:13,120 --> 00:17:15,640
+And it's automatically previewing your code in here.
+
+411
+00:17:15,640 --> 00:17:18,040
+So this is a live code environment
+
+412
+00:17:18,040 --> 00:17:20,080
+where I can start editing things.
+
+413
+00:17:20,080 --> 00:17:22,760
+And as this read me says, you can drag and drop a CSV file
+
+414
+00:17:22,760 --> 00:17:24,520
+into this project, and it will be converted
+
+415
+00:17:24,520 --> 00:17:26,400
+into a SQLite database.
+
+416
+00:17:26,400 --> 00:17:29,200
+So let's see, where did we put?
+
+417
+00:17:29,200 --> 00:17:30,480
+Here's that SRP thing.
+
+418
+00:17:30,480 --> 00:17:32,160
+I'm going to drag and drop it in here.
+
+419
+00:17:32,160 --> 00:17:35,120
+So now we've got sorp2012.csv.
+
+420
+00:17:35,120 --> 00:17:37,960
+And then the edit I was about to make in my editor,
+
+421
+00:17:37,960 --> 00:17:41,800
+I'm going to find the longitude and latitude columns
+
+422
+00:17:41,800 --> 00:17:42,520
+and rename them.
+
+423
+00:17:42,520 --> 00:17:44,360
+So that one I'm going to call longitude,
+
+424
+00:17:44,360 --> 00:17:47,320
+and that one I'm going to call latitude.
+
+425
+00:17:47,320 --> 00:17:50,120
+And note that this right hand pane is already
+
+426
+00:17:50,120 --> 00:17:51,080
+showing that data.
+
+427
+00:17:51,080 --> 00:17:55,240
+This right here is, oh, there we go.
+
+428
+00:17:55,240 --> 00:17:59,760
+This right here is that CSV file running inside of data set,
+
+429
+00:17:59,760 --> 00:18:01,800
+but with those two changes made.
+
+430
+00:18:01,800 --> 00:18:04,240
+So longitude and latitude are running there.
+
+431
+00:18:04,240 --> 00:18:06,960
+This is all powered by a file called glitch.json,
+
+432
+00:18:06,960 --> 00:18:09,640
+which knows that to install, it has to pip install data set
+
+433
+00:18:09,640 --> 00:18:13,120
+and CSVs to SQLite, and then run them.
+
+434
+00:18:13,120 --> 00:18:15,000
+And then it has to start.
+
+435
+00:18:15,000 --> 00:18:16,960
+It has to run the data set server.
+
+436
+00:18:16,960 --> 00:18:19,560
+And I actually want to add an extra thing to this.
+
+437
+00:18:19,560 --> 00:18:22,240
+I'm going to install that plug-in, the cluster map one.
+
+438
+00:18:22,240 --> 00:18:26,800
+So I'm going to say pip install data set cluster map.
+
+439
+00:18:26,800 --> 00:18:27,800
+There we go.
+
+440
+00:18:27,800 --> 00:18:30,800
+And there's a little log file here
+
+441
+00:18:30,800 --> 00:18:32,440
+that will show what it's actually doing.
+
+442
+00:18:32,440 --> 00:18:34,080
+So it's already done it.
+
+443
+00:18:34,080 --> 00:18:35,520
+It's installed that new library.
+
+444
+00:18:35,520 --> 00:18:36,720
+It's loaded up here.
+
+445
+00:18:36,720 --> 00:18:40,760
+And now if I click on this thing here, I've got a map.
+
+446
+00:18:40,760 --> 00:18:43,520
+Let's do show in a new window.
+
+447
+00:18:43,520 --> 00:18:47,680
+This is a URL right now that anyone can go and visit.
+
+448
+00:18:47,680 --> 00:18:53,480
+And this is a map of all of the 36,000 buildings
+
+449
+00:18:53,480 --> 00:18:54,600
+owned by the state of Ohio.
+
+450
+00:18:54,600 --> 00:19:00,160
+If I click the Load All button, did I click that successfully?
+
+451
+00:19:00,160 --> 00:19:03,200
+It's actually going to load all 36,000 points onto the map,
+
+452
+00:19:03,200 --> 00:19:06,560
+because it turns out JavaScript's kind of fast now.
+
+453
+00:19:06,560 --> 00:19:07,720
+So yeah, this is loading up.
+
+454
+00:19:07,720 --> 00:19:11,160
+And this is now a interactive map of every property
+
+455
+00:19:11,160 --> 00:19:12,800
+owned by the state of Ohio.
+
+456
+00:19:12,800 --> 00:19:15,120
+And literally, all I had to do to get this
+
+457
+00:19:15,120 --> 00:19:18,520
+was download that CSV file, drag it into a window,
+
+458
+00:19:18,520 --> 00:19:19,880
+and here it is.
+
+459
+00:19:19,880 --> 00:19:22,640
+I think this is a really, I'm absolutely
+
+460
+00:19:22,640 --> 00:19:26,040
+fascinated by Glitch as a sort of tool for rapidly prototyping
+
+461
+00:19:26,040 --> 00:19:26,880
+things.
+
+462
+00:19:26,880 --> 00:19:29,580
+And part of my goal with this project
+
+463
+00:19:29,580 --> 00:19:32,440
+is to make this kind of tooling more accessible to journalists.
+
+464
+00:19:32,440 --> 00:19:36,840
+This is a pretty exciting way of giving journalists the ability
+
+465
+00:19:36,840 --> 00:19:38,640
+to start messing around with code
+
+466
+00:19:38,640 --> 00:19:41,320
+and with these kinds of projects without having to completely
+
+467
+00:19:41,320 --> 00:19:43,640
+talk them through how to program.
+
+468
+00:19:43,640 --> 00:19:45,440
+So did that map finish loading?
+
+469
+00:19:45,440 --> 00:19:45,840
+There we go.
+
+470
+00:19:45,840 --> 00:19:48,280
+This is 24,000.
+
+471
+00:19:48,280 --> 00:19:49,480
+It's loading over my phone.
+
+472
+00:19:49,480 --> 00:19:51,640
+That would explain why it's taking a while
+
+473
+00:19:51,640 --> 00:19:55,360
+to load 36,000 data points.
+
+474
+00:19:55,360 --> 00:19:58,520
+But anyway, you can see this is, these are,
+
+475
+00:19:58,520 --> 00:20:00,840
+oh, it's going to zoom in and out while it's loading.
+
+476
+00:20:00,840 --> 00:20:04,080
+I'll come back to that one later.
+
+477
+00:20:04,080 --> 00:20:08,920
+So that's an example of using the CSVs to SQLite command
+
+478
+00:20:08,920 --> 00:20:11,720
+to convert open data released by government
+
+479
+00:20:11,720 --> 00:20:14,360
+and then using Glitch to actually host that data
+
+480
+00:20:14,360 --> 00:20:16,880
+and start interacting with it, installing plugins,
+
+481
+00:20:16,880 --> 00:20:18,720
+playing out with this whole ecosystem.
+
+482
+00:20:18,720 --> 00:20:21,480
+Amazingly, Glitch doesn't even require you to have a login.
+
+483
+00:20:21,480 --> 00:20:24,240
+If you, without logging into the site,
+
+484
+00:20:24,240 --> 00:20:27,040
+go to my project and click that remix button,
+
+485
+00:20:27,040 --> 00:20:28,580
+it'll give you an anonymous session
+
+486
+00:20:28,580 --> 00:20:31,400
+and give you a project that will get deleted in five days time.
+
+487
+00:20:31,400 --> 00:20:33,520
+But it's still enough for you to start playing around
+
+488
+00:20:33,520 --> 00:20:35,880
+and trying out the tools.
+
+489
+00:20:35,880 --> 00:20:39,640
+But let's talk about a slightly more sophisticated example.
+
+490
+00:20:39,640 --> 00:20:41,280
+Because CSVs to SQLite works great
+
+491
+00:20:41,280 --> 00:20:43,000
+if your data is a CSV file.
+
+492
+00:20:43,000 --> 00:20:45,600
+But a lot of times, you want to pull data
+
+493
+00:20:45,600 --> 00:20:47,320
+from multiple sources and do something
+
+494
+00:20:47,320 --> 00:20:48,840
+a little bit more comprehensive with it
+
+495
+00:20:48,840 --> 00:20:51,280
+before you start trying to serve it up.
+
+496
+00:20:51,280 --> 00:20:55,320
+So I've been working on a library called SQLiteUtils,
+
+497
+00:20:55,320 --> 00:20:59,680
+which is mainly designed for running in Jupyter Notebooks.
+
+498
+00:20:59,680 --> 00:21:01,920
+I'm a huge fan of Jupyter Notebooks.
+
+499
+00:21:01,920 --> 00:21:04,080
+If you're doing ad hoc data analysis,
+
+500
+00:21:04,080 --> 00:21:05,560
+screen scraping and so forth, they're
+
+501
+00:21:05,560 --> 00:21:07,080
+a fantastic environment.
+
+502
+00:21:07,080 --> 00:21:09,320
+And so what I'm going to do is show you,
+
+503
+00:21:09,320 --> 00:21:13,920
+talk you through how I built a database of the most popular
+
+504
+00:21:13,920 --> 00:21:18,200
+PyPI packages using that Jupyter Notebook and this library.
+
+505
+00:21:18,200 --> 00:21:20,360
+So I'm going to jump over to that now.
+
+506
+00:21:20,360 --> 00:21:22,680
+Again, this will be fun watching it work over my phone,
+
+507
+00:21:22,680 --> 00:21:24,800
+but I think it'll be OK.
+
+508
+00:21:24,800 --> 00:21:29,280
+OK, so is that readable?
+
+509
+00:21:29,280 --> 00:21:30,400
+There we go.
+
+510
+00:21:30,400 --> 00:21:35,800
+So there is a fabulous project run by who?
+
+511
+00:21:35,800 --> 00:21:36,960
+Oh, what happened there?
+
+512
+00:21:40,320 --> 00:21:43,160
+I lost track of who built this.
+
+513
+00:21:43,160 --> 00:21:48,680
+But this project here is running a Google BigQuery once a week
+
+514
+00:21:48,680 --> 00:21:51,600
+to figure out the 5,000 most downloaded packages
+
+515
+00:21:51,600 --> 00:21:53,400
+from the Python package index.
+
+516
+00:21:53,400 --> 00:21:55,640
+And handily, it makes all of that data
+
+517
+00:21:55,640 --> 00:21:58,000
+available as a JSON file.
+
+518
+00:21:58,000 --> 00:22:04,400
+So if you want to start interrogating Python statistics,
+
+519
+00:22:04,400 --> 00:22:06,280
+this is a really good starting point.
+
+520
+00:22:06,280 --> 00:22:07,760
+And in that JSON file, you basically
+
+521
+00:22:07,760 --> 00:22:10,800
+get a list of projects and their download count.
+
+522
+00:22:10,800 --> 00:22:12,680
+So what I'm going to do is I'm going
+
+523
+00:22:12,680 --> 00:22:16,240
+to use the requests library to fetch that back in.
+
+524
+00:22:16,240 --> 00:22:18,080
+I'm going to pull out just the top 100
+
+525
+00:22:18,080 --> 00:22:20,640
+to speed things up a little bit and print them all out.
+
+526
+00:22:20,640 --> 00:22:25,480
+So here we have the top 100 downloaded packages from PyPI
+
+527
+00:22:25,480 --> 00:22:30,400
+over the past 365 days.
+
+528
+00:22:30,400 --> 00:22:32,120
+And pip itself has been downloaded
+
+529
+00:22:32,120 --> 00:22:36,960
+531 million times, which is an interesting number in itself.
+
+530
+00:22:36,960 --> 00:22:38,600
+So now that I've done that, I'd like
+
+531
+00:22:38,600 --> 00:22:40,480
+to get a little bit more information
+
+532
+00:22:40,480 --> 00:22:42,520
+about each of those packages.
+
+533
+00:22:42,520 --> 00:22:47,040
+And it turns out, PyPI has this semi-documented feature
+
+534
+00:22:47,040 --> 00:22:50,160
+where if you go to pypi.jango, you
+
+535
+00:22:50,160 --> 00:22:52,200
+get the information about Django.
+
+536
+00:22:52,200 --> 00:22:54,320
+And if you add slash JSON on the end,
+
+537
+00:22:54,320 --> 00:22:57,880
+it'll give you the key information about that package.
+
+538
+00:22:57,880 --> 00:23:00,320
+Oh, what happened there?
+
+539
+00:23:00,320 --> 00:23:01,400
+Oh, pypi.jango.
+
+540
+00:23:01,400 --> 00:23:04,080
+So it'll give you the key information in that package
+
+541
+00:23:04,080 --> 00:23:04,800
+as JSON.
+
+542
+00:23:04,800 --> 00:23:06,760
+And you can pretty print that out and see, OK,
+
+543
+00:23:06,760 --> 00:23:08,840
+we're getting back the author, the author email,
+
+544
+00:23:08,840 --> 00:23:10,240
+the classifiers, the description.
+
+545
+00:23:10,240 --> 00:23:12,360
+It's a good amount of data.
+
+546
+00:23:12,360 --> 00:23:13,960
+So again, because I'm on my phone,
+
+547
+00:23:13,960 --> 00:23:17,640
+I'm just going to do this with the top 10 packages.
+
+548
+00:23:17,640 --> 00:23:20,120
+I'm going to loop through the top 10 packages.
+
+549
+00:23:20,120 --> 00:23:22,560
+And for each one, request that URL,
+
+550
+00:23:22,560 --> 00:23:24,160
+annotate it with the download count,
+
+551
+00:23:24,160 --> 00:23:25,720
+because that's not available in PyPI,
+
+552
+00:23:25,720 --> 00:23:28,720
+but it is available from our original data source,
+
+553
+00:23:28,720 --> 00:23:31,240
+and stick that in a list of records.
+
+554
+00:23:31,240 --> 00:23:34,160
+So shift-enter.
+
+555
+00:23:34,160 --> 00:23:34,720
+Here we go.
+
+556
+00:23:34,720 --> 00:23:38,440
+So that's fine pretty quickly.
+
+557
+00:23:38,440 --> 00:23:40,520
+There we have the top 10 packages.
+
+558
+00:23:40,520 --> 00:23:43,360
+There's 10 things in my records array.
+
+559
+00:23:43,360 --> 00:23:45,560
+If we look at the first item in the records array,
+
+560
+00:23:45,560 --> 00:23:48,560
+it's, as you would expect, it's a JSON blob.
+
+561
+00:23:48,560 --> 00:23:50,680
+And so now this gets fun, because what I want to do
+
+562
+00:23:50,680 --> 00:23:54,200
+is turn this into a database, into a SQLite database,
+
+563
+00:23:54,200 --> 00:23:56,720
+so I can start exploring it with Dataset.
+
+564
+00:23:56,720 --> 00:24:00,520
+And so to do that, I'm going to import the SQLiteUtils module.
+
+565
+00:24:00,520 --> 00:24:03,880
+I'm going to do db equals SQLiteUtils.database
+
+566
+00:24:03,880 --> 00:24:05,680
+and give it the path to a file.
+
+567
+00:24:05,680 --> 00:24:07,520
+I'm actually just going to make sure I haven't
+
+568
+00:24:07,520 --> 00:24:08,560
+got that file already.
+
+569
+00:24:11,080 --> 00:24:12,800
+OK, I'm going to remove that file first
+
+570
+00:24:12,800 --> 00:24:14,520
+to make sure this works.
+
+571
+00:24:14,520 --> 00:24:16,160
+So I do this.
+
+572
+00:24:16,160 --> 00:24:19,440
+And then I can say db packages.
+
+573
+00:24:19,440 --> 00:24:21,240
+This is a table that I'm about to create.
+
+574
+00:24:21,240 --> 00:24:25,040
+I'm going to create a table called packages.insertAll.
+
+575
+00:24:25,040 --> 00:24:26,880
+I'm going to send it that list of records.
+
+576
+00:24:26,880 --> 00:24:29,240
+I could stop then, and that would create me a database
+
+577
+00:24:29,240 --> 00:24:29,800
+table.
+
+578
+00:24:29,800 --> 00:24:31,600
+But I want to do a couple of other things.
+
+579
+00:24:31,920 --> 00:24:36,040
+The primary key should be that name column, which
+
+580
+00:24:36,040 --> 00:24:38,400
+is the name of the package, which on PyPI
+
+581
+00:24:38,400 --> 00:24:39,760
+we can guarantee is unique.
+
+582
+00:24:39,760 --> 00:24:41,720
+And I'm also going to give it a column order,
+
+583
+00:24:41,720 --> 00:24:42,960
+because without that, the columns
+
+584
+00:24:42,960 --> 00:24:44,040
+will be in a random order.
+
+585
+00:24:44,040 --> 00:24:45,400
+And if I say, you know what, I want
+
+586
+00:24:45,400 --> 00:24:47,240
+the name and the summary and the download count first,
+
+587
+00:24:47,240 --> 00:24:49,160
+it'll be a little bit nicer to look at.
+
+588
+00:24:49,160 --> 00:24:52,120
+So I'll do that, and that's created the table.
+
+589
+00:24:52,120 --> 00:24:53,520
+And then the last step, I'm going
+
+590
+00:24:53,520 --> 00:24:56,880
+to tell it I want to enable full text search across the name,
+
+591
+00:24:56,880 --> 00:24:59,520
+summary, keywords, and description columns.
+
+592
+00:24:59,520 --> 00:25:00,680
+So that's it.
+
+593
+00:25:00,680 --> 00:25:01,240
+That's done.
+
+594
+00:25:01,240 --> 00:25:05,600
+Now if we look in here again, we have a file called PyPI.db.
+
+595
+00:25:05,600 --> 00:25:08,600
+It's 140 kilobytes, because it's only got 10 things in it.
+
+596
+00:25:08,600 --> 00:25:12,760
+And I can run data set dash p.
+
+597
+00:25:12,760 --> 00:25:15,000
+I run out of ports a lot.
+
+598
+00:25:15,000 --> 00:25:17,640
+PyPI.db.
+
+599
+00:25:17,640 --> 00:25:19,880
+And here we go.
+
+600
+00:25:19,880 --> 00:25:22,520
+This is a database of Python packages.
+
+601
+00:25:22,520 --> 00:25:25,240
+Couple of interesting things about this.
+
+602
+00:25:25,240 --> 00:25:26,940
+Firstly, we can order by download count,
+
+603
+00:25:26,940 --> 00:25:30,160
+and there's pip sitting at the top.
+
+604
+00:25:30,160 --> 00:25:33,760
+If you look at the classifiers column here,
+
+605
+00:25:33,760 --> 00:25:35,800
+you'll notice that this is an array.
+
+606
+00:25:35,800 --> 00:25:38,560
+That's because the data, it was actually
+
+607
+00:25:38,560 --> 00:25:41,520
+a nested JSON array in that data we pulled back.
+
+608
+00:25:41,520 --> 00:25:43,480
+SQLite util spots when that happens,
+
+609
+00:25:43,480 --> 00:25:46,480
+and it creates a serialized JSON blob
+
+610
+00:25:46,480 --> 00:25:48,680
+in that particular column, which is handy,
+
+611
+00:25:48,680 --> 00:25:52,800
+because SQLite actually has JSON functions built in.
+
+612
+00:25:52,800 --> 00:25:55,360
+So you could run SQL queries against the contents
+
+613
+00:25:55,360 --> 00:25:57,800
+of a JSON array and do all sorts of interesting things
+
+614
+00:25:57,800 --> 00:26:00,000
+with that structured data once it makes in there.
+
+615
+00:26:00,000 --> 00:26:02,360
+And this is super convenient if you're working with,
+
+616
+00:26:02,360 --> 00:26:03,920
+if you just want to grab some data
+
+617
+00:26:03,920 --> 00:26:06,000
+and get it into a shape where you can start looking at it,
+
+618
+00:26:06,000 --> 00:26:07,480
+because you don't have to think about the fact
+
+619
+00:26:07,480 --> 00:26:08,440
+that some of it's JSON.
+
+620
+00:26:08,440 --> 00:26:12,280
+That's just handled automatically for you.
+
+621
+00:26:12,280 --> 00:26:13,360
+And again, we can fast it.
+
+622
+00:26:13,360 --> 00:26:16,960
+We can see that Amazon Web Services have two
+
+623
+00:26:16,960 --> 00:26:18,480
+of the packages in the top 10.
+
+624
+00:26:18,480 --> 00:26:23,280
+That's BotoCore and S3 Transfer, two of the top 10
+
+625
+00:26:23,280 --> 00:26:24,960
+downloaded packages.
+
+626
+00:26:24,960 --> 00:26:28,960
+What I'm actually going to do is I prepared, before this talk,
+
+627
+00:26:29,400 --> 00:26:31,280
+a more interesting database.
+
+628
+00:26:31,280 --> 00:26:33,000
+Actually, well, before this talk,
+
+629
+00:26:33,000 --> 00:26:37,800
+I downloaded the first, the top 1,500 packages.
+
+630
+00:26:37,800 --> 00:26:39,920
+So what I'll do is I'm going to load those in.
+
+631
+00:26:39,920 --> 00:26:43,040
+This is 1,500 packages in the same format
+
+632
+00:26:43,040 --> 00:26:45,200
+as those 10 that I just pulled down.
+
+633
+00:26:45,200 --> 00:26:48,760
+And now I'm going to add them to that database again.
+
+634
+00:26:48,760 --> 00:26:51,480
+Here I'm, rather than doing an insert, I'm doing an upsert.
+
+635
+00:26:51,480 --> 00:26:54,200
+So this is saying, insert these records.
+
+636
+00:26:54,200 --> 00:26:56,280
+If the primary key of name clashes
+
+637
+00:26:56,280 --> 00:26:59,600
+with an existing record, replace that existing record.
+
+638
+00:26:59,600 --> 00:27:00,400
+So I can do that.
+
+639
+00:27:00,400 --> 00:27:03,000
+And I'm also saying I want to populate the full text search,
+
+640
+00:27:03,000 --> 00:27:04,440
+which I'll show you in a moment.
+
+641
+00:27:04,440 --> 00:27:06,400
+So that should have worked.
+
+642
+00:27:06,400 --> 00:27:09,920
+I'm going to run the data set again.
+
+643
+00:27:09,920 --> 00:27:13,000
+And so now I should have, here we go.
+
+644
+00:27:13,000 --> 00:27:15,320
+This is now 1,500 Python packages.
+
+645
+00:27:15,320 --> 00:27:18,400
+You'll notice everything is super fast, because 1,500 is not
+
+646
+00:27:18,400 --> 00:27:21,360
+a lot of data, and SQLite is an incredibly optimized
+
+647
+00:27:21,360 --> 00:27:24,000
+piece of software.
+
+648
+00:27:24,040 --> 00:27:27,000
+There's an interesting thing here where data set suggests
+
+649
+00:27:27,000 --> 00:27:31,760
+fields that you might want to facet on based on which
+
+650
+00:27:31,760 --> 00:27:35,280
+columns available have less than 20 unique values.
+
+651
+00:27:35,280 --> 00:27:37,040
+And right now across 1,500 packages,
+
+652
+00:27:37,040 --> 00:27:38,960
+the only one with less than 20 unique values
+
+653
+00:27:38,960 --> 00:27:41,240
+is the description content type.
+
+654
+00:27:41,240 --> 00:27:42,720
+So we can see markdown is currently
+
+655
+00:27:42,720 --> 00:27:45,440
+beating restructured text.
+
+656
+00:27:45,440 --> 00:27:47,280
+But you can actually hack around in the URL.
+
+657
+00:27:47,280 --> 00:27:50,440
+So if I say facet equals author in the URL itself,
+
+658
+00:27:50,440 --> 00:27:52,800
+it'll show me the top authors.
+
+659
+00:27:52,800 --> 00:27:56,080
+Microsoft Corporation are responsible for 149
+
+660
+00:27:56,080 --> 00:27:59,800
+of the packages in the top 1,500 on PyPI,
+
+661
+00:27:59,800 --> 00:28:01,680
+which is kind of fascinating.
+
+662
+00:28:01,680 --> 00:28:05,120
+Google have Google LLC, Google Inc, and Google Inc.
+
+663
+00:28:05,120 --> 00:28:07,000
+They need to standardize their names a bit.
+
+664
+00:28:07,000 --> 00:28:08,440
+In terms of individuals, I'm sure people
+
+665
+00:28:08,440 --> 00:28:10,600
+won't be surprised to see that Kenneth Reitz has
+
+666
+00:28:10,600 --> 00:28:13,040
+the most packages in the top 1,500 that
+
+667
+00:28:13,040 --> 00:28:15,000
+aren't authored by a corporation.
+
+668
+00:28:15,000 --> 00:28:16,200
+But this is kind of cool, right?
+
+669
+00:28:16,200 --> 00:28:19,160
+We're getting insight into those top 1,500.
+
+670
+00:28:19,160 --> 00:28:20,680
+And we've put very little work in.
+
+671
+00:28:20,680 --> 00:28:23,640
+There were a dozen lines of Python code in the Jupyter
+
+672
+00:28:23,640 --> 00:28:25,200
+Notebook to create this thing.
+
+673
+00:28:25,200 --> 00:28:29,000
+And now I'm able to start exploring that data.
+
+674
+00:28:29,000 --> 00:28:31,760
+I'm going to do something a little bit more exciting than
+
+675
+00:28:31,760 --> 00:28:33,080
+that.
+
+676
+00:28:33,080 --> 00:28:34,960
+Let's publish it to the internet.
+
+677
+00:28:34,960 --> 00:28:38,520
+So Dataset has a bunch of subcommands.
+
+678
+00:28:38,520 --> 00:28:41,920
+Dataset dash dash help will show you what those commands are.
+
+679
+00:28:41,920 --> 00:28:44,720
+The most exciting of which is Dataset publish.
+
+680
+00:28:44,720 --> 00:28:48,920
+So Dataset publish lets you take a CSV file
+
+681
+00:28:48,920 --> 00:28:50,360
+and stick it on the internet.
+
+682
+00:28:50,360 --> 00:28:54,280
+And actually, I need to switch to my development version
+
+683
+00:28:54,280 --> 00:28:55,800
+of Dataset for this.
+
+684
+00:28:55,800 --> 00:28:58,240
+Dataset dash dash help.
+
+685
+00:28:58,240 --> 00:29:02,320
+Dataset publish dash dash.
+
+686
+00:29:02,320 --> 00:29:05,040
+So as of yesterday morning, Dataset
+
+687
+00:29:05,040 --> 00:29:06,680
+can now publish to Google Cloud Run.
+
+688
+00:29:06,680 --> 00:29:10,360
+Previously, it could only do Zeitnau and Heroku.
+
+689
+00:29:10,360 --> 00:29:13,200
+And the best part about open source
+
+690
+00:29:13,200 --> 00:29:16,320
+is that's nothing to do with me at all.
+
+691
+00:29:16,320 --> 00:29:18,960
+That's a pull request I just merged from Remain Primate.
+
+692
+00:29:18,960 --> 00:29:23,200
+So thank you very much, Remain, for implementing that feature.
+
+693
+00:29:23,200 --> 00:29:27,160
+But that means I can run Dataset publish Cloud Run.
+
+694
+00:29:27,160 --> 00:29:30,760
+And I have no idea if this is going
+
+695
+00:29:30,760 --> 00:29:32,800
+to work over my telephone.
+
+696
+00:29:32,800 --> 00:29:34,280
+So we'll see.
+
+697
+00:29:34,280 --> 00:29:35,640
+I can pass a bunch of arguments.
+
+698
+00:29:35,640 --> 00:29:38,480
+I'm going to tell it I want the title of my published Dataset
+
+699
+00:29:38,480 --> 00:29:40,760
+to be PyPI top 1,500 packages.
+
+700
+00:29:40,760 --> 00:29:42,520
+I want to install a plugin.
+
+701
+00:29:42,520 --> 00:29:44,920
+Dataset Vega is a visualization plugin.
+
+702
+00:29:44,920 --> 00:29:47,160
+I'm going to use the master branch.
+
+703
+00:29:47,160 --> 00:29:50,040
+So rather than the version of Dataset from PyPI,
+
+704
+00:29:50,040 --> 00:29:52,440
+I'm actually going to use the latest version from GitHub.
+
+705
+00:29:52,440 --> 00:29:54,240
+And I'm going to enable cause headers
+
+706
+00:29:54,240 --> 00:29:58,400
+so that I can do JSON API calls to it from other places.
+
+707
+00:29:58,400 --> 00:30:00,360
+And let's see what happens.
+
+708
+00:30:00,360 --> 00:30:03,640
+I'm excited to see if this works.
+
+709
+00:30:03,640 --> 00:30:05,960
+Here we go.
+
+710
+00:30:05,960 --> 00:30:08,120
+We'll leave this running in the background for a little bit.
+
+711
+00:30:08,120 --> 00:30:09,880
+Thankfully, I've got one of these I prepared earlier.
+
+712
+00:30:09,880 --> 00:30:10,500
+So there we go.
+
+713
+00:30:10,500 --> 00:30:11,680
+It's kicked off.
+
+714
+00:30:11,680 --> 00:30:12,920
+It's creating a tarball.
+
+715
+00:30:12,920 --> 00:30:16,040
+The tarball is 12.9 megabytes because it's a Docker file.
+
+716
+00:30:16,040 --> 00:30:18,000
+And it's that SQLite database.
+
+717
+00:30:18,000 --> 00:30:20,060
+We're packaging the data with the thing.
+
+718
+00:30:20,060 --> 00:30:22,560
+We send it up to Google Cloud Build, which will then
+
+719
+00:30:22,560 --> 00:30:24,080
+build that Docker container.
+
+720
+00:30:24,080 --> 00:30:25,920
+That upload is going to take a little while.
+
+721
+00:30:25,920 --> 00:30:27,800
+But eventually, we'll start seeing
+
+722
+00:30:27,800 --> 00:30:32,840
+it spit out a whole bunch of output of building the Docker
+
+723
+00:30:32,840 --> 00:30:35,400
+file, publishing it to their image storage,
+
+724
+00:30:35,400 --> 00:30:38,820
+and eventually launching a new instance which we can actually
+
+725
+00:30:38,820 --> 00:30:40,040
+go and browse.
+
+726
+00:30:40,040 --> 00:30:43,720
+So let's see what that's going to be like right now.
+
+727
+00:30:43,720 --> 00:30:44,520
+Here we go.
+
+728
+00:30:44,520 --> 00:30:47,560
+Unfortunately, Cloud Run gives us quite ugly URLs.
+
+729
+00:30:47,560 --> 00:30:51,200
+But what it will give us is this.
+
+730
+00:30:51,200 --> 00:30:51,920
+I haven't hit it.
+
+731
+00:30:51,920 --> 00:30:52,440
+There we go.
+
+732
+00:30:52,440 --> 00:30:56,000
+Oh, that's a bug in the latest master that I need to fix.
+
+733
+00:30:56,000 --> 00:30:56,500
+API.
+
+734
+00:30:56,500 --> 00:30:57,600
+Here we go.
+
+735
+00:30:57,600 --> 00:31:01,320
+So here's that database, just as we saw earlier.
+
+736
+00:31:01,320 --> 00:31:04,000
+But this is published on the internet.
+
+737
+00:31:04,000 --> 00:31:06,280
+And because I installed the Dataset Vega plugin,
+
+738
+00:31:06,280 --> 00:31:08,160
+I also get the option to do charts.
+
+739
+00:31:08,160 --> 00:31:09,200
+So I can say, you know what?
+
+740
+00:31:09,200 --> 00:31:10,580
+I want a bar chart where I'm going
+
+741
+00:31:10,580 --> 00:31:12,400
+to take the name of the plugin.
+
+742
+00:31:12,400 --> 00:31:15,280
+And I'm going to plot it against the download count.
+
+743
+00:31:15,280 --> 00:31:17,960
+And let's swap x and y coordinates
+
+744
+00:31:17,960 --> 00:31:19,800
+so that we can see it more easily.
+
+745
+00:31:19,800 --> 00:31:21,600
+And then you can also say, you know what?
+
+746
+00:31:21,600 --> 00:31:25,800
+I want the color to correspond to, let's do the licenses.
+
+747
+00:31:25,800 --> 00:31:28,280
+License in there?
+
+748
+00:31:28,280 --> 00:31:29,960
+Dum-pa-dum-pa-dum.
+
+749
+00:31:29,960 --> 00:31:30,440
+There we go.
+
+750
+00:31:30,440 --> 00:31:34,120
+So now we're seeing that we've got
+
+751
+00:31:34,120 --> 00:31:38,480
+a graph of the downloads of the top 100 in this case.
+
+752
+00:31:38,480 --> 00:31:40,400
+We've color coded against the licenses.
+
+753
+00:31:40,400 --> 00:31:42,280
+And this is something I'm really excited in digging
+
+754
+00:31:42,280 --> 00:31:46,280
+into further, the idea that plugins can add visualizations
+
+755
+00:31:46,280 --> 00:31:49,160
+or all kinds of other additional functionality on top
+
+756
+00:31:49,160 --> 00:31:52,720
+of the core Dataset tool.
+
+757
+00:31:52,720 --> 00:31:55,520
+So let's see if that's.
+
+758
+00:31:55,520 --> 00:31:56,280
+Oh, look at that.
+
+759
+00:31:56,280 --> 00:31:58,120
+It worked.
+
+760
+00:31:58,120 --> 00:31:58,880
+That's amazing.
+
+761
+00:31:58,880 --> 00:32:02,120
+My telephone just deployed a web app.
+
+762
+00:32:02,120 --> 00:32:02,960
+That's really cool.
+
+763
+00:32:02,960 --> 00:32:04,560
+And yeah, if I double click here,
+
+764
+00:32:04,560 --> 00:32:08,720
+I get that error, which I will have to fix after this talk.
+
+765
+00:32:08,720 --> 00:32:11,480
+But there's that database.
+
+766
+00:32:12,200 --> 00:32:15,000
+As I mentioned earlier, we've got a JSON API.
+
+767
+00:32:15,000 --> 00:32:19,840
+So now anyone in the world can start building their own tools
+
+768
+00:32:19,840 --> 00:32:23,360
+against a JSON API of the top 1,500 Python packages
+
+769
+00:32:23,360 --> 00:32:25,080
+with a whole bunch of useful things.
+
+770
+00:32:25,080 --> 00:32:26,600
+Something I forgot to demonstrate earlier
+
+771
+00:32:26,600 --> 00:32:30,200
+is I enabled full text search against a bunch of columns.
+
+772
+00:32:30,200 --> 00:32:32,480
+This means that if I search for, say, Django,
+
+773
+00:32:32,480 --> 00:32:36,360
+it'll return all of the packages that match Django.
+
+774
+00:32:36,360 --> 00:32:38,480
+I can search for ginger.
+
+775
+00:32:38,480 --> 00:32:39,880
+Oh, ginger.
+
+776
+00:32:39,880 --> 00:32:41,680
+So ginger didn't give me the right result
+
+777
+00:32:41,680 --> 00:32:43,080
+because it's stored as ginger2.
+
+778
+00:32:43,080 --> 00:32:44,680
+You can actually use wildcards in this.
+
+779
+00:32:44,680 --> 00:32:47,200
+So if I do ginger with a star, then I
+
+780
+00:32:47,200 --> 00:32:50,880
+think I'll get back ginger2 as one of those results.
+
+781
+00:32:50,880 --> 00:32:52,920
+So we've now got full text search running
+
+782
+00:32:52,920 --> 00:32:54,920
+against four columns in a database.
+
+783
+00:32:54,920 --> 00:32:57,440
+And the amount of effort taken to put this together
+
+784
+00:32:57,440 --> 00:33:00,400
+and publish it online was very, very small,
+
+785
+00:33:00,400 --> 00:33:03,000
+which is really what this whole project is about.
+
+786
+00:33:03,000 --> 00:33:06,400
+It's like, how can we take any Dataset you can imagine
+
+787
+00:33:06,400 --> 00:33:09,240
+and get it online in the most useful way possible
+
+788
+00:33:09,240 --> 00:33:12,720
+with the least effort and cost?
+
+789
+00:33:12,720 --> 00:33:17,000
+So let's build something even more fun.
+
+790
+00:33:17,000 --> 00:33:18,640
+So we've got this JSON API.
+
+791
+00:33:18,640 --> 00:33:20,120
+What can we build on top of it?
+
+792
+00:33:20,120 --> 00:33:24,080
+And again, I'm going to return to Glitch for this
+
+793
+00:33:24,080 --> 00:33:28,320
+because Glitch is such a great rapid prototyping environment.
+
+794
+00:33:28,320 --> 00:33:31,520
+So what we've got here is an autocomplete search engine
+
+795
+00:33:31,520 --> 00:33:33,200
+running against PyPI.
+
+796
+00:33:33,200 --> 00:33:37,080
+If I start typing Django, there we go.
+
+797
+00:33:37,080 --> 00:33:39,280
+It's returning results.
+
+798
+00:33:39,280 --> 00:33:40,760
+I can do AWS.
+
+799
+00:33:40,760 --> 00:33:43,640
+And Troposphere comes back.
+
+800
+00:33:43,640 --> 00:33:45,200
+Oh, and this is kind of giving us
+
+801
+00:33:45,200 --> 00:33:47,440
+a clue as to why we're getting different results come back
+
+802
+00:33:47,440 --> 00:33:48,680
+at the top.
+
+803
+00:33:48,680 --> 00:33:53,560
+It's a straightforward, what's it called, TF-IDF style search.
+
+804
+00:33:53,560 --> 00:33:56,960
+So AWS is mentioned, it turns out,
+
+805
+00:33:56,960 --> 00:33:59,040
+50 times in the description of this thing
+
+806
+00:33:59,040 --> 00:34:01,600
+because it's got all of these different resource
+
+807
+00:34:01,600 --> 00:34:03,160
+supports and so forth.
+
+808
+00:34:03,160 --> 00:34:06,400
+But the implementation of this is kind of fun.
+
+809
+00:34:06,400 --> 00:34:10,280
+What I'm going to do is I'll show you this in the Dataset
+
+810
+00:34:10,280 --> 00:34:13,040
+SQL environment first.
+
+811
+00:34:13,040 --> 00:34:14,500
+So what I've actually done here is
+
+812
+00:34:14,500 --> 00:34:17,880
+I've composed a custom SQL query for the feature
+
+813
+00:34:17,880 --> 00:34:18,880
+that we want to build.
+
+814
+00:34:18,880 --> 00:34:21,600
+So I'm saying select packages.rank, packages name,
+
+815
+00:34:21,600 --> 00:34:26,480
+packages summary from packages, join packages FTS,
+
+816
+00:34:26,480 --> 00:34:28,440
+where packages FTS match search.
+
+817
+00:34:28,440 --> 00:34:31,120
+This is how SQLite's built-in search engine works.
+
+818
+00:34:31,120 --> 00:34:34,920
+It creates a second table called the name of your table,
+
+819
+00:34:34,920 --> 00:34:38,560
+underscore FTS, and it lets you then join against that table
+
+820
+00:34:38,560 --> 00:34:40,720
+to run full-text search commands.
+
+821
+00:34:40,720 --> 00:34:42,360
+Another fun detail here is because I've
+
+822
+00:34:42,360 --> 00:34:46,240
+got colon search in my SQL query,
+
+823
+00:34:46,240 --> 00:34:49,040
+Dataset's smart enough to spot that and pull it out
+
+824
+00:34:49,040 --> 00:34:50,640
+and turn it into a form field.
+
+825
+00:34:50,640 --> 00:34:53,780
+So here I've got a quick interface
+
+826
+00:34:53,780 --> 00:35:00,880
+for starting to play around with this SQL query.
+
+827
+00:35:00,880 --> 00:35:02,440
+Really neat detail here is it means
+
+828
+00:35:02,440 --> 00:35:05,440
+you can build entirely new applications by writing
+
+829
+00:35:05,440 --> 00:35:07,880
+some SQL and then sending the link to somebody else.
+
+830
+00:35:07,880 --> 00:35:10,220
+I can literally paste this link into an email,
+
+831
+00:35:10,220 --> 00:35:11,680
+and if somebody clicks on it, they'll
+
+832
+00:35:11,680 --> 00:35:14,840
+be able to start interacting with whatever SQL query it
+
+833
+00:35:14,840 --> 00:35:16,520
+is I just came up with.
+
+834
+00:35:16,520 --> 00:35:19,320
+So there's that query.
+
+835
+00:35:19,320 --> 00:35:20,720
+I click Get as JSON.
+
+836
+00:35:20,720 --> 00:35:22,720
+I'm getting it back as JSON data.
+
+837
+00:35:22,720 --> 00:35:26,880
+And so if we look at the autocomplete implementation
+
+838
+00:35:26,880 --> 00:35:30,720
+here, this is an HTML file with a little bit of JavaScript
+
+839
+00:35:30,720 --> 00:35:31,220
+in it.
+
+840
+00:35:31,220 --> 00:35:34,020
+JavaScript literally assembles SQL
+
+841
+00:35:34,020 --> 00:35:37,060
+in a JavaScript backtick string, which
+
+842
+00:35:37,060 --> 00:35:42,300
+is the JavaScript equivalent of f-strings.
+
+843
+00:35:42,300 --> 00:35:43,580
+I love this.
+
+844
+00:35:43,580 --> 00:35:47,660
+I think there's something very subversive about embedding
+
+845
+00:35:47,660 --> 00:35:49,140
+SQL directly in JavaScript.
+
+846
+00:35:49,140 --> 00:35:53,060
+I've been trying to upset people at work with this quite a bit.
+
+847
+00:35:53,060 --> 00:35:54,060
+But it works, right?
+
+848
+00:35:54,060 --> 00:35:56,540
+And so this is assembling that.
+
+849
+00:35:56,540 --> 00:35:59,900
+I'm adding a little bit of code to do this syntax highlighting.
+
+850
+00:35:59,900 --> 00:36:02,340
+I've got a onKeyUp on the search box,
+
+851
+00:36:02,340 --> 00:36:04,100
+which runs the searches.
+
+852
+00:36:04,100 --> 00:36:08,020
+This is entirely like raw vanilla JavaScript.
+
+853
+00:36:08,020 --> 00:36:09,820
+There's no libraries or anything in here.
+
+854
+00:36:09,820 --> 00:36:11,540
+All of the work is done by a fetch.
+
+855
+00:36:11,540 --> 00:36:14,860
+I do a fetch against that URL, and then I decode the JSON,
+
+856
+00:36:14,860 --> 00:36:18,940
+and then I use innerHTML to create the search results.
+
+857
+00:36:18,940 --> 00:36:23,540
+Literally, this entire thing is, what, 100 lines of code,
+
+858
+00:36:23,540 --> 00:36:25,500
+and that's the full implementation for a very
+
+859
+00:36:25,500 --> 00:36:27,980
+snappy autocomplete.
+
+860
+00:36:28,020 --> 00:36:29,380
+The performance you get from this
+
+861
+00:36:29,380 --> 00:36:34,380
+is pretty decent, partly because it's SQLite on the server,
+
+862
+00:36:34,380 --> 00:36:36,340
+partly because there's very little bytes on the wire
+
+863
+00:36:36,340 --> 00:36:37,500
+for this.
+
+864
+00:36:37,500 --> 00:36:40,540
+I've been having a lot of fun building all kinds
+
+865
+00:36:40,540 --> 00:36:42,460
+of little prototypes like this.
+
+866
+00:36:42,460 --> 00:36:44,500
+Because once you've got SQL in your JavaScript,
+
+867
+00:36:44,500 --> 00:36:47,660
+it turns out you can knock out some really exciting complex
+
+868
+00:36:47,660 --> 00:36:52,100
+projects with very little invested effort.
+
+869
+00:36:52,100 --> 00:36:55,900
+And I've got an article I wrote in December
+
+870
+00:36:55,900 --> 00:36:58,100
+that more or less describes this technique in more detail
+
+871
+00:36:58,100 --> 00:36:59,940
+if you want to really get into the guts of how
+
+872
+00:36:59,940 --> 00:37:01,860
+all of that worked.
+
+873
+00:37:01,860 --> 00:37:04,620
+So I wanted to show you a few other interesting projects
+
+874
+00:37:04,620 --> 00:37:08,340
+that myself and other people have built on top of Dataset.
+
+875
+00:37:08,340 --> 00:37:11,860
+The first one, this is some sort of freelance data journalism
+
+876
+00:37:11,860 --> 00:37:13,980
+I did last August.
+
+877
+00:37:13,980 --> 00:37:17,900
+So the Russian IRA, the Internet Research Agency,
+
+878
+00:37:17,900 --> 00:37:19,860
+are this mysterious group in Russia
+
+879
+00:37:19,860 --> 00:37:22,020
+who've been buying Facebook ads to promote
+
+880
+00:37:22,020 --> 00:37:23,940
+various political causes.
+
+881
+00:37:23,940 --> 00:37:26,900
+And the House Intelligence Committee
+
+882
+00:37:26,900 --> 00:37:30,460
+got hold of all of the ads that they had placed
+
+883
+00:37:30,460 --> 00:37:32,060
+and then made them available for people
+
+884
+00:37:32,060 --> 00:37:33,980
+to download, which is super exciting,
+
+885
+00:37:33,980 --> 00:37:36,420
+except they made them available as a bunch of zip files
+
+886
+00:37:36,420 --> 00:37:40,500
+of zipped up PDF files, which is not quite so exciting.
+
+887
+00:37:40,500 --> 00:37:44,260
+But this chap called Ed Summers took those PDF files,
+
+888
+00:37:44,260 --> 00:37:47,900
+wrote some genius code on top of Tesseract OCR,
+
+889
+00:37:47,900 --> 00:37:50,260
+and turned them all into JSON.
+
+890
+00:37:50,260 --> 00:37:51,340
+And actually, you know what?
+
+891
+00:37:51,340 --> 00:37:54,380
+I'll show you his project for this just quickly,
+
+892
+00:37:54,380 --> 00:37:57,100
+because it's kind of amazing.
+
+893
+00:37:57,100 --> 00:37:57,620
+Here we go.
+
+894
+00:37:57,620 --> 00:38:00,300
+He has a GitHub repository, which you should check out.
+
+895
+00:38:00,300 --> 00:38:03,060
+It uses Tesseract OCR, takes those PDFs,
+
+896
+00:38:03,060 --> 00:38:07,100
+and turns them into a beautifully constructed set
+
+897
+00:38:07,100 --> 00:38:11,300
+of JSON.
+
+898
+00:38:11,300 --> 00:38:12,980
+So I took that JSON, and I used it
+
+899
+00:38:12,980 --> 00:38:16,500
+to build a Dataset instance that lets you search through the ads
+
+900
+00:38:16,500 --> 00:38:18,180
+that the Russians were placing.
+
+901
+00:38:18,180 --> 00:38:20,620
+And so let's search for cops as an example.
+
+902
+00:38:20,620 --> 00:38:23,660
+If I search for the word cops, I get back.
+
+903
+00:38:23,660 --> 00:38:26,180
+These are ads that the Russians paid for in cops.
+
+904
+00:38:26,180 --> 00:38:30,940
+I can sort by the amount of US dollars that they spent on this.
+
+905
+00:38:30,940 --> 00:38:35,140
+So they spent $215 on this ad here.
+
+906
+00:38:35,140 --> 00:38:37,700
+But you also get the targeting information from Facebook.
+
+907
+00:38:37,700 --> 00:38:42,780
+So they were targeting this at people who are age 18 to 65.
+
+908
+00:38:42,780 --> 00:38:44,460
+That one's not particularly exciting.
+
+909
+00:38:44,460 --> 00:38:45,940
+But the really creepy stuff is when
+
+910
+00:38:45,940 --> 00:38:48,460
+you look at things like the most frequent targets
+
+911
+00:38:48,460 --> 00:38:49,980
+that they were going after.
+
+912
+00:38:50,460 --> 00:38:53,540
+It's people who match interest, Martin Luther King,
+
+913
+00:38:53,540 --> 00:38:55,320
+African-American history, and so forth.
+
+914
+00:38:55,320 --> 00:38:57,340
+The Russians were deliberately targeting
+
+915
+00:38:57,340 --> 00:38:59,540
+the African-American voting segment
+
+916
+00:38:59,540 --> 00:39:02,220
+with all kinds of messaging.
+
+917
+00:39:02,220 --> 00:39:05,420
+It's kind of fascinating to dig into this data.
+
+918
+00:39:05,420 --> 00:39:07,660
+But it's also, this is exactly the kind of thing
+
+919
+00:39:07,660 --> 00:39:09,620
+I want Datasets to be used for, is
+
+920
+00:39:09,620 --> 00:39:14,420
+taking these initially sort of obtuse binary blobs of PDF
+
+921
+00:39:14,420 --> 00:39:16,740
+files and then turning them into an interactive experience
+
+922
+00:39:16,740 --> 00:39:19,140
+where people can actually start diving through
+
+923
+00:39:19,140 --> 00:39:22,580
+and investigating that data themselves.
+
+924
+00:39:22,580 --> 00:39:25,340
+The other project I wanted to show you is I built Dataset
+
+925
+00:39:25,340 --> 00:39:26,940
+hoping the newspapers would use it.
+
+926
+00:39:26,940 --> 00:39:28,380
+At least one newspaper has.
+
+927
+00:39:28,380 --> 00:39:30,300
+This is the Baltimore Sun.
+
+928
+00:39:30,300 --> 00:39:31,820
+Carl Johnson at the Baltimore Sun
+
+929
+00:39:31,820 --> 00:39:36,620
+used it to publish the salary information of everyone
+
+930
+00:39:36,620 --> 00:39:39,420
+employed by the state of Maryland.
+
+931
+00:39:39,420 --> 00:39:41,580
+And so you can see the, this one's quite fun,
+
+932
+00:39:41,580 --> 00:39:44,260
+you can see the highest paid person for each organizer.
+
+933
+00:39:44,260 --> 00:39:46,380
+People will not be surprised to see that the football
+
+934
+00:39:46,380 --> 00:39:47,920
+coach at the University of Maryland
+
+935
+00:39:47,920 --> 00:39:50,320
+is the highest paid person in the entire state
+
+936
+00:39:50,320 --> 00:39:52,080
+by the state government.
+
+937
+00:39:52,080 --> 00:39:53,040
+But this is great, right?
+
+938
+00:39:53,040 --> 00:39:55,800
+This is a newspaper used by software.
+
+939
+00:39:55,800 --> 00:39:57,820
+They used the theming and the templates
+
+940
+00:39:57,820 --> 00:40:00,720
+to put their own color scheme interface on the top.
+
+941
+00:40:00,720 --> 00:40:03,480
+And they used it to publish data of interest to the public.
+
+942
+00:40:03,480 --> 00:40:07,040
+And I believe they're hosting this entire thing on a T2 micro
+
+943
+00:40:07,040 --> 00:40:09,400
+because it turns out Python and SQLite,
+
+944
+00:40:09,400 --> 00:40:10,880
+like SQLite runs on a watch.
+
+945
+00:40:10,880 --> 00:40:12,560
+It doesn't need a lot of resources
+
+946
+00:40:12,560 --> 00:40:13,920
+to produce really good results.
+
+947
+00:40:18,120 --> 00:40:21,000
+So I'm going to move to questions in a second.
+
+948
+00:40:21,000 --> 00:40:22,640
+But I have a call to action first,
+
+949
+00:40:22,640 --> 00:40:24,680
+which is that it turns out the world is completely
+
+950
+00:40:24,680 --> 00:40:26,520
+full of interesting data.
+
+951
+00:40:26,520 --> 00:40:29,640
+I want people to publish it in the most useful way possible.
+
+952
+00:40:29,640 --> 00:40:32,640
+So if you have data, please take a look at Dataset.
+
+953
+00:40:32,640 --> 00:40:37,040
+If you're interested in working with me on this open source
+
+954
+00:40:37,040 --> 00:40:39,880
+project, I'm very keen on getting more plug-ins,
+
+955
+00:40:39,880 --> 00:40:43,060
+getting more publishing options to different hosting providers.
+
+956
+00:40:43,060 --> 00:40:46,560
+I'm trying to figure out Amazon Lambda at the moment, which
+
+957
+00:40:46,560 --> 00:40:48,480
+is difficult because they decided
+
+958
+00:40:48,480 --> 00:40:50,760
+that SQLite was not a useful module
+
+959
+00:40:50,760 --> 00:40:53,080
+and didn't include it in their Python distribution.
+
+960
+00:40:53,080 --> 00:40:55,160
+But there's a lot of scope, I think,
+
+961
+00:40:55,160 --> 00:40:58,920
+for developing this project in all kinds of interesting ways.
+
+962
+00:40:58,920 --> 00:41:00,000
+So thank you very much.
+
+963
+00:41:00,000 --> 00:41:00,500
+Thank you.
+
+964
+00:41:00,500 --> 00:41:01,000
+Thank you.
+
+965
+00:41:01,000 --> 00:41:01,500
+Thank you.
+
+966
+00:41:01,500 --> 00:41:02,000
+Thank you.
+
+967
+00:41:02,000 --> 00:41:02,500
+Thank you.
+
+968
+00:41:02,500 --> 00:41:03,000
+Thank you.
+
+969
+00:41:03,000 --> 00:41:03,500
+Thank you.
+
+970
+00:41:03,500 --> 00:41:04,000
+Thank you.
+
+971
+00:41:04,000 --> 00:41:04,500
+Thank you.
+
+972
+00:41:04,500 --> 00:41:05,000
+Thank you.
+
+973
+00:41:05,000 --> 00:41:05,500
+Thank you.
+
+974
+00:41:05,500 --> 00:41:06,000
+Thank you.
+
+975
+00:41:06,000 --> 00:41:06,500
+Thank you.
+
+976
+00:41:06,500 --> 00:41:07,000
+Thank you.
+
+977
+00:41:07,000 --> 00:41:07,500
+Thank you.
+
+978
+00:41:07,500 --> 00:41:09,000
+Thank you.
+
+979
+00:41:09,000 --> 00:41:10,000
+OK, thank you, Simon.
+
+980
+00:41:10,000 --> 00:41:11,960
+We have about five minutes left for questions.
+
+981
+00:41:11,960 --> 00:41:13,420
+So if anyone would like to have a question,
+
+982
+00:41:13,420 --> 00:41:14,380
+please come to the mic.
+
+983
+00:41:14,380 --> 00:41:16,660
+And we'll be able to get that started.
+
+984
+00:41:24,540 --> 00:41:28,220
+You stated early on that, first of all, thank you so very much.
+
+985
+00:41:28,220 --> 00:41:33,380
+This was very enlightening for what you can do with data.
+
+986
+00:41:33,380 --> 00:41:38,020
+Early on, you stated that because of your description
+
+987
+00:41:38,020 --> 00:41:40,140
+of serverless as it can scale to zero
+
+988
+00:41:40,140 --> 00:41:44,600
+and SQLite being in read-only mode
+
+989
+00:41:44,600 --> 00:41:47,020
+eliminates the problems that it comes with,
+
+990
+00:41:47,020 --> 00:41:50,800
+you can inherently scale that as well.
+
+991
+00:41:50,800 --> 00:41:55,020
+How is Dataset Deploy shipping the databases with it?
+
+992
+00:41:55,020 --> 00:41:57,100
+Are you shipping to two different areas that
+
+993
+00:41:57,100 --> 00:41:58,340
+can scale on their own?
+
+994
+00:41:58,340 --> 00:42:00,100
+Or is it each building a database?
+
+995
+00:42:00,100 --> 00:42:00,780
+No, not at all.
+
+996
+00:42:00,780 --> 00:42:04,060
+I create a Docker container with the Dataset app in it
+
+997
+00:42:04,060 --> 00:42:06,340
+and the SQLite database just in the container,
+
+998
+00:42:06,340 --> 00:42:07,380
+and I ship that.
+
+999
+00:42:07,380 --> 00:42:08,980
+And that's been working really well.
+
+1000
+00:42:08,980 --> 00:42:10,420
+It has size constraints.
+
+1001
+00:42:10,420 --> 00:42:13,460
+Once you get to a 2 gigabyte SQLite database,
+
+1002
+00:42:13,460 --> 00:42:14,980
+that's a Docker container which is not
+
+1003
+00:42:14,980 --> 00:42:16,500
+going to boot up very quickly.
+
+1004
+00:42:16,500 --> 00:42:18,780
+So I'm very interested in looking
+
+1005
+00:42:18,780 --> 00:42:22,020
+at providers that let you mount a persistent volume just
+
+1006
+00:42:22,020 --> 00:42:23,780
+so I can store a 2 gigabyte database
+
+1007
+00:42:23,780 --> 00:42:25,260
+and not have to worry about it.
+
+1008
+00:42:25,260 --> 00:42:28,620
+But the technical size limit of SQLite is 140 terabytes,
+
+1009
+00:42:28,620 --> 00:42:31,660
+so I'm not expecting to run into any constraints on that
+
+1010
+00:42:31,660 --> 00:42:32,340
+anytime soon.
+
+1011
+00:42:39,020 --> 00:42:40,380
+Anyone else for questions?
+
+1012
+00:42:44,900 --> 00:42:45,860
+I guess that's it.
+
+1013
+00:42:45,860 --> 00:42:46,460
+Oh, thank you.
+
+1014
+00:42:46,460 --> 00:42:48,020
+Thank you.
+

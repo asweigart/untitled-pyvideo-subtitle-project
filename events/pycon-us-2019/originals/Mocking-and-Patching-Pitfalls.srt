@@ -1,0 +1,2056 @@
+1
+00:00:00,000 --> 00:00:04,400
+or got accepted, kind of realized I probably should have spent some more time on the title.
+
+2
+00:00:04,400 --> 00:00:08,720
+And so I actually thought of a lot of other titles and thought I would start out by sharing
+
+3
+00:00:08,720 --> 00:00:14,880
+some of those with you.
+
+4
+00:00:14,880 --> 00:00:19,800
+So all those titles I think are appropriate in their own different ways.
+
+5
+00:00:19,800 --> 00:00:25,720
+I think one of my favorite ones is People's History of Mocking because this is going to
+
+6
+00:00:25,920 --> 00:00:32,040
+be a technical talk but it's also partly kind of a story about some observations I've made
+
+7
+00:00:32,040 --> 00:00:35,960
+on the way people use mocks in real life.
+
+8
+00:00:35,960 --> 00:00:41,320
+So this talk is going to be full of opinions and speculation and it's also going to be
+
+9
+00:00:41,320 --> 00:00:45,200
+very biased if it's not yet obvious from those titles.
+
+10
+00:00:45,200 --> 00:00:50,240
+So I'm hoping it'll just at least spark some conversations and make you think about different
+
+11
+00:00:50,240 --> 00:00:55,840
+ways of using mock or reconsider how you're using mock in patching your projects.
+
+12
+00:00:55,840 --> 00:01:00,720
+But the final title I wanted was Mock Hell and it just didn't happen to make it into
+
+13
+00:01:00,720 --> 00:01:02,840
+the program.
+
+14
+00:01:02,840 --> 00:01:09,080
+And that title is actually based on a comment a coworker of mine had once made where she
+
+15
+00:01:09,080 --> 00:01:12,960
+said I am in Mock Hell.
+
+16
+00:01:12,960 --> 00:01:18,640
+So I'm a staff software engineer at QUID working on a platform.
+
+17
+00:01:18,840 --> 00:01:23,720
+What QUID does is provide tools for understanding large amounts of unstructured text.
+
+18
+00:01:23,720 --> 00:01:29,280
+So what you see up here is a visualization which shows the clustering of discussions
+
+19
+00:01:29,280 --> 00:01:34,160
+around the future of air travel and that's based on I believe it's data sources from
+
+20
+00:01:34,160 --> 00:01:37,480
+public news and blogs.
+
+21
+00:01:37,480 --> 00:01:41,920
+So on my day-to-day I work on a mix of data engineering and microservices.
+
+22
+00:01:41,920 --> 00:01:50,720
+What that means is I do 99% Python, also Flask and then a little bit of Scala and Java occasionally.
+
+23
+00:01:50,720 --> 00:01:53,040
+I'm also a relative newcomer to Python.
+
+24
+00:01:53,040 --> 00:01:56,760
+It's actually the fourth language I learned and I've only been doing it about four or
+
+25
+00:01:56,760 --> 00:01:59,800
+five years professionally.
+
+26
+00:01:59,800 --> 00:02:05,240
+Before that I did a ton of C++ and a little bit of Java and C sharp.
+
+27
+00:02:05,240 --> 00:02:11,280
+And I think that kind of background working with statically compiled languages creates
+
+28
+00:02:11,320 --> 00:02:16,640
+a different sort of perspective around software design and testing and I'm hoping to share
+
+29
+00:02:16,640 --> 00:02:20,560
+some of those ideas here.
+
+30
+00:02:20,560 --> 00:02:27,040
+So who you might be, this talk is going to be more of an intermediate to advanced talk.
+
+31
+00:02:27,040 --> 00:02:30,440
+So you should have at least used mocking or patching before.
+
+32
+00:02:30,440 --> 00:02:36,400
+If you haven't, I think you can still learn some things and follow along.
+
+33
+00:02:36,400 --> 00:02:41,400
+Maybe you're somebody who uses the mocking patch APIs regularly but you're not sure exactly
+
+34
+00:02:41,400 --> 00:02:44,880
+why it's painful or why it causes you problems sometimes.
+
+35
+00:02:44,880 --> 00:02:50,440
+Or maybe you're just really comfortable with mock but you want to learn more about different
+
+36
+00:02:50,440 --> 00:02:54,960
+options and opinions on the way that they can be used.
+
+37
+00:02:54,960 --> 00:02:59,320
+Some of the things you might learn or what are the different styles of unit testing or
+
+38
+00:02:59,320 --> 00:03:01,700
+different styles of TDD.
+
+39
+00:03:01,700 --> 00:03:04,480
+Where did mocks actually come from?
+
+40
+00:03:04,640 --> 00:03:07,040
+What are some alternatives to mocking?
+
+41
+00:03:07,040 --> 00:03:10,560
+What are some anti-patterns of mocking and patching?
+
+42
+00:03:10,560 --> 00:03:16,240
+And what is the relationship between mocking and good design?
+
+43
+00:03:16,240 --> 00:03:26,000
+So just like Dante had nine circles of progressive hell, there's progressive levels of mock hell.
+
+44
+00:03:26,000 --> 00:03:28,880
+And this is what I would personally consider mock hell.
+
+45
+00:03:28,880 --> 00:03:32,520
+So right at the entrance you have complex patch targets.
+
+46
+00:03:32,560 --> 00:03:37,160
+I think that's something everybody deals with and you just learn how to do it.
+
+47
+00:03:37,160 --> 00:03:40,600
+And it's not the worst thing but it is confusing.
+
+48
+00:03:40,600 --> 00:03:43,800
+Where things get really bad is when you get to the bottom.
+
+49
+00:03:43,800 --> 00:03:49,160
+And the worst case scenarios for me are situations where I end up having to use the debugger
+
+50
+00:03:49,160 --> 00:03:53,280
+to reverse engineer the mocks and the tests.
+
+51
+00:03:53,280 --> 00:03:56,800
+Or when there's just so much mocking that I don't even want to refactor the code because
+
+52
+00:03:56,800 --> 00:04:03,200
+it's going to result in changes across dozens and dozens of lines of code or files and so on.
+
+53
+00:04:03,200 --> 00:04:07,040
+So that's a scenario where the mocks are actually technical debt.
+
+54
+00:04:09,840 --> 00:04:14,600
+So after running in this kind of issue over and over again in code, I began to ask myself
+
+55
+00:04:14,600 --> 00:04:21,160
+this question of, you know, why are developers ending up with these problems all the time?
+
+56
+00:04:21,160 --> 00:04:22,680
+And how are they learning about mocks?
+
+57
+00:04:23,640 --> 00:04:27,880
+Because when I wrote my own code I would rarely use mocks or patches.
+
+58
+00:04:27,880 --> 00:04:31,040
+And when I did I wouldn't have all these kinds of issues.
+
+59
+00:04:31,040 --> 00:04:34,800
+So I started reading a lot of books and blogs and just trying to figure this out.
+
+60
+00:04:37,720 --> 00:04:43,600
+And so I think when it comes to learning about mocks, what happens is that people go out
+
+61
+00:04:43,600 --> 00:04:49,480
+and they look at a blog or they look at a book or watch some videos and then they learn this.
+
+62
+00:04:49,520 --> 00:04:53,160
+Mock is this really cool library used to isolate code for testing.
+
+63
+00:04:53,160 --> 00:04:58,520
+Here's how you use magicmock, patch, spec, auto-spec, side-effect, and all those things.
+
+64
+00:04:58,520 --> 00:05:01,560
+And then there's some warning about patching being tricky.
+
+65
+00:05:01,560 --> 00:05:04,400
+You have to make sure you target the right name space.
+
+66
+00:05:04,400 --> 00:05:07,560
+And then there's typically some kind of example like this.
+
+67
+00:05:07,560 --> 00:05:13,000
+So you have some code under test, my module, and that uses some other module called db
+
+68
+00:05:13,000 --> 00:05:15,320
+and a function db read.
+
+69
+00:05:15,320 --> 00:05:17,560
+The code under test is this total value function.
+
+70
+00:05:17,600 --> 00:05:24,920
+And all it's going to do is pull a list of values based on some item ID and sum them up
+
+71
+00:05:24,920 --> 00:05:27,600
+and return them.
+
+72
+00:05:27,600 --> 00:05:31,160
+And so here's a typical example of, pretty straightforward example
+
+73
+00:05:31,160 --> 00:05:33,440
+of how you'd use mock and patch.
+
+74
+00:05:33,440 --> 00:05:37,680
+So in this total value function or test total value function,
+
+75
+00:05:37,680 --> 00:05:43,560
+first thing you do is you apply a patch around my module.db read that substitutes in this mock,
+
+76
+00:05:43,560 --> 00:05:45,840
+which I'm also calling db read here.
+
+77
+00:05:45,880 --> 00:05:51,080
+And the first line of the actual test, you set up a can value to be returned.
+
+78
+00:05:51,080 --> 00:05:54,640
+You execute the code and assert on the return value.
+
+79
+00:05:54,640 --> 00:06:01,400
+And then finally, you assert on the side effects or the interaction with this db read function.
+
+80
+00:06:01,400 --> 00:06:06,160
+So if I draw that as a picture, this is kind of how I think about it.
+
+81
+00:06:06,160 --> 00:06:11,440
+So you've got total value in db read and then the external database in white.
+
+82
+00:06:11,440 --> 00:06:13,480
+You write your test.
+
+83
+00:06:13,520 --> 00:06:17,640
+That test sets up a patch around that db read function.
+
+84
+00:06:17,640 --> 00:06:23,400
+You substitute in a mock, runs the actual total value function,
+
+85
+00:06:23,400 --> 00:06:25,960
+asserts on the results, and then asserts on the interaction.
+
+86
+00:06:28,520 --> 00:06:33,760
+So the next thing that might happen is you might take that knowledge and go off and try
+
+87
+00:06:33,760 --> 00:06:35,720
+to apply it to a real problem.
+
+88
+00:06:35,720 --> 00:06:40,520
+And so I picked up a sort of simple example that's a little bit more realistic.
+
+89
+00:06:40,560 --> 00:06:42,880
+So the code is going to be a little bit more dense,
+
+90
+00:06:42,880 --> 00:06:45,800
+but that example is called the Guardian Feed.
+
+91
+00:06:45,800 --> 00:06:49,840
+And the Guardian is an English news website, and they also provide a REST API
+
+92
+00:06:49,840 --> 00:06:53,440
+that lets you search their entire database of articles.
+
+93
+00:06:53,440 --> 00:06:57,840
+So the hypothetical problem here is given some topic of interest like Brexit.
+
+94
+00:07:01,080 --> 00:07:05,400
+Find all the relevant articles from a particular time period and feed those article URLs
+
+95
+00:07:05,400 --> 00:07:09,360
+to a web scraper service so you can get all the content.
+
+96
+00:07:09,760 --> 00:07:11,320
+The REST API is pretty straightforward.
+
+97
+00:07:11,320 --> 00:07:15,840
+You just get on a search route and then there's some parameters in the query string
+
+98
+00:07:15,840 --> 00:07:20,600
+to configure the date range, also a page number that you want to get
+
+99
+00:07:20,600 --> 00:07:25,720
+because there might be multiple pages of results, your actual query string, and an API key.
+
+100
+00:07:27,160 --> 00:07:29,440
+And this is what the response looks like.
+
+101
+00:07:29,440 --> 00:07:34,320
+The important parts here are that there's just a response blob.
+
+102
+00:07:34,320 --> 00:07:38,720
+It has a current page number to tell you which page you're on, the total number of pages
+
+103
+00:07:38,760 --> 00:07:45,320
+for that search query, and then finally a results array where each element
+
+104
+00:07:45,320 --> 00:07:48,400
+of that results array is going to have this web URL field.
+
+105
+00:07:48,400 --> 00:07:53,720
+And that's the field that you want to pull and provide to the scraper.
+
+106
+00:07:56,160 --> 00:07:57,280
+Here's the main program.
+
+107
+00:07:57,280 --> 00:07:58,200
+It's pretty straightforward.
+
+108
+00:07:58,200 --> 00:08:00,560
+You just construct your feed with your query and then you run it.
+
+109
+00:08:02,000 --> 00:08:04,000
+And then there's, here's the feed class.
+
+110
+00:08:04,000 --> 00:08:05,200
+There's only three functions.
+
+111
+00:08:05,720 --> 00:08:10,520
+It's a lot of code, so I've kind of broken it down with attend code folder.
+
+112
+00:08:11,800 --> 00:08:12,840
+So here's the constructor.
+
+113
+00:08:12,840 --> 00:08:18,760
+It takes a query, a parameter for the page size, which is the number of results per page,
+
+114
+00:08:18,760 --> 00:08:23,360
+the date range you want to search over, and then finally the host name for the Redist host,
+
+115
+00:08:23,360 --> 00:08:27,080
+which is where we're going to push all those URLs to.
+
+116
+00:08:27,080 --> 00:08:31,480
+So the constructor just sets some internal parameters.
+
+117
+00:08:31,520 --> 00:08:33,280
+And then in the last two lines of the constructor,
+
+118
+00:08:33,280 --> 00:08:37,640
+it actually constructs a Redist connection and then a request session,
+
+119
+00:08:37,640 --> 00:08:42,000
+which is going to hang on to a connection pool for the repeated requests that we make to this API.
+
+120
+00:08:44,720 --> 00:08:50,800
+The format request function is basically just taking all those parameters and a page number,
+
+121
+00:08:50,800 --> 00:08:55,560
+and it's going to build up a request HTTP get message.
+
+122
+00:08:55,560 --> 00:08:59,120
+And so that's what you see in the last line of this function,
+
+123
+00:08:59,160 --> 00:09:00,960
+where it's calling request.prepare.
+
+124
+00:09:04,040 --> 00:09:06,400
+And then finally here's the run function.
+
+125
+00:09:06,400 --> 00:09:09,880
+This is where all the work actually happens.
+
+126
+00:09:11,000 --> 00:09:18,800
+So this while loop is just iterating until it gets all the pages for that search query.
+
+127
+00:09:18,800 --> 00:09:23,480
+So the first two lines of that body are just sending, they're just formatting a request,
+
+128
+00:09:23,480 --> 00:09:24,720
+and then sending it off to the guardian.
+
+129
+00:09:25,680 --> 00:09:30,400
+And the next chunk there is just parsing the response to get that results field.
+
+130
+00:09:30,400 --> 00:09:38,600
+And then the very last chunk is just parsing the web URL field from each element of results
+
+131
+00:09:38,600 --> 00:09:41,000
+and then pushing it to Redis.
+
+132
+00:09:41,000 --> 00:09:45,600
+The syntax in that last chunk is a little bit strange just because I needed to fit everything
+
+133
+00:09:45,600 --> 00:09:46,600
+onto a single slide.
+
+134
+00:09:49,200 --> 00:09:52,000
+OK, so if I was going to draw that as a picture, I might look like this.
+
+135
+00:09:52,000 --> 00:09:53,600
+I've got the tests. I've got the feed.
+
+136
+00:09:53,680 --> 00:09:57,560
+I've got request session, request requests, and Redis.pi.
+
+137
+00:09:57,560 --> 00:09:59,000
+Then my external system is in white.
+
+138
+00:10:00,320 --> 00:10:05,840
+So if I follow the same pattern that we just looked at, I want to apply my patches around
+
+139
+00:10:05,840 --> 00:10:09,600
+these dependencies to isolate my feed class.
+
+140
+00:10:09,600 --> 00:10:13,400
+Then I'm going to sub in a mock, run the test.
+
+141
+00:10:13,400 --> 00:10:17,880
+And there's no return value here, so I'm just going to assert on the interactions or side
+
+142
+00:10:17,880 --> 00:10:19,880
+effects of running that feed class.
+
+143
+00:10:20,880 --> 00:10:26,080
+So what that test might actually look like if you're writing it.
+
+144
+00:10:26,080 --> 00:10:30,880
+So we want to test this feed.run function, and we know we're going to need to pass these things.
+
+145
+00:10:30,880 --> 00:10:36,800
+The first thing we need to do is set up a return value for the response.
+
+146
+00:10:36,800 --> 00:10:41,280
+So this is just a fake response that's returning one page with two results.
+
+147
+00:10:41,280 --> 00:10:48,280
+After actually calling the run function, it should hit the request API as a side effect.
+
+148
+00:10:55,040 --> 00:10:57,800
+So then I'm going to make some assertions on those side effects.
+
+149
+00:10:57,800 --> 00:11:02,480
+So first thing I do is I assert that the prepare method was called.
+
+150
+00:11:02,480 --> 00:11:08,000
+Then I check that the request message was constructed correctly with the expected parameters
+
+151
+00:11:08,200 --> 00:11:12,200
+so that I wanted to make sure it's a get message.
+
+152
+00:11:12,200 --> 00:11:19,000
+It was using the correct guardian URL, and then I got the right parameters that I expected.
+
+153
+00:11:19,000 --> 00:11:22,680
+And I also want to assert on the redis call.
+
+154
+00:11:22,680 --> 00:11:27,480
+So I make sure it was constructed correctly, and then make sure it got called with those
+
+155
+00:11:27,480 --> 00:11:30,480
+two URLs that I would expect.
+
+156
+00:11:30,480 --> 00:11:37,480
+So that's a lot of code, and I think it's representative of what I would call mock hell.
+
+157
+00:11:43,680 --> 00:11:49,880
+And I think it's a fair thing to say that this is pretty heavily over-mocked and over-patched.
+
+158
+00:11:49,880 --> 00:11:56,880
+And so when I end up dealing with code like this on a much larger scale, this is kind
+
+159
+00:11:56,880 --> 00:11:58,480
+of the mood I get into.
+
+160
+00:11:58,480 --> 00:12:00,280
+And I feel kind of dazed.
+
+161
+00:12:00,280 --> 00:12:05,780
+I don't know what happened, and I don't know why the code is like that, and it gets kind
+
+162
+00:12:05,780 --> 00:12:07,480
+of tedious.
+
+163
+00:12:07,480 --> 00:12:13,320
+And that example is actually only probably like level four of mock hell.
+
+164
+00:12:13,320 --> 00:12:20,120
+The more complex examples are just too hard to explain in this kind of format.
+
+165
+00:12:20,120 --> 00:12:24,480
+So the question now is how do you fix something like that, or how do you avoid it?
+
+166
+00:12:25,480 --> 00:12:30,480
+But before getting to that, I think it's really helpful to be able to ask specific questions
+
+167
+00:12:30,480 --> 00:12:37,480
+that help you name problems in this code other than saying, oh, it's really maxine complex.
+
+168
+00:12:37,480 --> 00:12:40,480
+What do I do about it?
+
+169
+00:12:40,480 --> 00:12:46,480
+So the first question is how many marks do you think are in this code?
+
+170
+00:12:48,480 --> 00:12:51,480
+And just by show of hands, who thinks it's three?
+
+171
+00:12:52,480 --> 00:12:55,480
+Who thinks it's four?
+
+172
+00:12:55,480 --> 00:12:58,480
+And who thinks it's more than four?
+
+173
+00:12:59,480 --> 00:13:03,480
+OK, so I think we have a lot of people who know mock pretty well.
+
+174
+00:13:04,480 --> 00:13:12,480
+It's actually 11, and this is because of this deep mocking behavior of mock.
+
+175
+00:13:12,480 --> 00:13:19,480
+And it's kind of a mixed bag of being both a feature and a liability, because it will
+
+176
+00:13:19,480 --> 00:13:23,480
+automatically create another mock for you when you call an undefined method.
+
+177
+00:13:23,480 --> 00:13:29,480
+And that's nice for setting up your tests, but when you have a lot of them, it becomes very confusing.
+
+178
+00:13:31,480 --> 00:13:34,480
+So I've also highlighted all the lines of mock and patch.
+
+179
+00:13:37,480 --> 00:13:44,480
+And so the question when I see something like this that I have is, is this actually essential behavior
+
+180
+00:13:44,480 --> 00:13:47,480
+that my test should care about or should know about?
+
+181
+00:13:47,480 --> 00:13:49,480
+Or is it just implementation detail?
+
+182
+00:13:50,480 --> 00:13:53,480
+And I'm going to call it a couple things here.
+
+183
+00:13:55,480 --> 00:14:00,480
+This set of patch statements, is that really necessary information that the test needs to know about,
+
+184
+00:14:00,480 --> 00:14:07,480
+or is that just some kind of violation of an information hiding principle or encapsulation of the feed class?
+
+185
+00:14:10,480 --> 00:14:16,480
+These other lines, I think arguably you could claim that these things are a law of demeanor violation.
+
+186
+00:14:16,480 --> 00:14:23,480
+And so what that is, is some idea that comes out of objects or in design about chaining method calls
+
+187
+00:14:23,480 --> 00:14:27,480
+into an object's instance variables.
+
+188
+00:14:27,480 --> 00:14:34,480
+And the reason that's not a good thing is because it's very invasive, because you're reaching deep into an object hierarchy.
+
+189
+00:14:37,480 --> 00:14:43,480
+Another way to think about this is how can you trivially break this test with very harmless refactorings?
+
+190
+00:14:43,480 --> 00:14:48,480
+So what if you change imports on Redis from this to this?
+
+191
+00:14:49,480 --> 00:14:54,480
+So it's pretty innocent refactoring, but that's going to break your test at this patch.
+
+192
+00:14:57,480 --> 00:15:04,480
+Another example of that is what if you change this request constructor to use args instead of quarks?
+
+193
+00:15:05,480 --> 00:15:07,480
+So something like this.
+
+194
+00:15:08,480 --> 00:15:11,480
+It's going to break this particular mock statement.
+
+195
+00:15:13,480 --> 00:15:20,480
+So this is an example of a really brittle specification or something that's over verified, I think.
+
+196
+00:15:21,480 --> 00:15:26,480
+And there's multiple more examples for that particular code base I could show you.
+
+197
+00:15:27,480 --> 00:15:35,480
+So I think what's happening when people are learning about mock and patch is that they're missing the fine print.
+
+198
+00:15:35,480 --> 00:15:41,480
+And the fine print sometimes comes across as something like, oh, by the way,
+
+199
+00:15:47,480 --> 00:15:49,480
+I think my text isn't showing up.
+
+200
+00:15:53,480 --> 00:15:59,480
+So there's a bullet point up there that says four, and the fine print, so it really is fine print.
+
+201
+00:15:59,480 --> 00:16:05,480
+There's typically some advice that says, by the way, be careful about overmocking.
+
+202
+00:16:06,480 --> 00:16:13,480
+And I think that advice often comes in at the very end and it's an afterthought or it just gets ignored or it's not well understood.
+
+203
+00:16:15,480 --> 00:16:22,480
+And there's also a fifth bullet point on there called mocks aren't stubs, which I'll get to in another eventually slide.
+
+204
+00:16:23,480 --> 00:16:32,480
+So another thing I did was, before putting this deck together, was go watch every video I could find about mocking at previous PyCons.
+
+205
+00:16:33,480 --> 00:16:40,480
+And the reason was I wanted to make sure I wasn't just repeating existing information or saying anything crazy.
+
+206
+00:16:41,480 --> 00:16:47,480
+And I think for the most part it confirmed the pattern that I just saw about this fine print.
+
+207
+00:16:47,480 --> 00:16:53,480
+Last year there was a talk at PyCon Cleveland called demystifying the patch function.
+
+208
+00:16:53,480 --> 00:16:57,480
+And this is actually a good talk, especially if you're confused about how to use the patch API.
+
+209
+00:16:57,480 --> 00:17:02,480
+And I actually learned some things from it that I used in some of the following examples.
+
+210
+00:17:03,480 --> 00:17:10,480
+And I also want to say thank you to Lisa Roach, who gave this talk, because I asked her to take a look at my slides and offer some feedback,
+
+211
+00:17:10,480 --> 00:17:12,480
+and she was nice enough to do it.
+
+212
+00:17:12,480 --> 00:17:19,480
+So the only reason I'm picking on this particular talk is because it did happen in Cleveland and something really interesting happened in the Q&A.
+
+213
+00:17:19,480 --> 00:17:22,480
+So the first thing that happened in the Q&A was somebody came up and said,
+
+214
+00:17:22,480 --> 00:17:27,480
+hey, I've got all these problems with patches and maintenance and technical debt.
+
+215
+00:17:27,480 --> 00:17:29,480
+What do I do about it? Do you have any tips?
+
+216
+00:17:29,480 --> 00:17:33,480
+Advice was this, patches can definitely get out of hand.
+
+217
+00:17:33,480 --> 00:17:36,480
+You maybe need to look into why there is so much heavy mocking.
+
+218
+00:17:36,480 --> 00:17:38,480
+So this is a really good talk.
+
+219
+00:17:38,480 --> 00:17:41,480
+You may need to look into why there is so much heavy mocking.
+
+220
+00:17:41,480 --> 00:17:49,480
+So this by itself is not that interesting, other than the fact that it's an example of the fine print that I think often comes at the end.
+
+221
+00:17:50,480 --> 00:17:57,480
+The interesting part is what actually happens next, which is that somebody comes up to make a comment and ask a question.
+
+222
+00:17:57,480 --> 00:18:01,480
+And what they say is, hello, that was a really good talk.
+
+223
+00:18:01,480 --> 00:18:04,480
+I'm Michael Ford. I was the original author of Mock.
+
+224
+00:18:04,480 --> 00:18:09,480
+One thing I would say is that patches are a sign of failure.
+
+225
+00:18:13,480 --> 00:18:16,480
+The more you have to patch, the worse your code is.
+
+226
+00:18:18,480 --> 00:18:29,480
+So I think all that advice is spot on and it's right, but I also think it's unsatisfying in a way because it's very cryptic.
+
+227
+00:18:29,480 --> 00:18:37,480
+And if you're having problems with Mock, it's not really clear what you're supposed to do next to try and fix your problems.
+
+228
+00:18:37,480 --> 00:18:41,480
+So what I want to do is kind of dig in to what those things mean.
+
+229
+00:18:41,480 --> 00:18:44,480
+Like, what does it mean that patches are a sign of failure?
+
+230
+00:18:44,480 --> 00:18:47,480
+Or maybe you need to look into why there's so much heavy mocking.
+
+231
+00:18:49,480 --> 00:18:54,480
+So to do that, I think you need to look at this question of where did Mocks come from?
+
+232
+00:18:54,480 --> 00:19:04,480
+And really the idea behind mocking was that ideally there should be some kind of symbiotic relationship between your code and your tests,
+
+233
+00:19:04,480 --> 00:19:11,480
+where your tests are reflecting the quality of your code, which is a signal that you should go back and refactor it.
+
+234
+00:19:11,480 --> 00:19:14,480
+And then your code is determining what your tests look like.
+
+235
+00:19:14,480 --> 00:19:22,480
+Sometimes you'll hear that advice is this phrase called listening to your tests.
+
+236
+00:19:22,480 --> 00:19:30,480
+And where that phrase comes from is actually this book, Growing Object-Oriented Software, Guided by Tests, by Freeman and Price.
+
+237
+00:19:30,480 --> 00:19:33,480
+And these are the guys who actually invented mocking.
+
+238
+00:19:33,480 --> 00:19:39,480
+So if you go to Appendix A, they will actually tell you about the history of how they came up with the ideas
+
+239
+00:19:39,480 --> 00:19:47,480
+and how they were doing it in the context of doing extreme programming and TDD and object-oriented design in Java.
+
+240
+00:19:48,480 --> 00:19:53,480
+So you'll see the ideas in here referred to as mockist style.
+
+241
+00:19:53,480 --> 00:19:58,480
+Sometimes you'll also hear it referred to as a London-style TDD.
+
+242
+00:19:58,480 --> 00:20:04,480
+Before they published that book, they actually wrote this academic paper called Mock Rolls Not Objects.
+
+243
+00:20:04,480 --> 00:20:13,480
+I think the abstract has three really important points that are useful for understanding why people get into mock hell or have problems with mocks.
+
+244
+00:20:14,480 --> 00:20:22,480
+So the first two are that mock objects is an extension to test-driven development that supports good object-oriented design.
+
+245
+00:20:22,480 --> 00:20:33,480
+The third point they make is that it turns out to be less interesting as a technique for isolating tests than is widely thought.
+
+246
+00:20:33,480 --> 00:20:41,480
+And I think that's really important to understand because that's directly opposite of what you'll read if you go out
+
+247
+00:20:42,480 --> 00:20:51,480
+and you just find some blog post or something about how to use mock or why mock and patch exist.
+
+248
+00:20:53,480 --> 00:20:57,480
+And I put those three points up on this slide just because I think they're important.
+
+249
+00:20:57,480 --> 00:21:05,480
+So mocks were created in the context of doing TDD and object-oriented design,
+
+250
+00:21:05,480 --> 00:21:10,480
+and they were not really ever intended to just be some tool for isolation.
+
+251
+00:21:10,480 --> 00:21:20,480
+So if you think about the things that those three points bring you, if you're doing TDD, you're doing rapid cycles of small refactoring.
+
+252
+00:21:20,480 --> 00:21:29,480
+If you're doing object-oriented design, there's lots of things that brings, but the important one is this idea of object collaborations or role-based designs.
+
+253
+00:21:29,480 --> 00:21:33,480
+So if you've ever heard of things like CRC cards, it's basically the same thing.
+
+254
+00:21:33,480 --> 00:21:41,480
+And then finally, the way mocks are intended to be used is that they're supposed to be a tool for exploratory design and discovery.
+
+255
+00:21:43,480 --> 00:21:56,480
+And so those three things together form this kind of what I would say a three-legged stool to where if there's any sort of misunderstanding or deficiency in any one of those things, things start to fall over and fall apart.
+
+256
+00:21:56,480 --> 00:22:06,480
+Now, there's also contrary opinions to that London style of TDD, and so not everybody likes this.
+
+257
+00:22:06,480 --> 00:22:16,480
+So this book is a book with examples in C-sharp, and I like this book because it has a pretty subtle and nuanced view.
+
+258
+00:22:16,480 --> 00:22:22,480
+And the thing they say is always choose interaction testing or mocking as the last option.
+
+259
+00:22:22,480 --> 00:22:25,480
+This is very important. Not everyone agrees with this point of view.
+
+260
+00:22:25,480 --> 00:22:36,480
+If you're going to price what I advocate with many call the London School, I'm not fully disagreeing, but for maintainability, test using mocks creates more trouble than it's worth.
+
+261
+00:22:36,480 --> 00:22:47,480
+And I just put this up here because it's making a very strong statement, which I think you're probably not ever going to find in Python material about mocking.
+
+262
+00:22:47,480 --> 00:22:56,480
+So if you're on board with this idea of not liking mocks or you want to get rid of mocks, the question might be how do you test without mocks?
+
+263
+00:22:56,480 --> 00:23:04,480
+So we're almost to the code, and this is, I think, the last thing.
+
+264
+00:23:04,480 --> 00:23:11,480
+And this idea of mocks aren't stubs, which is line item five in the fine print.
+
+265
+00:23:11,480 --> 00:23:16,480
+So point one about mocks aren't stubs is that mocks are not stubs.
+
+266
+00:23:16,480 --> 00:23:19,480
+Point two is that mocks do not equal stubs.
+
+267
+00:23:19,480 --> 00:23:22,480
+And then number three is stubs are not mocks.
+
+268
+00:23:22,480 --> 00:23:31,480
+So the reason I'm being a little bit pedantic about this is because this is an important point, and it's important to understanding the rest of the slides.
+
+269
+00:23:31,480 --> 00:23:37,480
+And what this title is referring to is a blog post that talks about test double-digit mocks.
+
+270
+00:23:37,480 --> 00:23:42,480
+And what this title is referring to is a blog post that talks about test doubles.
+
+271
+00:23:42,480 --> 00:23:48,480
+So if you're not familiar with test doubles, basically a test double is just a thing you can substitute for the real thing in your test.
+
+272
+00:23:48,480 --> 00:23:52,480
+And as it turns out, a mock is just one kind of double.
+
+273
+00:23:52,480 --> 00:24:00,480
+The Python mock library is a little bit confusingly named because you can actually configure it to behave like any one of these doubles.
+
+274
+00:24:00,480 --> 00:24:06,480
+It just uses different vocabulary and terminology, and it makes it a little bit hard to talk about these things.
+
+275
+00:24:06,480 --> 00:24:15,480
+I'm going to throw those definitions up here and just demonstrate them by example, but they're here for reference in case you're looking at this later.
+
+276
+00:24:15,480 --> 00:24:28,480
+So if you go back to this mock patch example, really what's going on here is in this first line, you're setting up a stub.
+
+277
+00:24:28,480 --> 00:24:35,480
+And so what a stub is is just some can value that gets returned no matter what you're passing in.
+
+278
+00:24:35,480 --> 00:24:40,480
+The second line there is the mock, which is this DB read that assert called with.
+
+279
+00:24:40,480 --> 00:24:47,480
+And so the important part of a mock is that it's asserting on an interaction or a side effect with another system.
+
+280
+00:24:47,480 --> 00:24:52,480
+That's what makes this a mock-style test or what some people call London-style testing.
+
+281
+00:24:52,480 --> 00:24:55,480
+So what's the alternative to that?
+
+282
+00:24:55,480 --> 00:24:57,480
+It's something I'm going to call fake patching.
+
+283
+00:24:57,480 --> 00:25:01,480
+So if you bring this code back to something more minimal, there's still this patch.
+
+284
+00:25:01,480 --> 00:25:10,480
+But I'm going to define this fake DB read function, which is just actually has a little bit of logic to return a fixture from the file system.
+
+285
+00:25:10,480 --> 00:25:16,480
+And then I'm going to use this feature called new of the patch function to substitute that in instead of using a mock.
+
+286
+00:25:16,480 --> 00:25:18,480
+So I'm still patching, but I'm not mocking.
+
+287
+00:25:18,480 --> 00:25:24,480
+And I only have an assertion on the return value, so I don't need to assert on the side effect or interaction.
+
+288
+00:25:24,480 --> 00:25:28,480
+So if I draw this as a picture, it might look like this.
+
+289
+00:25:28,480 --> 00:25:34,480
+Define the fake, substitute it in, run it, assert on the result, and that's it.
+
+290
+00:25:34,480 --> 00:25:38,480
+As a third alternative, you can do dependency injection.
+
+291
+00:25:38,480 --> 00:25:40,480
+So you can actually inject your fake.
+
+292
+00:25:40,480 --> 00:25:43,480
+To do this, you need to change the total value function.
+
+293
+00:25:43,480 --> 00:25:48,480
+So on the left is where we started, and on the right is the modification.
+
+294
+00:25:48,480 --> 00:26:01,480
+So I just get rid of that DB import, DB read import, and then alter the signature of total value so that it expects to be provided with some collaborator that fills the role of a DB reader.
+
+295
+00:26:01,480 --> 00:26:13,480
+And so what that does is it completely decouples this my module package or my module module from anything related to specific DB implementation.
+
+296
+00:26:13,480 --> 00:26:21,480
+And then when I actually inject it, the test is pretty much the same, except I provide it as a parameter to the function call.
+
+297
+00:26:21,480 --> 00:26:23,480
+So I draw that as a picture.
+
+298
+00:26:23,480 --> 00:26:25,480
+It looks like this.
+
+299
+00:26:25,480 --> 00:26:28,480
+This total value function that expects to begin a collaborator.
+
+300
+00:26:28,480 --> 00:26:33,480
+Define the fake, inject it, run the test, assert on the results.
+
+301
+00:26:33,480 --> 00:26:40,480
+On the real app, you create a real DB adapter, you inject it, and then you just run.
+
+302
+00:26:40,480 --> 00:26:48,480
+So there's actually a fourth option, which is you could inject a mock, which you can figure out if you understand the previous three things.
+
+303
+00:26:48,480 --> 00:26:56,480
+So when it comes to dealing with testing or refactoring code, I find these three kinds of questions pretty handy.
+
+304
+00:26:56,480 --> 00:27:00,480
+Number one is which test doubles do you want to be using?
+
+305
+00:27:00,480 --> 00:27:03,480
+So I showed basically mocks and fakes.
+
+306
+00:27:04,480 --> 00:27:11,480
+You can go look out online and see what the other kinds are and think about how you might want to use those.
+
+307
+00:27:11,480 --> 00:27:15,480
+Do you want to do mockist or classical style testing?
+
+308
+00:27:15,480 --> 00:27:18,480
+Sometimes this is also called London or Detroit.
+
+309
+00:27:18,480 --> 00:27:24,480
+So do you want to verify on side effects or do you just want to verify return values and state change?
+
+310
+00:27:24,480 --> 00:27:29,480
+And then the last thing is do you want to patch or do you want to inject your test double once you've chosen it?
+
+311
+00:27:29,480 --> 00:27:34,480
+And you can mix and match these techniques to get whatever results you need.
+
+312
+00:27:34,480 --> 00:27:40,480
+So that sets us up to go look at the Guardian Feed test again.
+
+313
+00:27:44,480 --> 00:27:50,480
+So this is going to be a little map of the things we're going to look at and then I'm going to use this plane to kind of keep track of where we are.
+
+314
+00:27:50,480 --> 00:27:53,480
+So the first thing is mock roles, not objects.
+
+315
+00:27:53,480 --> 00:27:57,480
+So the easiest way to show that, demonstrate that is by example.
+
+316
+00:27:57,480 --> 00:28:01,480
+So the question on this is what are the roles in this collaboration?
+
+317
+00:28:01,480 --> 00:28:04,480
+I would say they're master and student.
+
+318
+00:28:04,480 --> 00:28:08,480
+So Yoda and Luke are collaborators acting in the roles of master and student.
+
+319
+00:28:08,480 --> 00:28:15,480
+Another part in this story, Obi-Wan and Anakin were acting in the roles of master and students.
+
+320
+00:28:15,480 --> 00:28:20,480
+And at another point they were both same characters are acting in the roles of hero and villain.
+
+321
+00:28:20,480 --> 00:28:25,480
+But yet again at another point it was actually Luke and Darth Vader.
+
+322
+00:28:25,480 --> 00:28:32,480
+And then at the end they're acting in the roles of father and son or they're collaborating in the roles of father and son.
+
+323
+00:28:32,480 --> 00:28:39,480
+So the question looking at this code is what are the roles in this collaboration?
+
+324
+00:28:39,480 --> 00:28:49,480
+And I would say the basic ones are you need something that's a parser or a connector, something that's a data sync and something that's a source.
+
+325
+00:28:49,480 --> 00:28:57,480
+So if you're going to be mocking or using a test double, those are the abstractions that you want to be mocking.
+
+326
+00:28:57,480 --> 00:29:02,480
+So that sets us up to look at some of these other tactics.
+
+327
+00:29:02,480 --> 00:29:07,480
+And the first thing we're going to attack is all the requests mocking and patching.
+
+328
+00:29:07,480 --> 00:29:09,480
+So we're going to do two things.
+
+329
+00:29:09,480 --> 00:29:13,480
+One is this idea of finding a seam and then we're going to patch in a fake.
+
+330
+00:29:13,480 --> 00:29:23,480
+So this is where we left our tests and I'm going to bring it back to something a little bit simpler and introduce this idea of a seam.
+
+331
+00:29:23,480 --> 00:29:31,480
+The collaborator we really want to mock is the Guardian Library and not session or request.
+
+332
+00:29:31,480 --> 00:29:41,480
+So a seam is this idea that comes out of refactoring and a seam is a place where you can alter behavior in your program without editing in that place.
+
+333
+00:29:41,480 --> 00:29:46,480
+So session is not just magically communicating to Guardian.
+
+334
+00:29:46,480 --> 00:29:48,480
+It's actually using a bunch of other libraries.
+
+335
+00:29:48,480 --> 00:29:52,480
+There's a lot of other levels of abstraction in between.
+
+336
+00:29:52,480 --> 00:29:55,480
+So there's a couple of different seams we could exploit.
+
+337
+00:29:55,480 --> 00:29:59,480
+If you wanted to go really level, you could try to use a TCP seam.
+
+338
+00:29:59,480 --> 00:30:11,480
+The easiest seam to use, I think, is to go in and patch or mock in the actual request internals inside that library instead of trying to mock our application.
+
+339
+00:30:11,480 --> 00:30:18,480
+And so there's a useful library called HTTmock that will let you do that.
+
+340
+00:30:18,480 --> 00:30:28,480
+So we're going to make a change that looks like this and use that request seam to substitute a fake instead of a mock.
+
+341
+00:30:28,480 --> 00:30:30,480
+So this is what the fake function looks like.
+
+342
+00:30:30,480 --> 00:30:37,480
+It's just implementing a very simple logic to emulate the actual Guardian API.
+
+343
+00:30:37,480 --> 00:30:48,480
+The two lines that are important here are the first one, which is this URL match, which is directing HTTmock to redirect any traffic to this guardianapis.com hostname to this function.
+
+344
+00:30:48,480 --> 00:30:51,480
+And then this function gets a URL and the request body.
+
+345
+00:30:51,480 --> 00:30:57,480
+And we can do processing on it and whatnot to generate a fake response and return it.
+
+346
+00:30:57,480 --> 00:31:01,480
+So here's what the actual test looks like.
+
+347
+00:31:01,480 --> 00:31:13,480
+Mock Redis is still there, but this lets us get rid of all the patching and mocking around the request library and replace it with that single patch statement.
+
+348
+00:31:13,480 --> 00:31:19,480
+And it lets me directly express the collaboration relationship that I actually care about.
+
+349
+00:31:19,480 --> 00:31:28,480
+So we're still patching. We're just patching at a different spot and we're using a fake instead of a mock.
+
+350
+00:31:28,480 --> 00:31:32,480
+The second technique is to apply dependency injection.
+
+351
+00:31:32,480 --> 00:31:37,480
+So for two and three, we're going to attack this Redis mock.
+
+352
+00:31:37,480 --> 00:31:39,480
+So this is where our test is.
+
+353
+00:31:39,480 --> 00:31:45,480
+What we want to do is change our feed class to take a collaborator.
+
+354
+00:31:45,480 --> 00:31:57,480
+And we're going to build a fake Redis connection, substitute that in, and then instead of asserting on a side effect, we're going to assert on the state of fake Redis.
+
+355
+00:31:57,480 --> 00:32:00,480
+So what that code looks like is this.
+
+356
+00:32:00,480 --> 00:32:03,480
+So this is where we're starting out with.
+
+357
+00:32:03,480 --> 00:32:11,480
+We're still passing in the Redis host and the change we want to make is to just inject the Redis connection.
+
+358
+00:32:11,480 --> 00:32:14,480
+It's pretty straightforward.
+
+359
+00:32:14,480 --> 00:32:16,480
+You have to change the test like this.
+
+360
+00:32:16,480 --> 00:32:27,480
+So we have to construct a connection and fake Redis is a library that is basically an in-process Redis server that has the same API.
+
+361
+00:32:27,480 --> 00:32:43,480
+So we construct the fake connection, inject it, and then the assertion changes to where I'm now popping data off fake Redis instead of checking the calls that happened to fake Redis.
+
+362
+00:32:43,480 --> 00:32:49,480
+The fourth tactic is to inject the collaborator.
+
+363
+00:32:49,480 --> 00:32:54,480
+And really, Redis connection is not the actual collaborator.
+
+364
+00:32:54,480 --> 00:32:56,480
+It's kind of an implementation detail.
+
+365
+00:32:56,480 --> 00:33:04,480
+So it's not a big leap to realize that you should just be injecting some function that acts like a data sync.
+
+366
+00:33:04,480 --> 00:33:08,480
+So it's a really straightforward change there.
+
+367
+00:33:08,480 --> 00:33:11,480
+The run method in the feed class just changes like this.
+
+368
+00:33:11,480 --> 00:33:15,480
+You use the sync instead of the Redis connection.
+
+369
+00:33:15,480 --> 00:33:19,480
+The other thing about this class is that it's now completely decoupled from Redis.
+
+370
+00:33:19,480 --> 00:33:27,480
+It has no knowledge of any particular data store that it's sending these URLs to.
+
+371
+00:33:27,480 --> 00:33:29,480
+And the test changes like this.
+
+372
+00:33:29,480 --> 00:33:31,480
+Mock Redis is gone.
+
+373
+00:33:31,480 --> 00:33:35,480
+We just have an array and we just use receive.append as a sync.
+
+374
+00:33:35,480 --> 00:33:39,480
+And then we're just making an assertion on the results that got sent.
+
+375
+00:33:39,480 --> 00:33:48,480
+And then we do have to change the main function a little bit to create a real Redis connection and then inject it in the feed and run it.
+
+376
+00:33:48,480 --> 00:33:55,480
+So you do need to add a few lines of code there.
+
+377
+00:33:55,480 --> 00:33:59,480
+And then the last tactic is to go functional.
+
+378
+00:33:59,480 --> 00:34:07,480
+So somebody who's a functional programmer might say, your real problem is that all your functions have side effects.
+
+379
+00:34:07,480 --> 00:34:11,480
+If you just had pure functions, you wouldn't have all these problems.
+
+380
+00:34:11,480 --> 00:34:17,480
+And so from that standpoint, I took all that code and kind of refactored it into that shape.
+
+381
+00:34:17,480 --> 00:34:23,480
+So you just have this feed function which constructs this session.
+
+382
+00:34:23,480 --> 00:34:33,480
+And then on the second line, there's a function that constructs the initial request from your query string and sends it to get the first page of results.
+
+383
+00:34:33,480 --> 00:34:43,480
+Third line, it takes that first page of results and then constructs the entire set of page requests it needs to get all the URLs.
+
+384
+00:34:43,480 --> 00:34:50,480
+And then sends that using the session to get all the pages back.
+
+385
+00:34:50,480 --> 00:34:57,480
+Then there's some munging or parsing to get the Web URLs and then you just push all those URLs out to Redis.
+
+386
+00:34:57,480 --> 00:35:01,480
+And this is what all that code looks like.
+
+387
+00:35:01,480 --> 00:35:09,480
+It's too nice to read, but there's no I.O. here. It's just all transformations.
+
+388
+00:35:09,480 --> 00:35:13,480
+So now there's some anti-patterns which I think I've observed.
+
+389
+00:35:13,480 --> 00:35:16,480
+So this is going to get a little bit more speculative.
+
+390
+00:35:16,480 --> 00:35:23,480
+And I'd be curious if anybody has noticed these kinds of things happening as well.
+
+391
+00:35:23,480 --> 00:35:26,480
+First pattern is something I call BootlegTDD.
+
+392
+00:35:26,480 --> 00:35:32,480
+And that name comes from a friend of mine who follows this Instagram feed of bootleg toys.
+
+393
+00:35:32,480 --> 00:35:39,480
+So show me things like this where you get EmperorDafSerious or Toby1.
+
+394
+00:35:39,480 --> 00:35:43,480
+And then my favorite one is Dennis.
+
+395
+00:35:43,480 --> 00:35:53,480
+And so what I mean by bootleg is something that's sort of superficially like the real thing, but something is kind of essentially off.
+
+396
+00:35:53,480 --> 00:36:03,480
+So what that might look like with TDD is you're someone who's aiming for 100% test isolation, 100% coverage, because you've got to be perfect.
+
+397
+00:36:03,480 --> 00:36:10,480
+Maybe you test first, maybe you test last, maybe you test whenever and you're not refactoring.
+
+398
+00:36:10,480 --> 00:36:20,480
+And you're doing some kind of procedural decomposition or top-down design instead of object-oriented programming.
+
+399
+00:36:20,480 --> 00:36:29,480
+And in case you're not familiar with that, basically in procedural decomposition you just take a function at a very high level and you break it down into two smaller subproblems.
+
+400
+00:36:29,480 --> 00:36:33,480
+You take that and break it down into two smaller subproblems and so on.
+
+401
+00:36:33,480 --> 00:36:38,480
+And so your functions get more and more detailed as you do this breakdown.
+
+402
+00:36:38,480 --> 00:36:47,480
+So what that might look like is if you've got this program P, which is a high level abstraction, you break it into two things, A and B, decompose those into C, D, and E.
+
+403
+00:36:47,480 --> 00:36:51,480
+And then finally you're done, you hit the database and it's time to test.
+
+404
+00:36:51,480 --> 00:36:58,480
+And because you want 100% coverage and isolation, you say I'm going to test P and mock out A and B.
+
+405
+00:36:58,480 --> 00:37:05,480
+Same thing with A and B, you mock out C, D, and E. And then you test C, D, and E, but now you hit the database and what do you do?
+
+406
+00:37:05,480 --> 00:37:12,480
+So maybe you think I should mock the DB connection or mock the query language.
+
+407
+00:37:12,480 --> 00:37:20,480
+And that's not the greatest thing in the world because it makes your test tied to some very low level implementation details.
+
+408
+00:37:20,480 --> 00:37:28,480
+So I've ended up in scenarios where I've had a number of tests break just because whitespace and SQL query changed.
+
+409
+00:37:28,480 --> 00:37:37,480
+And so if you go back to that Freeman and Price book, their advice on this kind of thing is actually don't mock code you can't change and don't mock code you can't own.
+
+410
+00:37:37,480 --> 00:37:41,480
+Because mocking is supposed to be an exploratory design tool.
+
+411
+00:37:41,480 --> 00:37:52,480
+And their advice would be to just create a database adapter and then mock that instead of trying to mock the DB connection or the query language.
+
+412
+00:37:52,480 --> 00:37:57,480
+There's another pattern related to that I call, I think, inversion mock.
+
+413
+00:37:57,480 --> 00:38:05,480
+And so if this is where our code example was, as we built this up, we built it from high level to low level abstractions.
+
+414
+00:38:05,480 --> 00:38:08,480
+So the dependencies go from high level to low level.
+
+415
+00:38:08,480 --> 00:38:11,480
+Then you add in all your tests.
+
+416
+00:38:11,480 --> 00:38:21,480
+And so the issues I've kind of noticed with this are that because somebody was doing top down design, there's no understanding or concept of dependency inversion.
+
+417
+00:38:21,480 --> 00:38:27,480
+And because there's a lot of patching and over mocking, it tends to lock in that structure.
+
+418
+00:38:27,480 --> 00:38:42,480
+And so I kind of have this feeling that people who get into the habit of patching, it kind of creates this obstacle for understanding dependency inversion principles and things like inversion of control.
+
+419
+00:38:42,480 --> 00:38:49,480
+And in case you're not familiar with dependency inversion, we saw a very simple example when we did this dependency injection.
+
+420
+00:38:49,480 --> 00:38:53,480
+So here we injected a fake.
+
+421
+00:38:53,480 --> 00:38:55,480
+In the real app, we injected a DB.
+
+422
+00:38:55,480 --> 00:39:06,480
+And then you end up with this situation that looks like this, where total value is highly configurable and has no dependencies on implementation details.
+
+423
+00:39:06,480 --> 00:39:17,480
+So if I draw some lines around that, what you'll see is that all the stuff in the middle or the core is your valuable code and all the implementation details are on the outside.
+
+424
+00:39:17,480 --> 00:39:20,480
+And there's no dependencies from the inside to the outside.
+
+425
+00:39:20,480 --> 00:39:23,480
+So total value doesn't care which database it's using.
+
+426
+00:39:23,480 --> 00:39:29,480
+It doesn't care whether the actual app is a web app or it's a CLI or a GUI.
+
+427
+00:39:29,480 --> 00:39:35,480
+And so sometimes you'll see that referred to as clean architecture or onion architecture.
+
+428
+00:39:35,480 --> 00:39:42,480
+The other name that goes by is ports and adapters, which I think should be obvious why it's called that from the picture.
+
+429
+00:39:42,480 --> 00:39:45,480
+Sometimes that's also called hexagonal.
+
+430
+00:39:45,480 --> 00:39:53,480
+And the difference with this is it's just organizing the things on the outside into different groups of adapters.
+
+431
+00:39:53,480 --> 00:40:07,480
+So if you ever see these buzzwords thrown out or these really cryptic diagrams talking about clean and onion architectures and hexagonal, you know about 80 or 90 percent of what you need to know to understand what's going on there.
+
+432
+00:40:07,480 --> 00:40:13,480
+There's another pattern, which I named the blob.
+
+433
+00:40:13,480 --> 00:40:19,480
+What that is is you have some program that connects to a database.
+
+434
+00:40:19,480 --> 00:40:21,480
+And so you work on it and work on it and work on it.
+
+435
+00:40:21,480 --> 00:40:25,480
+And then a week later, you're done.
+
+436
+00:40:25,480 --> 00:40:31,480
+And I think this one is a favorite of data scientists.
+
+437
+00:40:31,480 --> 00:40:39,480
+And it has to do with I think it's common among people who are programming, but they're not in the role of software engineers.
+
+438
+00:40:39,480 --> 00:40:43,480
+So at this point, how do you test this with this database?
+
+439
+00:40:43,480 --> 00:40:45,480
+It's kind of a little bit too late to unit test.
+
+440
+00:40:45,480 --> 00:40:55,480
+So you kind of just patch tactically or extreme tackle patching and you kind of figure out whatever and then eventually it passes.
+
+441
+00:40:55,480 --> 00:41:02,480
+And OK, so the issues with this kind of thing is like not really sure what kind of test this is.
+
+442
+00:41:02,480 --> 00:41:03,480
+It's not a unit test.
+
+443
+00:41:03,480 --> 00:41:05,480
+Maybe it's some sort of regression test.
+
+444
+00:41:05,480 --> 00:41:07,480
+Who knows?
+
+445
+00:41:07,480 --> 00:41:17,480
+And there's also this kind of split mindset I have about this, which is that on one level, it is really a pragmatic way of using patching and mocking.
+
+446
+00:41:17,480 --> 00:41:21,480
+But on the other hand, maybe it's just enabling bad habits.
+
+447
+00:41:21,480 --> 00:41:25,480
+And I think it could go both ways.
+
+448
+00:41:25,480 --> 00:41:27,480
+This one is going to get really speculative.
+
+449
+00:41:27,480 --> 00:41:32,480
+I'd be curious if anybody's actually ever seen this patches as crosscuts.
+
+450
+00:41:32,480 --> 00:41:34,480
+There's no pictures here.
+
+451
+00:41:34,480 --> 00:41:41,480
+There's just this argument that a test should ideally test a single behavior.
+
+452
+00:41:41,480 --> 00:41:46,480
+And a patch is a violation of some encapsulation boundary.
+
+453
+00:41:46,480 --> 00:41:57,480
+So a test with a lot of patches is, I have a typo in there, a test with a lot of patches is violating multiple encapsulation boundaries.
+
+454
+00:41:57,480 --> 00:42:06,480
+So my hypothesis around that is if you've got a test case with a lot of patches, that represents a problem with cohesion and coupling.
+
+455
+00:42:06,480 --> 00:42:15,480
+So maybe your requirements changed and your package structure or your module structure is no longer adequate for your application.
+
+456
+00:42:15,480 --> 00:42:18,480
+So you might need to think about changing that around.
+
+457
+00:42:18,480 --> 00:42:29,480
+Or maybe it's a sign of a cross-cutting concern, which was not properly captured in your package design.
+
+458
+00:42:29,480 --> 00:42:32,480
+OK, so we're almost at the end.
+
+459
+00:42:32,480 --> 00:42:34,480
+I just want to share some of my opinions.
+
+460
+00:42:34,480 --> 00:42:36,480
+You should always be refactoring in your tests.
+
+461
+00:42:36,480 --> 00:42:40,480
+That will help you prevent you from getting into mock hell.
+
+462
+00:42:40,480 --> 00:42:44,480
+Consider using other test doubles besides mock.
+
+463
+00:42:44,480 --> 00:42:52,480
+Or think about using some of the other features of mock that will let you configure it with these other behaviors.
+
+464
+00:42:52,480 --> 00:42:55,480
+Patching should be rare.
+
+465
+00:42:55,480 --> 00:43:02,480
+My opinion is that it's the last thing you should be reaching for whenever you have a problem with testing.
+
+466
+00:43:02,480 --> 00:43:06,480
+And then mocks, if you choose to use them, should target roles and not objects.
+
+467
+00:43:06,480 --> 00:43:09,480
+Make sure you're mocking the right abstractions.
+
+468
+00:43:09,480 --> 00:43:11,480
+And remember that they're not a tool.
+
+469
+00:43:11,480 --> 00:43:15,480
+They were never intended just as a tool for test isolation.
+
+470
+00:43:15,480 --> 00:43:25,480
+So I also want to give thanks to Brian Auken and Harry Percival, who were nice enough to answer my emails and give me feedback on my slides.
+
+471
+00:43:25,480 --> 00:43:29,480
+So Brian's book is a really good book on PyTest, if you're not familiar with that.
+
+472
+00:43:29,480 --> 00:43:37,480
+And then Harry's book is a hands-on tutorial on doing TDD with Python and Django.
+
+473
+00:43:37,480 --> 00:43:39,480
+And I finally got some resources here.
+
+474
+00:43:39,480 --> 00:43:41,480
+There's multiple opinions on these things.
+
+475
+00:43:41,480 --> 00:43:46,480
+Often it's just a question of what style you want to use and how you want to mix and match these things.
+
+476
+00:43:46,480 --> 00:43:54,480
+So there's some debates and counter opinions and other resources that you can look up.
+
+477
+00:43:54,480 --> 00:43:56,480
+So that's the end of my talk.
+
+478
+00:43:56,480 --> 00:43:59,480
+And I think we have time for questions.
+
+479
+00:43:59,480 --> 00:44:07,480
+Thanks, Edwin.
+
+480
+00:44:07,480 --> 00:44:10,480
+So we have time for one or two questions.
+
+481
+00:44:10,480 --> 00:44:26,480
+The microphones are over there, I think.
+
+482
+00:44:26,480 --> 00:44:29,480
+Hello?
+
+483
+00:44:29,480 --> 00:44:30,480
+Can you hear me?
+
+484
+00:44:30,480 --> 00:44:31,480
+Oh, great.
+
+485
+00:44:31,480 --> 00:44:36,480
+So since nobody's asking questions, I thought I may give you the pleasure.
+
+486
+00:44:36,480 --> 00:44:38,480
+Fakes versus mocks.
+
+487
+00:44:38,480 --> 00:44:45,480
+Like, when I use mocks, I kind of assume that the code, like the mock code itself is tested and working.
+
+488
+00:44:45,480 --> 00:44:49,480
+Whereas if I have to write my own fake, like who tests that, right?
+
+489
+00:44:49,480 --> 00:44:51,480
+I essentially wrote some code.
+
+490
+00:44:51,480 --> 00:44:53,480
+Yeah, I'm sorry, I can't hear you.
+
+491
+00:44:53,480 --> 00:44:56,480
+Is it better now?
+
+492
+00:44:56,480 --> 00:44:59,480
+Fakes against mocks, that's the question.
+
+493
+00:44:59,480 --> 00:45:00,480
+Yeah.
+
+494
+00:45:00,480 --> 00:45:04,480
+And like if I write my own fake, who tests that, right?
+
+495
+00:45:04,480 --> 00:45:08,480
+It's a new set of code I have to maintain.
+
+496
+00:45:08,480 --> 00:45:14,480
+Whereas if I use the mock, I'm using a library who somebody else wrote and tested, so it is working great.
+
+497
+00:45:14,480 --> 00:45:18,480
+Do you see a problem there or not?
+
+498
+00:45:18,480 --> 00:45:22,480
+Sometimes it's a question of a judgment call.
+
+499
+00:45:22,480 --> 00:45:29,480
+I personally find for me using a fake is less code to maintain than the mock.
+
+500
+00:45:29,480 --> 00:45:35,480
+And you avoid the problems with over-mocking and getting stuck on implementation details.
+
+501
+00:45:35,480 --> 00:45:43,480
+When you use a mock, you typically end up having to also do a stub and do a number of other things that just create technical debt.
+
+502
+00:45:43,480 --> 00:45:47,480
+But if you can make it work for you, then I think that's fine.
+
+503
+00:45:47,480 --> 00:45:51,480
+It's just a question of which style do you want to use.
+
+504
+00:45:51,480 --> 00:45:53,480
+Thank you.
+
+505
+00:45:53,480 --> 00:45:59,480
+I have a question about dependency injections.
+
+506
+00:45:59,480 --> 00:46:17,480
+I recently wrote a function that takes several inputs and then fundamentally it uses this input to call one place, gather information, call another place, and call the third place, and merge them and return to...
+
+507
+00:46:17,480 --> 00:46:28,480
+So in that case, I have several inputs and then I have three dependency injections that make the function too big and it looks kind of ugly.
+
+508
+00:46:28,480 --> 00:46:30,480
+Do you have any suggestions to such?
+
+509
+00:46:30,480 --> 00:46:38,480
+Yeah, so that objection to dependency injection comes up, I think, somewhat frequently.
+
+510
+00:46:38,480 --> 00:46:48,480
+The question I would have is does your top-level function really depend on those three data sources or is there some hierarchy of dependencies?
+
+511
+00:46:48,480 --> 00:46:57,480
+And so the creator of AngularJS actually has a lot of blog posts on this idea where he talks about dependency injection and so on.
+
+512
+00:46:57,480 --> 00:47:03,480
+So I'd go look at those posts if you can find them.
+
+513
+00:47:03,480 --> 00:47:05,480
+Thanks again, Edwin.
+
+514
+00:47:05,480 --> 00:47:07,480
+Please give him another round of applause.
+

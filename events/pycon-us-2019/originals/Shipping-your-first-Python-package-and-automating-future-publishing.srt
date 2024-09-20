@@ -1,0 +1,2232 @@
+1
+00:00:00,000 --> 00:00:03,640
+Our next presenter is Chris Wilcox, who will be talking about shipping your first Python
+
+2
+00:00:03,640 --> 00:00:04,640
+package.
+
+3
+00:00:04,640 --> 00:00:07,640
+Please make him feel welcome.
+
+4
+00:00:07,640 --> 00:00:14,400
+Thanks, everyone, for coming.
+
+5
+00:00:14,400 --> 00:00:17,320
+I've been coming to PyCon for five years, and this is the first time I've gotten to
+
+6
+00:00:17,320 --> 00:00:20,880
+speak, so I'm pretty excited.
+
+7
+00:00:20,880 --> 00:00:22,240
+So again, my name is Chris.
+
+8
+00:00:22,240 --> 00:00:23,680
+I live in Seattle, Washington.
+
+9
+00:00:23,680 --> 00:00:27,500
+I work for this small internet startup you might have heard of called Google.
+
+10
+00:00:27,500 --> 00:00:30,860
+We make a search engine and some other things.
+
+11
+00:00:30,860 --> 00:00:34,900
+Because I live in the PNW, I try to take advantage of some of the nature we have in my personal
+
+12
+00:00:34,900 --> 00:00:38,220
+life, so that's me hiking up Mount Rainier.
+
+13
+00:00:38,220 --> 00:00:41,620
+I also have a like for all things two wheels.
+
+14
+00:00:41,620 --> 00:00:44,800
+I don't know how that happened, but I bicycle a lot, and one of the things I do in my spare
+
+15
+00:00:44,800 --> 00:00:48,300
+time is I'm an amateur road racer.
+
+16
+00:00:48,300 --> 00:00:51,620
+But you probably didn't come here to hear what I do.
+
+17
+00:00:51,620 --> 00:00:55,360
+You're probably interested about PyPI.
+
+18
+00:00:55,360 --> 00:00:56,880
+So this is what we're going to talk about today.
+
+19
+00:00:56,880 --> 00:01:02,840
+We're going to start by creating a simple PyPI package that we can publish.
+
+20
+00:01:02,840 --> 00:01:05,520
+Then we're going to talk about some of the more extended features you likely want to
+
+21
+00:01:05,520 --> 00:01:07,960
+use in setup.py.
+
+22
+00:01:07,960 --> 00:01:11,560
+And then we'll talk a bit about how you can use automation to make maintaining this process
+
+23
+00:01:11,560 --> 00:01:14,560
+a lot easier.
+
+24
+00:01:14,560 --> 00:01:17,960
+So what is PyPI?
+
+25
+00:01:17,960 --> 00:01:23,640
+What PyPI is is a package repository for Python maintainers.
+
+26
+00:01:23,640 --> 00:01:26,660
+It's one of the things that makes Python a joy to use.
+
+27
+00:01:26,660 --> 00:01:30,980
+It's the ecosystem that we all came to Python for.
+
+28
+00:01:30,980 --> 00:01:36,400
+And it's because of this ecosystem that Python developers can learn and build great and interesting
+
+29
+00:01:36,400 --> 00:01:38,000
+things.
+
+30
+00:01:38,000 --> 00:01:43,040
+But over time, Python has evolved, and along with Python, PyPI has evolved.
+
+31
+00:01:43,040 --> 00:01:44,680
+And with these evolution, changes came.
+
+32
+00:01:44,680 --> 00:01:48,840
+And this has made PyPI seem mysterious to many people.
+
+33
+00:01:48,840 --> 00:01:52,240
+My hope here today is to prove that there is no mystery.
+
+34
+00:01:52,240 --> 00:01:56,360
+It's simple, and everyone in this room should be able to deploy a package to PyPI.
+
+35
+00:01:56,360 --> 00:02:00,960
+And with any luck, by the end of this talk, every one of you will be a Python package
+
+36
+00:02:00,960 --> 00:02:03,880
+author.
+
+37
+00:02:03,880 --> 00:02:05,840
+So what is a Python package?
+
+38
+00:02:05,840 --> 00:02:11,280
+A Python package is a module, a class, some functions that you have that you can deploy
+
+39
+00:02:11,280 --> 00:02:13,240
+for other users.
+
+40
+00:02:13,240 --> 00:02:15,160
+And here is a really simple one.
+
+41
+00:02:15,160 --> 00:02:17,480
+We have a module called myPackage.
+
+42
+00:02:17,480 --> 00:02:18,480
+It has an init.
+
+43
+00:02:18,480 --> 00:02:20,720
+And it has a module.
+
+44
+00:02:20,720 --> 00:02:25,120
+And it has a very simple function called spam that always returns eggs.
+
+45
+00:02:25,120 --> 00:02:29,640
+This is enough for us to demonstrate how you might deploy to PyPI.
+
+46
+00:02:29,640 --> 00:02:34,040
+The first thing we need to do is make a setup.py file.
+
+47
+00:02:34,040 --> 00:02:39,040
+There are only four fields required in order to deploy to PyPI.
+
+48
+00:02:39,040 --> 00:02:41,400
+You need a name for what this package is.
+
+49
+00:02:41,400 --> 00:02:42,840
+You need a version.
+
+50
+00:02:42,840 --> 00:02:43,840
+A brief description.
+
+51
+00:02:43,840 --> 00:02:48,780
+And you need to know what things you need in the package.
+
+52
+00:02:48,780 --> 00:02:52,420
+The line at the bottom, setup tools dot find packages, is a helper function provided by
+
+53
+00:02:52,420 --> 00:02:57,660
+setup tools that will discover the necessary things inside that folder for you.
+
+54
+00:02:57,660 --> 00:03:03,060
+And the first thing we do, because we're good software engineers, is we test first before
+
+55
+00:03:03,060 --> 00:03:05,100
+doing anything else.
+
+56
+00:03:05,100 --> 00:03:07,340
+So we can make a virtual environment.
+
+57
+00:03:07,340 --> 00:03:09,200
+We can install using pip.
+
+58
+00:03:09,200 --> 00:03:12,700
+So this is a little more unusual than the way you might use pip now.
+
+59
+00:03:12,700 --> 00:03:17,740
+We use dot, which specifies to install this directory where setup.py is, and dash E,
+
+60
+00:03:17,740 --> 00:03:20,180
+which is editable or development mode.
+
+61
+00:03:20,180 --> 00:03:24,060
+The reason we do this is when we make changes to our package, we don't have to keep reinstalling
+
+62
+00:03:24,060 --> 00:03:25,900
+it.
+
+63
+00:03:25,900 --> 00:03:31,700
+After we've done that, we can open a Python repel, import our package, and prove it works.
+
+64
+00:03:31,700 --> 00:03:33,740
+Yay.
+
+65
+00:03:33,740 --> 00:03:38,520
+The next thing we do is we can upload this to test PyPI.
+
+66
+00:03:38,520 --> 00:03:42,180
+It probably wouldn't be a great idea to do this right to PyPI, since it's likely being
+
+67
+00:03:42,180 --> 00:03:45,680
+your first time doing this, you're going to have some stumbling blocks.
+
+68
+00:03:45,680 --> 00:03:47,720
+So we start by installing some dependencies.
+
+69
+00:03:47,720 --> 00:03:50,640
+We need twine and we need wheel.
+
+70
+00:03:50,640 --> 00:03:54,700
+Then we run Python setup to Py, stdst, bdistwheel.
+
+71
+00:03:54,700 --> 00:03:55,960
+What does that mean?
+
+72
+00:03:55,960 --> 00:04:00,480
+stdst is a source distribution, meaning we're just going to bundle up the Python scripts
+
+73
+00:04:00,480 --> 00:04:05,320
+that we have so that they can be shipped to PyPI and downloaded by our users.
+
+74
+00:04:05,320 --> 00:04:08,920
+Bdistwheel is a binary distribution in the wheel format.
+
+75
+00:04:08,920 --> 00:04:16,740
+This is the sort of accepted and expected way of shipping binary distributions.
+
+76
+00:04:16,740 --> 00:04:21,400
+For pure Python packages, this isn't strictly necessary, but it is seen as good practice
+
+77
+00:04:21,400 --> 00:04:23,280
+to provide wheels for your packages.
+
+78
+00:04:23,280 --> 00:04:26,280
+And it's easy to do, so we'll do it here.
+
+79
+00:04:26,280 --> 00:04:29,440
+Once we've done that, we can use twine to upload.
+
+80
+00:04:29,440 --> 00:04:34,160
+And because we're not doing this to the default endpoint, PyPI, we specify test PyPI as the
+
+81
+00:04:34,160 --> 00:04:36,180
+repository.
+
+82
+00:04:36,180 --> 00:04:40,440
+The argument after that is a glob pattern that will collect everything under dist.
+
+83
+00:04:40,440 --> 00:04:44,640
+Dist is the folder where everything built by the setup.py process on the line previous
+
+84
+00:04:44,640 --> 00:04:46,560
+will be put.
+
+85
+00:04:46,560 --> 00:04:51,180
+And at the end, we can install from test PyPI using pip in the way you expect, but we have
+
+86
+00:04:51,180 --> 00:04:56,060
+to specify the index URL because, again, it's not the default.
+
+87
+00:04:56,060 --> 00:04:59,580
+And doing this to PyPI, very much the same process.
+
+88
+00:04:59,580 --> 00:05:04,660
+It's a little simpler here because we don't need to reinstall all of our dependencies.
+
+89
+00:05:04,660 --> 00:05:09,740
+But again, we build from setup, and we upload with twine.
+
+90
+00:05:09,740 --> 00:05:10,740
+And here we are.
+
+91
+00:05:10,740 --> 00:05:14,340
+We have a package now that we can install and we can use.
+
+92
+00:05:14,340 --> 00:05:15,340
+So that's it.
+
+93
+00:05:15,340 --> 00:05:16,340
+The talk is over.
+
+94
+00:05:16,340 --> 00:05:18,760
+We can now deploy to PyPI.
+
+95
+00:05:18,760 --> 00:05:21,040
+Congratulations, everyone.
+
+96
+00:05:21,040 --> 00:05:23,640
+You are now package authors.
+
+97
+00:05:23,640 --> 00:05:30,260
+Except you might have noticed this is pretty bare minimum.
+
+98
+00:05:30,260 --> 00:05:37,120
+And if you saw this coming to PyPI, you might think this is a bit sketchy.
+
+99
+00:05:37,120 --> 00:05:39,980
+It is the bare minimum.
+
+100
+00:05:39,980 --> 00:05:41,560
+You can do the bare minimum if you like.
+
+101
+00:05:41,560 --> 00:05:42,560
+That's okay.
+
+102
+00:05:42,560 --> 00:05:44,520
+That's up to you.
+
+103
+00:05:44,520 --> 00:05:48,580
+But I think here we like to do more than the bare minimum for our users.
+
+104
+00:05:48,580 --> 00:05:49,580
+What do you think?
+
+105
+00:05:49,580 --> 00:05:50,580
+All right.
+
+106
+00:05:50,580 --> 00:05:51,580
+More flair.
+
+107
+00:05:51,580 --> 00:05:52,580
+Yeah.
+
+108
+00:05:52,580 --> 00:06:00,180
+So the first thing we want to talk about is adding author information.
+
+109
+00:06:00,180 --> 00:06:04,720
+If you ran setup.py estus today on your computer, you get a few warnings.
+
+110
+00:06:04,720 --> 00:06:08,840
+And the warnings tell you that it's expected that you have an URL, an author, and an author
+
+111
+00:06:08,840 --> 00:06:10,120
+email.
+
+112
+00:06:10,120 --> 00:06:11,920
+And these are pretty good expectations, right?
+
+113
+00:06:11,920 --> 00:06:13,100
+We're putting something on the internet.
+
+114
+00:06:13,100 --> 00:06:14,700
+And we want to make sure you know how to get in touch with us.
+
+115
+00:06:14,700 --> 00:06:18,500
+So giving a repository URL and what our name is is going to build some trust.
+
+116
+00:06:18,500 --> 00:06:23,060
+And so we can add these things here.
+
+117
+00:06:23,060 --> 00:06:26,660
+There's another really important thing in PyPI for discovering packages we're interested
+
+118
+00:06:26,660 --> 00:06:28,540
+in and understanding what these packages are.
+
+119
+00:06:28,540 --> 00:06:30,780
+And those are classifiers.
+
+120
+00:06:30,780 --> 00:06:36,620
+PyPI today provides over 600 different classifiers for you to use that help you describe packages.
+
+121
+00:06:36,620 --> 00:06:39,900
+On the screen now are some of the more common things you might see.
+
+122
+00:06:39,900 --> 00:06:42,300
+First, we talk about the development state.
+
+123
+00:06:42,300 --> 00:06:44,780
+Where are we in the process of this package?
+
+124
+00:06:44,780 --> 00:06:45,780
+Is it alpha?
+
+125
+00:06:45,780 --> 00:06:46,780
+Has it matured?
+
+126
+00:06:46,780 --> 00:06:49,120
+Do we consider production?
+
+127
+00:06:49,120 --> 00:06:53,580
+The next thing you'll usually see are some specifiers around programming languages.
+
+128
+00:06:53,580 --> 00:06:55,540
+This package, I just made it today.
+
+129
+00:06:55,540 --> 00:06:59,100
+So I'm going to support the current Python 3 versions that haven't been end of life.
+
+130
+00:06:59,100 --> 00:07:02,660
+So that's 3.5, 3.6, and 3.7.
+
+131
+00:07:02,660 --> 00:07:06,380
+Because this package has nothing specific to an operating system, we can say it works
+
+132
+00:07:06,380 --> 00:07:07,380
+on all of them.
+
+133
+00:07:07,380 --> 00:07:14,660
+There's no reason I would believe that printing eggs would have a problem on any OS today.
+
+134
+00:07:14,660 --> 00:07:17,820
+The last thing we can do is we can talk about topics.
+
+135
+00:07:17,820 --> 00:07:19,900
+And so here I said this is a utility.
+
+136
+00:07:19,900 --> 00:07:20,900
+There are a lot of these.
+
+137
+00:07:20,900 --> 00:07:23,480
+Scientific computing is one, for instance.
+
+138
+00:07:23,480 --> 00:07:24,480
+One of them for internet.
+
+139
+00:07:24,480 --> 00:07:29,800
+And so you can really begin to describe your package to users.
+
+140
+00:07:29,800 --> 00:07:33,380
+This is probably the most important thing, though, that was missing previously.
+
+141
+00:07:33,380 --> 00:07:35,500
+There was no license.
+
+142
+00:07:35,500 --> 00:07:41,380
+Licenses aren't required to upload to PyPI, but I would strongly recommend them.
+
+143
+00:07:41,380 --> 00:07:45,700
+It's the case for a lot of users in the Python community that they can't use your package
+
+144
+00:07:45,700 --> 00:07:48,060
+without a license.
+
+145
+00:07:48,060 --> 00:07:52,780
+And not to turn this into a licensing talk, but if you have no license, that's not the
+
+146
+00:07:52,780 --> 00:07:54,720
+equivalent of a free-for-all.
+
+147
+00:07:54,720 --> 00:07:59,140
+Some people might think that if you just don't give a license, I can do whatever I want.
+
+148
+00:07:59,140 --> 00:08:00,140
+That's not true.
+
+149
+00:08:00,980 --> 00:08:06,620
+In the corporate world, we need a license to understand what rights we're being given
+
+150
+00:08:06,620 --> 00:08:08,460
+and what rights we're giving.
+
+151
+00:08:08,460 --> 00:08:11,060
+And without that, we're dead in the water.
+
+152
+00:08:11,060 --> 00:08:13,340
+So there are a bunch of classifiers.
+
+153
+00:08:13,340 --> 00:08:15,060
+There's around 80 of these.
+
+154
+00:08:15,060 --> 00:08:19,900
+And I called out three of the most common licenses from my perspective using Python
+
+155
+00:08:19,900 --> 00:08:20,900
+packages.
+
+156
+00:08:20,900 --> 00:08:23,100
+You'll see a lot of MIT, Apache, and GPL.
+
+157
+00:08:23,100 --> 00:08:26,580
+MIT and Apache are both fairly unrestrictive licenses.
+
+158
+00:08:26,580 --> 00:08:27,620
+They do have differences.
+
+159
+00:08:27,620 --> 00:08:30,060
+You should read about them on your own before choosing one.
+
+160
+00:08:30,060 --> 00:08:36,100
+But those are probably the most common, with GPL coming in next.
+
+161
+00:08:36,100 --> 00:08:41,020
+The other thing that was missing is any sort of meaningful description or getting started
+
+162
+00:08:41,020 --> 00:08:43,340
+installation information.
+
+163
+00:08:43,340 --> 00:08:46,820
+And we can provide that via longer description.
+
+164
+00:08:46,820 --> 00:08:52,020
+The code on this slide shows you how we could read in the readme from our repository and
+
+165
+00:08:52,020 --> 00:08:54,380
+then put it into the long description.
+
+166
+00:08:54,380 --> 00:08:56,260
+So long description takes text.
+
+167
+00:08:56,260 --> 00:09:00,260
+Long description content type allows us to tell it what that text is.
+
+168
+00:09:00,260 --> 00:09:01,460
+And that's pretty important.
+
+169
+00:09:01,460 --> 00:09:05,300
+Because without the content type, it just assumes it's plain text, which probably isn't
+
+170
+00:09:05,300 --> 00:09:07,500
+what you intended to get.
+
+171
+00:09:07,500 --> 00:09:08,700
+There are a lot of supported formats.
+
+172
+00:09:08,700 --> 00:09:11,780
+Plain text is one of them, along with common mark, restructured text.
+
+173
+00:09:11,780 --> 00:09:16,100
+And the most recent one is GitHub markdown, which I find very convenient, since it's kind
+
+174
+00:09:16,100 --> 00:09:20,220
+of the default for that world.
+
+175
+00:09:20,220 --> 00:09:23,380
+So after all that, this is what our setup to Py looks like.
+
+176
+00:09:24,180 --> 00:09:25,740
+It's not anything too crazy.
+
+177
+00:09:25,740 --> 00:09:30,180
+But what this results in is a more reasonable-looking PyPI package.
+
+178
+00:09:30,180 --> 00:09:34,100
+It goes a bit beyond the minimum we need, but it's enough that our users can understand
+
+179
+00:09:34,100 --> 00:09:40,420
+what our package is about, where it can be used, et cetera.
+
+180
+00:09:40,420 --> 00:09:42,620
+But I want to talk about some other things.
+
+181
+00:09:42,620 --> 00:09:47,420
+These things are general improvements beyond the things that you tend to look at first
+
+182
+00:09:47,420 --> 00:09:49,100
+on PyPI.
+
+183
+00:09:49,100 --> 00:09:51,580
+But they're going to make maintaining your package easier, and they're going to better
+
+184
+00:09:51,620 --> 00:09:53,820
+communicate things to your users.
+
+185
+00:09:53,820 --> 00:09:56,660
+So I want to start by talking about a thing called Python requires.
+
+186
+00:09:56,660 --> 00:10:02,260
+PyPI right now doesn't enforce Python versions for your installs.
+
+187
+00:10:02,260 --> 00:10:07,860
+So let's say I went today and I shipped this package without Python requires, and a Python
+
+188
+00:10:07,860 --> 00:10:12,860
+3.4 user came along, or a Python 2.7 user came along and tried to install the package.
+
+189
+00:10:12,860 --> 00:10:15,740
+And it doesn't work, and they have a problem.
+
+190
+00:10:15,740 --> 00:10:20,060
+Now we might expect that the user would go back to the package page and notice that,
+
+191
+00:10:20,060 --> 00:10:23,420
+oh, it says the supported version is 3.5 plus.
+
+192
+00:10:23,420 --> 00:10:27,660
+But there's pretty much an equally likely chance that that same user files a bug about
+
+193
+00:10:27,660 --> 00:10:30,900
+how it doesn't work, doesn't tell you they're on 2.7, you spend the next three hours of
+
+194
+00:10:30,900 --> 00:10:34,420
+your life trying to figure out why this is doing some weird thing, to eventually realize
+
+195
+00:10:34,420 --> 00:10:37,220
+three days later that the problem is they're using an unsupported version that you'd never
+
+196
+00:10:37,220 --> 00:10:38,700
+tested.
+
+197
+00:10:38,700 --> 00:10:40,220
+And that's not a good situation for anyone.
+
+198
+00:10:40,220 --> 00:10:43,580
+It's not good for your customer, because they've wasted time trying to use something that was
+
+199
+00:10:43,580 --> 00:10:45,060
+never going to work.
+
+200
+00:10:45,060 --> 00:10:46,820
+You spend time trying to debug.
+
+201
+00:10:46,820 --> 00:10:50,540
+And so at the end of the day, the best thing we can do for everyone is be transparent and
+
+202
+00:10:50,540 --> 00:10:53,060
+honest about what it is we do and don't support.
+
+203
+00:10:53,060 --> 00:10:55,540
+And Python requires allows us to do that.
+
+204
+00:10:55,540 --> 00:11:00,540
+So because, again, I shipped this today, I'm going to support 3.5, 3.6, and 3.7, and this
+
+205
+00:11:00,540 --> 00:11:03,900
+takes care of that.
+
+206
+00:11:03,900 --> 00:11:07,980
+Another thing that isn't happening in this small package, but is far more common in real
+
+207
+00:11:07,980 --> 00:11:11,540
+world packages, are dependencies.
+
+208
+00:11:11,540 --> 00:11:15,860
+So imagine for a moment that you had a package that needed to get content from the internet.
+
+209
+00:11:15,900 --> 00:11:20,380
+If you're going to do that, you're likely using ErlLib 3, using requests.
+
+210
+00:11:20,380 --> 00:11:23,140
+These are pretty common packages for doing this sort of thing.
+
+211
+00:11:23,140 --> 00:11:26,420
+And so here's an example of how you might do that.
+
+212
+00:11:26,420 --> 00:11:27,820
+Install requires takes an array.
+
+213
+00:11:27,820 --> 00:11:29,300
+We give it the packages.
+
+214
+00:11:29,300 --> 00:11:34,700
+And this way, PyPI, when it installs the setup.py, can go ahead and install your dependencies
+
+215
+00:11:34,700 --> 00:11:41,060
+for the user so they don't end up in a weird place where things don't work.
+
+216
+00:11:41,060 --> 00:11:47,420
+The last thing I wanted to talk about adding to setup.py is the reduction, the exclusion
+
+217
+00:11:47,420 --> 00:11:50,060
+of certain things from our package.
+
+218
+00:11:50,060 --> 00:11:55,220
+This turns out to be a little more controversial because some users really do want everything.
+
+219
+00:11:55,220 --> 00:11:58,900
+They want your tests, they want your docs, they want it all to come down right away.
+
+220
+00:11:58,900 --> 00:12:01,100
+This is really common in audit workflows.
+
+221
+00:12:01,100 --> 00:12:04,260
+So if someone wants to be able to run your tests once they've installed to verify it
+
+222
+00:12:04,260 --> 00:12:07,180
+works, they want the unit tests.
+
+223
+00:12:07,180 --> 00:12:11,740
+The problem is these things can also be seen as bloat for pretty much every other user.
+
+224
+00:12:11,740 --> 00:12:15,500
+And for a lot of packages that I've worked on, tests make up a significant portion of
+
+225
+00:12:15,500 --> 00:12:16,780
+the code base.
+
+226
+00:12:16,780 --> 00:12:18,700
+Docs take up a lot of space.
+
+227
+00:12:18,700 --> 00:12:22,180
+And so I don't really want to have to distribute those every time and increase the size of
+
+228
+00:12:22,180 --> 00:12:26,340
+my install, which might be problematic for people with slow internet or on platforms
+
+229
+00:12:26,340 --> 00:12:28,060
+that have limited disk space.
+
+230
+00:12:28,060 --> 00:12:29,460
+And so you can limit some of these things.
+
+231
+00:12:29,460 --> 00:12:35,340
+You can exclude them so that they don't come down.
+
+232
+00:12:35,340 --> 00:12:38,420
+Another thing that we sort of glossed over is I talked about publishing without everyone's
+
+233
+00:12:38,420 --> 00:12:42,300
+talking about having credentials.
+
+234
+00:12:42,300 --> 00:12:47,340
+PyPI works on a username password model.
+
+235
+00:12:47,340 --> 00:12:50,460
+And there's talk to add new sorts of authentication for them, but this is the state of the art
+
+236
+00:12:50,460 --> 00:12:51,460
+today.
+
+237
+00:12:51,460 --> 00:12:53,980
+And there are a few ways to manage this.
+
+238
+00:12:53,980 --> 00:12:58,580
+The most obvious one is when you run from the CLI twine, it'll prompt for a username,
+
+239
+00:12:58,580 --> 00:13:00,540
+it'll prompt for a password.
+
+240
+00:13:00,540 --> 00:13:02,020
+And this is really easy to get started with.
+
+241
+00:13:02,780 --> 00:13:10,340
+And when you need to publish, you just fetch it and then you type it in.
+
+242
+00:13:10,340 --> 00:13:14,220
+Another common way is a file called .pypirc.
+
+243
+00:13:14,220 --> 00:13:16,980
+This file tends to live in your home directory.
+
+244
+00:13:16,980 --> 00:13:18,420
+And we can form it as you see here.
+
+245
+00:13:18,420 --> 00:13:22,500
+So the repository URL would be for PyPI.
+
+246
+00:13:22,500 --> 00:13:25,420
+Username would be, in my case, Sierra Wilcox.
+
+247
+00:13:25,420 --> 00:13:27,800
+And then I'd have a password.
+
+248
+00:13:27,800 --> 00:13:30,780
+There's one other way that is becoming more popular among people.
+
+249
+00:13:30,780 --> 00:13:32,500
+And they seem to like this.
+
+250
+00:13:32,500 --> 00:13:33,500
+Keyring.
+
+251
+00:13:33,500 --> 00:13:35,500
+So we can install Keyring.
+
+252
+00:13:35,500 --> 00:13:42,580
+Keyring is a password manager that when given a endpoint, so in our case a URL to test PyPI
+
+253
+00:13:42,580 --> 00:13:47,260
+or to PyPI, and a username, it will provide the password.
+
+254
+00:13:47,260 --> 00:13:52,260
+I think it's important to mention by default this isn't all that secure.
+
+255
+00:13:52,260 --> 00:13:55,020
+It might seem on the surface like this is better.
+
+256
+00:13:55,020 --> 00:13:58,180
+It does allow you to look at the things by your application.
+
+257
+00:13:58,180 --> 00:14:00,620
+But in this case, the application is Python.
+
+258
+00:14:00,620 --> 00:14:03,860
+So it's actually open to a lot of the world.
+
+259
+00:14:03,860 --> 00:14:06,560
+I think it's a little better than PyPIRC.
+
+260
+00:14:06,560 --> 00:14:11,500
+The reason for that is it's pretty easy to accidentally commit your PyPIRC.
+
+261
+00:14:11,500 --> 00:14:15,300
+And it's also in plain text in a predictable location on a computer that you likely use
+
+262
+00:14:15,300 --> 00:14:17,020
+for things other than publishing packages.
+
+263
+00:14:17,020 --> 00:14:20,860
+And so if you were to have any sort of infection or anything, you'd really have to worry that
+
+264
+00:14:20,860 --> 00:14:27,180
+your PyPI credentials have been in some ways compromised.
+
+265
+00:14:27,180 --> 00:14:30,020
+So this is what I figured at this point I would be feeling in the audience.
+
+266
+00:14:30,020 --> 00:14:33,420
+So I've shown you a bunch of different settings that you can do.
+
+267
+00:14:33,420 --> 00:14:40,220
+But in what way am I supposed to retain a dozen different things that go in the setup.py file?
+
+268
+00:14:40,220 --> 00:14:43,220
+My suggestion would be to not try to do that.
+
+269
+00:14:43,220 --> 00:14:44,580
+You're going to have a hard time.
+
+270
+00:14:44,580 --> 00:14:49,100
+So what you could remember instead is that the PyPA publishes a sample project.
+
+271
+00:14:49,100 --> 00:14:52,940
+And the sample project has a ton of comments on every one of these settings that helps
+
+272
+00:14:52,940 --> 00:14:55,540
+you understand better how you might use it and why you might use it.
+
+273
+00:14:55,540 --> 00:15:00,060
+And they have extensive documentation beyond the sample that you can use.
+
+274
+00:15:00,060 --> 00:15:03,660
+The other thing you might find is that as you develop packages beyond your first and
+
+275
+00:15:03,660 --> 00:15:07,420
+second one is that you start to rely on your own work.
+
+276
+00:15:07,420 --> 00:15:09,880
+So you've now done this a few times.
+
+277
+00:15:09,880 --> 00:15:13,560
+You just go grab your old setup.py and you copy it into your new package.
+
+278
+00:15:13,560 --> 00:15:16,040
+You change some things, the name of the package and whatnot.
+
+279
+00:15:16,040 --> 00:15:19,740
+But likely things like your URLs are going to be mostly the same.
+
+280
+00:15:19,740 --> 00:15:21,220
+Your email is going to be the same.
+
+281
+00:15:21,220 --> 00:15:25,420
+And so you can sort of just borrow from your past self.
+
+282
+00:15:25,420 --> 00:15:29,220
+Another way to do this I wanted to mention is a thing called cookie cutter.
+
+283
+00:15:29,220 --> 00:15:34,500
+Cookie cutter is a really powerful templating tool that you can install via PyPI that will
+
+284
+00:15:34,500 --> 00:15:37,580
+help lay out your entire repository.
+
+285
+00:15:37,580 --> 00:15:39,900
+And this goes far beyond just the setup.py file.
+
+286
+00:15:39,900 --> 00:15:45,460
+We're talking about your get ignore files, documentation layouts, testing infrastructure,
+
+287
+00:15:45,460 --> 00:15:47,420
+at least the start of it.
+
+288
+00:15:47,420 --> 00:15:49,300
+It can be very helpful.
+
+289
+00:15:49,300 --> 00:15:53,260
+On the other hand, it also can come off as kind of opinionated because it has already
+
+290
+00:15:53,260 --> 00:15:55,300
+made all of these decisions for you.
+
+291
+00:15:55,380 --> 00:15:57,900
+And so if you can agree with it, very helpful.
+
+292
+00:15:57,900 --> 00:16:00,860
+If you disagree with it, that might stop you in the water.
+
+293
+00:16:00,860 --> 00:16:02,620
+The good news, it is extensible.
+
+294
+00:16:02,620 --> 00:16:05,060
+So if you wanted to make your own template, you could.
+
+295
+00:16:05,060 --> 00:16:08,460
+That would fit the way you wanted to do things.
+
+296
+00:16:08,460 --> 00:16:12,380
+The one of these I tend to choose is the bit about copying your previous work.
+
+297
+00:16:12,380 --> 00:16:16,260
+I tend to start my packages by taking one I have and deleting a bunch of the content
+
+298
+00:16:16,260 --> 00:16:17,760
+and then starting from there.
+
+299
+00:16:17,760 --> 00:16:19,260
+But you can choose your own way.
+
+300
+00:16:19,260 --> 00:16:24,260
+I think my way is probably a bit messy, but it works for me.
+
+301
+00:16:24,260 --> 00:16:28,020
+So now that we've done that, I would like to talk about how we can never do most of
+
+302
+00:16:28,020 --> 00:16:29,020
+it again.
+
+303
+00:16:29,020 --> 00:16:31,460
+And that's my goal.
+
+304
+00:16:31,460 --> 00:16:36,220
+I as part of my day job support around four dozen PyPI packages.
+
+305
+00:16:36,220 --> 00:16:39,820
+And so trying to manually publish them would get to be a bit of a drag.
+
+306
+00:16:39,820 --> 00:16:44,740
+So we can talk about ways we can automate this to make this a little less bad.
+
+307
+00:16:44,740 --> 00:16:47,320
+So why might we automate?
+
+308
+00:16:47,320 --> 00:16:51,340
+The first one I thought of had to do with the credentials I talked about.
+
+309
+00:16:51,340 --> 00:16:54,260
+Using those credentials is a risk.
+
+310
+00:16:54,260 --> 00:16:58,360
+It also doesn't work well past one person, which is likely the case for most projects
+
+311
+00:16:58,360 --> 00:17:00,860
+after a little bit of time.
+
+312
+00:17:00,860 --> 00:17:04,500
+The other thing that it brings is consistency.
+
+313
+00:17:04,500 --> 00:17:06,880
+Computers are very good at following instructions.
+
+314
+00:17:06,880 --> 00:17:08,740
+Human beings less so.
+
+315
+00:17:08,740 --> 00:17:13,380
+I think most of us in grade school or sometime about then took an instructions test where
+
+316
+00:17:13,380 --> 00:17:16,140
+you walked through it and you get to the end and they're like, you didn't need to do this
+
+317
+00:17:16,140 --> 00:17:17,140
+at all, sit quietly.
+
+318
+00:17:17,140 --> 00:17:18,620
+At least they did that to me.
+
+319
+00:17:18,620 --> 00:17:20,060
+It was torture.
+
+320
+00:17:20,460 --> 00:17:24,240
+They did that and you messed it up.
+
+321
+00:17:24,240 --> 00:17:27,620
+But computers will follow every step you give them exactly every time.
+
+322
+00:17:27,620 --> 00:17:30,060
+So automation is repeatable.
+
+323
+00:17:30,060 --> 00:17:33,400
+The other thing is it gives you scale.
+
+324
+00:17:33,400 --> 00:17:37,500
+When you're one person, having a bespoke development environment is perfectly fine.
+
+325
+00:17:37,500 --> 00:17:40,420
+The second you have two people, that doesn't work anymore.
+
+326
+00:17:40,420 --> 00:17:44,340
+And so if we have automation to do this, we simplify our dev environment, we make it easier
+
+327
+00:17:44,340 --> 00:17:49,300
+to onboard and we allow ourselves to grow our team.
+
+328
+00:17:49,300 --> 00:17:53,900
+So the first thing I'd like to talk about automating is some of our test work.
+
+329
+00:17:53,900 --> 00:17:58,860
+One of the interesting thing about Python packages over say a web service is you have
+
+330
+00:17:58,860 --> 00:18:01,180
+to support multiple platforms.
+
+331
+00:18:01,180 --> 00:18:05,900
+If you're just running let's say a Flask app, you probably only care about a single version
+
+332
+00:18:05,900 --> 00:18:08,100
+of Python at a time.
+
+333
+00:18:08,100 --> 00:18:11,260
+With packages, you almost always care about all of the currently supported versions of
+
+334
+00:18:11,260 --> 00:18:17,220
+Python which tends to be three, four, five things at once that you have to worry about.
+
+335
+00:18:17,300 --> 00:18:23,940
+So using testing tools that help us to parameterize this, to support four to five test runs at
+
+336
+00:18:23,940 --> 00:18:29,380
+once that are all the same, other than the Python version, is very helpful.
+
+337
+00:18:29,380 --> 00:18:31,100
+So there are two I want to mention.
+
+338
+00:18:31,100 --> 00:18:35,380
+I couldn't talk about test automation without talking about TOCs because it's by far the
+
+339
+00:18:35,380 --> 00:18:39,740
+most popular test automation tool in Python.
+
+340
+00:18:39,740 --> 00:18:44,260
+It's based on I&I files where you can specify the Python versions you need to test, what
+
+341
+00:18:44,260 --> 00:18:46,700
+a test scenario might look like.
+
+342
+00:18:46,700 --> 00:18:49,860
+But there's another one I want to talk about that I find myself using.
+
+343
+00:18:49,860 --> 00:18:50,860
+It's called NOX.
+
+344
+00:18:50,860 --> 00:18:56,420
+NOX is very much inspired by TOCs, but it claims to be far more flexible and it's based
+
+345
+00:18:56,420 --> 00:18:57,580
+in Python.
+
+346
+00:18:57,580 --> 00:19:01,740
+So rather than having an I&I file, we end up with Python functions that we can run to
+
+347
+00:19:01,740 --> 00:19:04,500
+execute tests.
+
+348
+00:19:04,500 --> 00:19:07,900
+Because TOCs has such a big presence already and there's a lot of documentation in the
+
+349
+00:19:07,900 --> 00:19:13,140
+community, I'm going to show you how NOX works since it has a much smaller corpus, but definitely
+
+350
+00:19:13,140 --> 00:19:16,300
+look into both tools.
+
+351
+00:19:16,300 --> 00:19:20,620
+So here is a basic NOX file that will run our unit tests.
+
+352
+00:19:20,620 --> 00:19:25,300
+Above the function declaration, there's a session decorator that takes in an array of
+
+353
+00:19:25,300 --> 00:19:27,500
+Python versions.
+
+354
+00:19:27,500 --> 00:19:33,140
+What this will do is when we run NOX, it will run this function three times, once for each
+
+355
+00:19:33,140 --> 00:19:35,620
+version of Python.
+
+356
+00:19:35,620 --> 00:19:37,140
+And what do we do inside the function?
+
+357
+00:19:37,140 --> 00:19:41,340
+We install some test dependencies, so we install mock and we install PyTest.
+
+358
+00:19:41,340 --> 00:19:46,900
+We install our package and then we run PyTest with some arguments.
+
+359
+00:19:46,900 --> 00:19:52,820
+The bit at the end, the session.posargs, that is a way to extend unit.
+
+360
+00:19:52,820 --> 00:19:56,940
+So we're not really using that here, and I don't have this on the screen, but we can
+
+361
+00:19:56,940 --> 00:20:01,700
+pass additional parameters to unit at runtime if we want via this.
+
+362
+00:20:01,700 --> 00:20:06,140
+And so this can be useful if you have additional test flags that you want to use or if there
+
+363
+00:20:06,140 --> 00:20:10,500
+are a lot of other tasks you might do from, let's say, docs running and where you might
+
+364
+00:20:10,540 --> 00:20:13,740
+want to pass more run arguments.
+
+365
+00:20:13,740 --> 00:20:17,140
+This is one of the other cool things I like about things like NOX and TOCS over just using
+
+366
+00:20:17,140 --> 00:20:23,580
+PyTest directly is we can make a docs target that runs every time we run our tests.
+
+367
+00:20:23,580 --> 00:20:27,420
+All this does is install Sphinx, installs our module, builds the docs.
+
+368
+00:20:27,420 --> 00:20:29,180
+It's not too complicated.
+
+369
+00:20:29,180 --> 00:20:32,580
+But it brings this really great side effect.
+
+370
+00:20:32,580 --> 00:20:37,660
+Without this, most people find themselves building their docs when they go to release.
+
+371
+00:20:37,700 --> 00:20:41,020
+Now, I don't know about you, but I like to find my problems much closer to when they
+
+372
+00:20:41,020 --> 00:20:46,180
+happen than, let's say, a month later and then wonder why I'm having an issue.
+
+373
+00:20:46,180 --> 00:20:50,700
+When you change your code because the docs are generated, you can break the docs and
+
+374
+00:20:50,700 --> 00:20:52,740
+Sphinx will have an issue.
+
+375
+00:20:52,740 --> 00:20:56,420
+But if you run it as part of your test, you will know the moment you made that change.
+
+376
+00:20:56,420 --> 00:20:59,100
+You'll know why it broke and you'll be able to address it right then.
+
+377
+00:20:59,100 --> 00:21:02,500
+And so by bringing our docs into our test run, we can end up with a much more stable
+
+378
+00:21:02,500 --> 00:21:06,660
+documentation situation.
+
+379
+00:21:06,660 --> 00:21:11,220
+This very much doesn't go as deep as docs and talks go.
+
+380
+00:21:11,220 --> 00:21:17,340
+Luckily, there was a talk on Friday by my coworker, Thea, on these tools.
+
+381
+00:21:17,340 --> 00:21:23,820
+And the slides will be up on the PyCon 2019 YouTube channel later.
+
+382
+00:21:23,820 --> 00:21:27,740
+The next thing we're going to talk about is moving this to CI.
+
+383
+00:21:27,740 --> 00:21:29,660
+It's all great to automate this locally.
+
+384
+00:21:29,660 --> 00:21:30,960
+That's a lot better.
+
+385
+00:21:30,960 --> 00:21:34,260
+We don't have to worry about managing all that and making sure everyone's running PyTest
+
+386
+00:21:34,260 --> 00:21:36,380
+multiple times.
+
+387
+00:21:36,380 --> 00:21:40,260
+Let's find a way to get that into the cloud somewhere where it runs on pull requests,
+
+388
+00:21:40,260 --> 00:21:42,980
+on merges to master.
+
+389
+00:21:42,980 --> 00:21:45,900
+There are a lot of different CI services that we can use.
+
+390
+00:21:45,900 --> 00:21:47,900
+There are a lot of popular ones people know.
+
+391
+00:21:47,900 --> 00:21:48,900
+Circle is the one I'm going to talk about.
+
+392
+00:21:48,900 --> 00:21:53,300
+But there's also Travis, there's AppVayor, there's many more.
+
+393
+00:21:53,300 --> 00:21:54,300
+So what is CI?
+
+394
+00:21:54,300 --> 00:21:55,840
+CI is continuous integration.
+
+395
+00:21:55,840 --> 00:22:00,540
+So every time we merge to master, every time we make a pull request, we can get a run.
+
+396
+00:22:00,540 --> 00:22:04,980
+The nice thing about this is, again, it simplifies what we require of our developers.
+
+397
+00:22:04,980 --> 00:22:08,500
+They no longer need to have as much figured out on their machine in order to contribute
+
+398
+00:22:08,500 --> 00:22:10,280
+to a project.
+
+399
+00:22:10,280 --> 00:22:13,180
+We can also use CI for another task.
+
+400
+00:22:13,180 --> 00:22:17,540
+We can use it to publish our package.
+
+401
+00:22:17,540 --> 00:22:23,140
+So to use something like Circle, you need a GitHub or a Bitbucket account.
+
+402
+00:22:23,140 --> 00:22:24,140
+And you can sign in with it.
+
+403
+00:22:24,140 --> 00:22:27,040
+And it knows how to discover your repositories.
+
+404
+00:22:27,040 --> 00:22:30,140
+So the page I have up now is what you'll see once you log in.
+
+405
+00:22:30,140 --> 00:22:31,820
+You can go to add projects.
+
+406
+00:22:31,820 --> 00:22:33,620
+It will have already discovered your repositories.
+
+407
+00:22:33,660 --> 00:22:37,300
+And in my case, I pointed out my PyPI package.
+
+408
+00:22:37,300 --> 00:22:43,820
+It instructs us to create a folder called CircleCI and put a config.yaml in it.
+
+409
+00:22:43,820 --> 00:22:48,860
+Config.yaml specifies two distinct things, workflows and jobs.
+
+410
+00:22:48,860 --> 00:22:51,460
+So a workflow is a step of jobs.
+
+411
+00:22:51,460 --> 00:22:52,660
+It's a list.
+
+412
+00:22:52,660 --> 00:22:58,040
+And a job defines a discrete task that needs to be done as part of continuous integration.
+
+413
+00:22:58,040 --> 00:23:02,960
+The sample.yaml at the bottom is pretty good for Python programs.
+
+414
+00:23:02,960 --> 00:23:05,560
+But it's not really tailored to PyPI.
+
+415
+00:23:05,560 --> 00:23:07,220
+You can try to start from this.
+
+416
+00:23:07,220 --> 00:23:10,520
+But I'm going to put up the link to my GitHub at the end for this project.
+
+417
+00:23:10,520 --> 00:23:11,520
+And you can start from that one.
+
+418
+00:23:11,520 --> 00:23:12,980
+It's a little easier.
+
+419
+00:23:12,980 --> 00:23:18,800
+There are some things unique to making Python packages from, say, a web app.
+
+420
+00:23:18,800 --> 00:23:23,520
+So let's start by looking at what is in a CircleCI configuration file.
+
+421
+00:23:23,520 --> 00:23:25,880
+First let's talk about the workflows.
+
+422
+00:23:25,880 --> 00:23:27,560
+Those are a list of jobs.
+
+423
+00:23:27,560 --> 00:23:29,080
+And that's the same here.
+
+424
+00:23:29,080 --> 00:23:31,180
+We have three test groups.
+
+425
+00:23:31,180 --> 00:23:33,640
+We have a 3.5, a 3.6, and a 3.7.
+
+426
+00:23:33,640 --> 00:23:35,340
+And we have a deploy task.
+
+427
+00:23:35,340 --> 00:23:39,900
+And that deploy task is what we're going to use to publish our content to PyPI.
+
+428
+00:23:39,900 --> 00:23:42,120
+There are a few extra things there.
+
+429
+00:23:42,120 --> 00:23:44,640
+If you look under 3.7, you'll see it has a filter.
+
+430
+00:23:44,640 --> 00:23:46,560
+That filters on tags.
+
+431
+00:23:46,560 --> 00:23:48,440
+Only run this on all tags.
+
+432
+00:23:48,440 --> 00:23:52,320
+The reason I'm doing this is this way on a tag run, which is how we're going to publish,
+
+433
+00:23:52,320 --> 00:23:53,980
+we'll run our 3.7 tests.
+
+434
+00:23:53,980 --> 00:23:58,620
+So before we try to publish, we'll make sure at least one of our test runs work.
+
+435
+00:23:58,620 --> 00:24:00,780
+Under deploy, again, we have filters.
+
+436
+00:24:00,780 --> 00:24:04,900
+We have the tags filter, which has a regex, which can roughly be described as it looks
+
+437
+00:24:04,900 --> 00:24:07,220
+like a version number.
+
+438
+00:24:07,220 --> 00:24:09,300
+And it also ignores branches.
+
+439
+00:24:09,300 --> 00:24:12,740
+This is important so that way we don't try to build on master.
+
+440
+00:24:12,740 --> 00:24:16,660
+Because the last thing I would want is merging some pull requests and then having it decide
+
+441
+00:24:16,660 --> 00:24:19,140
+now is a good time to try to publish.
+
+442
+00:24:19,140 --> 00:24:23,860
+This way we have full control over when we publish.
+
+443
+00:24:23,860 --> 00:24:26,440
+So let's look at the test job a little bit.
+
+444
+00:24:26,440 --> 00:24:30,700
+The test job looks very much like we would have done manually.
+
+445
+00:24:30,700 --> 00:24:35,700
+If we ignore some of the extra stuff, check out which clones the repository and some of
+
+446
+00:24:35,700 --> 00:24:41,860
+the virtual end creation, we install Knox and we run Knox.
+
+447
+00:24:41,860 --> 00:24:43,540
+Deployment is very much the same story.
+
+448
+00:24:43,540 --> 00:24:48,020
+We check out the repository, we make a virtual environment, we install our dependencies Twine
+
+449
+00:24:49,020 --> 00:24:55,580
+and we run the two steps we did earlier when we manually uploaded to PyPI.
+
+450
+00:24:55,580 --> 00:24:59,100
+There are some extra steps that we need to think about with upgrading that we didn't
+
+451
+00:24:59,100 --> 00:25:01,540
+really talk about before.
+
+452
+00:25:01,540 --> 00:25:04,140
+We need to change the version number.
+
+453
+00:25:04,140 --> 00:25:08,220
+The good thing is if you forget to do this, nothing really exciting happens because PyPI
+
+454
+00:25:08,220 --> 00:25:11,300
+won't let you overwrite version numbers, but you might be surprised that you never get
+
+455
+00:25:11,300 --> 00:25:13,520
+a new package.
+
+456
+00:25:13,520 --> 00:25:19,380
+We started at 0.0.1, so I'm going to increment this to 0.0.2, and once you've merged this
+
+457
+00:25:19,380 --> 00:25:24,240
+to your master branch, you're going to create a tag.
+
+458
+00:25:24,240 --> 00:25:29,040
+You can create a tag using git tag or any of the CLI tools you use for git, but I prefer
+
+459
+00:25:29,040 --> 00:25:32,120
+to use the releases system on GitHub.
+
+460
+00:25:32,120 --> 00:25:37,080
+So releases will give you an archive of your current state of your repository and they
+
+461
+00:25:37,080 --> 00:25:38,960
+will also give you a tag.
+
+462
+00:25:38,960 --> 00:25:40,960
+So in this case, we're going to make a tag called 0.0.2.
+
+463
+00:25:41,520 --> 00:25:45,920
+I'm going to name the release 0.0.2, and if I'd like, I could provide a description of
+
+464
+00:25:45,920 --> 00:25:50,640
+this release, additional change log information, and as I said, it's going to automatically
+
+465
+00:25:50,640 --> 00:25:54,400
+create an archive at this point that is downloadable from GitHub.
+
+466
+00:25:54,400 --> 00:25:58,200
+And this might be useful if users don't want to use PyPI or are trying to bundle things
+
+467
+00:25:58,200 --> 00:25:59,360
+to go somewhere else.
+
+468
+00:25:59,360 --> 00:26:03,560
+It's just convenient, and it doesn't take a lot extra for us.
+
+469
+00:26:03,560 --> 00:26:06,360
+And once I click that, Circle is going to notice the tag.
+
+470
+00:26:06,360 --> 00:26:09,820
+It's going to kick off a build called 0.0.2.
+
+471
+00:26:09,820 --> 00:26:15,300
+It's going to run test 3.7, and upon a successful run, deploy is then going to run and publish
+
+472
+00:26:15,300 --> 00:26:16,300
+to PyPI.
+
+473
+00:26:16,300 --> 00:26:20,700
+And that's it.
+
+474
+00:26:20,700 --> 00:26:26,260
+With that, you can publish to PyPI, you can automate the CI, you can automate your test
+
+475
+00:26:26,260 --> 00:26:27,260
+runs.
+
+476
+00:26:27,260 --> 00:26:32,620
+With any luck, a few of you, hopefully all of you, are now package authors in Python,
+
+477
+00:26:32,620 --> 00:26:35,500
+and I sincerely look forward to whatever you can bring to our ecosystem.
+
+478
+00:26:39,820 --> 00:26:45,860
+Thank you, Chris.
+
+479
+00:26:45,860 --> 00:26:49,980
+If there are any questions, we have a couple of microphones in the aisles, so please queue
+
+480
+00:26:49,980 --> 00:26:53,980
+up and please ask questions in the form of a question.
+
+481
+00:26:53,980 --> 00:26:55,420
+Comments can be saved for the whole way after.
+
+482
+00:26:55,420 --> 00:26:56,420
+Thank you.
+
+483
+00:26:56,420 --> 00:27:01,540
+Would you structure your setup.py differently for applications versus libraries?
+
+484
+00:27:01,540 --> 00:27:03,980
+I'm sorry, I couldn't-
+
+485
+00:27:03,980 --> 00:27:06,500
+Would you structure your setup.py?
+
+486
+00:27:06,500 --> 00:27:12,180
+Would you do anything different for libraries versus your application?
+
+487
+00:27:12,180 --> 00:27:15,540
+It's a command line application versus it's a library.
+
+488
+00:27:15,540 --> 00:27:21,900
+If I was making a CLI-based thing for PyP, like something that uses CLI, not particularly.
+
+489
+00:27:21,900 --> 00:27:27,980
+There are some considerations when you start to do things beyond just packages.
+
+490
+00:27:27,980 --> 00:27:30,940
+There are additional tools that exist to make sure everything is included.
+
+491
+00:27:30,940 --> 00:27:34,460
+So it's not so much that I would structure it differently, but I might consider more
+
+492
+00:27:35,460 --> 00:27:37,100
+exactly specifying the content I need.
+
+493
+00:27:37,100 --> 00:27:39,220
+So there are multiple ways to do this in Python.
+
+494
+00:27:39,220 --> 00:27:41,420
+You can include package data.
+
+495
+00:27:41,420 --> 00:27:45,860
+You can also use a thing called a manifest.in file to help make sure you get all the content.
+
+496
+00:27:45,860 --> 00:27:49,260
+But as far as the setup.py goes, no, it's mostly the same.
+
+497
+00:27:49,260 --> 00:27:56,080
+You mentioned you have a bunch of packages that you maintain.
+
+498
+00:27:56,080 --> 00:28:01,780
+How do you release them when there are interdependencies across packages?
+
+499
+00:28:01,860 --> 00:28:08,180
+There's a long answer, but the short answer is very carefully.
+
+500
+00:28:08,180 --> 00:28:11,620
+You do your best to not have the situations.
+
+501
+00:28:11,620 --> 00:28:14,980
+Really you just have to stage releases, and sometimes it means releasing things twice,
+
+502
+00:28:14,980 --> 00:28:17,140
+if I'm completely honest.
+
+503
+00:28:17,140 --> 00:28:19,860
+Sometimes it does mean that package A has to go out so package B can go out and then
+
+504
+00:28:19,860 --> 00:28:22,760
+package A has something else again.
+
+505
+00:28:22,760 --> 00:28:28,420
+That is a talk.
+
+506
+00:28:28,420 --> 00:28:32,180
+How did you handle credentials in CircleCI for the upload?
+
+507
+00:28:32,180 --> 00:28:36,860
+In CircleCI, I lied about that because it made the slide entirely too long.
+
+508
+00:28:36,860 --> 00:28:42,980
+The easiest way to do it is CircleCI has the ability to have environment variables.
+
+509
+00:28:42,980 --> 00:28:47,820
+As an environment variable, you can put your password and then you can echo into a PyPIRC
+
+510
+00:28:47,820 --> 00:28:50,380
+at runtime inside the virtual environment.
+
+511
+00:28:50,380 --> 00:28:52,620
+That's the most common way to do that.
+
+512
+00:28:52,620 --> 00:28:56,500
+It works pretty well, but it would have taken up about half of the slide to show that, and
+
+513
+00:28:56,500 --> 00:29:00,820
+it's not really interesting to look at.
+
+514
+00:29:00,820 --> 00:29:05,360
+My hope moving forward, one of the features, kind of a plug here, anyone coming for sprints?
+
+515
+00:29:05,360 --> 00:29:10,700
+One of the topics is adding API keys to PyPI and the system.
+
+516
+00:29:10,700 --> 00:29:13,020
+If you're interested in that, please stop by.
+
+517
+00:29:13,020 --> 00:29:14,340
+It's something we'd like to get to.
+
+518
+00:29:14,340 --> 00:29:17,260
+For me, I would feel a lot more comfortable doing that than giving my username and password
+
+519
+00:29:17,260 --> 00:29:18,260
+to my full account.
+
+520
+00:29:18,260 --> 00:29:22,580
+Yeah, good question.
+
+521
+00:29:22,580 --> 00:29:32,660
+How do you deal with having multiple test runs in, say, CircleCI or Jenkins when you
+
+522
+00:29:32,660 --> 00:29:38,460
+have Knox which runs all of the different versions at once?
+
+523
+00:29:38,460 --> 00:29:43,180
+The way it was dealt with here is that we had three different Docker containers, one
+
+524
+00:29:43,180 --> 00:29:47,900
+of which would be 3.5, one of which would be 3.6, one of which would be 3.7, and Knox
+
+525
+00:29:47,900 --> 00:29:49,340
+would run in all of them.
+
+526
+00:29:49,340 --> 00:29:52,140
+If Knox doesn't detect a Python environment, it just skips the run.
+
+527
+00:29:52,140 --> 00:29:53,140
+It doesn't fail.
+
+528
+00:29:53,140 --> 00:29:55,580
+It just assumes it shouldn't have bothered running.
+
+529
+00:29:55,580 --> 00:30:00,500
+The way I handle this in my day job is we manage a custom image that has all of the
+
+530
+00:30:00,500 --> 00:30:04,200
+versions of Python, so we run it once, and then Knox runs all of them.
+
+531
+00:30:04,200 --> 00:30:08,320
+There isn't really a strong reason to do one or the other besides the fact that you end
+
+532
+00:30:08,320 --> 00:30:14,100
+up having to maintain Docker containers if you do it the way we do for my projects.
+
+533
+00:30:14,100 --> 00:30:17,680
+We did it the way we did it for mine is that it does result in a speedup in test runs,
+
+534
+00:30:17,680 --> 00:30:19,940
+and we run a lot of tests.
+
+535
+00:30:19,940 --> 00:30:23,100
+So it was just an optimization.
+
+536
+00:30:23,100 --> 00:30:24,460
+Hi.
+
+537
+00:30:24,460 --> 00:30:33,060
+With setup tools, you have the ability to use setup.config to set all those in a plain
+
+538
+00:30:33,060 --> 00:30:34,060
+text file.
+
+539
+00:30:34,060 --> 00:30:38,700
+Is there any drawbacks to doing it that way or benefits that you know of?
+
+540
+00:30:38,700 --> 00:30:40,900
+Not particularly.
+
+541
+00:30:40,900 --> 00:30:44,220
+For a beginning project, I don't think it's strictly necessary.
+
+542
+00:30:44,220 --> 00:30:48,820
+It depends a little bit, too, on if you're working on a binary distribution.
+
+543
+00:30:48,820 --> 00:30:53,140
+So everything I talked about here was about a pure Python world in which we're just writing
+
+544
+00:30:53,140 --> 00:30:59,460
+Python code, but it's not as common, but it's not uncommon to have a C extension in which
+
+545
+00:30:59,460 --> 00:31:03,660
+the binary distributions, they get a bit hairier.
+
+546
+00:31:03,660 --> 00:31:08,780
+So the setup.config, a very common thing to add is to specify what kind of BDist we're
+
+547
+00:31:08,780 --> 00:31:12,620
+going to do and specify things like we want a universal wheel.
+
+548
+00:31:12,620 --> 00:31:13,620
+That's pretty common.
+
+549
+00:31:13,620 --> 00:31:16,500
+Like I said, you can also use manifest.in.
+
+550
+00:31:16,500 --> 00:31:19,260
+Some of this is personal style.
+
+551
+00:31:19,260 --> 00:31:23,100
+I find myself using those more when the setup.py gets kind of long.
+
+552
+00:31:23,100 --> 00:31:26,820
+So if things start to feel unwieldy, I'll kind of tuck them away to the side.
+
+553
+00:31:26,820 --> 00:31:29,780
+But for a lot of packages, it's just not strictly necessary.
+
+554
+00:31:29,780 --> 00:31:31,580
+A lot of them are rather simple and well-contained.
+
+555
+00:31:31,580 --> 00:31:37,380
+You have a few methods on the public surface.
+
+556
+00:31:37,380 --> 00:31:38,380
+Thank you.
+
+557
+00:31:38,380 --> 00:31:44,740
+Are there any more questions?
+
+558
+00:31:44,740 --> 00:31:46,380
+Thank you again, Chris.
+

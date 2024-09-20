@@ -1,0 +1,1680 @@
+1
+00:00:00,000 --> 00:00:07,000
+Hello. How's everyone doing? Are you enjoying PyCon so far?
+
+2
+00:00:07,000 --> 00:00:20,000
+Well, let's welcome Pamela Makanulti to tell us more about multiprocessing in Python.
+
+3
+00:00:20,000 --> 00:00:22,000
+Good afternoon.
+
+4
+00:00:22,000 --> 00:00:32,000
+Hello, everybody. My name is Pamela, and we're going to talk a little bit about multiprocessing.
+
+5
+00:00:32,000 --> 00:00:37,000
+How do I get this thing moving first?
+
+6
+00:00:37,000 --> 00:00:43,000
+Here we are. So who am I? I'm a senior developer at Cloud City. We're a contracting company.
+
+7
+00:00:43,000 --> 00:00:50,000
+I'm also the bass player in a band called Girl Skull, or Girl Skool, depending on how you want to pronounce it.
+
+8
+00:00:50,000 --> 00:00:58,000
+And my Twitter handle is Pmakanulti01. I've been doing Python for about 19 years now. I started in 2000.
+
+9
+00:00:58,000 --> 00:01:07,000
+Mostly web work, but done a lot of data analysis, some IoT work, and some other cool stuff.
+
+10
+00:01:07,000 --> 00:01:12,000
+So framing the problem. This is a quote that I saw a couple years ago, and I love it.
+
+11
+00:01:12,000 --> 00:01:17,000
+It really describes almost all of the multiprocessing stuff and thread work.
+
+12
+00:01:17,000 --> 00:01:22,000
+You know you need to do something. You need to use the resources.
+
+13
+00:01:22,000 --> 00:01:30,000
+And just things don't work the way you want them to work, in surprising ways.
+
+14
+00:01:30,000 --> 00:01:35,000
+Multiprocessing or Python processing comes in a lot of different flavors.
+
+15
+00:01:35,000 --> 00:01:38,000
+So there's the main one, which is one process only.
+
+16
+00:01:38,000 --> 00:01:44,000
+And I just use the Dunder main function, and you write your script or your app, and it runs, and you're great.
+
+17
+00:01:44,000 --> 00:01:50,000
+And you don't have to worry about all the intricacies of trying to use multiple servers,
+
+18
+00:01:50,000 --> 00:01:58,000
+and dancing around and making sure that things work together and don't collapse and collide with each other.
+
+19
+00:01:58,000 --> 00:02:05,000
+And then there are threads, and threads seem like a great thing, except that Python uses a global interpreter lock.
+
+20
+00:02:05,000 --> 00:02:10,000
+So you really don't get a second CPU very easily.
+
+21
+00:02:10,000 --> 00:02:15,000
+Threads basically allow you to write very straightforward synchronous codes,
+
+22
+00:02:15,000 --> 00:02:20,000
+code that all blocks each other unless you're doing an IO, some kind of IO.
+
+23
+00:02:20,000 --> 00:02:26,000
+And it's really hard to remember, oh, what's going to do an IO, what's not going to do an IO,
+
+24
+00:02:26,000 --> 00:02:30,000
+what's going to give up time, what's not, can get very confusing.
+
+25
+00:02:30,000 --> 00:02:34,000
+And that's one of the reasons that async IO came along, because I call it shuffling the IO,
+
+26
+00:02:34,000 --> 00:02:37,000
+because you're starting something and then something else gets to work on,
+
+27
+00:02:37,000 --> 00:02:42,000
+you're just constantly having these mental threads of execution that are sharing things,
+
+28
+00:02:42,000 --> 00:02:48,000
+sharing the CPU when somebody's not, when another thread is waiting for something.
+
+29
+00:02:48,000 --> 00:02:52,000
+But it's very explicit about when you're giving up time and when you're not.
+
+30
+00:02:52,000 --> 00:02:56,000
+So although it can be confusing, it's a little easier to figure out, you have to think,
+
+31
+00:02:56,000 --> 00:03:00,000
+it forces you to think about how things work together.
+
+32
+00:03:00,000 --> 00:03:03,000
+Now if you really want to use multiple processes,
+
+33
+00:03:03,000 --> 00:03:07,000
+there's this multiprocessing module that comes with this thing called pool.
+
+34
+00:03:07,000 --> 00:03:14,000
+And it allows you to literally map a function to some kind of iterable.
+
+35
+00:03:14,000 --> 00:03:17,000
+If we're chunking each one piece, it gets one piece of data,
+
+36
+00:03:17,000 --> 00:03:21,000
+and you get the resulting change data back.
+
+37
+00:03:21,000 --> 00:03:26,000
+And that's really good for some basic things where all the data is the same.
+
+38
+00:03:26,000 --> 00:03:30,000
+And especially if you're doing something that's going to get run once,
+
+39
+00:03:30,000 --> 00:03:33,000
+come to the end, start over again.
+
+40
+00:03:33,000 --> 00:03:36,000
+And then if you've gotten bigger, you can do third-party tools.
+
+41
+00:03:36,000 --> 00:03:44,000
+You can use, you can move to a queuing system like Reddit, Redith,
+
+42
+00:03:44,000 --> 00:03:49,000
+or ZeroMQ, or something built under Kubernetes.
+
+43
+00:03:49,000 --> 00:03:54,000
+There are a lot of tools that you can use to scale up in different ways.
+
+44
+00:03:54,000 --> 00:03:56,000
+But what I'm going to talk about is the things that you need to do
+
+45
+00:03:56,000 --> 00:04:05,000
+if you want to use the multiprocessing process function or class.
+
+46
+00:04:05,000 --> 00:04:08,000
+So when do you want to use multiprocessing?
+
+47
+00:04:08,000 --> 00:04:11,000
+The number one thing is when you're CPU constrained.
+
+48
+00:04:11,000 --> 00:04:14,000
+If you're trying to churn through something,
+
+49
+00:04:14,000 --> 00:04:17,000
+you're not waiting on the network all the time,
+
+50
+00:04:17,000 --> 00:04:22,000
+and you're not writing to disk or reading from disk all the time and not blocking,
+
+51
+00:04:23,000 --> 00:04:26,000
+and you just want to use all the CPU cycles you can,
+
+52
+00:04:26,000 --> 00:04:28,000
+and you can split up your work into chunks,
+
+53
+00:04:28,000 --> 00:04:31,000
+you want to use multiprocessing because that way you're using all...
+
+54
+00:04:31,000 --> 00:04:36,000
+I mean, you have these CPUs, go into AWS, 1,000 CPUs,
+
+55
+00:04:36,000 --> 00:04:39,000
+and you run Python with one, you're kind of losing,
+
+56
+00:04:39,000 --> 00:04:41,000
+spending a lot of money that you don't need.
+
+57
+00:04:41,000 --> 00:04:44,000
+The other thing is sometimes you have situations where you'd want to use
+
+58
+00:04:44,000 --> 00:04:49,000
+the OS's data, the OS's process protection model,
+
+59
+00:04:49,000 --> 00:04:53,000
+where you're using some kind of third-party library that you don't trust,
+
+60
+00:04:53,000 --> 00:04:55,000
+or you're using some data that might...
+
+61
+00:04:55,000 --> 00:04:58,000
+you're doing something where you are a little worried about security.
+
+62
+00:04:58,000 --> 00:05:03,000
+This way you know that process A and process B won't be able to talk to each other
+
+63
+00:05:03,000 --> 00:05:05,000
+or overwrite each other.
+
+64
+00:05:05,000 --> 00:05:10,000
+Other times, connection or operational integrity.
+
+65
+00:05:10,000 --> 00:05:12,000
+So I use a lot of SQL alchemy.
+
+66
+00:05:12,000 --> 00:05:18,000
+It's not a big fan of having multiple threads using the same transaction.
+
+67
+00:05:18,000 --> 00:05:21,000
+You can do it, but it's hard in one process.
+
+68
+00:05:21,000 --> 00:05:23,000
+So it's a lot easier just to break them off
+
+69
+00:05:23,000 --> 00:05:27,000
+and to have each process have its own database transaction connection.
+
+70
+00:05:27,000 --> 00:05:30,000
+And the last thing is sometimes you have library limitations
+
+71
+00:05:30,000 --> 00:05:33,000
+where it's just not thread-safe at all.
+
+72
+00:05:33,000 --> 00:05:37,000
+You want to do things that even if you want to use threading,
+
+73
+00:05:37,000 --> 00:05:41,000
+because it's mostly IO-bound, but your library is not thread-safe,
+
+74
+00:05:41,000 --> 00:05:44,000
+you need to use something like multiprocessing.
+
+75
+00:05:46,000 --> 00:05:48,000
+So I'm going to talk...
+
+76
+00:05:48,000 --> 00:05:54,000
+My examples are going to talk about using the queues and what you need to do,
+
+77
+00:05:54,000 --> 00:05:58,000
+but I have this complex, what I call my complex multiprocessing example.
+
+78
+00:05:58,000 --> 00:06:02,000
+And this came out of the project I was doing last year at my work
+
+79
+00:06:02,000 --> 00:06:08,000
+where we were working on an IoT device that was sucking in data from two different sources,
+
+80
+00:06:08,000 --> 00:06:11,000
+setting it off to central server,
+
+81
+00:06:11,000 --> 00:06:16,000
+but also needed to be able to get commands from the external servers
+
+82
+00:06:16,000 --> 00:06:19,000
+and recognize some unusual events,
+
+83
+00:06:19,000 --> 00:06:24,000
+and that all had to synchronize together so that you weren't...
+
+84
+00:06:24,000 --> 00:06:27,000
+So that there were places where you wanted to make sure you serialized things
+
+85
+00:06:27,000 --> 00:06:30,000
+and places where you didn't.
+
+86
+00:06:30,000 --> 00:06:32,000
+So I have the main process.
+
+87
+00:06:32,000 --> 00:06:37,000
+So my architecture was I had a main process that listened on an event queue.
+
+88
+00:06:37,000 --> 00:06:40,000
+How often have we heard an event queue this weekend?
+
+89
+00:06:40,000 --> 00:06:43,000
+Everything talking about async IO, twisted, etc.
+
+90
+00:06:43,000 --> 00:06:46,000
+And basically it takes events, processes them, and depending on what it does,
+
+91
+00:06:46,000 --> 00:06:49,000
+it'll either send it to what I call the send queue,
+
+92
+00:06:49,000 --> 00:06:52,000
+which gets serviced by a process that sends stuff out,
+
+93
+00:06:52,000 --> 00:06:55,000
+or it's dealing with a reply, some internal request,
+
+94
+00:06:55,000 --> 00:07:00,000
+main process has dealt with it, and the reply and the listen process will take care of it.
+
+95
+00:07:00,000 --> 00:07:05,000
+So one of those sources is what I call the status subpros.
+
+96
+00:07:05,000 --> 00:07:09,000
+We have all these IoT devices, and things can go wrong on the device itself.
+
+97
+00:07:09,000 --> 00:07:14,000
+It might be running out of memory, you might be getting disk errors,
+
+98
+00:07:14,000 --> 00:07:18,000
+the network might be getting flaky, you have no idea why there,
+
+99
+00:07:18,000 --> 00:07:21,000
+why am I only getting connections half the time?
+
+100
+00:07:21,000 --> 00:07:26,000
+I want to see what's happened over time, why is my wireless disconnecting,
+
+101
+00:07:26,000 --> 00:07:28,000
+and I come back a couple hours later.
+
+102
+00:07:28,000 --> 00:07:32,000
+So this monitoring the system environment.
+
+103
+00:07:32,000 --> 00:07:36,000
+And then the observations, this was the core reason for the product in the first place.
+
+104
+00:07:36,000 --> 00:07:40,000
+It was hooked up to an HVAC system, and it would track temperatures,
+
+105
+00:07:40,000 --> 00:07:45,000
+and airflow rates, and power rates, and dozens of other parameters,
+
+106
+00:07:45,000 --> 00:07:50,000
+many of which were raw numbers that needed to get calculated somewhere.
+
+107
+00:07:50,000 --> 00:07:54,000
+And rather than send these raw numbers and do all the calculation on the back server,
+
+108
+00:07:54,000 --> 00:07:58,000
+we were doing them here, and that's why we were using the CPU work here,
+
+109
+00:07:58,000 --> 00:08:02,000
+because the status process was constantly kicking off subprocesses to do work,
+
+110
+00:08:02,000 --> 00:08:08,000
+but this thing would take the data, and it would spend, depending on the data,
+
+111
+00:08:08,000 --> 00:08:16,000
+one to two seconds to convert it to a common format and do the math,
+
+112
+00:08:16,000 --> 00:08:22,000
+taking these raw register values and turning them into cubic feet per minute,
+
+113
+00:08:22,000 --> 00:08:28,000
+or temperature ranges, or whatever, or power levels.
+
+114
+00:08:28,000 --> 00:08:31,000
+Send queue, just we're sending data to the servers,
+
+115
+00:08:31,000 --> 00:08:35,000
+and I don't want to have to worry about, I don't want to think about it anywhere else.
+
+116
+00:08:35,000 --> 00:08:40,000
+You queue it up, the data server says, okay, I'm going to tend to send it to the central server.
+
+117
+00:08:40,000 --> 00:08:43,000
+If the network's down, I don't want to break everything else.
+
+118
+00:08:43,000 --> 00:08:49,000
+So that send subprocess would manage a queue, manage its own internal queue to disk,
+
+119
+00:08:49,000 --> 00:08:54,000
+but also just have an in-memory queue that worked out nicely.
+
+120
+00:08:54,000 --> 00:08:59,000
+And then the last one was sometimes you want to go tell that system to go do something.
+
+121
+00:08:59,000 --> 00:09:02,000
+There was a listen subprocess that would listen to a socket.
+
+122
+00:09:02,000 --> 00:09:06,000
+When it got something, queue up an event to go do something, the main process,
+
+123
+00:09:06,000 --> 00:09:10,000
+go do something, and then it would come back through another queue.
+
+124
+00:09:10,000 --> 00:09:17,000
+So main process, this is the point, is that it's a complicated system.
+
+125
+00:09:17,000 --> 00:09:20,000
+It's not all doing one thing.
+
+126
+00:09:20,000 --> 00:09:23,000
+There are different kinds of data.
+
+127
+00:09:23,000 --> 00:09:25,000
+They need to talk to each other.
+
+128
+00:09:25,000 --> 00:09:28,000
+There are places where you want to make sure you do things synchronously.
+
+129
+00:09:28,000 --> 00:09:32,000
+So if a reply comes in that's going to be accessing some system,
+
+130
+00:09:32,000 --> 00:09:37,000
+I don't want to be having some other system trying to access that at the same time.
+
+131
+00:09:37,000 --> 00:09:40,000
+So there's a coordination involved.
+
+132
+00:09:40,000 --> 00:09:44,000
+So that's just some background to give you an idea of what a complicated system is,
+
+133
+00:09:44,000 --> 00:09:47,000
+and I might refer to it a couple of times here, the rest of the talk.
+
+134
+00:09:47,000 --> 00:09:50,000
+But the main thing is I have five tips.
+
+135
+00:09:50,000 --> 00:09:57,000
+Tip number one, and this is the one that's most multiprocessing related, is don't share data.
+
+136
+00:09:57,000 --> 00:10:02,000
+First of all, you can't share Python objects across processes.
+
+137
+00:10:02,000 --> 00:10:06,000
+Just imagine what would happen if the garbage collector tried to run against something
+
+138
+00:10:06,000 --> 00:10:10,000
+that some other process was dealing with.
+
+139
+00:10:10,000 --> 00:10:14,000
+And on top of that, when you share data, you have to manage the locks yourself.
+
+140
+00:10:14,000 --> 00:10:17,000
+And that doesn't scale.
+
+141
+00:10:17,000 --> 00:10:20,000
+So pass messages.
+
+142
+00:10:20,000 --> 00:10:27,000
+You break your process and your architecture into as small a bytes as possible
+
+143
+00:10:27,000 --> 00:10:32,000
+and send them to queues and have people have processes.
+
+144
+00:10:32,000 --> 00:10:39,000
+I anthropomorphize my computers all the time, so I'll refer to them as he, she, them, whatever.
+
+145
+00:10:39,000 --> 00:10:44,000
+Have them work through there, have each process do what it needs to do
+
+146
+00:10:44,000 --> 00:10:49,000
+by using its work through a queue.
+
+147
+00:10:49,000 --> 00:10:53,000
+So one other rule is make sure each queue only handles one type of message.
+
+148
+00:10:53,000 --> 00:10:58,000
+There's a little exception I'll talk about in a minute, but it's really complicated.
+
+149
+00:10:58,000 --> 00:11:02,000
+If you have a queue that gets both kinds of messages,
+
+150
+00:11:02,000 --> 00:11:07,000
+and you have a, then the subprocess is reading from that,
+
+151
+00:11:07,000 --> 00:11:12,000
+has to know, okay, is it doing this? You have to have this if statement everywhere.
+
+152
+00:11:12,000 --> 00:11:16,000
+And if you're already breaking things into multiple processes, don't do that that way.
+
+153
+00:11:16,000 --> 00:11:19,000
+Do it at the queuing level.
+
+154
+00:11:19,000 --> 00:11:24,000
+And also, each process should be reading from one queue at a time.
+
+155
+00:11:24,000 --> 00:11:27,000
+Only be listening on one queue.
+
+156
+00:11:27,000 --> 00:11:30,000
+It gets very confusing if you're saying, okay, is there anything here?
+
+157
+00:11:30,000 --> 00:11:37,000
+Nope, all right, here, here. Now you're doing a select, a kind of a select on a set of sockets.
+
+158
+00:11:37,000 --> 00:11:43,000
+And that's not worth it for queuing system.
+
+159
+00:11:43,000 --> 00:11:47,000
+And one of the great things about using multiprocessing queue is it chips.
+
+160
+00:11:47,000 --> 00:11:50,000
+It's part of the standard library.
+
+161
+00:11:50,000 --> 00:11:54,000
+That means that, but it's also a queuing system so that when you want to get big,
+
+162
+00:11:54,000 --> 00:11:58,000
+if you do get big, or if performance becomes a major bottleneck,
+
+163
+00:11:58,000 --> 00:12:01,000
+you can, don't have to rewrite your architecture.
+
+164
+00:12:01,000 --> 00:12:05,000
+You just have to encapsulate the queuing, your queue gets and puts,
+
+165
+00:12:05,000 --> 00:12:10,000
+and put them and use Redis or RabbitMQ or something,
+
+166
+00:12:10,000 --> 00:12:14,000
+some other queuing system that will work for you better, more consistently.
+
+167
+00:12:14,000 --> 00:12:24,000
+The downside about queuing is that it uses pipes, and every message, every piece of data is pickled.
+
+168
+00:12:24,000 --> 00:12:27,000
+So, pickle is not the fastest.
+
+169
+00:12:27,000 --> 00:12:33,000
+And risks, make sure that you're not, if you're sending something that uses one important,
+
+170
+00:12:33,000 --> 00:12:40,000
+it's not like daytime, if it's not available, it can break in another subprocess.
+
+171
+00:12:40,000 --> 00:12:49,000
+In general, try to keep your messages away from anything more complicated than a straight dictionary.
+
+172
+00:12:49,000 --> 00:12:52,000
+So a couple of examples, setting up a queue is pretty straightforward.
+
+173
+00:12:52,000 --> 00:12:55,000
+You can set up a queue that will use up all the memory you can use,
+
+174
+00:12:55,000 --> 00:13:01,000
+or you can say only accept five messages, and then if you try to put something in that queue, it'll block.
+
+175
+00:13:01,000 --> 00:13:06,000
+Getting, putting stuff on a queue is pretty straightforward.
+
+176
+00:13:06,000 --> 00:13:14,000
+Getting something off of a queue, this becomes very important in one of the other tips,
+
+177
+00:13:14,000 --> 00:13:20,000
+but always use a timeout, and closing a queue, for a long time I thought I just had to close them.
+
+178
+00:13:20,000 --> 00:13:24,000
+Turns out you have to wait for the associated thread, because it's a pipe,
+
+179
+00:13:24,000 --> 00:13:31,000
+the thread, it's every queue when you create it, creates a thread that manages the data through the pipe,
+
+180
+00:13:31,000 --> 00:13:36,000
+because the pipes can fill up faster than the queuing system.
+
+181
+00:13:36,000 --> 00:13:40,000
+Tip number two, always clean up after yourself.
+
+182
+00:13:40,000 --> 00:13:43,000
+I bet most of your parents told you, always clean up after yourself.
+
+183
+00:13:43,000 --> 00:13:48,000
+I bet your partners probably tell you that too sometimes, I know mine does.
+
+184
+00:13:48,000 --> 00:13:50,000
+In multiprocessing, there are two parts.
+
+185
+00:13:50,000 --> 00:13:53,000
+One, you need to make sure that everybody knows that they're done.
+
+186
+00:13:53,000 --> 00:13:56,000
+When do you clean up until you get done?
+
+187
+00:13:56,000 --> 00:13:59,000
+And the other part is they have to clean up after themselves.
+
+188
+00:13:59,000 --> 00:14:04,000
+And the last part is the master process has to clean up everybody else.
+
+189
+00:14:04,000 --> 00:14:08,000
+That's the mom who cleans up any mess that's still lying around.
+
+190
+00:14:08,000 --> 00:14:11,000
+So I use two different ways to notify processes.
+
+191
+00:14:11,000 --> 00:14:14,000
+I have a signal, this is a place where it's kind of a shared memory,
+
+192
+00:14:14,000 --> 00:14:19,000
+but it's just a flag that says one or zero, and you can wait on it.
+
+193
+00:14:19,000 --> 00:14:22,000
+And I use an end message so that when I get a signal that it's time to shut down,
+
+194
+00:14:22,000 --> 00:14:26,000
+I queue up a message that just quote, end, unquote.
+
+195
+00:14:26,000 --> 00:14:28,000
+And when you're reading a message, when you're reading from a queue,
+
+196
+00:14:28,000 --> 00:14:31,000
+if you see a message that says end, it says, oh, break out of my loop,
+
+197
+00:14:31,000 --> 00:14:36,000
+because every one of these, when you're reading from a queue, it's just a loop,
+
+198
+00:14:36,000 --> 00:14:40,000
+get the next job, get the next job.
+
+199
+00:14:40,000 --> 00:14:46,000
+Processes, as I said, and main processes mostly concerned with shutting down
+
+200
+00:14:46,000 --> 00:14:51,000
+the subprocesses and cleaning up the queues that it notes about.
+
+201
+00:14:51,000 --> 00:14:56,000
+So this is what a standard subprocess loop looks like.
+
+202
+00:14:56,000 --> 00:15:00,000
+It's got wait for the event to set.
+
+203
+00:15:00,000 --> 00:15:06,000
+If it's set, go, break out a loop, read the queue,
+
+204
+00:15:06,000 --> 00:15:11,000
+and then if the item I've got from the queue just a simple end, break out of the queue,
+
+205
+00:15:11,000 --> 00:15:14,000
+and then break out of the loop.
+
+206
+00:15:14,000 --> 00:15:19,000
+So that's most of what happens in a process.
+
+207
+00:15:19,000 --> 00:15:24,000
+You look for the signals that say, I need to stop, break out of your loop,
+
+208
+00:15:24,000 --> 00:15:26,000
+do a little cleanup, leave.
+
+209
+00:15:26,000 --> 00:15:29,000
+Main process is a little harder when it's shutting down.
+
+210
+00:15:29,000 --> 00:15:31,000
+What we do is we set the event.
+
+211
+00:15:31,000 --> 00:15:33,000
+It's probably already set, but you might not be.
+
+212
+00:15:33,000 --> 00:15:35,000
+You're never sure.
+
+213
+00:15:35,000 --> 00:15:37,000
+So set the event to hope that somebody else is going to,
+
+214
+00:15:37,000 --> 00:15:40,000
+that anybody didn't get the message will.
+
+215
+00:15:40,000 --> 00:15:43,000
+Then you wait for some time to wait.
+
+216
+00:15:43,000 --> 00:15:45,000
+I usually say three to five seconds.
+
+217
+00:15:45,000 --> 00:15:49,000
+Wait for all the threads to try to shut themselves down cleanly.
+
+218
+00:15:49,000 --> 00:15:52,000
+Wait for them to see the message, take the time.
+
+219
+00:15:52,000 --> 00:15:58,000
+This code here says wait for up to whatever my stop wait seconds is right now.
+
+220
+00:15:58,000 --> 00:16:04,000
+And then it says, okay, join this subprocess in timeout if I timeout after
+
+221
+00:16:04,000 --> 00:16:07,000
+the total number of seconds.
+
+222
+00:16:07,000 --> 00:16:11,000
+And if it finishes early, I just keep recalculating how long I've got,
+
+223
+00:16:11,000 --> 00:16:14,000
+so I will never wait longer than three seconds.
+
+224
+00:16:14,000 --> 00:16:18,000
+And if I get to the end of that, I think we have problems.
+
+225
+00:16:18,000 --> 00:16:22,000
+So as long as I keep a list of the processes I've started,
+
+226
+00:16:22,000 --> 00:16:26,000
+and I basically pop it off the list, and if it's still alive,
+
+227
+00:16:26,000 --> 00:16:30,000
+because it's possible that it finished up between the time I gave up
+
+228
+00:16:30,000 --> 00:16:35,000
+and the time I'm looking at it now, if it's still alive,
+
+229
+00:16:35,000 --> 00:16:37,000
+send it a terminate. It's going to kill it.
+
+230
+00:16:37,000 --> 00:16:41,000
+It's going to kill it hard. It's going to wipe it out.
+
+231
+00:16:41,000 --> 00:16:44,000
+You want to log that. I'll talk about that later.
+
+232
+00:16:44,000 --> 00:16:48,000
+And then if it isn't alive, get its exit code,
+
+233
+00:16:48,000 --> 00:16:52,000
+because you want to know whether it exited cleanly
+
+234
+00:16:52,000 --> 00:16:56,000
+or whether it died for some other reason.
+
+235
+00:16:58,000 --> 00:17:01,000
+So again, when you're as part of shutdown and cleaning up queues,
+
+236
+00:17:01,000 --> 00:17:03,000
+you probably want to drain them.
+
+237
+00:17:03,000 --> 00:17:07,000
+If you've queued up a whole lot of things when you're shutting down,
+
+238
+00:17:07,000 --> 00:17:10,000
+nobody's going to be consuming stuff out of those queues.
+
+239
+00:17:10,000 --> 00:17:12,000
+You're going to want to drain them.
+
+240
+00:17:12,000 --> 00:17:14,000
+If there's something important in there,
+
+241
+00:17:14,000 --> 00:17:16,000
+draining them might do a lot more work than this.
+
+242
+00:17:16,000 --> 00:17:18,000
+It might take the item and store it somewhere,
+
+243
+00:17:18,000 --> 00:17:23,000
+so that when you start up again, you'll have some process that says,
+
+244
+00:17:23,000 --> 00:17:26,000
+okay, preload the queue with all the old stuff.
+
+245
+00:17:26,000 --> 00:17:30,000
+And the last part, as I said, always join the thread afterwards.
+
+246
+00:17:30,000 --> 00:17:34,000
+So what happened with me was I would, especially when debugging,
+
+247
+00:17:34,000 --> 00:17:38,000
+it's like, da-da-da-da-da, control C, fine, it closes,
+
+248
+00:17:38,000 --> 00:17:42,000
+and then every other time I would get this exception message.
+
+249
+00:17:42,000 --> 00:17:46,000
+Why am I getting an exception message saying that there's a thread broken
+
+250
+00:17:46,000 --> 00:17:48,000
+or something like that?
+
+251
+00:17:48,000 --> 00:17:50,000
+And then finally, after reading docs and figuring it out,
+
+252
+00:17:50,000 --> 00:17:53,000
+it's like, oh, my app is shutting down.
+
+253
+00:17:53,000 --> 00:17:56,000
+I'm trying to get out of, you know, the main function is gone,
+
+254
+00:17:56,000 --> 00:17:59,000
+but there's this one thread that's still hanging around
+
+255
+00:17:59,000 --> 00:18:07,000
+because it either never got a chance to tell that it's done
+
+256
+00:18:07,000 --> 00:18:09,000
+or there was still some piece of data sitting in a queue
+
+257
+00:18:09,000 --> 00:18:12,000
+that it had to clear off.
+
+258
+00:18:12,000 --> 00:18:18,000
+So that join thread is something that just removes a spurious error.
+
+259
+00:18:18,000 --> 00:18:23,000
+If you're queuing very large objects, you know, in the course of megabytes,
+
+260
+00:18:23,000 --> 00:18:25,000
+that join thread might take a little while
+
+261
+00:18:25,000 --> 00:18:29,000
+because it's going to have to drain the queue.
+
+262
+00:18:29,000 --> 00:18:32,000
+Drain the pipe, rather.
+
+263
+00:18:32,000 --> 00:18:34,000
+Tip three.
+
+264
+00:18:34,000 --> 00:18:36,000
+Just like driving, obey all signals.
+
+265
+00:18:36,000 --> 00:18:39,000
+And I know some of us here from Boston, like I am,
+
+266
+00:18:39,000 --> 00:18:42,000
+and obeying all signals is not, you know, primary in their nature,
+
+267
+00:18:42,000 --> 00:18:46,000
+but so every process, both the master and the subprocesses,
+
+268
+00:18:46,000 --> 00:18:50,000
+you need to handle, and here it says both term and int signals.
+
+269
+00:18:50,000 --> 00:18:53,000
+Today, in Lynn Root's talk earlier, I realized,
+
+270
+00:18:53,000 --> 00:18:57,000
+oh, there's HUP, and there are three or four other signals
+
+271
+00:18:57,000 --> 00:18:59,000
+that you want to be able to handle
+
+272
+00:18:59,000 --> 00:19:01,000
+that might shut you down more gracefully
+
+273
+00:19:01,000 --> 00:19:06,000
+or reload the configuration, it varies.
+
+274
+00:19:06,000 --> 00:19:12,000
+Each signal, the algorithm that I use is my signal handlers say,
+
+275
+00:19:12,000 --> 00:19:15,000
+oh, I'm going to set the shutdown event.
+
+276
+00:19:15,000 --> 00:19:17,000
+The first two times I get that signal.
+
+277
+00:19:17,000 --> 00:19:21,000
+The third time I get that signal, I'm going to raise an exception.
+
+278
+00:19:21,000 --> 00:19:25,000
+That way, you can test, if I do control C on it,
+
+279
+00:19:25,000 --> 00:19:27,000
+and when I'm debugging, the first time through,
+
+280
+00:19:27,000 --> 00:19:29,000
+it's not going to throw a keyboard exception,
+
+281
+00:19:29,000 --> 00:19:31,000
+it's just going to do a normal shutdown.
+
+282
+00:19:31,000 --> 00:19:33,000
+Nice, clean shutdown, get to practice it.
+
+283
+00:19:33,000 --> 00:19:36,000
+But if I really, if it's stuck, control C, control C, control C,
+
+284
+00:19:36,000 --> 00:19:41,000
+and now I will get exceptions, and I can test failure, you know,
+
+285
+00:19:41,000 --> 00:19:46,000
+failure modes, and just keep myself from being stuck.
+
+286
+00:19:46,000 --> 00:19:49,000
+Because you really want to make sure, one of the key things
+
+287
+00:19:49,000 --> 00:19:53,000
+with multiprocessing is you want to shut everything down cleanly.
+
+288
+00:19:53,000 --> 00:19:55,000
+You don't want to leave connections open,
+
+289
+00:19:55,000 --> 00:19:57,000
+you don't want to have zombie processes around,
+
+290
+00:19:57,000 --> 00:20:00,000
+and what I have found is if you can shut down cleanly,
+
+291
+00:20:00,000 --> 00:20:04,000
+you've probably thought about all the race conditions you need to do.
+
+292
+00:20:04,000 --> 00:20:09,000
+So, shut the, you know, set the event the first two times, third time raise.
+
+293
+00:20:09,000 --> 00:20:14,000
+And sometimes you might need to go in and change some system settings
+
+294
+00:20:14,000 --> 00:20:19,000
+when you have a brain fart.
+
+295
+00:20:24,000 --> 00:20:27,000
+I don't remember now, so I'm just going to skip it,
+
+296
+00:20:27,000 --> 00:20:30,000
+because I've got to keep going. That's the rule.
+
+297
+00:20:30,000 --> 00:20:34,000
+Okay, so signal handlers, this is pretty straightforward.
+
+298
+00:20:34,000 --> 00:20:36,000
+I create a signal object that I can pass into the handler
+
+299
+00:20:36,000 --> 00:20:39,000
+so it knows, it has a clue what's going on.
+
+300
+00:20:39,000 --> 00:20:43,000
+And that object is where I track the how many signals,
+
+301
+00:20:43,000 --> 00:20:45,000
+you know, how many times I've had the signal,
+
+302
+00:20:45,000 --> 00:20:47,000
+and I also have to pass it to shut down event
+
+303
+00:20:47,000 --> 00:20:49,000
+so it knows how to set that event.
+
+304
+00:20:50,000 --> 00:20:53,000
+Tip four, don't ever wait forever, ever.
+
+305
+00:20:53,000 --> 00:20:55,000
+In multiprocessing, if you have something that says,
+
+306
+00:20:55,000 --> 00:20:59,000
+oh, it'll only take a second, it's going to take a year someday.
+
+307
+00:20:59,000 --> 00:21:03,000
+If you think, and if you say, oh, I don't know how to do that, it's too hard,
+
+308
+00:21:03,000 --> 00:21:05,000
+work to figure out how to do it.
+
+309
+00:21:05,000 --> 00:21:09,000
+Because there are some interfaces that don't have a timeout mode or something,
+
+310
+00:21:09,000 --> 00:21:11,000
+but really try your best.
+
+311
+00:21:11,000 --> 00:21:13,000
+Makes it a little more complicated.
+
+312
+00:21:13,000 --> 00:21:15,000
+So no process should ever get stuck.
+
+313
+00:21:15,000 --> 00:21:17,000
+Every loop needs to be able to terminate.
+
+314
+00:21:17,000 --> 00:21:19,000
+Blocking calls need a timeout.
+
+315
+00:21:19,000 --> 00:21:24,000
+And timeouts are basically, how long can I wait before I have to start shredding down?
+
+316
+00:21:24,000 --> 00:21:27,000
+You know, if I can think I can wait two seconds before,
+
+317
+00:21:27,000 --> 00:21:30,000
+you know, so that if I've got 100 processes,
+
+318
+00:21:30,000 --> 00:21:32,000
+and I can wait 20 seconds or 30 seconds,
+
+319
+00:21:32,000 --> 00:21:36,000
+okay, make your timeout two seconds.
+
+320
+00:21:36,000 --> 00:21:40,000
+Probably want to be in the quarter, in the under half a second.
+
+321
+00:21:40,000 --> 00:21:43,000
+Okay, you're going to pull, but timeout.
+
+322
+00:21:43,000 --> 00:21:45,000
+And if you have something that doesn't timeout,
+
+323
+00:21:45,000 --> 00:21:48,000
+it doesn't take a timeout, you're going to have to write it yourself.
+
+324
+00:21:48,000 --> 00:21:50,000
+You're going to write the...
+
+325
+00:21:50,000 --> 00:21:55,000
+So nice thing, queues, tell it to block, but you can give it a timeout.
+
+326
+00:21:55,000 --> 00:21:59,000
+You know, there's a nice one hundredth of a second timeout.
+
+327
+00:21:59,000 --> 00:22:05,000
+If it's empty, which will come back as empty in the timeout, then just keep going.
+
+328
+00:22:05,000 --> 00:22:09,000
+Sockets, I can set the timeout when you start up with a socket.
+
+329
+00:22:09,000 --> 00:22:15,000
+In fact, for ZeroMQ, you could actually set the timeout
+
+330
+00:22:15,000 --> 00:22:20,000
+on the socket when somebody was waiting on it.
+
+331
+00:22:20,000 --> 00:22:24,000
+So when I was using that tool, I ended up setting the timeout
+
+332
+00:22:24,000 --> 00:22:27,000
+in the signal handler for that process.
+
+333
+00:22:27,000 --> 00:22:29,000
+Made the code a little easier to read.
+
+334
+00:22:31,000 --> 00:22:34,000
+I don't have an example here, but sometimes you just...
+
+335
+00:22:34,000 --> 00:22:36,000
+There is no timeout.
+
+336
+00:22:36,000 --> 00:22:38,000
+I just have to get it, I can be blocking or non-blocking,
+
+337
+00:22:38,000 --> 00:22:40,000
+then make a non-blocking call.
+
+338
+00:22:40,000 --> 00:22:43,000
+If it comes back empty, sleep for however long that is,
+
+339
+00:22:43,000 --> 00:22:46,000
+or half a week that is, and just go check again.
+
+340
+00:22:46,000 --> 00:22:51,000
+It's not pretty, but you have to make sure that you're never sitting in a spot
+
+341
+00:22:51,000 --> 00:22:54,000
+that you'll never get out of.
+
+342
+00:22:54,000 --> 00:22:59,000
+And last, and this is one everybody knows, but report and log all the things.
+
+343
+00:22:59,000 --> 00:23:03,000
+Use the Python logging module, because that's what you should use.
+
+344
+00:23:03,000 --> 00:23:05,000
+There are some problems with multiprocessing,
+
+345
+00:23:05,000 --> 00:23:11,000
+and so what you really want to do is you want to set up another subprocess
+
+346
+00:23:11,000 --> 00:23:14,000
+or even a thread, but probably a subprocess that has a queue,
+
+347
+00:23:14,000 --> 00:23:20,000
+and all the logging function writes your logging message to that queue
+
+348
+00:23:20,000 --> 00:23:23,000
+so that that one process can keep them in line.
+
+349
+00:23:23,000 --> 00:23:27,000
+Because if you don't, then you might get that garbage,
+
+350
+00:23:27,000 --> 00:23:29,000
+the quote from the screen.
+
+351
+00:23:30,000 --> 00:23:34,000
+The other trick is to make sure every log message tells you
+
+352
+00:23:34,000 --> 00:23:37,000
+how long it's been since the application got started.
+
+353
+00:23:37,000 --> 00:23:39,000
+You can put a time stamp in there,
+
+354
+00:23:39,000 --> 00:23:42,000
+but then you're always going to be doing mental math of,
+
+355
+00:23:42,000 --> 00:23:45,000
+was this a half a second or a quarter of a second?
+
+356
+00:23:45,000 --> 00:23:49,000
+You've got 12 decimal places or six decimal places,
+
+357
+00:23:49,000 --> 00:23:51,000
+you're going to have to do this mental math,
+
+358
+00:23:51,000 --> 00:23:55,000
+when all you really care about is, started at zero,
+
+359
+00:23:55,000 --> 00:23:59,000
+this thing happened at .04, this happened at .05.
+
+360
+00:23:59,000 --> 00:24:03,000
+Make sure that you name each process in the log so you know where it came from.
+
+361
+00:24:03,000 --> 00:24:06,000
+You can give your process ID, but you won't know what that is later.
+
+362
+00:24:06,000 --> 00:24:11,000
+You have to log every exception, every error, include tracebacks,
+
+363
+00:24:11,000 --> 00:24:14,000
+preferably record something that you consider a warning.
+
+364
+00:24:14,000 --> 00:24:19,000
+You ought to log things like during the startup and shutdown routines,
+
+365
+00:24:19,000 --> 00:24:21,000
+because that's where things get really nasty,
+
+366
+00:24:21,000 --> 00:24:25,000
+and also whenever certain significant events happen.
+
+367
+00:24:25,000 --> 00:24:30,000
+In the complex case, when an external request came in, we would log it,
+
+368
+00:24:30,000 --> 00:24:35,000
+and whenever the timer, whenever one of the status or the observation request came in,
+
+369
+00:24:35,000 --> 00:24:40,000
+but we didn't log everything that got sent to the servers.
+
+370
+00:24:40,000 --> 00:24:44,000
+In debug mode is where you put an enormous number of log statements.
+
+371
+00:24:44,000 --> 00:24:47,000
+You just log everything, because you're looking for,
+
+372
+00:24:47,000 --> 00:24:52,000
+okay, how do these two, you're going to look for how these two processes are interacting.
+
+373
+00:24:52,000 --> 00:24:55,000
+Is one happening a little faster than you expect?
+
+374
+00:24:55,000 --> 00:24:59,000
+Is one blocking in a way that you don't expect?
+
+375
+00:24:59,000 --> 00:25:04,000
+So this is my, how am I going to log something?
+
+376
+00:25:04,000 --> 00:25:06,000
+I use monotonic.
+
+377
+00:25:06,000 --> 00:25:09,000
+I don't remember anymore exactly why, but when I looked through it,
+
+378
+00:25:09,000 --> 00:25:15,000
+it was the one that was consistent, and it was not going to get changed very easily.
+
+379
+00:25:15,000 --> 00:25:20,000
+And then I just, my S-strings, they're the best,
+
+380
+00:25:20,000 --> 00:25:27,000
+and tell me how many hours and seconds it's been since we started,
+
+381
+00:25:27,000 --> 00:25:30,000
+and then the name, and then whatever the message is.
+
+382
+00:25:30,000 --> 00:25:37,000
+And here's some sample, you know, just okay, what process is it, what's the user,
+
+383
+00:25:37,000 --> 00:25:41,000
+that first numeric column is how long it's been since I started.
+
+384
+00:25:41,000 --> 00:25:45,000
+So you can see, it starts up pretty quickly and gets going, and everything's more or less linear.
+
+385
+00:25:45,000 --> 00:25:50,000
+Then I tell you what process it is, it's a worker process, or is it the master process,
+
+386
+00:25:50,000 --> 00:25:54,000
+and then some steps about, then a description of what's actually going on.
+
+387
+00:25:54,000 --> 00:25:59,000
+And shutdown, you can see I hit the Control-C, and oh look, normal shutdown went through, it was great.
+
+388
+00:26:02,000 --> 00:26:07,000
+Last, in conclusion, I will just repeat these things.
+
+389
+00:26:07,000 --> 00:26:10,000
+There are five things, good tips.
+
+390
+00:26:10,000 --> 00:26:13,000
+Don't share messages, don't share always past messages.
+
+391
+00:26:14,000 --> 00:26:18,000
+There are times when you have problems, where your messages are enormous.
+
+392
+00:26:19,000 --> 00:26:24,000
+Then that's a little beyond the scope of this one, there are problems like,
+
+393
+00:26:24,000 --> 00:26:32,000
+C. Titus Brown tells a story about how he would have data structure that was a sparse array that was
+
+394
+00:26:34,000 --> 00:26:39,000
+on the order of 50 to 100 gigabytes, larger, larger, and there was no way he could
+
+395
+00:26:40,000 --> 00:26:47,000
+distribute that. People kept saying, oh, figure out a way to put it across bunches of different computers,
+
+396
+00:26:47,000 --> 00:26:56,000
+and you can't because everybody was writing to that array, and reading from it to figure out epigenetics.
+
+397
+00:26:57,000 --> 00:27:02,000
+Always clean up after yourself, handle term and end signals, obey all signals,
+
+398
+00:27:02,000 --> 00:27:06,000
+don't ever wait forever, and report and log all the things.
+
+399
+00:27:07,000 --> 00:27:12,000
+Some of these are straightforward. The only one, as I said, the only one that's really multiprocessing related is
+
+400
+00:27:12,000 --> 00:27:19,000
+don't share, use messages. But all the rest are things that every time I've tried to write multiprocessing stuff
+
+401
+00:27:19,000 --> 00:27:23,000
+in my 20-year career, these are the things that drive me crazy.
+
+402
+00:27:23,000 --> 00:27:30,000
+Da-da-da-da-da-da-da-da, okay, what's going on? Oh yeah, oh yeah, oh yeah, oh yeah.
+
+403
+00:27:30,000 --> 00:27:37,000
+So as part of this talk, I actually wrote a blog post for my company, read a lot from the programming
+
+404
+00:27:37,000 --> 00:27:49,000
+guidelines section, and also I have a little library package that wraps, because most of this stuff is boilerplate.
+
+405
+00:27:51,000 --> 00:27:56,000
+You just have to figure it out every time. So I've got a module that more or less wraps multiprocessing
+
+406
+00:27:56,000 --> 00:28:05,000
+to handle queues, to group up processes, to handle shutdowns, and has an encapsulating framework for worker queues,
+
+407
+00:28:05,000 --> 00:28:11,000
+worker processes, so that you don't have to, you can use the default startup and shutdown functions and things like that
+
+408
+00:28:11,000 --> 00:28:20,000
+and pass basic data. My name's Pamela McAnulty. My email address is sort of on there. My Twitter handle is PMcAnulty01.
+
+409
+00:28:21,000 --> 00:28:25,000
+And how much time do we have left? Do we have time for a question? Am I wrong? Have I sped up?
+
+410
+00:28:25,000 --> 00:28:33,000
+It's up to you. We have about two minutes. At least one question, I guess. All right.
+
+411
+00:28:33,000 --> 00:28:37,000
+And as Brandon says, please ask your question in the name, form of question.
+
+412
+00:28:37,000 --> 00:28:51,000
+How do I convince my coworkers who are used to using Java that Python's multithreading multiprocessing business is not the worst thing ever to walk the earth?
+
+413
+00:28:51,000 --> 00:28:53,000
+Well, it's not the worst thing ever to walk the earth.
+
+414
+00:28:53,000 --> 00:28:55,000
+That's what they think, though, and I can't convince them.
+
+415
+00:28:55,000 --> 00:29:06,000
+But if they're, but compiled systems tend to be, you know, if they're comfortable with that, it's going to be more performant.
+
+416
+00:29:06,000 --> 00:29:14,000
+Unless you're counting developer time. In which case, they're writing in Java.
+
+417
+00:29:14,000 --> 00:29:25,000
+I mean, and that's that my my first manager, the one who introduced me to Python says Python is a competitive advantage because it means my developers can do more work faster.
+
+418
+00:29:25,000 --> 00:29:39,000
+Well, let's thank Pamela for a great talk.
+
+419
+00:29:39,000 --> 00:29:43,000
+Thank you. Thank you all for coming and keep enjoying PyCon.
+
+420
+00:29:44,000 --> 00:29:46,000
+Thank you.
+

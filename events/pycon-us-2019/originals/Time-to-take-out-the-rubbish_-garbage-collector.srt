@@ -1,0 +1,3616 @@
+1
+00:00:00,000 --> 00:00:09,640
+Happy May the 4th, everyone.
+
+2
+00:00:09,640 --> 00:00:11,800
+We're going to go ahead and get started.
+
+3
+00:00:11,800 --> 00:00:17,080
+Just as a reminder, please make sure you turn off all sounds from your electronic devices.
+
+4
+00:00:17,080 --> 00:00:25,480
+We have Pablo Galindo, who is a CPython core developer and also works at Bloomberg.
+
+5
+00:00:25,480 --> 00:00:29,480
+He'll be giving time to take out the rubbish garbage collector.
+
+6
+00:00:29,480 --> 00:00:32,480
+Awesome.
+
+7
+00:00:32,480 --> 00:00:40,520
+Thank you very much for coming.
+
+8
+00:00:40,520 --> 00:00:44,720
+In this talk, I'm going to work you through basically the current implementation of the
+
+9
+00:00:44,720 --> 00:00:46,200
+CPython garbage collector.
+
+10
+00:00:46,200 --> 00:00:51,160
+At the beginning, we're going to make a gentle introduction of memory management and reference
+
+11
+00:00:51,160 --> 00:00:52,160
+counting.
+
+12
+00:00:52,160 --> 00:00:57,360
+The idea is that we are centering our efforts on how the current algorithm for garbage collection
+
+13
+00:00:57,360 --> 00:00:59,360
+works and why it's needed.
+
+14
+00:00:59,360 --> 00:01:01,000
+A very brief introduction.
+
+15
+00:01:01,000 --> 00:01:03,320
+This is my Twitter handle.
+
+16
+00:01:03,320 --> 00:01:04,960
+I'm a Python core developer.
+
+17
+00:01:04,960 --> 00:01:07,760
+I work now as a software engineer at Bloomberg.
+
+18
+00:01:07,760 --> 00:01:10,560
+Before that, I was in academia doing blood hole physics research.
+
+19
+00:01:10,560 --> 00:01:14,120
+If you're interested in that, please come after the talk and talk with me.
+
+20
+00:01:14,120 --> 00:01:19,320
+One of the authors of PEP 570, the implementer, we merged this last week.
+
+21
+00:01:19,520 --> 00:01:26,720
+I spend my free time squashing bags and raising conditions on CPython.
+
+22
+00:01:26,720 --> 00:01:27,720
+Awesome.
+
+23
+00:01:27,720 --> 00:01:32,680
+Let's get with the introduction of what garbage collection is and why it's needed.
+
+24
+00:01:32,680 --> 00:01:35,560
+So in mind that you have a variable, right?
+
+25
+00:01:35,560 --> 00:01:37,600
+For example, here is this list.
+
+26
+00:01:37,600 --> 00:01:38,640
+Then you delete the variable.
+
+27
+00:01:38,640 --> 00:01:41,240
+As you know, this is basically removing the name.
+
+28
+00:01:41,240 --> 00:01:43,920
+But we're interested in what happened at that point.
+
+29
+00:01:43,920 --> 00:01:48,760
+So this scenario also presents itself when you have a function, for example, in this
+
+30
+00:01:48,760 --> 00:01:50,520
+case, this factorized function.
+
+31
+00:01:50,520 --> 00:01:52,680
+And then you have an internal variable local to the function.
+
+32
+00:01:52,680 --> 00:01:54,560
+In this case, it's this list of primes.
+
+33
+00:01:54,560 --> 00:01:58,280
+And when the function finishes, the list of primes is not needed anymore.
+
+34
+00:01:58,280 --> 00:02:00,760
+So we say that the variable goes out of scope.
+
+35
+00:02:00,760 --> 00:02:05,360
+And we're interested to know what happens or how CPython behaves to clean up that list
+
+36
+00:02:05,360 --> 00:02:07,120
+that is not needed anymore.
+
+37
+00:02:07,120 --> 00:02:08,560
+So what happens to it, right?
+
+38
+00:02:08,560 --> 00:02:10,040
+So some definitions.
+
+39
+00:02:10,040 --> 00:02:14,080
+So first, we are going to define garbage as the memory that is occupied by objects that
+
+40
+00:02:14,080 --> 00:02:16,360
+are no longer needed in the program.
+
+41
+00:02:16,360 --> 00:02:20,680
+And therefore garbage collection is just a form of automatic memory management.
+
+42
+00:02:20,680 --> 00:02:25,040
+We can go to the actual Python repository and we see how it defines the process of free
+
+43
+00:02:25,040 --> 00:02:27,760
+memory when it's not used anymore.
+
+44
+00:02:27,760 --> 00:02:29,200
+So why do we need this thing?
+
+45
+00:02:29,200 --> 00:02:31,360
+Because otherwise, we will run out of memory, right?
+
+46
+00:02:31,360 --> 00:02:36,600
+If we don't clean the memory that we are using, we will soon run out of memory.
+
+47
+00:02:36,600 --> 00:02:39,240
+And the idea is that it has to be automatic.
+
+48
+00:02:39,240 --> 00:02:42,800
+And this is very important because first, we don't need to do it ourselves.
+
+49
+00:02:43,680 --> 00:02:44,880
+So we have to do it manually.
+
+50
+00:02:44,880 --> 00:02:45,880
+And that's the problem.
+
+51
+00:02:45,880 --> 00:02:46,880
+So we have to do it manually.
+
+52
+00:02:46,880 --> 00:02:47,880
+And we have to do it manually.
+
+53
+00:02:47,880 --> 00:02:48,880
+So we have to do it manually.
+
+54
+00:02:48,880 --> 00:02:49,880
+And that's the problem.
+
+55
+00:02:49,880 --> 00:02:52,880
+And the problem is that it involves less thinking and therefore fewer bugs because all of you
+
+56
+00:02:52,880 --> 00:02:57,880
+that have compiled languages, especially low level ones like C, you will know that memory
+
+57
+00:02:57,880 --> 00:03:02,880
+management is one of the most challenging parts of the language and the source of many
+
+58
+00:03:02,880 --> 00:03:05,880
+of the bugs and memory leaks.
+
+59
+00:03:05,880 --> 00:03:10,880
+There is a problem though because having it automatic can be a bit slower if it's not
+
+60
+00:03:10,880 --> 00:03:11,880
+done properly.
+
+61
+00:03:11,960 --> 00:03:12,960
+So for example, Rust.
+
+62
+00:03:12,960 --> 00:03:14,960
+Rust is a good example.
+
+63
+00:03:14,960 --> 00:03:16,360
+Rust doesn't have garbage collector.
+
+64
+00:03:16,360 --> 00:03:20,200
+It has a very clever new approach, which is the borough checker.
+
+65
+00:03:20,200 --> 00:03:25,600
+So this is a way, apart from giving other nice features, it's a way of avoiding sort
+
+66
+00:03:25,600 --> 00:03:28,960
+of manual memory management or even garbage collector.
+
+67
+00:03:28,960 --> 00:03:32,360
+So C and C++ usually were designed for having manual memory management.
+
+68
+00:03:32,360 --> 00:03:37,360
+But there is some implementation of garbage collected version of the language available.
+
+69
+00:03:37,360 --> 00:03:38,360
+OK.
+
+70
+00:03:38,840 --> 00:03:43,840
+So let's walk also through some pieces that we're going to need to understand the algorithm
+
+71
+00:03:43,840 --> 00:03:46,840
+and the different phases that it went through.
+
+72
+00:03:46,840 --> 00:03:49,440
+So the first thing that we need to talk is finalizers.
+
+73
+00:03:49,440 --> 00:03:54,360
+So basically, imagine that we have a class, in this case this class dog, right?
+
+74
+00:03:54,360 --> 00:03:58,060
+And then we create one of these dogs and then we delete the dog.
+
+75
+00:03:58,060 --> 00:04:00,560
+And then we assume that this frees up memory, right?
+
+76
+00:04:00,560 --> 00:04:04,720
+So it's actually a bit more complicated because if we go to the Python docs, we will see that
+
+77
+00:04:04,720 --> 00:04:08,720
+It's actually not guaranteed that the Dell method is called, especially when the interpreter
+
+78
+00:04:08,720 --> 00:04:09,720
+exits.
+
+79
+00:04:09,720 --> 00:04:13,600
+Usually it's actually called, but we cannot rely on that method to be called.
+
+80
+00:04:13,600 --> 00:04:14,600
+Why not?
+
+81
+00:04:14,600 --> 00:04:18,640
+Well, because the first thing is that the purpose of the Dell method, which is called
+
+82
+00:04:18,640 --> 00:04:22,280
+the finalizer, is only to free up memory when it's no longer necessary.
+
+83
+00:04:22,280 --> 00:04:26,560
+So we should not rely on this method to do some kind of cleanup of resources.
+
+84
+00:04:26,560 --> 00:04:31,120
+We have other approaches in Python, particularly with the statement and context managers, that
+
+85
+00:04:31,120 --> 00:04:32,120
+will help us with these things.
+
+86
+00:04:32,520 --> 00:04:35,400
+So for example, if you are going to close a file or finish a database connection, you
+
+87
+00:04:35,400 --> 00:04:38,920
+should use a context manager and not Dell.
+
+88
+00:04:38,920 --> 00:04:40,600
+Then we are going to introduce reference counting.
+
+89
+00:04:40,600 --> 00:04:45,840
+So reference counting is one of the, basically the major way that CPython manages memory
+
+90
+00:04:45,840 --> 00:04:46,960
+and lifetime.
+
+91
+00:04:46,960 --> 00:04:49,060
+So reference counting is a strategy.
+
+92
+00:04:49,060 --> 00:04:54,880
+So the idea is that every object has internally has a number, which basically refers to all
+
+93
+00:04:54,880 --> 00:04:56,600
+the other objects that are referring to it.
+
+94
+00:04:56,600 --> 00:04:59,800
+For example, you have a list and an object is inside a list.
+
+95
+00:05:00,480 --> 00:05:03,520
+And the number will be one because the list owns the object.
+
+96
+00:05:03,520 --> 00:05:07,880
+For example, in this case here, we have x, which is a list of three elements.
+
+97
+00:05:07,880 --> 00:05:09,240
+And then we create a second variable.
+
+98
+00:05:09,240 --> 00:05:12,280
+So we know, we say that x has two references.
+
+99
+00:05:12,280 --> 00:05:15,480
+One is the name x and the other is the name y.
+
+100
+00:05:15,480 --> 00:05:17,240
+You can actually try it for live objects.
+
+101
+00:05:17,240 --> 00:05:21,480
+So for example, in the sys module, we have this function called getRefCount.
+
+102
+00:05:21,480 --> 00:05:25,080
+And you can call it to any object and it will return the number of references that are pointing
+
+103
+00:05:25,080 --> 00:05:26,080
+to the object.
+
+104
+00:05:26,080 --> 00:05:28,560
+So basically internal integer that lives inside the object.
+
+105
+00:05:29,080 --> 00:05:32,680
+There is a catch though, because the function will always return one more.
+
+106
+00:05:32,680 --> 00:05:36,840
+And this is because the function needs to see the object to return the reference count.
+
+107
+00:05:36,840 --> 00:05:39,880
+So you need to be aware that you always need to think one less.
+
+108
+00:05:39,880 --> 00:05:41,480
+So for example, let's make an example.
+
+109
+00:05:41,480 --> 00:05:42,840
+So we import the module sys.
+
+110
+00:05:42,840 --> 00:05:44,640
+We have this list that we talked before.
+
+111
+00:05:44,640 --> 00:05:46,200
+And then we check how many references it has.
+
+112
+00:05:46,200 --> 00:05:47,200
+It says two.
+
+113
+00:05:47,200 --> 00:05:48,880
+We know that actually it's only one.
+
+114
+00:05:48,880 --> 00:05:51,800
+Then we create another name for the list, which is y.
+
+115
+00:05:51,800 --> 00:05:54,520
+And then we check again and we see that actually it increased one.
+
+116
+00:05:54,520 --> 00:05:55,520
+We know that actually it's two.
+
+117
+00:05:55,600 --> 00:05:58,640
+And then when we delete the name, we say that we're back to two again.
+
+118
+00:05:58,640 --> 00:06:00,040
+So that's OK.
+
+119
+00:06:00,040 --> 00:06:04,040
+You have to be aware as well that a container also claims ownership of this.
+
+120
+00:06:04,040 --> 00:06:06,400
+So it's not only names to the variables.
+
+121
+00:06:06,400 --> 00:06:10,360
+If the variable is inside a container, the reference count will also be increased once.
+
+122
+00:06:10,360 --> 00:06:12,600
+For example, in this case, we have two variables.
+
+123
+00:06:12,600 --> 00:06:15,040
+So if we check the reference count of x, we know it's one.
+
+124
+00:06:15,040 --> 00:06:19,160
+But when we put this variable in a set, we see that actually, because the variable is
+
+125
+00:06:19,160 --> 00:06:21,520
+in a set, the reference count increases by one.
+
+126
+00:06:21,520 --> 00:06:25,120
+And the idea is that when the reference count goes to zero, we know that no other object
+
+127
+00:06:25,120 --> 00:06:27,960
+is actually using the one that we are talking about.
+
+128
+00:06:27,960 --> 00:06:30,520
+So we can actually destroy the object.
+
+129
+00:06:30,520 --> 00:06:33,600
+So now we're going to be deploying, which is cycles.
+
+130
+00:06:33,600 --> 00:06:35,600
+So let's imagine this situation.
+
+131
+00:06:35,600 --> 00:06:39,440
+I'm only using two nodes because three is like a tree and people just sat down attention
+
+132
+00:06:39,440 --> 00:06:41,480
+when there is a tree in the slides.
+
+133
+00:06:41,480 --> 00:06:46,360
+So in this case, we have A and B and these objects point to each other.
+
+134
+00:06:46,360 --> 00:06:50,280
+And then there is this arrow on the left, which is basically a reference from the outside.
+
+135
+00:06:50,280 --> 00:06:54,560
+So some other object outside is referring to A. So A has two references, one from B and
+
+136
+00:06:54,560 --> 00:06:59,000
+one from the outside, and B has one from A. So there is a problem, right?
+
+137
+00:06:59,000 --> 00:07:04,520
+Because if we delete the reference from the outside, then A points to B, but B points
+
+138
+00:07:04,520 --> 00:07:09,440
+to A. So even if these two objects are not reachable anymore, the reference count will
+
+139
+00:07:09,440 --> 00:07:11,040
+never fall to zero.
+
+140
+00:07:11,040 --> 00:07:12,400
+And therefore, we cannot clean them up.
+
+141
+00:07:12,400 --> 00:07:13,600
+So we need something else.
+
+142
+00:07:13,600 --> 00:07:15,960
+And this something else is the garbage collector.
+
+143
+00:07:15,960 --> 00:07:19,440
+So the situation, to give a little more clarity, will be something like this, right?
+
+144
+00:07:19,440 --> 00:07:24,400
+We have a lot of objects in our program, which are here, the blue cycles, and the blue circles.
+
+145
+00:07:24,720 --> 00:07:28,920
+And then we have these two, A and B, sitting around, and they are not reachable.
+
+146
+00:07:28,920 --> 00:07:31,960
+This means that there is not an arrow from these other objects pointing to them.
+
+147
+00:07:31,960 --> 00:07:36,360
+So we need something else, a mechanism to identify these cycles and delete them.
+
+148
+00:07:36,360 --> 00:07:38,360
+So this is a garbage collector.
+
+149
+00:07:38,360 --> 00:07:42,200
+So to walk through the algorithm, we are going to imagine basically a situation in which
+
+150
+00:07:42,200 --> 00:07:43,360
+have several cycles.
+
+151
+00:07:43,360 --> 00:07:46,160
+So first, we need to know how these cycles are created.
+
+152
+00:07:46,160 --> 00:07:47,880
+So for example, this is a simple example.
+
+153
+00:07:47,880 --> 00:07:49,400
+You can create a class node.
+
+154
+00:07:49,400 --> 00:07:50,880
+You can create three of them.
+
+155
+00:07:50,880 --> 00:07:55,920
+And then setting attributes, you can basically make every node point to the other two.
+
+156
+00:07:55,920 --> 00:07:57,320
+The situation is actually more complex.
+
+157
+00:07:57,320 --> 00:08:00,760
+This is an actual diagram of the relationship between all these classes.
+
+158
+00:08:00,760 --> 00:08:04,640
+You don't need to actually understand this thing, but bear in mind that there is actually
+
+159
+00:08:04,640 --> 00:08:07,280
+much more hidden objects that have reference inside.
+
+160
+00:08:07,280 --> 00:08:10,920
+In particular, you can look how there is a lot of things that point to the node type
+
+161
+00:08:10,920 --> 00:08:11,920
+in there.
+
+162
+00:08:11,920 --> 00:08:16,120
+And that is actually one of the major sources of cycles that you can form.
+
+163
+00:08:16,120 --> 00:08:20,560
+So the situation, even if you think that cycles are a bit weird, it's actually very, very
+
+164
+00:08:20,560 --> 00:08:21,560
+common that happens.
+
+165
+00:08:21,560 --> 00:08:24,280
+So it's important to have it handled in the runtime.
+
+166
+00:08:24,280 --> 00:08:27,920
+So OK, so let's go through the algorithm.
+
+167
+00:08:27,920 --> 00:08:31,500
+So bear in mind, the idea is to identify cycles and remove them.
+
+168
+00:08:31,500 --> 00:08:34,200
+So first thing, how are we going to identify the cycles?
+
+169
+00:08:34,200 --> 00:08:40,840
+So OK, as an example, let's consider the following situation, which is this one.
+
+170
+00:08:40,840 --> 00:08:44,100
+So let's consider these three cycles, which are separated.
+
+171
+00:08:44,100 --> 00:08:47,480
+We have x, y, and z, which is like a triangle of cycles.
+
+172
+00:08:47,480 --> 00:08:49,040
+Then we have a and b and l.
+
+173
+00:08:49,040 --> 00:08:50,240
+The form is not important.
+
+174
+00:08:50,240 --> 00:08:55,480
+And it's just to have three of them that will yield different behavior along the algorithm.
+
+175
+00:08:55,480 --> 00:08:59,840
+So basically, the triangle is created as we saw before with our class node and internal
+
+176
+00:08:59,840 --> 00:09:00,840
+reference.
+
+177
+00:09:00,840 --> 00:09:04,480
+And notice that we have an extra cycle that will help us see some behavior later, which
+
+178
+00:09:04,480 --> 00:09:06,000
+is set that points to itself.
+
+179
+00:09:06,000 --> 00:09:09,440
+Then we have a and b, again, with our class node.
+
+180
+00:09:09,440 --> 00:09:11,480
+And both a and b points to itself.
+
+181
+00:09:11,480 --> 00:09:14,280
+And an interesting one, which is a list that contains itself.
+
+182
+00:09:14,280 --> 00:09:17,080
+This is a cycle of only one element, which is cute.
+
+183
+00:09:17,080 --> 00:09:18,080
+Cool.
+
+184
+00:09:18,960 --> 00:09:22,640
+So bear in mind also that the situation is a bit more complex, because every object has
+
+185
+00:09:22,640 --> 00:09:23,640
+a dictionary inside.
+
+186
+00:09:23,640 --> 00:09:26,760
+And is the dictionary the one that actually points to other things?
+
+187
+00:09:26,760 --> 00:09:30,400
+So we have to consider not only the ones that we saw before, but every dictionary associated
+
+188
+00:09:30,400 --> 00:09:32,000
+with the class.
+
+189
+00:09:32,000 --> 00:09:33,080
+So this is the situation, right?
+
+190
+00:09:33,080 --> 00:09:35,400
+We have all these arrows pointing to each other.
+
+191
+00:09:35,400 --> 00:09:36,880
+So in the first row, we have the objects.
+
+192
+00:09:36,880 --> 00:09:40,920
+In the second row, we have the dictionaries and the list that has no dictionary inside.
+
+193
+00:09:40,920 --> 00:09:43,480
+And then the algorithm uses two linked lists.
+
+194
+00:09:43,480 --> 00:09:47,000
+The first one is the linked list of all the objects that are being considered.
+
+195
+00:09:47,320 --> 00:09:51,480
+And the second one is a list of all the objects that are going to maybe be destroyed.
+
+196
+00:09:51,480 --> 00:09:53,440
+And I say maybe, and you will see why.
+
+197
+00:09:53,440 --> 00:09:56,440
+So the first step is identifying which are the cycles.
+
+198
+00:09:56,440 --> 00:10:00,080
+So for that, we basically are going to copy the reference count into a separate field,
+
+199
+00:10:00,080 --> 00:10:01,080
+because we are going to modify.
+
+200
+00:10:01,080 --> 00:10:04,460
+And we don't want to mess in case the objects are not going to be destroyed.
+
+201
+00:10:04,460 --> 00:10:08,720
+So in this case, the algorithm starts basically copying this thing and decrementing the reference
+
+202
+00:10:08,720 --> 00:10:11,760
+count of all the objects that are pointing for every one of them.
+
+203
+00:10:11,760 --> 00:10:16,680
+And then when an object has a zero reference count, we mark it as maybe and ritual.
+
+204
+00:10:16,680 --> 00:10:21,000
+So for example, these are the numbers that are for the reference count.
+
+205
+00:10:21,000 --> 00:10:23,160
+So we start with the first object.
+
+206
+00:10:23,160 --> 00:10:27,360
+And we decrease the reference count of the only object that is pointing by x, which is
+
+207
+00:10:27,360 --> 00:10:28,360
+the dictionary.
+
+208
+00:10:28,360 --> 00:10:30,520
+So the dictionary becomes maybe and ritual.
+
+209
+00:10:30,520 --> 00:10:35,000
+That is what is marked in a gray color, because it has reference counts of zero.
+
+210
+00:10:35,000 --> 00:10:36,160
+So we go with y.
+
+211
+00:10:36,160 --> 00:10:37,360
+Y points to the dictionary.
+
+212
+00:10:37,360 --> 00:10:38,760
+We decrease its reference count.
+
+213
+00:10:38,760 --> 00:10:40,160
+Same thing with set.
+
+214
+00:10:40,160 --> 00:10:42,200
+The dictionary of x actually points to y and set.
+
+215
+00:10:42,200 --> 00:10:44,240
+So y and set are decreased by one.
+
+216
+00:10:44,240 --> 00:10:45,520
+The same thing for y.
+
+217
+00:10:45,560 --> 00:10:50,200
+And when we read the dictionary of set, then y and set are no longer referenced by anything.
+
+218
+00:10:50,200 --> 00:10:52,680
+So both become maybe and ritual again.
+
+219
+00:10:52,680 --> 00:10:57,200
+The same thing happens with a, b, and its dictionary.
+
+220
+00:10:57,200 --> 00:11:00,380
+And then the list that points to itself only has one reference, we decrease it.
+
+221
+00:11:00,380 --> 00:11:05,200
+So if you see in this situation, what happens is that after this algorithm, only the objects
+
+222
+00:11:05,200 --> 00:11:09,920
+that are ritual from the outside, which is that arrow that you see up there, has a reference
+
+223
+00:11:09,920 --> 00:11:11,580
+count bigger than one.
+
+224
+00:11:11,580 --> 00:11:15,240
+So basically, these are the objects that are ritual from the outside.
+
+225
+00:11:15,280 --> 00:11:18,520
+And all of the rest are basically isolated cycles.
+
+226
+00:11:18,520 --> 00:11:19,520
+OK.
+
+227
+00:11:19,520 --> 00:11:24,360
+So now we are not finished, because as you may imagine, if x is ritual from the outside,
+
+228
+00:11:24,360 --> 00:11:27,480
+we cannot delete any of the things that are actually referred by x, right?
+
+229
+00:11:27,480 --> 00:11:29,940
+Because we will destroy the internal state.
+
+230
+00:11:29,940 --> 00:11:33,520
+So the next part of the algorithm is trying to figure it out which objects are actually
+
+231
+00:11:33,520 --> 00:11:34,800
+ritual for it.
+
+232
+00:11:34,800 --> 00:11:37,720
+So the way it works is that we start with the first object.
+
+233
+00:11:37,720 --> 00:11:41,840
+If the object has a reference count bigger than one, we mark it as certainly ritual,
+
+234
+00:11:41,840 --> 00:11:43,800
+which is going to be this green color.
+
+235
+00:11:43,800 --> 00:11:47,840
+Notice that we also mark x, because x is the only object that is ritual, sorry, the
+
+236
+00:11:47,840 --> 00:11:52,080
+dictionary of x, because the dictionary of x is the only object which is ritual from
+
+237
+00:11:52,080 --> 00:11:53,080
+x.
+
+238
+00:11:53,080 --> 00:11:54,080
+OK, so we know that these two are ritual.
+
+239
+00:11:54,080 --> 00:11:57,480
+Then we go to y, and y has a reference count of zero.
+
+240
+00:11:57,480 --> 00:12:01,200
+So we don't know if it's going to be ritual or not, so we will move it temporarily to
+
+241
+00:12:01,200 --> 00:12:05,920
+the second list, which is the object that we maybe are going to destroy.
+
+242
+00:12:05,920 --> 00:12:08,600
+The same thing happens with set.
+
+243
+00:12:08,600 --> 00:12:10,320
+Then we visit the x dictionary.
+
+244
+00:12:10,320 --> 00:12:13,840
+And the x dictionary is very interesting because it's pointing to y and set.
+
+245
+00:12:13,840 --> 00:12:16,880
+And notice that y and set are already in the second list, which is, oh, maybe I'm going
+
+246
+00:12:16,880 --> 00:12:17,880
+to destroy them.
+
+247
+00:12:17,880 --> 00:12:22,000
+But because they are being pointed by an object which is green, we know that those, we cannot
+
+248
+00:12:22,000 --> 00:12:23,000
+destroy those.
+
+249
+00:12:23,000 --> 00:12:24,920
+So we need to move them back to the first list.
+
+250
+00:12:24,920 --> 00:12:28,080
+And we move them green because we know that certainly those are ritual.
+
+251
+00:12:28,080 --> 00:12:31,920
+Then we go to the dictionary of y, and it has zero reference counts, so we move it to
+
+252
+00:12:31,920 --> 00:12:33,880
+the second list.
+
+253
+00:12:33,880 --> 00:12:36,320
+The same thing happens with the dictionary of set.
+
+254
+00:12:36,320 --> 00:12:38,760
+A as well.
+
+255
+00:12:38,760 --> 00:12:39,760
+B as well.
+
+256
+00:12:39,760 --> 00:12:43,440
+So we have the dictionary of A and the dictionary of B. So we are basically moving all of these
+
+257
+00:12:43,440 --> 00:12:47,120
+objects to the second list because they have zero reference counts.
+
+258
+00:12:47,120 --> 00:12:51,920
+And notice an interesting thing, which is that every time we have one of these red arrows,
+
+259
+00:12:51,920 --> 00:12:53,920
+all the objects to the left are green.
+
+260
+00:12:53,920 --> 00:12:55,400
+This is an invariant of the algorithm.
+
+261
+00:12:55,400 --> 00:12:58,880
+And it's very important when you're implementing it because if this is not true, you have a
+
+262
+00:12:58,880 --> 00:13:01,000
+lag.
+
+263
+00:13:01,000 --> 00:13:05,200
+And then with l has zero reference count, we move it as well to the second list.
+
+264
+00:13:05,200 --> 00:13:06,240
+And then we need to visit y.
+
+265
+00:13:06,240 --> 00:13:08,080
+Notice that y is visited twice.
+
+266
+00:13:08,120 --> 00:13:11,680
+The first time we visited, it has zero reference counts, so we move it to the second list.
+
+267
+00:13:11,680 --> 00:13:15,640
+But the second time we visited, it was moved to the first list because someone else pointed
+
+268
+00:13:15,640 --> 00:13:16,640
+to it.
+
+269
+00:13:16,640 --> 00:13:19,800
+And we need to repeat the algorithm, like which are the objects pointed by y?
+
+270
+00:13:19,800 --> 00:13:21,480
+So actually, it's the dictionary of y.
+
+271
+00:13:21,480 --> 00:13:24,800
+So we move it back from the second list to the first.
+
+272
+00:13:24,800 --> 00:13:26,400
+And then the same thing with set.
+
+273
+00:13:26,400 --> 00:13:28,880
+The object pointed by set is the dictionary of set.
+
+274
+00:13:28,880 --> 00:13:32,720
+Also x and the rest, but we know that they are ritual, so we don't need to do it.
+
+275
+00:13:32,720 --> 00:13:36,600
+And then we visit the dictionary of y, but everything that is ritual from here, we know
+
+276
+00:13:36,720 --> 00:13:40,240
+is alive and the same thing for the dictionary of set.
+
+277
+00:13:40,240 --> 00:13:44,960
+So when we finish this step, basically we know that all the objects that are ritual
+
+278
+00:13:44,960 --> 00:13:51,080
+from the outside, so they are marked as green, and the objects that are marked as gray, we
+
+279
+00:13:51,080 --> 00:13:52,440
+know that they are isolated.
+
+280
+00:13:52,440 --> 00:13:56,800
+So this is objects that form cycles and they are not ritual from the outside.
+
+281
+00:13:56,800 --> 00:14:00,080
+And I'm repeating this because it's very important in some of the assumptions, well,
+
+282
+00:14:00,080 --> 00:14:01,080
+assumptions.
+
+283
+00:14:01,080 --> 00:14:03,320
+One of the things that we're going to do afterwards.
+
+284
+00:14:03,320 --> 00:14:07,920
+And it's very important to bear in mind that nobody outside these objects that we have
+
+285
+00:14:07,920 --> 00:14:11,160
+here can refer or see any of these objects.
+
+286
+00:14:11,160 --> 00:14:15,360
+So right now that we know the objects that we need to destroy, we simply destroy them,
+
+287
+00:14:15,360 --> 00:14:16,360
+right?
+
+288
+00:14:16,360 --> 00:14:20,720
+Which is actually not, because nothing in Python is actually that easy.
+
+289
+00:14:20,720 --> 00:14:24,240
+So there is this thing called weak reference.
+
+290
+00:14:24,240 --> 00:14:25,700
+So what are weak reference?
+
+291
+00:14:25,700 --> 00:14:30,840
+So weak reference are basically a way to refer to objects that don't count towards the total
+
+292
+00:14:30,840 --> 00:14:31,840
+sum of reference counting.
+
+293
+00:14:32,040 --> 00:14:34,880
+This is especially useful for not forming cycles in the first place.
+
+294
+00:14:34,880 --> 00:14:40,120
+But it has other usage, especially for example if you are wrapping C++ or other languages
+
+295
+00:14:40,120 --> 00:14:43,000
+that have problems with thermistic destruction.
+
+296
+00:14:43,000 --> 00:14:48,400
+And weak reference are especially tricky because weak reference have sometimes callbacks.
+
+297
+00:14:48,400 --> 00:14:52,840
+So basically the idea is that if you have many weak reference to a certain object and
+
+298
+00:14:52,840 --> 00:14:55,920
+the object dies, all the callbacks are executed.
+
+299
+00:14:55,920 --> 00:14:59,360
+Basically it's a way of saying, oh, the object that I'm referring to have died, so I need
+
+300
+00:14:59,360 --> 00:15:00,360
+to do something else, right?
+
+301
+00:15:00,440 --> 00:15:04,320
+Maybe closing files or maybe removing other cycles.
+
+302
+00:15:04,320 --> 00:15:08,240
+So these are very tricky because every time you call a function when you're finalizing
+
+303
+00:15:08,240 --> 00:15:13,480
+objects in C Python, you have to be extremely, extremely careful.
+
+304
+00:15:13,480 --> 00:15:17,360
+So in our case, we know that these are the objects that survive the last pass.
+
+305
+00:15:17,360 --> 00:15:21,920
+So these are the two blue objects that we know from before and the list that contains
+
+306
+00:15:21,920 --> 00:15:23,000
+itself.
+
+307
+00:15:23,000 --> 00:15:26,760
+So we have two kind of weak references that we saw before.
+
+308
+00:15:26,760 --> 00:15:32,040
+So here the one that has the little f of x are the ones that have callbacks and the
+
+309
+00:15:32,040 --> 00:15:34,040
+other two, so it's the green ones, right?
+
+310
+00:15:34,040 --> 00:15:37,960
+And the other two are weak references that do not have callbacks.
+
+311
+00:15:37,960 --> 00:15:41,880
+OK, so for the one that do not have callback, we can just remove them.
+
+312
+00:15:41,880 --> 00:15:46,560
+So the weak reference are stored actually in a linked list which is hidden from Python
+
+313
+00:15:46,560 --> 00:15:47,960
+that lives inside the object.
+
+314
+00:15:47,960 --> 00:15:51,920
+So we just reach into the linked list and we unlink them and destroy them.
+
+315
+00:15:51,920 --> 00:15:55,360
+So for the ones that have callbacks, we have to be very careful because it can be two possible
+
+316
+00:15:55,360 --> 00:15:56,360
+situations.
+
+317
+00:15:56,400 --> 00:16:00,880
+The first one is that the weak reference objects are actually outside the cycles.
+
+318
+00:16:00,880 --> 00:16:05,120
+Remember that these weak references cannot refer to the objects inside the cycles, so
+
+319
+00:16:05,120 --> 00:16:07,560
+that's OK because they cannot mess with them.
+
+320
+00:16:07,560 --> 00:16:10,200
+But we have to be extremely careful with the second case.
+
+321
+00:16:10,200 --> 00:16:13,440
+The second case is one of the objects that we're going to destroy as part of the cycle
+
+322
+00:16:13,440 --> 00:16:16,960
+happens to be a weak reference to one of the others.
+
+323
+00:16:16,960 --> 00:16:20,240
+And this is especially complicated because the callback of the second one can actually
+
+324
+00:16:20,240 --> 00:16:21,840
+mess with our object.
+
+325
+00:16:21,840 --> 00:16:25,920
+So for the first one I say, we can just remove them because there is absolutely no risk.
+
+326
+00:16:25,960 --> 00:16:27,600
+They cannot reach the object in our cycle.
+
+327
+00:16:27,600 --> 00:16:32,000
+They cannot create new references or resurrect them or change the field.
+
+328
+00:16:32,000 --> 00:16:33,640
+So we just remove them.
+
+329
+00:16:33,640 --> 00:16:35,600
+For these ones, there is a…
+
+330
+00:16:35,600 --> 00:16:39,760
+So the danger I saw is resurrection, which is like the callback can actually increase
+
+331
+00:16:39,760 --> 00:16:42,080
+the reference count again and it can bring it back to life.
+
+332
+00:16:42,080 --> 00:16:43,080
+So more later on this.
+
+333
+00:16:43,080 --> 00:16:46,920
+But there is a trick, which is that the garbage collector doesn't guarantee order of the
+
+334
+00:16:46,920 --> 00:16:47,920
+extraction.
+
+335
+00:16:47,920 --> 00:16:53,080
+And under that assumption, we can pretend that the weak reference just happens to be
+
+336
+00:16:53,080 --> 00:16:57,960
+before the object and we just don't call it because we say, oh, the weak reference
+
+337
+00:16:57,960 --> 00:17:00,440
+was actually destroyed before the object was destroyed.
+
+338
+00:17:00,440 --> 00:17:01,440
+So there's no reason to call it.
+
+339
+00:17:01,440 --> 00:17:06,120
+It's a trick, but we can do it because we have this guarantee that I talked before.
+
+340
+00:17:06,120 --> 00:17:09,960
+Okay, so we have called all the weak reference.
+
+341
+00:17:09,960 --> 00:17:12,600
+So we can forget about those.
+
+342
+00:17:12,600 --> 00:17:15,640
+Now let's call finalizers, which is the second problem.
+
+343
+00:17:15,640 --> 00:17:18,840
+So finalizers are especially tricky as well.
+
+344
+00:17:18,840 --> 00:17:19,840
+Why?
+
+345
+00:17:19,840 --> 00:17:21,200
+Because, let's imagine this situation.
+
+346
+00:17:21,240 --> 00:17:24,680
+So we have A and then we have B and they point to each other.
+
+347
+00:17:24,680 --> 00:17:29,160
+So the finalizer remembers that they are the Dell method that you can implement in Python.
+
+348
+00:17:29,160 --> 00:17:32,720
+Inside is a function pointer called tpFinalize.
+
+349
+00:17:32,720 --> 00:17:38,880
+In Python 2.7 or well, at some point it was a legacy one called tpDell that was linked
+
+350
+00:17:38,880 --> 00:17:41,120
+to the Dell function.
+
+351
+00:17:41,120 --> 00:17:48,160
+But as we will see later, that's legacy and has been replaced with a better system.
+
+352
+00:17:48,160 --> 00:17:49,480
+So the problem is the following.
+
+353
+00:17:49,520 --> 00:17:51,440
+So we have these two objects and we need to destroy them.
+
+354
+00:17:51,440 --> 00:17:52,760
+And then we need to call the finalizers.
+
+355
+00:17:52,760 --> 00:17:57,200
+But we have a problem because which finalizer we need to call first, right?
+
+356
+00:17:57,200 --> 00:18:00,760
+Imagine for example that the finalizer of A needs something in the finalizer of B. Imagine
+
+357
+00:18:00,760 --> 00:18:06,600
+for example that A is a database and B is a connection or something.
+
+358
+00:18:06,600 --> 00:18:09,920
+When you are going to destroy the database, you want to make sure that the connection
+
+359
+00:18:09,920 --> 00:18:11,920
+is closed or something like that, right?
+
+360
+00:18:11,920 --> 00:18:15,960
+Which is not the best way of doing it as we saw before, but imagine that is a possibility.
+
+361
+00:18:15,960 --> 00:18:20,200
+So what happens if the finalization of A calls the finalization of B for whatever reason?
+
+362
+00:18:20,200 --> 00:18:22,400
+So we don't know the order.
+
+363
+00:18:22,400 --> 00:18:26,200
+And there is another problem which is for example this one which is resurrection.
+
+364
+00:18:26,200 --> 00:18:29,920
+Imagine for example we have a global variable called x, we initialize it to none.
+
+365
+00:18:29,920 --> 00:18:34,480
+And then we have this class that we implement the Dundell method.
+
+366
+00:18:34,480 --> 00:18:36,560
+We print something to know that it was called.
+
+367
+00:18:36,560 --> 00:18:41,520
+And then basically when the Dell method is called, we put the object in the global variable.
+
+368
+00:18:41,520 --> 00:18:43,200
+So basically this is resurrecting.
+
+369
+00:18:43,800 --> 00:18:47,240
+The class, the object is going to be destroyed, but it just happens that the Dell method points
+
+370
+00:18:47,240 --> 00:18:52,400
+the object in the global variable, increasing the reference count and putting it back to life.
+
+371
+00:18:52,400 --> 00:18:57,680
+So in this case, when you create one of these objects and destroy the only name that points to it,
+
+372
+00:18:57,680 --> 00:19:04,120
+basically the print function is called and we see that the x variable instead of none
+
+373
+00:19:04,120 --> 00:19:05,720
+now is our object.
+
+374
+00:19:05,720 --> 00:19:09,480
+So this is especially tricky because this can mess up with so many things.
+
+375
+00:19:10,000 --> 00:19:14,120
+It's actually so tricky that Python 2 decided, you know, if there is one of these and it
+
+376
+00:19:14,120 --> 00:19:17,080
+becomes in a cycle, I'm literally not going to do anything.
+
+377
+00:19:17,080 --> 00:19:19,400
+And indeed we can actually check that this is true.
+
+378
+00:19:19,400 --> 00:19:24,600
+So this is Python 2 or more known as legacy Python.
+
+379
+00:19:24,600 --> 00:19:28,960
+So we have this class now, we implement this Dell method, we print something to know that
+
+380
+00:19:28,960 --> 00:19:29,960
+it was called.
+
+381
+00:19:29,960 --> 00:19:31,760
+It's the better debugging strategy.
+
+382
+00:19:31,760 --> 00:19:36,480
+And then we create one of these two nodes, we create a cycle pointing A to B and B to A.
+
+383
+00:19:36,480 --> 00:19:39,520
+And then we destroy both names and force a collection.
+
+384
+00:19:39,520 --> 00:19:44,680
+In this case, we are forcing a collection there, basically calling gc.collect, which
+
+385
+00:19:44,680 --> 00:19:49,440
+is a function which is available in the gc module.
+
+386
+00:19:49,440 --> 00:19:52,820
+So basically this runs the algorithm that we saw before.
+
+387
+00:19:52,820 --> 00:19:56,320
+So after that, we saw that these two objects are actually not destroyed.
+
+388
+00:19:56,320 --> 00:20:00,240
+They are in this special list called gcgarbage.
+
+389
+00:20:00,240 --> 00:20:01,240
+So there.
+
+390
+00:20:01,240 --> 00:20:03,720
+And basically this means that they are never destroyed.
+
+391
+00:20:03,720 --> 00:20:06,240
+They're going to be there for the remaining of your program.
+
+392
+00:20:06,240 --> 00:20:08,720
+And this is more or less a leak.
+
+393
+00:20:08,720 --> 00:20:13,680
+So in Python 3, we have perf442 by Antoine P. True.
+
+394
+00:20:13,680 --> 00:20:19,320
+And this fixes this and adds safe and deterministic object finalization.
+
+395
+00:20:19,320 --> 00:20:24,160
+So this takes into account all the things that are very, very complicated like resurrection.
+
+396
+00:20:24,160 --> 00:20:29,120
+It takes into account also something very important that every destructor here is finalized.
+
+397
+00:20:29,120 --> 00:20:31,200
+But every finalizer is only called once.
+
+398
+00:20:31,200 --> 00:20:35,240
+So basically if the object is resurrected and then destroyed again, the Dell method
+
+399
+00:20:35,240 --> 00:20:36,240
+is not called again.
+
+400
+00:20:36,240 --> 00:20:40,000
+And also it takes into account safety and correctness.
+
+401
+00:20:40,000 --> 00:20:44,480
+So if we repeat the same experiment again, so we create the null, we create two of them,
+
+402
+00:20:44,480 --> 00:20:46,440
+we create a cycle, we force a collection.
+
+403
+00:20:46,440 --> 00:20:53,040
+We know now with our incredible debugging strategy that we see that both prints have been called.
+
+404
+00:20:53,040 --> 00:20:54,480
+Therefore the Dell has been made.
+
+405
+00:20:54,480 --> 00:20:57,100
+And you can actually check that A and B are no more.
+
+406
+00:20:57,100 --> 00:20:58,320
+So how this works.
+
+407
+00:20:58,320 --> 00:21:02,200
+So inside the object there is this function pointer called tpFinalize.
+
+408
+00:21:02,200 --> 00:21:05,840
+The tpFinalize is basically pointing to your Dell function.
+
+409
+00:21:05,840 --> 00:21:08,800
+So these are the objects that we have before from the algorithm.
+
+410
+00:21:08,800 --> 00:21:09,880
+And the idea is the following.
+
+411
+00:21:09,880 --> 00:21:14,360
+So for every object, let's start for the one which is the first there.
+
+412
+00:21:14,360 --> 00:21:16,200
+So we call the finalizer if it's present.
+
+413
+00:21:16,200 --> 00:21:17,680
+If it's not present, we don't care.
+
+414
+00:21:17,680 --> 00:21:18,680
+If it's present, we call it.
+
+415
+00:21:18,680 --> 00:21:21,640
+Here we're going to represent that with this green circle.
+
+416
+00:21:21,640 --> 00:21:23,160
+So that means that it's called.
+
+417
+00:21:23,160 --> 00:21:26,580
+Then inside the object, we mark that we have called the finalizer.
+
+418
+00:21:26,580 --> 00:21:28,820
+So we are going to represent that with this tick.
+
+419
+00:21:28,820 --> 00:21:34,300
+This is very important because this means that every object needs to know if the finalizer
+
+420
+00:21:34,300 --> 00:21:35,300
+has been called.
+
+421
+00:21:35,300 --> 00:21:37,740
+And this is something that we need to store inside the object.
+
+422
+00:21:37,740 --> 00:21:40,980
+And this is true for every object which is tracked by the garbage collector.
+
+423
+00:21:40,980 --> 00:21:46,220
+Which means that absolutely all the objects need to have an extra fill inside somehow.
+
+424
+00:21:46,220 --> 00:21:49,660
+Therefore increasing the memory consumption of all your Python program.
+
+425
+00:21:49,660 --> 00:21:52,420
+Imagine that all your Python objects will have an extra little fill.
+
+426
+00:21:52,420 --> 00:21:55,820
+But when you add them all together, it can be an important increase.
+
+427
+00:21:55,820 --> 00:22:00,740
+So when you do this kind of thing and when you modify the Python object, you have to
+
+428
+00:22:00,740 --> 00:22:03,580
+be extra careful not to add arbitrary stuff.
+
+429
+00:22:03,580 --> 00:22:06,780
+Because if you do this thing, basically you're going to increase the memory consumption of
+
+430
+00:22:06,780 --> 00:22:09,300
+all the programs that use Python.
+
+431
+00:22:09,300 --> 00:22:12,220
+So then you have to also be very careful.
+
+432
+00:22:12,220 --> 00:22:16,140
+Because another thing that can happen is that when you call the finalizer of the first object,
+
+433
+00:22:16,140 --> 00:22:18,860
+it can actually go and destroy some of them.
+
+434
+00:22:18,860 --> 00:22:23,420
+So for example, the finalizer of the first object can go and destroy the last one.
+
+435
+00:22:23,420 --> 00:22:24,420
+And this can happen.
+
+436
+00:22:24,580 --> 00:22:27,320
+In this part of the algorithm, you have to be extremely tricky.
+
+437
+00:22:27,320 --> 00:22:30,780
+Because when you have the collection of the objects that you are iterating over, they
+
+438
+00:22:30,780 --> 00:22:33,220
+can start appearing and disappearing.
+
+439
+00:22:33,220 --> 00:22:36,700
+And then your algorithm needs to be resilient of this effect.
+
+440
+00:22:36,700 --> 00:22:40,820
+This is one of the parts of the garbage collector code which is full of comments explaining
+
+441
+00:22:40,820 --> 00:22:43,940
+how crazy this is and how careful this needs to be.
+
+442
+00:22:43,940 --> 00:22:46,860
+But it works, sort of.
+
+443
+00:22:46,860 --> 00:22:51,100
+It works, it works.
+
+444
+00:22:51,100 --> 00:22:54,580
+OK, so then we know that this can happen.
+
+445
+00:22:54,580 --> 00:23:00,500
+And then the second time, we call the other object finalizer and we mark it as finalized.
+
+446
+00:23:00,500 --> 00:23:04,140
+And this little mark is the one that we need to inspect the next time we try to call the
+
+447
+00:23:04,140 --> 00:23:05,140
+finalizer.
+
+448
+00:23:05,140 --> 00:23:08,900
+Because if the mark is there, we know that the method was called before.
+
+449
+00:23:08,900 --> 00:23:12,800
+So we don't need to destroy it.
+
+450
+00:23:12,800 --> 00:23:15,260
+So you may think, OK, this is OK.
+
+451
+00:23:15,260 --> 00:23:19,540
+But what happens if the first object is actually resurrected as we saw before?
+
+452
+00:23:19,660 --> 00:23:23,780
+So if the object is resurrected, it means that we need to abort all the collection.
+
+453
+00:23:23,780 --> 00:23:27,140
+It means that that object cannot be actually destroyed because it has been resurrected.
+
+454
+00:23:27,140 --> 00:23:31,660
+But not only that, all the other objects that have been referred by that one need to be
+
+455
+00:23:31,660 --> 00:23:33,380
+also resurrected as well.
+
+456
+00:23:33,380 --> 00:23:36,080
+Because you cannot leave the object in an inconsistent state.
+
+457
+00:23:36,080 --> 00:23:40,420
+So basically, you abort the collection and put all the objects back.
+
+458
+00:23:40,420 --> 00:23:42,660
+But that's basically all the possibilities that can happen.
+
+459
+00:23:42,660 --> 00:23:47,460
+You just need to be very careful with where you put things and that your data structures
+
+460
+00:23:47,460 --> 00:23:48,500
+are very consistent.
+
+461
+00:23:48,700 --> 00:23:52,260
+If you check the code, there is actually a lot of assertions around this.
+
+462
+00:23:52,260 --> 00:23:56,660
+The algorithm checks all the time that all the collection that it's using is consistent.
+
+463
+00:23:56,660 --> 00:23:59,900
+The reference counts are bigger than zero at this stage.
+
+464
+00:23:59,900 --> 00:24:05,460
+That the different objects that happen to be there are never deleted.
+
+465
+00:24:05,460 --> 00:24:09,020
+So the last step in the algorithm is clearing the reference cycles.
+
+466
+00:24:09,020 --> 00:24:12,140
+So basically, the idea is that we are left with this object.
+
+467
+00:24:12,140 --> 00:24:16,420
+This object we already know that we have called all the finalizers.
+
+468
+00:24:16,420 --> 00:24:18,620
+There are no weak references to these objects.
+
+469
+00:24:18,620 --> 00:24:20,820
+And it's isolated from the outside.
+
+470
+00:24:20,820 --> 00:24:26,340
+So the reference count that these two objects have are only maintained by the internal reference
+
+471
+00:24:26,340 --> 00:24:27,920
+of both objects.
+
+472
+00:24:27,920 --> 00:24:32,260
+So you think about this, it means that if somehow we destroy these arrows, the object's
+
+473
+00:24:32,260 --> 00:24:36,100
+reference count will fall to zero and they will be naturally destroyed.
+
+474
+00:24:36,100 --> 00:24:40,620
+So that's the work of an extra function, C function, inside the object which is called
+
+475
+00:24:40,620 --> 00:24:41,820
+TP clear.
+
+476
+00:24:41,820 --> 00:24:44,620
+So in Python, you don't need to implement this thing or worry about that.
+
+477
+00:24:44,620 --> 00:24:49,860
+It's implemented for you automatically in the object object.
+
+478
+00:24:49,860 --> 00:24:54,540
+But in C, if you are implementing some extension module or some custom class or even in Siphon,
+
+479
+00:24:54,540 --> 00:24:56,460
+you may want to implement TP clear.
+
+480
+00:24:56,460 --> 00:24:59,240
+Usually, we recommend that you always implement TP clear.
+
+481
+00:24:59,240 --> 00:25:03,980
+So the idea is that even if you are doubting if you need to do it or not, you need to.
+
+482
+00:25:03,980 --> 00:25:07,220
+And the idea is that this function, the only job of this function is remove these internal
+
+483
+00:25:07,220 --> 00:25:08,220
+arrows.
+
+484
+00:25:08,220 --> 00:25:11,400
+So for example, imagine a simple case, the list that contains itself.
+
+485
+00:25:11,400 --> 00:25:15,000
+So for the list that contains itself, this function just deletes all the elements in
+
+486
+00:25:15,000 --> 00:25:16,000
+the list.
+
+487
+00:25:16,000 --> 00:25:17,280
+So it calls list.clear.
+
+488
+00:25:17,280 --> 00:25:20,100
+For a dictionary, it basically empties the dictionary.
+
+489
+00:25:20,100 --> 00:25:23,100
+For a set, it empties the set and so on.
+
+490
+00:25:23,100 --> 00:25:26,840
+For an object, it basically can set all the attributes to none.
+
+491
+00:25:26,840 --> 00:25:30,080
+And the idea is that after calling this function, there will be no internal reference.
+
+492
+00:25:30,080 --> 00:25:31,760
+So we will be in this situation.
+
+493
+00:25:31,760 --> 00:25:35,800
+And the reference count has fall to zero, so we know that we can literally destroy the
+
+494
+00:25:35,800 --> 00:25:36,800
+object.
+
+495
+00:25:36,800 --> 00:25:41,360
+And at this stage, the thing that is going to be called right now is the actual destructor.
+
+496
+00:25:41,400 --> 00:25:46,440
+The actual destructor is a function pointed inside the object called tpDialog that you
+
+497
+00:25:46,440 --> 00:25:47,440
+don't see in Python.
+
+498
+00:25:47,440 --> 00:25:50,960
+But when you're implementing extension modules, you can implement it in case you want to clean
+
+499
+00:25:50,960 --> 00:25:56,520
+up also some other things like C objects or extra things that your extension model needs
+
+500
+00:25:56,520 --> 00:25:57,520
+to care about.
+
+501
+00:25:57,520 --> 00:26:02,180
+And at that point, we have done our work and this object up there, are we just finished?
+
+502
+00:26:02,180 --> 00:26:05,520
+So this is the end of the algorithm and the end of the round.
+
+503
+00:26:05,520 --> 00:26:06,560
+But there is more.
+
+504
+00:26:06,560 --> 00:26:10,360
+So the interesting part now is to talk about some optimizations on top of that.
+
+505
+00:26:10,360 --> 00:26:13,840
+Because if you think about this, basically this algorithm runs over all the objects that
+
+506
+00:26:13,840 --> 00:26:17,320
+are tracked by the collector, which is like the majority of them.
+
+507
+00:26:17,320 --> 00:26:19,120
+So there is some optimization that we have on top.
+
+508
+00:26:19,120 --> 00:26:21,480
+One of these is the generations.
+
+509
+00:26:21,480 --> 00:26:26,480
+So the idea is that the generational garbage collector is an optimization on top of this
+
+510
+00:26:26,480 --> 00:26:31,080
+that is based on the idea that objects that remain reachable after a run of the garbage
+
+511
+00:26:31,080 --> 00:26:35,480
+collector, so the green ones in the algorithm that we saw before, will also remain reachable
+
+512
+00:26:35,480 --> 00:26:37,120
+in future runs.
+
+513
+00:26:37,760 --> 00:26:41,360
+So the idea is that the older the objects are, the more likely to be used by the program.
+
+514
+00:26:41,360 --> 00:26:46,160
+And this idea is basically also in contact with the idea that in Python, there is a lot
+
+515
+00:26:46,160 --> 00:26:50,640
+of scenarios when you create a lot of objects very fast, very little and very short lived.
+
+516
+00:26:50,640 --> 00:26:54,400
+So the idea is that objects will be created very, very fast and will be destroyed very,
+
+517
+00:26:54,400 --> 00:26:55,640
+very fast as well.
+
+518
+00:26:55,640 --> 00:27:01,240
+So if an object has survived a lot of runs of the garbage collector, we probably need
+
+519
+00:27:01,240 --> 00:27:05,420
+to run over it less and less because it's very likely to survive.
+
+520
+00:27:05,420 --> 00:27:10,180
+So the idea is that we have three collections, which we call generations.
+
+521
+00:27:10,180 --> 00:27:14,500
+CPython has three by default, but you can compile CPython with more if you want.
+
+522
+00:27:14,500 --> 00:27:19,060
+The first generation, which is indexed by zero, is the younger generation.
+
+523
+00:27:19,060 --> 00:27:22,300
+Then you have the other ones, and the third one is the older.
+
+524
+00:27:22,300 --> 00:27:26,620
+And the idea is that objects that survive a pass in the generation are promoted to the
+
+525
+00:27:26,620 --> 00:27:27,620
+next one.
+
+526
+00:27:27,620 --> 00:27:28,620
+Basically, they are moved.
+
+527
+00:27:28,620 --> 00:27:33,580
+And objects in older generation, as I said, basically have survived more and more collection
+
+528
+00:27:33,580 --> 00:27:34,580
+passes.
+
+529
+00:27:34,620 --> 00:27:39,140
+So if an object in the older generation, the object is very likely to be around for a long
+
+530
+00:27:39,140 --> 00:27:42,300
+time or at least has survived a lot of passes of the GC.
+
+531
+00:27:42,300 --> 00:27:45,180
+So let's see, let's inspect this thing in a graphical way.
+
+532
+00:27:45,180 --> 00:27:48,820
+So the generation in the bottom is the younger generation.
+
+533
+00:27:48,820 --> 00:27:50,420
+Then we have another and the older one.
+
+534
+00:27:50,420 --> 00:27:55,020
+So think that there is some errors on the top, which I don't know if these are there,
+
+535
+00:27:55,020 --> 00:27:56,020
+these errors here.
+
+536
+00:27:56,020 --> 00:28:00,540
+So these two errors can be, they can be objects that are eternal.
+
+537
+00:28:00,540 --> 00:28:05,060
+So some objects live in the actual data segment of your program, and these objects are never
+
+538
+00:28:05,060 --> 00:28:06,060
+deallocated.
+
+539
+00:28:06,060 --> 00:28:10,420
+So it may be some errors also from the outside, from objects that will never be deallocated
+
+540
+00:28:10,420 --> 00:28:12,340
+until Python finishes.
+
+541
+00:28:12,340 --> 00:28:15,460
+And those errors can be also taken into account.
+
+542
+00:28:15,460 --> 00:28:16,660
+So let's do the thing.
+
+543
+00:28:16,660 --> 00:28:18,820
+So we start with the younger generation.
+
+544
+00:28:18,820 --> 00:28:21,660
+We collect, so we run the algorithm that we talk about.
+
+545
+00:28:21,660 --> 00:28:27,140
+And after finishing, we know that the objects in gray are the objects that we need to destroy.
+
+546
+00:28:27,180 --> 00:28:32,180
+The objects that remain blue in the bottom box are the objects that we need to promote.
+
+547
+00:28:32,180 --> 00:28:33,180
+So we do that.
+
+548
+00:28:33,180 --> 00:28:37,500
+So we destroy the objects in cycles, and then we'll promote the rest to the second generation.
+
+549
+00:28:37,500 --> 00:28:41,620
+So some time passes, and there is a new collection in the second generation.
+
+550
+00:28:41,620 --> 00:28:46,340
+So we run the algorithm again, cleaning, you know, weak reference, calling finalizer, et
+
+551
+00:28:46,340 --> 00:28:47,340
+cetera, et cetera.
+
+552
+00:28:47,340 --> 00:28:50,580
+And then after that, we know that all these other objects need to be destroyed because
+
+553
+00:28:50,580 --> 00:28:51,860
+they are not used anymore.
+
+554
+00:28:51,860 --> 00:28:55,660
+Notice that this means in these generation diagrams that there are no errors from the
+
+555
+00:28:55,660 --> 00:28:58,660
+upper generations to the lower generations, right?
+
+556
+00:28:58,660 --> 00:29:02,220
+So we see that the only object that is blue in the middle is the only object that has
+
+557
+00:29:02,220 --> 00:29:04,180
+an error from the upper generation.
+
+558
+00:29:04,180 --> 00:29:09,900
+So after this run, we just promote this little guy there, and then we have the objects in
+
+559
+00:29:09,900 --> 00:29:11,140
+the latest generation.
+
+560
+00:29:11,140 --> 00:29:12,820
+The latest generation is also a bit tricky.
+
+561
+00:29:12,820 --> 00:29:15,460
+It also suffers garbage collection runs.
+
+562
+00:29:15,460 --> 00:29:17,780
+In this case, I'm not going to show it here.
+
+563
+00:29:17,780 --> 00:29:22,700
+But also, when the latest generation is run, there is an extra, a lot of extra steps that
+
+564
+00:29:22,700 --> 00:29:23,700
+are done.
+
+565
+00:29:23,700 --> 00:29:28,900
+So, for example, the free list, the internal free list are clear.
+
+566
+00:29:28,900 --> 00:29:34,660
+So free list is basically optimization because when you create certain objects, for example,
+
+567
+00:29:34,660 --> 00:29:39,820
+floats or tuples or objects that are very likely to appear, when you destroy them, instead
+
+568
+00:29:39,820 --> 00:29:42,180
+of destroying them, you mark as unused.
+
+569
+00:29:42,180 --> 00:29:46,460
+And if you want to create a new one instead of creating a new one, you use the corpse
+
+570
+00:29:46,460 --> 00:29:48,660
+of the other one to put new things in.
+
+571
+00:29:48,660 --> 00:29:52,340
+So this basically makes that it's much faster to allocate them.
+
+572
+00:29:52,340 --> 00:29:55,900
+So when you run in the latest generation, all of the free lists are clear.
+
+573
+00:29:55,900 --> 00:29:57,760
+Some of the free lists are clear.
+
+574
+00:29:57,760 --> 00:30:02,540
+So that you may think, OK, so when do you run the algorithm in a generation?
+
+575
+00:30:02,540 --> 00:30:06,940
+So you basically run the algorithm in a generation, what we call a pass of the garbage collector,
+
+576
+00:30:06,940 --> 00:30:09,180
+when the generation reaches a certain threshold.
+
+577
+00:30:09,180 --> 00:30:12,580
+This means that the generation has a certain number of objects inside.
+
+578
+00:30:12,580 --> 00:30:14,680
+And you can actually inspect these numbers.
+
+579
+00:30:14,680 --> 00:30:18,900
+So for example, you can import the GC module, which is for garbage collector, and then you
+
+580
+00:30:19,900 --> 00:30:23,060
+call this function called getThreshold, and it will return a tuple.
+
+581
+00:30:23,060 --> 00:30:24,860
+In this case, there are three elements in the tuple.
+
+582
+00:30:24,860 --> 00:30:26,580
+It's 700, 10, and 10.
+
+583
+00:30:26,580 --> 00:30:27,580
+Those are the defaults.
+
+584
+00:30:27,580 --> 00:30:31,740
+And these are the number of objects that need to be in the generation to start rigging in
+
+585
+00:30:31,740 --> 00:30:33,060
+a collection.
+
+586
+00:30:33,060 --> 00:30:36,860
+In this case, if you have compiled Python with more generation, the tuple will be bigger.
+
+587
+00:30:36,860 --> 00:30:42,940
+You can actually call a function called getSetThreshold and pass n numbers, where n are the numbers
+
+588
+00:30:42,940 --> 00:30:45,060
+of generation if you want to change this value.
+
+589
+00:30:45,420 --> 00:30:50,740
+This is an interesting trick, as Victor Estiner here will know very well.
+
+590
+00:30:50,740 --> 00:30:56,660
+Because if you have bugs that happen in the garbage collector, you want to trigger more
+
+591
+00:30:56,660 --> 00:30:58,020
+and more collection very fast.
+
+592
+00:30:58,020 --> 00:31:02,020
+So putting long numbers in this threshold triggers more collection, and it will trigger
+
+593
+00:31:02,020 --> 00:31:04,100
+your bug more likely so you can reproduce it.
+
+594
+00:31:04,100 --> 00:31:06,620
+This is especially useful if the bugs are raised conditions.
+
+595
+00:31:06,620 --> 00:31:09,940
+So in this case, we set up to 1,000, 50, and 20.
+
+596
+00:31:09,940 --> 00:31:13,420
+And then when we call again getThreshold, we see that the values are changed.
+
+597
+00:31:13,420 --> 00:31:20,540
+So you can use it if you have an extra knowledge of how often these generations are filled
+
+598
+00:31:20,540 --> 00:31:27,260
+and you have a better strategy, or you want to delay or make more often garbage collector
+
+599
+00:31:27,260 --> 00:31:28,540
+runs.
+
+600
+00:31:28,540 --> 00:31:32,020
+So you can force also a collection by hand if you want.
+
+601
+00:31:32,020 --> 00:31:34,460
+So there is this function called gcCollect.
+
+602
+00:31:34,460 --> 00:31:37,820
+And it receives a parameter, which is the generation.
+
+603
+00:31:37,820 --> 00:31:41,220
+So you can make a run on a particular generation if you want.
+
+604
+00:31:41,380 --> 00:31:45,140
+If you don't provide any parameter, it will run on the latest generation, and it will
+
+605
+00:31:45,140 --> 00:31:47,260
+promote everything up.
+
+606
+00:31:47,260 --> 00:31:50,740
+You can actually also expect all the objects that are tracked by the garbage collector.
+
+607
+00:31:50,740 --> 00:31:54,940
+This is sort of give me all the objects that are alive in the Python program.
+
+608
+00:31:54,940 --> 00:31:58,820
+Of course, this is not all the objects, Victor, because all the objects that are not tracked
+
+609
+00:31:58,820 --> 00:32:01,060
+by the GC will not appear here.
+
+610
+00:32:01,060 --> 00:32:02,740
+But this is still a bunch of them.
+
+611
+00:32:02,740 --> 00:32:06,900
+So the function that you can call is called getGcObjects.
+
+612
+00:32:06,900 --> 00:32:07,900
+So it was like this.
+
+613
+00:32:08,860 --> 00:32:13,780
+And then you get this list here, which is very big, so I have not completed.
+
+614
+00:32:13,780 --> 00:32:17,580
+And since Python 3.8, you can actually now specify a generation.
+
+615
+00:32:17,580 --> 00:32:22,940
+So you can say, oh, actually give me all the objects that are in a particular generation.
+
+616
+00:32:22,940 --> 00:32:27,500
+And this is especially interesting if you want to improve the GC or do some experiments
+
+617
+00:32:27,500 --> 00:32:31,180
+of how your program is using the GC or how many objects are in your generations.
+
+618
+00:32:31,180 --> 00:32:35,900
+OK, so let's talk about the GIL briefly.
+
+619
+00:32:35,900 --> 00:32:38,940
+So the GIL, as you may know, is a mutex.
+
+620
+00:32:38,940 --> 00:32:42,860
+It's actually just a combination of mutex, a condition variable, and a Boolean.
+
+621
+00:32:42,860 --> 00:32:46,580
+Basically, the idea is that one of the important things that it does is that it protects access
+
+622
+00:32:46,580 --> 00:32:47,580
+to Python objects.
+
+623
+00:32:47,580 --> 00:32:52,380
+So basically, when you have multiple threads, it protects them to modify the reference count.
+
+624
+00:32:52,380 --> 00:32:56,980
+Because when you grab a Python object or you refer to it, basically, you need to increase
+
+625
+00:32:56,980 --> 00:32:58,820
+and decrease the reference count of the objects.
+
+626
+00:32:58,820 --> 00:33:00,200
+And this is just an integer.
+
+627
+00:33:00,200 --> 00:33:02,460
+So you have multiple threads accessing the same value.
+
+628
+00:33:02,460 --> 00:33:04,020
+This is a race condition.
+
+629
+00:33:04,060 --> 00:33:08,900
+Because this is a Python runtime, doing this wrongly can create real problems.
+
+630
+00:33:08,900 --> 00:33:12,380
+So as you know, the GIL basically makes your threads not happy.
+
+631
+00:33:12,380 --> 00:33:15,140
+But you can use multiprocessing instead.
+
+632
+00:33:15,140 --> 00:33:18,900
+So the idea is that one of the main reasons to have the GIL is that it protects the reference
+
+633
+00:33:18,900 --> 00:33:19,900
+count.
+
+634
+00:33:19,900 --> 00:33:22,340
+That's one of the main purposes.
+
+635
+00:33:22,340 --> 00:33:25,860
+Because we need basically atomicity when we increase them and decrease them.
+
+636
+00:33:25,860 --> 00:33:29,860
+If you go to the actual Python documentation, you can see actually that this explains it.
+
+637
+00:33:30,020 --> 00:33:33,980
+So it explains, for example, the case of a multi-threaded program when two threads simultaneously
+
+638
+00:33:33,980 --> 00:33:36,340
+increase the reference count of the same object.
+
+639
+00:33:36,340 --> 00:33:39,660
+And therefore, you can have objects that will be leaked.
+
+640
+00:33:39,660 --> 00:33:41,340
+This is never destroyed.
+
+641
+00:33:41,340 --> 00:33:45,500
+Or objects that will be destroyed before they should.
+
+642
+00:33:45,500 --> 00:33:48,860
+Other features of the language and extension model have grown to depend on the guarantees
+
+643
+00:33:48,860 --> 00:33:49,860
+of the GIL.
+
+644
+00:33:49,860 --> 00:33:54,380
+But memory management becomes basically the main reason that we have this thing.
+
+645
+00:33:54,380 --> 00:33:57,780
+And this is the reason that removing the GIL is so hard, one of them.
+
+646
+00:33:57,780 --> 00:34:00,780
+Because basically, if you want to remove the GIL, you need to get rid of reference
+
+647
+00:34:00,780 --> 00:34:01,780
+counting.
+
+648
+00:34:01,780 --> 00:34:02,780
+That's it.
+
+649
+00:34:02,780 --> 00:34:06,860
+So we basically need a new garbage collector or some modified garbage collector that will
+
+650
+00:34:06,860 --> 00:34:09,020
+basically do the job that the reference count is doing.
+
+651
+00:34:09,020 --> 00:34:13,020
+And this is really, really hard for many reasons.
+
+652
+00:34:13,020 --> 00:34:14,500
+So the garbage collector is also atomic.
+
+653
+00:34:14,500 --> 00:34:16,900
+It means that there is, first, only one.
+
+654
+00:34:16,900 --> 00:34:17,900
+So it's global.
+
+655
+00:34:17,900 --> 00:34:19,460
+There is no one per thread.
+
+656
+00:34:19,460 --> 00:34:22,980
+One consequence is that it will stop all your threads from running.
+
+657
+00:34:22,980 --> 00:34:26,300
+We know that because of the GIL, there is not two threads running Python in parallel.
+
+658
+00:34:26,340 --> 00:34:29,660
+But it means that if you inspect the times that the threads take, one of them will take
+
+659
+00:34:29,660 --> 00:34:32,380
+a bit longer because it's running the collection.
+
+660
+00:34:32,380 --> 00:34:34,980
+Another interesting thing is copy and write.
+
+661
+00:34:34,980 --> 00:34:36,180
+So what is copy and write?
+
+662
+00:34:36,180 --> 00:34:39,380
+So copy and write is an optimization in some platforms.
+
+663
+00:34:39,380 --> 00:34:42,140
+So basically, it's used for fork processes and the like.
+
+664
+00:34:42,140 --> 00:34:45,220
+And the idea is that if you have a process and you fork it, this means that you have
+
+665
+00:34:45,220 --> 00:34:46,220
+a copy of it itself.
+
+666
+00:34:46,220 --> 00:34:51,420
+There is an optimization that says, well, if you're not going to modify the memory,
+
+667
+00:34:51,420 --> 00:34:55,180
+because both processes will have the same memory, so if you're not going to modify it,
+
+668
+00:34:55,180 --> 00:34:56,180
+we can share it.
+
+669
+00:34:56,180 --> 00:35:00,220
+So only when you actually modify some value of the memory, it will trigger a page fold
+
+670
+00:35:00,220 --> 00:35:03,100
+inside the operative system, and then it will make a copy.
+
+671
+00:35:03,100 --> 00:35:06,900
+This means that if you have four or five or six copies of your program, you don't need
+
+672
+00:35:06,900 --> 00:35:09,580
+four or five or six times the same memory.
+
+673
+00:35:09,580 --> 00:35:11,460
+But there is a problem.
+
+674
+00:35:11,460 --> 00:35:13,700
+And the problem is that reference counting.
+
+675
+00:35:13,700 --> 00:35:17,980
+Because just looking at a Python object increases this number just by looking at it.
+
+676
+00:35:17,980 --> 00:35:20,740
+And because it increases the number, it's writing to memory.
+
+677
+00:35:20,740 --> 00:35:23,060
+And writing to memory copies an entire page.
+
+678
+00:35:23,060 --> 00:35:24,700
+And this is a lot of memory.
+
+679
+00:35:24,820 --> 00:35:29,540
+What is worse, running the garbage collector increases and looks at the reference count
+
+680
+00:35:29,540 --> 00:35:32,340
+of all the objects that are tracked by the GC.
+
+681
+00:35:32,340 --> 00:35:38,540
+And this means that all the pages in the memory layout where this object lives will be copied,
+
+682
+00:35:38,540 --> 00:35:43,260
+which basically will make that if you have 10 processes, you'll need 10 times the same
+
+683
+00:35:43,260 --> 00:35:44,260
+memory.
+
+684
+00:35:44,260 --> 00:35:45,260
+And this is a problem.
+
+685
+00:35:45,260 --> 00:35:46,540
+As you may know, this is a problem that is stuck on our face.
+
+686
+00:35:46,540 --> 00:35:49,140
+There's a lot of interesting talks about this.
+
+687
+00:35:49,140 --> 00:35:52,140
+They tried to disable the garbage collector.
+
+688
+00:35:52,780 --> 00:35:55,980
+You may think, oh, is the memory going to grow indefinitely?
+
+689
+00:35:55,980 --> 00:35:56,980
+So actually, not really.
+
+690
+00:35:56,980 --> 00:35:58,140
+There is still problems.
+
+691
+00:35:58,140 --> 00:36:01,620
+So they actually made some new adjustments in the future.
+
+692
+00:36:01,620 --> 00:36:04,700
+But the idea is that reference count is still the primary mechanism for this.
+
+693
+00:36:04,700 --> 00:36:09,860
+So you will still have a lot of variables getting destroyed because of it.
+
+694
+00:36:09,860 --> 00:36:13,540
+After that, they actually continued back to see Python and implemented GC freeze.
+
+695
+00:36:13,540 --> 00:36:17,700
+So GC freeze is a function that basically freezes all the objects tracked by the GC.
+
+696
+00:36:17,700 --> 00:36:20,140
+And you can use it in combination with fork.
+
+697
+00:36:20,140 --> 00:36:21,940
+This is basically what is in the documentation.
+
+698
+00:36:21,940 --> 00:36:22,940
+So you can read it there.
+
+699
+00:36:22,940 --> 00:36:27,060
+And you can use it in combination to fork to basically make it a bit easier in this
+
+700
+00:36:27,060 --> 00:36:31,700
+situation and don't suffer that much for this copy and write violation semantics.
+
+701
+00:36:31,700 --> 00:36:38,300
+Once you want to restart the GC over all these objects, you can call GC unfreeze.
+
+702
+00:36:38,300 --> 00:36:44,220
+So let's go to some interesting practical applications of this to basically wrap up.
+
+703
+00:36:44,220 --> 00:36:46,140
+So one interesting thing is the bug in reference cycles.
+
+704
+00:36:46,140 --> 00:36:50,180
+So you may be interested in saying, OK, I have my program, right?
+
+705
+00:36:50,260 --> 00:36:53,300
+I basically want to know which objects become part of cycles.
+
+706
+00:36:53,300 --> 00:36:57,100
+Because one of the things of cycles is that it's very difficult to know when they happen.
+
+707
+00:36:57,100 --> 00:36:59,620
+Because it's not only your immediate objects.
+
+708
+00:36:59,620 --> 00:37:01,900
+They will have internal structures inside.
+
+709
+00:37:01,900 --> 00:37:04,020
+And they will form cycles of themselves.
+
+710
+00:37:04,020 --> 00:37:05,660
+And they are really, really tricky to find.
+
+711
+00:37:05,660 --> 00:37:08,940
+So one thing you can do is, for example, let's do this situation.
+
+712
+00:37:08,940 --> 00:37:11,460
+So we have our class node there as before.
+
+713
+00:37:11,460 --> 00:37:12,740
+So we create two of them.
+
+714
+00:37:12,740 --> 00:37:14,860
+We point one to each other.
+
+715
+00:37:14,860 --> 00:37:19,300
+And then in the GC module, there is this variable here called setDebug.
+
+716
+00:37:19,300 --> 00:37:22,060
+And then you can plus a flag called debugSable.
+
+717
+00:37:22,060 --> 00:37:27,140
+So when you plus that flag, what it's going to do with the GC is that instead of destroying
+
+718
+00:37:27,140 --> 00:37:32,260
+your objects, it's going to put it into this special variable in the GC module called GCGarbage.
+
+719
+00:37:32,260 --> 00:37:37,660
+So in this case, if you follow the code, sorry for the background, if you delete the names
+
+720
+00:37:37,660 --> 00:37:41,860
+and force a collection, you can inspect the GC garbage list there.
+
+721
+00:37:41,860 --> 00:37:44,700
+And we see that our two node objects are there.
+
+722
+00:37:44,700 --> 00:37:46,700
+So the idea is that you set this variable.
+
+723
+00:37:46,860 --> 00:37:48,100
+You run your program a bit.
+
+724
+00:37:48,100 --> 00:37:50,500
+And then you inspect the contents on this GC garbage.
+
+725
+00:37:50,500 --> 00:37:54,260
+And then basically, you have an idea of which objects are becoming part of cycles.
+
+726
+00:37:54,260 --> 00:37:59,700
+So you may want to now use maybe weak references or, I don't know, look at your program to
+
+727
+00:37:59,700 --> 00:38:01,620
+improve it or something like that.
+
+728
+00:38:01,620 --> 00:38:03,340
+So this is an interesting thing.
+
+729
+00:38:03,340 --> 00:38:06,940
+Another interesting thing is, for example, calculating memory costs.
+
+730
+00:38:06,940 --> 00:38:09,780
+So this is like simple stuff.
+
+731
+00:38:09,780 --> 00:38:16,100
+And the idea is that the GC, every object for the GC algorithm to work needs to know
+
+732
+00:38:16,100 --> 00:38:17,900
+how to reach all the objects that contain.
+
+733
+00:38:17,900 --> 00:38:21,340
+So for example, a list needs to know how to reach all the objects that are in the list.
+
+734
+00:38:21,340 --> 00:38:24,220
+A dictionary needs to know how to reach the key and the values.
+
+735
+00:38:24,220 --> 00:38:26,620
+A class, all the attributes, et cetera, et cetera.
+
+736
+00:38:26,620 --> 00:38:29,260
+Basically, an object needs to know how to recourse itself.
+
+737
+00:38:29,260 --> 00:38:30,260
+And you can use this thing.
+
+738
+00:38:30,260 --> 00:38:34,180
+So for example, if you have this list here in the top, so it's a list that has multiple
+
+739
+00:38:34,180 --> 00:38:37,820
+lists inside, you may be tempted to calculate the total size of the list.
+
+740
+00:38:37,820 --> 00:38:45,020
+And then you can say, OK, I will get size of in X, and it reports 96 bytes.
+
+741
+00:38:45,060 --> 00:38:50,140
+And then the problem is that that's not the recursive size of the list.
+
+742
+00:38:50,140 --> 00:38:53,020
+It's only the size of the list plus the size of the pointers.
+
+743
+00:38:53,020 --> 00:38:57,740
+Because if you get this other list here, that one, which has the same number of elements,
+
+744
+00:38:57,740 --> 00:39:00,860
+but they are less because they are not list by themselves, the size is the same.
+
+745
+00:39:00,860 --> 00:39:04,860
+But you can use this function in the GC module called get reference.
+
+746
+00:39:04,860 --> 00:39:08,700
+So this value, this function here, will automatically know how to reach all the objects
+
+747
+00:39:08,700 --> 00:39:09,660
+that are inside.
+
+748
+00:39:09,660 --> 00:39:13,140
+And then you can call this function recursively.
+
+749
+00:39:13,140 --> 00:39:18,820
+And then calling get size of in every element of the list, actually there are dictionaries
+
+750
+00:39:18,820 --> 00:39:19,460
+as well.
+
+751
+00:39:19,460 --> 00:39:21,100
+So you can actually know the total size.
+
+752
+00:39:21,100 --> 00:39:22,580
+In this case, I'm not calling recursively.
+
+753
+00:39:22,580 --> 00:39:24,660
+I'm just calling it in the first level.
+
+754
+00:39:24,660 --> 00:39:31,340
+But you can use it as a genetic way of reaching all the objects in a generic one.
+
+755
+00:39:31,340 --> 00:39:36,140
+So the last thing that I want to talk about is an interesting thing that happens, which
+
+756
+00:39:36,140 --> 00:39:37,780
+is exception blocks.
+
+757
+00:39:37,780 --> 00:39:40,660
+So let's imagine the following scenario.
+
+758
+00:39:40,660 --> 00:39:42,300
+So we have a for loop there.
+
+759
+00:39:42,300 --> 00:39:46,460
+So we have for x in range something, then whatever.
+
+760
+00:39:46,460 --> 00:39:52,340
+And the thing is that the variable x that we have in the for x in range, you can actually
+
+761
+00:39:52,340 --> 00:39:54,540
+inspect it after the loop is done.
+
+762
+00:39:54,540 --> 00:39:59,180
+So in this case, range 10, actually the last element is 9.
+
+763
+00:39:59,180 --> 00:40:01,300
+So you can actually print x over there.
+
+764
+00:40:01,300 --> 00:40:03,780
+And you can print the last value of x is 9.
+
+765
+00:40:03,780 --> 00:40:05,460
+This also happens with context managers.
+
+766
+00:40:05,460 --> 00:40:08,700
+So for example, you can say we open something as file.
+
+767
+00:40:08,700 --> 00:40:10,220
+And then you print the variable file.
+
+768
+00:40:10,220 --> 00:40:12,380
+And the value of file is still there.
+
+769
+00:40:12,380 --> 00:40:15,540
+So basically, these variables outlive the context manager.
+
+770
+00:40:15,540 --> 00:40:17,340
+So this is a known thing.
+
+771
+00:40:17,340 --> 00:40:21,340
+But if you do exception management here, so you have this try block.
+
+772
+00:40:21,340 --> 00:40:22,460
+So you do try.
+
+773
+00:40:22,460 --> 00:40:24,460
+You divide by 0 to create an exception.
+
+774
+00:40:24,460 --> 00:40:27,020
+And then you do exception as e.
+
+775
+00:40:27,020 --> 00:40:28,060
+And then you print e.
+
+776
+00:40:28,060 --> 00:40:29,460
+So print e works.
+
+777
+00:40:29,460 --> 00:40:33,580
+But you try to inspect the value of e after the except block is done.
+
+778
+00:40:33,580 --> 00:40:35,340
+The value of e is no more.
+
+779
+00:40:35,340 --> 00:40:37,860
+So basically, the variable e is not accessible
+
+780
+00:40:37,860 --> 00:40:40,340
+after the except block is done.
+
+781
+00:40:40,340 --> 00:40:42,180
+And there is an interesting reason for it.
+
+782
+00:40:42,180 --> 00:40:46,460
+The interesting reason is that the variable e contains the exception.
+
+783
+00:40:46,460 --> 00:40:49,060
+But the exception contains the frame object inside.
+
+784
+00:40:49,060 --> 00:40:52,260
+And that contains the variables in the frame, which contains exception,
+
+785
+00:40:52,260 --> 00:40:54,420
+which contains, so it's a cycle.
+
+786
+00:40:54,420 --> 00:40:58,580
+This means that if we don't do this thing, all the exceptions that happen,
+
+787
+00:40:58,580 --> 00:41:02,220
+and this has to be also take a thought, like when you recourse up and up
+
+788
+00:41:02,220 --> 00:41:04,780
+and up, the exception chain will form cycles.
+
+789
+00:41:04,780 --> 00:41:08,020
+Imagine, for example, that you have a gigantic NumPy array
+
+790
+00:41:08,020 --> 00:41:09,260
+on a function.
+
+791
+00:41:09,260 --> 00:41:10,620
+And then you raise an exception.
+
+792
+00:41:10,620 --> 00:41:13,820
+If the NumPy array is 1 gigabyte, if we don't do this thing,
+
+793
+00:41:13,820 --> 00:41:16,980
+it will leak 1 gigabyte until the garbage collector is run.
+
+794
+00:41:16,980 --> 00:41:19,900
+So it's not a leak technically, because the garbage collector
+
+795
+00:41:19,900 --> 00:41:21,020
+will end cleaning it.
+
+796
+00:41:21,020 --> 00:41:23,180
+But the problem is that it will delay the extraction
+
+797
+00:41:23,180 --> 00:41:24,420
+until there is a pass.
+
+798
+00:41:24,420 --> 00:41:27,180
+And if it just happens that your program never creates more objects,
+
+799
+00:41:27,180 --> 00:41:28,140
+there will be no runs.
+
+800
+00:41:28,140 --> 00:41:32,060
+So you basically have to maintain that gigabyte of NumPy object
+
+801
+00:41:32,060 --> 00:41:34,180
+alive forever.
+
+802
+00:41:34,180 --> 00:41:34,980
+It's not important.
+
+803
+00:41:34,980 --> 00:41:36,780
+It's just an interesting thing that happened.
+
+804
+00:41:36,780 --> 00:41:38,140
+And it might change in the future.
+
+805
+00:41:38,140 --> 00:41:41,700
+But this gives you an idea how tricky garbage collection is,
+
+806
+00:41:41,700 --> 00:41:44,060
+how tricky reference cycles happen.
+
+807
+00:41:44,060 --> 00:41:48,300
+And they can appear in the most unexpected places.
+
+808
+00:41:48,300 --> 00:41:53,260
+So the idea that you need to take out is that we have to take care of this.
+
+809
+00:41:53,260 --> 00:41:55,540
+We have put a lot of effort into making it correct.
+
+810
+00:41:55,540 --> 00:41:57,100
+And it's really, really tricky.
+
+811
+00:41:57,100 --> 00:41:59,580
+There is a lot of pieces involved.
+
+812
+00:41:59,580 --> 00:42:02,060
+We also collaborate with other open source projects,
+
+813
+00:42:02,100 --> 00:42:06,540
+like Siphon, to try to find bugs related to this and solve them as well.
+
+814
+00:42:06,540 --> 00:42:08,660
+But you have to sometimes, or only sometimes,
+
+815
+00:42:08,660 --> 00:42:11,500
+be aware that there is something called the garbage collector,
+
+816
+00:42:11,500 --> 00:42:13,900
+and what it's for, and when it runs.
+
+817
+00:42:13,900 --> 00:42:15,460
+And it's related to the gill.
+
+818
+00:42:15,460 --> 00:42:20,380
+And that is very key in case you want to remove it in the future.
+
+819
+00:42:20,380 --> 00:42:21,540
+So this is the end of the talk.
+
+820
+00:42:21,540 --> 00:42:22,900
+I hope you have enjoyed it.
+
+821
+00:42:22,900 --> 00:42:26,780
+And we have now to have some questions.
+
+822
+00:42:26,780 --> 00:42:37,020
+OK, we have room for about three minutes of questions,
+
+823
+00:42:37,020 --> 00:42:38,060
+so about three questions.
+
+824
+00:42:38,060 --> 00:42:58,940
+Could you provide any example use cases for when you might want to change
+
+825
+00:42:58,940 --> 00:43:03,220
+the number of generations in the generational collector?
+
+826
+00:43:03,220 --> 00:43:07,780
+So real ones, with real, I mean real applications.
+
+827
+00:43:07,820 --> 00:43:10,300
+I don't have any that can come to my mind.
+
+828
+00:43:10,300 --> 00:43:12,900
+But one of them is the one that I mentioned before.
+
+829
+00:43:12,900 --> 00:43:15,860
+You have a race condition that only happens in the GC.
+
+830
+00:43:15,860 --> 00:43:19,060
+And this is very likely for C extensions,
+
+831
+00:43:19,060 --> 00:43:21,020
+because sometimes there is memory that is corrupted,
+
+832
+00:43:21,020 --> 00:43:23,620
+and it just happens that the GC, when it's inspecting the object,
+
+833
+00:43:23,620 --> 00:43:24,500
+it crashes.
+
+834
+00:43:24,500 --> 00:43:26,780
+So you want to reproduce it, because it's a race condition,
+
+835
+00:43:26,780 --> 00:43:28,300
+lowering the number.
+
+836
+00:43:28,300 --> 00:43:30,420
+Instead of forcing new collections, it's a good way
+
+837
+00:43:30,420 --> 00:43:32,540
+of making it appear more often.
+
+838
+00:43:32,540 --> 00:43:35,940
+For real applications, it's more like a try to see what happens
+
+839
+00:43:35,940 --> 00:43:37,900
+and look at the memory consumption.
+
+840
+00:43:37,900 --> 00:43:39,940
+Or at least I don't have any that is obvious.
+
+841
+00:43:39,940 --> 00:43:41,860
+Maybe Instagram actually knows something else,
+
+842
+00:43:41,860 --> 00:43:44,060
+because they have played with it a bit more.
+
+843
+00:43:44,060 --> 00:43:44,540
+Thanks.
+
+844
+00:43:44,540 --> 00:43:45,020
+Thank you.
+
+845
+00:43:48,100 --> 00:43:50,900
+Hi, thanks for the talk.
+
+846
+00:43:50,900 --> 00:43:51,940
+Hello.
+
+847
+00:43:51,940 --> 00:43:53,380
+Thanks for the talk.
+
+848
+00:43:53,380 --> 00:43:56,300
+In some of your code examples, you were using Dell
+
+849
+00:43:56,300 --> 00:43:58,580
+with two variables at the same time.
+
+850
+00:43:58,580 --> 00:43:59,940
+I didn't know that was possible.
+
+851
+00:43:59,940 --> 00:44:02,140
+And I'm a little surprised that Dell isn't actually
+
+852
+00:44:02,140 --> 00:44:04,180
+trying to de-reference or decrease the reference
+
+853
+00:44:04,180 --> 00:44:06,020
+count of the tuple that goes into it.
+
+854
+00:44:06,020 --> 00:44:07,420
+Can you explain how that works?
+
+855
+00:44:07,420 --> 00:44:10,140
+So it's actually part of the grammar.
+
+856
+00:44:10,140 --> 00:44:12,780
+So it's not really creating a tuple in the middle.
+
+857
+00:44:12,780 --> 00:44:15,380
+It just goes to every variable in that particular list.
+
+858
+00:44:15,380 --> 00:44:17,340
+It's the same thing as, well, it's not exactly the same.
+
+859
+00:44:17,340 --> 00:44:19,460
+But it's the same when you do unpacking and unpacking.
+
+860
+00:44:19,460 --> 00:44:21,940
+So it's not really tuples sometimes getting created.
+
+861
+00:44:21,940 --> 00:44:23,100
+It's just a part of the grammar.
+
+862
+00:44:23,100 --> 00:44:24,900
+You can actually see, so in the documentation,
+
+863
+00:44:24,900 --> 00:44:26,900
+there is a nice explanation of how actually Dell
+
+864
+00:44:26,900 --> 00:44:28,580
+works with multiple arguments.
+
+865
+00:44:28,580 --> 00:44:30,380
+You don't need a parenthesis, for example.
+
+866
+00:44:30,380 --> 00:44:32,020
+And you can also check the grammar file
+
+867
+00:44:32,020 --> 00:44:35,220
+in the CPython source code.
+
+868
+00:44:35,220 --> 00:44:38,180
+So it's in grammar slash grammar, TXT, I think.
+
+869
+00:44:38,180 --> 00:44:41,220
+And you can check, actually, how is the exact way of or where
+
+870
+00:44:41,220 --> 00:44:43,780
+you can put it there.
+
+871
+00:44:43,780 --> 00:44:44,700
+Yeah, thanks.
+
+872
+00:44:44,700 --> 00:44:45,540
+Cool, thank you.
+
+873
+00:44:49,540 --> 00:44:50,060
+Hi.
+
+874
+00:44:50,060 --> 00:44:54,460
+Hi, you first-time listener, longtime caller.
+
+875
+00:44:54,460 --> 00:44:59,300
+So I was curious, when you have a reference cycle
+
+876
+00:44:59,340 --> 00:45:03,580
+and then you're calling TP finalize,
+
+877
+00:45:03,580 --> 00:45:07,460
+and then something in that cycle resurrects the whole cycle,
+
+878
+00:45:07,460 --> 00:45:11,540
+what prevents TP finalize from being called more than once
+
+879
+00:45:11,540 --> 00:45:13,500
+on one of the things that was deleted first?
+
+880
+00:45:13,500 --> 00:45:17,020
+So the algorithm first calls TP finalize on everything.
+
+881
+00:45:17,020 --> 00:45:19,380
+And then it checks if the cycle is still isolated.
+
+882
+00:45:19,380 --> 00:45:22,340
+And then if it's not, it resurrects everything,
+
+883
+00:45:22,340 --> 00:45:23,740
+well, everything that is reachable.
+
+884
+00:45:23,740 --> 00:45:25,620
+So basically, first it runs all the finalizers
+
+885
+00:45:25,620 --> 00:45:27,860
+independently if it's a resurrection or not.
+
+886
+00:45:27,860 --> 00:45:29,260
+And only after that, it actually
+
+887
+00:45:29,260 --> 00:45:31,100
+checks if the cycle is still isolated.
+
+888
+00:45:31,100 --> 00:45:36,180
+And then it runs checks to know which kind of things
+
+889
+00:45:36,180 --> 00:45:39,420
+need to be resurrected and which not.
+
+890
+00:45:39,420 --> 00:45:41,580
+So the finalizers can be called more than once?
+
+891
+00:45:41,580 --> 00:45:42,220
+No, no, no, no.
+
+892
+00:45:42,220 --> 00:45:43,940
+So it calls all the finalizers.
+
+893
+00:45:43,940 --> 00:45:45,860
+It marks them as called.
+
+894
+00:45:45,860 --> 00:45:48,500
+And then it runs the check for the isolation.
+
+895
+00:45:48,500 --> 00:45:51,460
+Yeah, but if the whole cycle gets resurrected and then
+
+896
+00:45:51,460 --> 00:45:52,740
+deleted again later.
+
+897
+00:45:52,740 --> 00:45:54,220
+But because the mark is there, you
+
+898
+00:45:54,220 --> 00:45:56,060
+know when you try to call the finalizer
+
+899
+00:45:56,060 --> 00:45:58,360
+that you don't need to because it's marked as already
+
+900
+00:45:58,360 --> 00:45:59,580
+finalized.
+
+901
+00:45:59,580 --> 00:46:00,480
+Thank you.
+
+902
+00:46:00,480 --> 00:46:02,100
+Cool.
+
+903
+00:46:02,100 --> 00:46:03,060
+Thank you, everyone.
+
+904
+00:46:03,060 --> 00:46:05,180
+And thank you, Pablo.
+

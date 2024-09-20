@@ -1,0 +1,2276 @@
+1
+00:00:00,000 --> 00:00:02,000
+Better?
+
+2
+00:00:02,000 --> 00:00:08,560
+Oh, so much better.
+
+3
+00:00:08,560 --> 00:00:11,560
+All right.
+
+4
+00:00:11,560 --> 00:00:12,880
+Talk about feature flags.
+
+5
+00:00:12,880 --> 00:00:13,880
+All right.
+
+6
+00:00:13,880 --> 00:00:15,480
+So my name is Caitlin Rubin.
+
+7
+00:00:15,480 --> 00:00:18,800
+The title of my talk is intentional deployment.
+
+8
+00:00:18,800 --> 00:00:21,280
+Best practices for feature flag management.
+
+9
+00:00:21,280 --> 00:00:25,900
+And I know what you guys are thinking, which is amazing job, Caitlin, on the title, right?
+
+10
+00:00:25,900 --> 00:00:26,900
+It's so good.
+
+11
+00:00:26,900 --> 00:00:29,600
+But what does it actually mean?
+
+12
+00:00:29,600 --> 00:00:34,800
+So let's talk about the smallest unit of meaning that we can get out of it, which is intention.
+
+13
+00:00:34,800 --> 00:00:37,460
+So doing what you meant to do.
+
+14
+00:00:37,460 --> 00:00:40,840
+As software engineers, I hope we are usually coding with intention.
+
+15
+00:00:40,840 --> 00:00:44,480
+I don't know if a lot of you are just slamming your keyboards against your standing desk
+
+16
+00:00:44,480 --> 00:00:48,560
+and just hoping Python spews out, but I'm usually not.
+
+17
+00:00:48,560 --> 00:00:49,600
+No.
+
+18
+00:00:49,600 --> 00:00:53,380
+We are writing code, we're testing code, and we are reviewing code, and we're doing a lot
+
+19
+00:00:53,380 --> 00:00:57,540
+of things to make sure that the code that we write does what we want it to do once it
+
+20
+00:00:57,540 --> 00:00:59,360
+gets out into the world.
+
+21
+00:00:59,360 --> 00:01:04,760
+And then we think to ourselves, maybe we want to be intentional about that step as well.
+
+22
+00:01:04,760 --> 00:01:05,760
+Right?
+
+23
+00:01:05,760 --> 00:01:09,520
+So we want to be intentional when we deploy our code out into the world.
+
+24
+00:01:09,520 --> 00:01:14,820
+So not everybody has continuous integration, continuous deployment, canary deployment.
+
+25
+00:01:14,820 --> 00:01:19,040
+So what is a very easy way to make sure that we have some control over our code once it
+
+26
+00:01:19,040 --> 00:01:21,560
+gets out into the world?
+
+27
+00:01:21,560 --> 00:01:23,440
+That's where we talk about feature flags.
+
+28
+00:01:23,440 --> 00:01:26,760
+So if we don't know what a feature flag is, it's basically a light switch that you can
+
+29
+00:01:26,760 --> 00:01:27,760
+wrap your code in.
+
+30
+00:01:27,760 --> 00:01:33,040
+And the important thing is that you can turn it on and off in production without a code
+
+31
+00:01:33,040 --> 00:01:34,600
+to play.
+
+32
+00:01:34,600 --> 00:01:38,600
+So basically, very fancy if statement.
+
+33
+00:01:38,600 --> 00:01:41,720
+So we're saying if the feature flag is on, we're doing something.
+
+34
+00:01:41,720 --> 00:01:44,240
+Otherwise, we're going to do something else.
+
+35
+00:01:44,240 --> 00:01:45,240
+Everybody with me?
+
+36
+00:01:45,240 --> 00:01:46,240
+Cool.
+
+37
+00:01:46,240 --> 00:01:47,240
+Okay.
+
+38
+00:01:47,240 --> 00:01:51,680
+So let's take a look at what that process looks like.
+
+39
+00:01:51,680 --> 00:01:55,560
+So we have oh, don't know if you guys can see that.
+
+40
+00:01:55,560 --> 00:01:57,380
+So we have a feature flag.
+
+41
+00:01:57,380 --> 00:02:02,380
+We have your brand-new code that you wrote called do new thing wrapped behind it.
+
+42
+00:02:02,380 --> 00:02:04,580
+And if the feature flag is on, we're going to do the new thing.
+
+43
+00:02:04,580 --> 00:02:08,700
+Otherwise, we're going to do the old thing that was already there.
+
+44
+00:02:08,700 --> 00:02:11,540
+So took our code, put it behind a feature flag.
+
+45
+00:02:11,540 --> 00:02:16,060
+Now we're going to take that code and put it in production.
+
+46
+00:02:16,060 --> 00:02:19,680
+So right now, the code is in production and the feature flag is off.
+
+47
+00:02:19,680 --> 00:02:21,780
+So we are still doing the old thing.
+
+48
+00:02:21,780 --> 00:02:22,780
+We come over here.
+
+49
+00:02:22,780 --> 00:02:25,460
+We're going to pretend that this feature flag is a release toggle.
+
+50
+00:02:25,460 --> 00:02:29,500
+We turn it on and we roll it all the way out to 100%.
+
+51
+00:02:29,500 --> 00:02:31,820
+Now all of a sudden, your users are seeing your feature.
+
+52
+00:02:31,820 --> 00:02:32,820
+Everybody is happy.
+
+53
+00:02:32,820 --> 00:02:33,820
+We're doing the new thing.
+
+54
+00:02:33,820 --> 00:02:36,020
+All of a sudden, something goes wrong, right?
+
+55
+00:02:36,020 --> 00:02:37,020
+Your feature is tanking.
+
+56
+00:02:37,020 --> 00:02:38,020
+It's broken.
+
+57
+00:02:38,020 --> 00:02:39,020
+Nobody likes it.
+
+58
+00:02:39,020 --> 00:02:40,020
+It sucks.
+
+59
+00:02:40,020 --> 00:02:41,020
+And we want to turn it off.
+
+60
+00:02:41,020 --> 00:02:42,780
+So we can do that immediately.
+
+61
+00:02:42,780 --> 00:02:43,960
+We just come over here.
+
+62
+00:02:43,960 --> 00:02:46,420
+We turn the release toggle back off.
+
+63
+00:02:46,420 --> 00:02:48,840
+And all of a sudden, nobody's seeing your feature anymore.
+
+64
+00:02:48,840 --> 00:02:51,340
+So pretty great.
+
+65
+00:02:51,340 --> 00:02:52,340
+Everybody's super happy.
+
+66
+00:02:52,340 --> 00:02:54,220
+You did an amazing job.
+
+67
+00:02:54,220 --> 00:03:00,020
+The issue is that everybody else in your company also had that same amazing idea.
+
+68
+00:03:00,020 --> 00:03:05,780
+So when feature flag becomes feature flags, we start to get into a little bit of a mess.
+
+69
+00:03:05,780 --> 00:03:09,560
+And it's not only the fact that we have such a sheer number of feature flags, but also
+
+70
+00:03:09,560 --> 00:03:13,100
+they all have very different types and very different meanings and rules that apply to
+
+71
+00:03:13,100 --> 00:03:14,100
+them.
+
+72
+00:03:14,100 --> 00:03:16,260
+So your feature flag from before was a release toggle.
+
+73
+00:03:16,260 --> 00:03:19,260
+You were slowly rolling something out to a group of users.
+
+74
+00:03:19,260 --> 00:03:20,660
+This one over here is a kill switch.
+
+75
+00:03:20,660 --> 00:03:22,780
+So it's intended to turn something off in production.
+
+76
+00:03:22,980 --> 00:03:24,620
+Meanwhile, this one over here is an experiment.
+
+77
+00:03:24,620 --> 00:03:27,460
+So you're targeting two different groups of users and you're trying to give them a different
+
+78
+00:03:27,460 --> 00:03:29,900
+experience.
+
+79
+00:03:29,900 --> 00:03:30,900
+This one down here is an opt-in.
+
+80
+00:03:30,900 --> 00:03:35,060
+So people who have this feature flag turned on are opting into an experience.
+
+81
+00:03:35,060 --> 00:03:36,400
+But this one over here is an opt-out.
+
+82
+00:03:36,400 --> 00:03:38,960
+So they have the exact opposite situation.
+
+83
+00:03:38,960 --> 00:03:43,060
+So all of these are coming together to give you this one big mess of feature flags, and
+
+84
+00:03:43,060 --> 00:03:46,260
+nobody really has a lot of control or visibility over it.
+
+85
+00:03:46,260 --> 00:03:48,420
+So how do we fix that?
+
+86
+00:03:48,420 --> 00:03:52,760
+Or rather, the question that we want to answer today is what's the best way to do feature
+
+87
+00:03:52,920 --> 00:03:53,920
+flags?
+
+88
+00:03:53,920 --> 00:03:57,000
+Now, let's talk about me a little bit.
+
+89
+00:03:57,000 --> 00:03:58,920
+So why do I want to answer that question?
+
+90
+00:03:58,920 --> 00:04:01,040
+Well, I am a software engineer.
+
+91
+00:04:01,040 --> 00:04:03,760
+I work for a company called Optimizely.
+
+92
+00:04:03,760 --> 00:04:07,840
+And Optimizely is an experimentation platform, which is kind of relevant for this, except
+
+93
+00:04:07,840 --> 00:04:10,440
+for the fact that we have a feature flagging product.
+
+94
+00:04:10,440 --> 00:04:12,480
+So I work on a feature flagging product.
+
+95
+00:04:12,480 --> 00:04:14,520
+I use feature flags in development.
+
+96
+00:04:14,520 --> 00:04:15,520
+I hack on feature flags.
+
+97
+00:04:15,520 --> 00:04:20,000
+And I also talk to a lot of people who use feature flags, who develop feature flags, and
+
+98
+00:04:20,000 --> 00:04:24,160
+who try to sell and implement feature flags for other customers.
+
+99
+00:04:24,160 --> 00:04:27,280
+So just for this presentation, I spoke to a lot of people.
+
+100
+00:04:27,280 --> 00:04:31,200
+Spoke to some backend software engineers, some frontend software engineers, some SDK
+
+101
+00:04:31,200 --> 00:04:35,320
+engineers, some PMs, director of development, a sales engineer, a solutions architect, a
+
+102
+00:04:35,320 --> 00:04:39,520
+DevOps engineer or two, and a quality assurance engineer.
+
+103
+00:04:39,520 --> 00:04:43,760
+And all of these people and I have been trying to come up with, you know, what is the best
+
+104
+00:04:43,760 --> 00:04:46,400
+way to do feature flags?
+
+105
+00:04:46,400 --> 00:04:50,080
+So we want to talk about what the best way to do feature flags is, but it's kind of more
+
+106
+00:04:50,080 --> 00:04:52,560
+fun to talk about the wrong way to do feature flags.
+
+107
+00:04:52,560 --> 00:04:57,280
+So what are the risks that we associate, you know, with putting feature flags in our code?
+
+108
+00:04:57,280 --> 00:04:59,940
+So we've talked about some people, we've talked about some feature flags.
+
+109
+00:04:59,940 --> 00:05:03,160
+What happens when we put those two things together?
+
+110
+00:05:03,160 --> 00:05:06,640
+The first thing we can talk about is probably, like, the lowest risk scenario, right?
+
+111
+00:05:06,640 --> 00:05:11,000
+So what's the lowest risk that we can do from feature flags?
+
+112
+00:05:11,000 --> 00:05:14,760
+Putting a feature flag in your code base is inherently introducing tech debt into your
+
+113
+00:05:14,760 --> 00:05:15,760
+code base.
+
+114
+00:05:16,560 --> 00:05:20,840
+If we take a look at these two code snippets from before, the one on the left is four times
+
+115
+00:05:20,840 --> 00:05:23,600
+as long, obviously, so it's a little bit harder to read.
+
+116
+00:05:23,600 --> 00:05:28,520
+But even all the smart people in this room can really not tell me what the thing on the
+
+117
+00:05:28,520 --> 00:05:29,600
+left is doing, right?
+
+118
+00:05:29,600 --> 00:05:32,560
+We don't know the state of the feature flag, so nobody in this room can tell me what it's
+
+119
+00:05:32,560 --> 00:05:33,560
+going to do.
+
+120
+00:05:33,560 --> 00:05:37,680
+Meanwhile, the code snippet on the right, everybody knows it's going to do the new thing.
+
+121
+00:05:37,680 --> 00:05:38,680
+Great.
+
+122
+00:05:38,680 --> 00:05:41,960
+So we are increasing the complexity in tech debt and making it harder for our engineers
+
+123
+00:05:41,960 --> 00:05:43,520
+to understand the code.
+
+124
+00:05:43,520 --> 00:05:48,960
+And not only that, oh, but, so I took a look in our own code base to find some feature
+
+125
+00:05:48,960 --> 00:05:53,880
+flags and I found we have over 65 instances of feature flags being called and a lot of
+
+126
+00:05:53,880 --> 00:05:56,160
+those are gating thousands of lines of code, right?
+
+127
+00:05:56,160 --> 00:05:58,640
+So this is a pretty big issue.
+
+128
+00:05:58,640 --> 00:06:00,800
+Not only that, but taking out a feature kind of sucks.
+
+129
+00:06:00,800 --> 00:06:03,720
+So this is an actual feature that I worked on.
+
+130
+00:06:03,720 --> 00:06:09,760
+The PR just to take the feature out was over a thousand lines of code, generated 95 plus
+
+131
+00:06:10,320 --> 00:06:14,920
+on GitHub and lived in the code base for over 60 days.
+
+132
+00:06:14,920 --> 00:06:17,160
+So that's kind of a mess.
+
+133
+00:06:17,160 --> 00:06:20,720
+So we've talked about the lower risk scenario.
+
+134
+00:06:20,720 --> 00:06:23,680
+We are not really affecting any customers with this risk.
+
+135
+00:06:23,680 --> 00:06:25,920
+We're just kind of pissing off a bunch of engineers.
+
+136
+00:06:25,920 --> 00:06:28,680
+Now let's talk about something that's a little bit more high risk, right?
+
+137
+00:06:28,680 --> 00:06:31,080
+We're actually affecting customers.
+
+138
+00:06:31,080 --> 00:06:34,720
+So we have to think about the performance impacts on our system that we have when we
+
+139
+00:06:34,720 --> 00:06:36,920
+put feature flags in.
+
+140
+00:06:37,000 --> 00:06:40,840
+You know, what happens when your feature is broken or your feature tanks, nobody likes
+
+141
+00:06:40,840 --> 00:06:43,440
+it or your feature is improperly implemented?
+
+142
+00:06:43,440 --> 00:06:46,360
+We can actually look at an example of this from my own company.
+
+143
+00:06:46,360 --> 00:06:51,920
+So we had if you look at this code sample, this is actually how you, you know, instantiate
+
+144
+00:06:51,920 --> 00:06:53,360
+and use a feature flag.
+
+145
+00:06:53,360 --> 00:06:55,840
+You're just kind of importing the package.
+
+146
+00:06:55,840 --> 00:06:59,240
+You're instantiating the client, which is just like grabbing a data file from somewhere
+
+147
+00:06:59,240 --> 00:07:00,520
+and setting it up.
+
+148
+00:07:00,520 --> 00:07:02,040
+Those first two lines are more just set up.
+
+149
+00:07:02,040 --> 00:07:03,720
+They should only happen once.
+
+150
+00:07:03,720 --> 00:07:06,720
+And then that second part is where you're actually calling if the feature is enabled
+
+151
+00:07:06,720 --> 00:07:08,080
+or not.
+
+152
+00:07:08,080 --> 00:07:11,680
+So we would think that this second part is the part that you should be able to repeat
+
+153
+00:07:11,680 --> 00:07:13,480
+over and over and over again.
+
+154
+00:07:13,480 --> 00:07:14,760
+Everything's fine.
+
+155
+00:07:14,760 --> 00:07:15,760
+Everyone's happy.
+
+156
+00:07:15,760 --> 00:07:18,440
+What we actually did was we put the whole thing in a loop.
+
+157
+00:07:18,440 --> 00:07:19,800
+So we were instantiating the client.
+
+158
+00:07:19,800 --> 00:07:23,560
+We were doing all this expensive stuff a lot of times.
+
+159
+00:07:23,560 --> 00:07:25,280
+Is that actually an issue?
+
+160
+00:07:25,280 --> 00:07:29,080
+So it turns out that added a performance hit of 48 seconds to one of our API endpoints.
+
+161
+00:07:29,080 --> 00:07:34,560
+I don't know how patient the people in the room are, but I don't think anybody wants
+
+162
+00:07:34,560 --> 00:07:37,560
+to wait 48 seconds for any kind of answer.
+
+163
+00:07:37,560 --> 00:07:42,600
+These things can have real performance impacts on your system if you're not doing them correctly.
+
+164
+00:07:42,600 --> 00:07:46,880
+So everybody's thinking how bad can feature flags actually get?
+
+165
+00:07:46,880 --> 00:07:48,960
+Is this actually a high-risk scenario?
+
+166
+00:07:48,960 --> 00:07:50,640
+How bad can it get?
+
+167
+00:07:50,640 --> 00:07:52,600
+It turns out it can get pretty bad.
+
+168
+00:07:52,600 --> 00:07:55,640
+So has anybody heard of Knight Capital Group?
+
+169
+00:07:55,640 --> 00:07:58,120
+Yeah, some people are nodding.
+
+170
+00:07:58,120 --> 00:08:01,880
+They were a financial services group.
+
+171
+00:08:01,880 --> 00:08:03,960
+The key word here is were.
+
+172
+00:08:03,960 --> 00:08:07,720
+So they were the largest trader in US equities in 2012.
+
+173
+00:08:07,720 --> 00:08:10,640
+They were trading $21 billion every day.
+
+174
+00:08:10,640 --> 00:08:13,840
+That's a lot of money.
+
+175
+00:08:13,840 --> 00:08:20,320
+At 9.30 a.m. on August 1st, 2012, they had $365 million.
+
+176
+00:08:20,320 --> 00:08:21,840
+Pay attention to that time.
+
+177
+00:08:21,840 --> 00:08:23,680
+Not just noting it for fun.
+
+178
+00:08:23,680 --> 00:08:27,040
+By 10.15 a.m., they were completely bankrupt.
+
+179
+00:08:27,040 --> 00:08:29,980
+They had a $460 million loss.
+
+180
+00:08:29,980 --> 00:08:32,360
+So that was 45 minutes completely bankrupt.
+
+181
+00:08:32,960 --> 00:08:34,560
+Why was that?
+
+182
+00:08:34,560 --> 00:08:37,000
+Because of an improperly managed feature flag.
+
+183
+00:08:37,000 --> 00:08:43,200
+So what happened was they had some eight-year plus old code on a server.
+
+184
+00:08:43,200 --> 00:08:46,200
+It was gated behind a feature flag that was currently off.
+
+185
+00:08:46,200 --> 00:08:47,200
+So everybody was happy.
+
+186
+00:08:47,200 --> 00:08:48,720
+It was still doing whatever it was supposed to do.
+
+187
+00:08:48,720 --> 00:08:50,840
+None of this code was getting touched.
+
+188
+00:08:50,840 --> 00:08:55,100
+They had this brand-new code that they added behind the same feature flag.
+
+189
+00:08:55,100 --> 00:08:58,640
+So now the feature flag gets turned on.
+
+190
+00:08:58,640 --> 00:09:01,940
+We're reviving the old code from the dead by accident.
+
+191
+00:09:01,940 --> 00:09:03,980
+This is eight-year old code.
+
+192
+00:09:03,980 --> 00:09:06,940
+What does that code actually do?
+
+193
+00:09:06,940 --> 00:09:09,460
+Turns out it's responsible for processing orders.
+
+194
+00:09:09,460 --> 00:09:11,580
+So they are a trading company.
+
+195
+00:09:11,580 --> 00:09:15,700
+It's responsible for getting orders as a parent and just sending out child orders.
+
+196
+00:09:15,700 --> 00:09:18,820
+It did not have the validation to stop processing orders.
+
+197
+00:09:18,820 --> 00:09:22,180
+So for 45 minutes, it was nonstop processing orders.
+
+198
+00:09:22,180 --> 00:09:25,700
+Ended up realizing a $460 million loss in 45 minutes.
+
+199
+00:09:25,700 --> 00:09:29,940
+If you want a nice visual of what that looks like, this is the stock over the course of
+
+200
+00:09:29,940 --> 00:09:30,940
+those days.
+
+201
+00:09:31,940 --> 00:09:35,540
+So it can actually end up being pretty bad.
+
+202
+00:09:35,540 --> 00:09:37,820
+So everybody is terrified now.
+
+203
+00:09:37,820 --> 00:09:38,820
+We're using feature flags.
+
+204
+00:09:38,820 --> 00:09:41,060
+We're going to go under in 45 minutes.
+
+205
+00:09:41,060 --> 00:09:42,060
+No.
+
+206
+00:09:42,060 --> 00:09:43,820
+Because we came to this talk.
+
+207
+00:09:43,820 --> 00:09:47,700
+We're all going to be intentional about how we deploy with feature flags.
+
+208
+00:09:47,700 --> 00:09:51,220
+So we're going to think about mitigating these risks by being intentional about using feature
+
+209
+00:09:51,220 --> 00:09:52,580
+flags.
+
+210
+00:09:52,580 --> 00:09:55,380
+Because when it comes down to it, you used a feature flag in the first place because
+
+211
+00:09:55,380 --> 00:09:58,340
+you wanted to be intentional when you wrote your code.
+
+212
+00:09:58,340 --> 00:10:04,380
+So why are we not being intentional about controlling those flags once they're in production?
+
+213
+00:10:04,380 --> 00:10:06,340
+So let's talk about best practices.
+
+214
+00:10:06,340 --> 00:10:11,060
+These might look different for your companies, your specific implementation of feature flags,
+
+215
+00:10:11,060 --> 00:10:14,000
+but these are all some questions that you should be thinking about and answering before
+
+216
+00:10:14,000 --> 00:10:15,940
+you put them into your code base.
+
+217
+00:10:15,940 --> 00:10:19,660
+And the two words that we want to focus on are visibility and accountability.
+
+218
+00:10:19,660 --> 00:10:22,020
+So let's talk about visibility first.
+
+219
+00:10:22,020 --> 00:10:25,500
+Basically I want you to know where your flags are and what they're doing every single hour
+
+220
+00:10:25,500 --> 00:10:27,380
+of every day.
+
+221
+00:10:27,380 --> 00:10:28,860
+Basically I want you to stock your flags.
+
+222
+00:10:28,860 --> 00:10:31,900
+I want you to be a helicopter parent all over your flags.
+
+223
+00:10:31,900 --> 00:10:36,300
+And for every single flag, you should know the state, the history, the metrics, and the
+
+224
+00:10:36,300 --> 00:10:37,300
+expiration.
+
+225
+00:10:37,300 --> 00:10:38,940
+So let's go through these words.
+
+226
+00:10:38,940 --> 00:10:40,220
+So state's pretty simple.
+
+227
+00:10:40,220 --> 00:10:41,340
+We talked about before.
+
+228
+00:10:41,340 --> 00:10:43,300
+Your feature flags are like a light switch.
+
+229
+00:10:43,300 --> 00:10:45,260
+Is it on or off?
+
+230
+00:10:45,260 --> 00:10:48,840
+History is probably going to be a little bit more specific to your implementation.
+
+231
+00:10:48,840 --> 00:10:50,940
+But these are some questions that you might want to think about, right?
+
+232
+00:10:50,940 --> 00:10:53,460
+So for every single flag, when did it last change?
+
+233
+00:10:53,460 --> 00:10:54,460
+Why did it change?
+
+234
+00:10:54,460 --> 00:10:55,460
+Who changed it?
+
+235
+00:10:55,540 --> 00:10:59,220
+Every single change that's happened, what was the state?
+
+236
+00:10:59,220 --> 00:11:00,220
+What was the rollout percentage?
+
+237
+00:11:00,220 --> 00:11:02,300
+What was the audience that it was targeting?
+
+238
+00:11:02,300 --> 00:11:05,180
+These are all questions that you want to think to yourself when you're putting feature flags
+
+239
+00:11:05,180 --> 00:11:07,340
+in.
+
+240
+00:11:07,340 --> 00:11:08,980
+The next thing you want to think about is some metrics.
+
+241
+00:11:08,980 --> 00:11:11,460
+So what metrics are around this feature flag?
+
+242
+00:11:11,460 --> 00:11:12,620
+What are tracking?
+
+243
+00:11:12,620 --> 00:11:13,980
+Is it actually being used?
+
+244
+00:11:13,980 --> 00:11:16,240
+So how many times has this flag been evaluated?
+
+245
+00:11:16,240 --> 00:11:17,900
+And when was the last time it was evaluated?
+
+246
+00:11:17,900 --> 00:11:21,860
+And then the last thing you want to know with metrics are kind of what's tracking its success
+
+247
+00:11:21,860 --> 00:11:23,380
+or its failure?
+
+248
+00:11:23,380 --> 00:11:26,700
+Is the feature flag succeeding?
+
+249
+00:11:26,700 --> 00:11:28,900
+For every flag, you also want to know an expiration date.
+
+250
+00:11:28,900 --> 00:11:32,360
+So a super important thing with feature flags is that you should be knowing when it goes
+
+251
+00:11:32,360 --> 00:11:34,700
+into your code, when it's coming back out.
+
+252
+00:11:34,700 --> 00:11:38,080
+So for every single flag, when does the flag need to be removed and who's responsible for
+
+253
+00:11:38,080 --> 00:11:40,760
+taking it out?
+
+254
+00:11:40,760 --> 00:11:43,340
+So we talked about some things that you want to know per feature flag.
+
+255
+00:11:43,340 --> 00:11:46,840
+Now we can talk about kind of a bird's eye view of your entire system.
+
+256
+00:11:46,840 --> 00:11:51,100
+So at any given time, you should be able to answer for me how many flags are in your code
+
+257
+00:11:51,100 --> 00:11:52,100
+base?
+
+258
+00:11:52,100 --> 00:11:53,100
+Where are they in your code?
+
+259
+00:11:53,820 --> 00:11:55,980
+So what percentage of your flags are rolled out to a certain percentage?
+
+260
+00:11:55,980 --> 00:11:58,460
+So how many have been rolled out all the way to 100?
+
+261
+00:11:58,460 --> 00:12:02,080
+How many haven't been rolled out at all or have been rolled back to zero?
+
+262
+00:12:02,080 --> 00:12:06,540
+And then which flags are expired or which flags are expiring in 30 days, 60 days, 90
+
+263
+00:12:06,540 --> 00:12:07,540
+days?
+
+264
+00:12:07,540 --> 00:12:08,540
+Very important for planning.
+
+265
+00:12:08,540 --> 00:12:12,180
+The next thing we want to think about is collaboration.
+
+266
+00:12:12,180 --> 00:12:14,520
+So other people might be using your flag.
+
+267
+00:12:14,520 --> 00:12:17,960
+Not necessarily in kind of the disastrous way of Knight Capital Group.
+
+268
+00:12:17,960 --> 00:12:22,340
+But the beauty of feature flags is that they can turn what used to be a code deploy into
+
+269
+00:12:22,340 --> 00:12:24,740
+a business decision.
+
+270
+00:12:24,740 --> 00:12:27,220
+And the important thing to note with that is that you might not be the one flipping
+
+271
+00:12:27,220 --> 00:12:29,320
+the switch on your feature flag.
+
+272
+00:12:29,320 --> 00:12:33,500
+So we need to think about who else your feature flag can affect, right?
+
+273
+00:12:33,500 --> 00:12:35,580
+What else might need to be gated behind this flag?
+
+274
+00:12:35,580 --> 00:12:40,220
+Are there docs as their marketing material that needs to be gated based on the same flag?
+
+275
+00:12:40,220 --> 00:12:41,220
+Who's controlling the flag?
+
+276
+00:12:41,220 --> 00:12:42,220
+Is it going to be a developer?
+
+277
+00:12:42,220 --> 00:12:43,220
+Is it a release team?
+
+278
+00:12:43,220 --> 00:12:44,220
+Is it a PM?
+
+279
+00:12:44,220 --> 00:12:46,980
+And then we also want to know who needs to be notified of this change.
+
+280
+00:12:46,980 --> 00:12:48,560
+Your flag is going to affect other people.
+
+281
+00:12:48,560 --> 00:12:52,040
+Who needs to be notified that it's going out?
+
+282
+00:12:52,080 --> 00:12:56,160
+So there's a pretty low tech way of doing this, which is you can find your flags with
+
+283
+00:12:56,160 --> 00:12:57,160
+get grep.
+
+284
+00:12:57,160 --> 00:13:00,100
+A couple examples here.
+
+285
+00:13:00,100 --> 00:13:03,940
+You can track your flags in a Google document or a shared spreadsheet.
+
+286
+00:13:03,940 --> 00:13:08,320
+This is a section that I added to a technical design document.
+
+287
+00:13:08,320 --> 00:13:10,840
+But the important thing is that we're answering the same question, right?
+
+288
+00:13:10,840 --> 00:13:11,840
+Where are flags?
+
+289
+00:13:11,840 --> 00:13:13,080
+How many of them are there?
+
+290
+00:13:13,080 --> 00:13:14,080
+What's the rollout schedule?
+
+291
+00:13:14,080 --> 00:13:15,800
+What's the flag history?
+
+292
+00:13:15,800 --> 00:13:18,780
+You just want to make sure that you're getting all of these questions before you start rolling
+
+293
+00:13:18,780 --> 00:13:20,680
+out with flags.
+
+294
+00:13:20,680 --> 00:13:24,820
+If you're working on a feature flag solution like I do, or if you're using something in
+
+295
+00:13:24,820 --> 00:13:29,360
+house, building something, you can make something that's maybe a little bit more customized.
+
+296
+00:13:29,360 --> 00:13:30,800
+This is like a dashboard that I built.
+
+297
+00:13:30,800 --> 00:13:32,360
+So where is the flag?
+
+298
+00:13:32,360 --> 00:13:33,360
+Is it being used?
+
+299
+00:13:33,360 --> 00:13:34,360
+When does it expire?
+
+300
+00:13:34,360 --> 00:13:37,800
+We're doing it in a little bit more of an automatic way, but we're answering the same
+
+301
+00:13:37,800 --> 00:13:38,800
+questions.
+
+302
+00:13:38,800 --> 00:13:40,360
+Cool.
+
+303
+00:13:40,360 --> 00:13:41,720
+So we talked about visibility.
+
+304
+00:13:41,720 --> 00:13:44,480
+Now we all have a very highly visible feature flagging system.
+
+305
+00:13:44,480 --> 00:13:46,880
+Now we want to be accountable for that system.
+
+306
+00:13:46,880 --> 00:13:49,840
+So we want to be accountable for our feature flags.
+
+307
+00:13:49,840 --> 00:13:53,560
+For every single flag, you should make sure that it's tracked in a shared place, that
+
+308
+00:13:53,560 --> 00:13:57,760
+everybody who's a stakeholder in this flag has access to the information, and that you
+
+309
+00:13:57,760 --> 00:14:02,800
+have alerting set up on the monitoring metrics you set up for visibility.
+
+310
+00:14:02,800 --> 00:14:04,860
+So how do we do this?
+
+311
+00:14:04,860 --> 00:14:07,000
+It's basically a lot of procedural change.
+
+312
+00:14:07,000 --> 00:14:11,880
+So you want to decide as a team or as a company who owns managing your feature flags, who's
+
+313
+00:14:11,880 --> 00:14:14,480
+in charge of making sure that this program is running smoothly.
+
+314
+00:14:14,480 --> 00:14:15,480
+Is it a release team?
+
+315
+00:14:15,480 --> 00:14:16,480
+Is it a PM?
+
+316
+00:14:16,480 --> 00:14:17,800
+Is it an engineering manager?
+
+317
+00:14:17,800 --> 00:14:21,280
+And then a separate question could be who's releasing the features.
+
+318
+00:14:21,280 --> 00:14:22,560
+So is it a release team?
+
+319
+00:14:22,560 --> 00:14:23,560
+Is it a PM?
+
+320
+00:14:23,560 --> 00:14:25,080
+Is it an engineering manager?
+
+321
+00:14:25,080 --> 00:14:26,840
+Or is it the engineers themselves?
+
+322
+00:14:26,840 --> 00:14:30,080
+The person who is managing the program and the person who's actually releasing the flags
+
+323
+00:14:30,080 --> 00:14:33,320
+can be a separate person.
+
+324
+00:14:33,320 --> 00:14:36,960
+And then for the person who's managing releasing your flags, what are you responsible for giving
+
+325
+00:14:36,960 --> 00:14:37,960
+them?
+
+326
+00:14:37,960 --> 00:14:42,240
+You should probably be giving them a release process, an exit criteria, and some comms.
+
+327
+00:14:42,240 --> 00:14:44,920
+So let's go through the three of those.
+
+328
+00:14:44,920 --> 00:14:48,480
+So for a release process, you want to be giving them a rollout plan when you give them the
+
+329
+00:14:48,480 --> 00:14:49,560
+feature flag.
+
+330
+00:14:49,560 --> 00:14:53,520
+So who is rolling out what at any given time is an answer that the person who's rolling
+
+331
+00:14:53,520 --> 00:14:56,960
+out your flag should know the answer to.
+
+332
+00:14:56,960 --> 00:14:59,520
+The next thing you want to think about is some risk assessment.
+
+333
+00:14:59,520 --> 00:15:01,720
+So who are you targeting with your flag?
+
+334
+00:15:01,720 --> 00:15:03,480
+And then what's the rollback procedure?
+
+335
+00:15:03,480 --> 00:15:08,000
+And by rollback procedure, I mean, there's a lot of little issues or bugs that they could
+
+336
+00:15:08,000 --> 00:15:09,880
+find with the feature.
+
+337
+00:15:09,880 --> 00:15:11,840
+What's actually responsible for a rollback?
+
+338
+00:15:11,840 --> 00:15:14,680
+What's big enough that it's risky enough that they need to roll it back?
+
+339
+00:15:14,680 --> 00:15:19,240
+And then who's responsible for rolling back that flag?
+
+340
+00:15:19,240 --> 00:15:21,160
+The next thing we can talk about is exit criteria.
+
+341
+00:15:21,160 --> 00:15:25,440
+So this is kind of a contract between product development that determines what's the success
+
+342
+00:15:25,440 --> 00:15:29,240
+of the feature flag and when can it be removed from the code base.
+
+343
+00:15:29,240 --> 00:15:31,440
+That's something that you should be giving the rollout team.
+
+344
+00:15:31,440 --> 00:15:34,680
+And then the last thing you want to think about is communication.
+
+345
+00:15:34,680 --> 00:15:37,920
+So like we talked about before, who needs to know that this flag is on?
+
+346
+00:15:37,920 --> 00:15:39,480
+What support staff needs to know?
+
+347
+00:15:39,480 --> 00:15:42,120
+And then how do they bucket themselves in and out of the feature?
+
+348
+00:15:42,120 --> 00:15:46,040
+You should be giving them that information.
+
+349
+00:15:46,040 --> 00:15:48,640
+So we talked about a lot of things that you should be paying attention to.
+
+350
+00:15:48,640 --> 00:15:51,400
+How do we kind of enforce that in our organization?
+
+351
+00:15:51,400 --> 00:15:53,920
+So one way that you can think about it is having a WIP limit.
+
+352
+00:15:53,920 --> 00:15:57,520
+So having a work in progress limit on the number of features or feature flags that you
+
+353
+00:15:57,520 --> 00:15:59,760
+have in development.
+
+354
+00:15:59,760 --> 00:16:02,360
+This is something that you can decide as a company.
+
+355
+00:16:02,360 --> 00:16:05,240
+You want to consider feature flags as work in flight.
+
+356
+00:16:05,240 --> 00:16:08,960
+So how much work in flight do you want to have as a team or as a company?
+
+357
+00:16:08,960 --> 00:16:12,720
+And this is super important because the people that are feeling the consequences of this
+
+358
+00:16:12,720 --> 00:16:17,220
+tech debt are not always the people prioritizing the work to take it out.
+
+359
+00:16:17,220 --> 00:16:21,600
+So having a work in progress limit might help you in that area.
+
+360
+00:16:21,600 --> 00:16:24,560
+The next thing you might want to think about is having a feature flag checklist.
+
+361
+00:16:24,560 --> 00:16:27,760
+So what are the lists of must-dos before somebody implements a feature?
+
+362
+00:16:27,760 --> 00:16:30,160
+You can decide that as a company.
+
+363
+00:16:30,160 --> 00:16:31,320
+What tracking do they need?
+
+364
+00:16:31,320 --> 00:16:33,560
+What's the procedure that they need to follow?
+
+365
+00:16:33,560 --> 00:16:34,560
+How do they roll forward?
+
+366
+00:16:34,560 --> 00:16:35,560
+How do they roll back?
+
+367
+00:16:35,560 --> 00:16:38,040
+And what kind of changes should not be behind a feature flag?
+
+368
+00:16:38,040 --> 00:16:40,880
+So if you have destructive database changes or things like that, these are things that
+
+369
+00:16:40,880 --> 00:16:42,700
+shouldn't live behind a feature flag.
+
+370
+00:16:42,700 --> 00:16:45,640
+You should know that for your company.
+
+371
+00:16:45,640 --> 00:16:50,080
+The next thing you might want to decide as a company is what's the lifespan of any specific
+
+372
+00:16:50,080 --> 00:16:51,560
+kind of feature flag?
+
+373
+00:16:51,560 --> 00:16:54,020
+So for short-lived flags, maybe it's a day for you.
+
+374
+00:16:54,020 --> 00:16:55,020
+Maybe it's a week.
+
+375
+00:16:55,020 --> 00:16:56,020
+Maybe it's a month.
+
+376
+00:16:56,020 --> 00:16:57,940
+And do you want to have long-lived flags at all?
+
+377
+00:16:57,940 --> 00:16:59,760
+These are questions that you should be thinking about.
+
+378
+00:16:59,760 --> 00:17:03,440
+And then even if somebody wants to break these rules, they have to think about it.
+
+379
+00:17:03,440 --> 00:17:07,280
+They have to have a reason for doing that.
+
+380
+00:17:07,280 --> 00:17:10,400
+When you're thinking about these limits, I would say that it depends on basically how
+
+381
+00:17:10,400 --> 00:17:13,520
+long does your system take to get meaningful results?
+
+382
+00:17:13,520 --> 00:17:17,280
+So for your company, if your feature is getting a lot of traffic, it might take you like a
+
+383
+00:17:17,280 --> 00:17:20,160
+minute, a day, an hour to get meaningful results.
+
+384
+00:17:20,160 --> 00:17:21,680
+It might take you a lot longer.
+
+385
+00:17:21,680 --> 00:17:25,400
+But these are the things that you want to think about.
+
+386
+00:17:25,400 --> 00:17:27,760
+So we want to talk about expired features as well.
+
+387
+00:17:27,760 --> 00:17:30,500
+How do we make sure that we take these out of the code base?
+
+388
+00:17:30,500 --> 00:17:34,960
+So we want to prioritize removing features as a part of the work of the feature.
+
+389
+00:17:34,960 --> 00:17:37,760
+We want to retire feature flags which are expired or unused.
+
+390
+00:17:37,760 --> 00:17:43,720
+And we want to make sure that those get out of the code base as soon as possible.
+
+391
+00:17:43,720 --> 00:17:45,840
+How do we make sure that expired features are removed?
+
+392
+00:17:45,840 --> 00:17:47,400
+There's a lot of ways that you could do this.
+
+393
+00:17:47,400 --> 00:17:51,200
+But a couple ideas is you could have a feature stand-up every week where you make sure that
+
+394
+00:17:51,200 --> 00:17:54,320
+you're looking at those things we tracked in visibility and you're making sure that
+
+395
+00:17:54,320 --> 00:17:58,460
+we're getting out expired features, unused features, and features that need to go.
+
+396
+00:17:58,460 --> 00:18:02,120
+We can also ticket flag removal when the flag is created.
+
+397
+00:18:02,120 --> 00:18:06,800
+If you're ticketing your project out, just write a ticket to take the flag out when you're
+
+398
+00:18:06,800 --> 00:18:08,240
+putting it in.
+
+399
+00:18:08,240 --> 00:18:11,800
+The most extreme version of this is you can literally write the PR to take the flag out
+
+400
+00:18:11,800 --> 00:18:13,200
+as soon as you put it in.
+
+401
+00:18:13,200 --> 00:18:14,200
+That might work for you guys.
+
+402
+00:18:14,200 --> 00:18:15,200
+It might not.
+
+403
+00:18:15,200 --> 00:18:17,160
+But it's still an idea.
+
+404
+00:18:17,160 --> 00:18:18,600
+All right.
+
+405
+00:18:18,600 --> 00:18:21,760
+And the last thing to note is that these are procedural changes.
+
+406
+00:18:21,760 --> 00:18:25,880
+So with any procedural change, it's super important that you ensure review from all
+
+407
+00:18:25,880 --> 00:18:28,280
+the people who have a stake in this process.
+
+408
+00:18:28,280 --> 00:18:34,580
+You gain buy-in from your community and you communicate these standards widely.
+
+409
+00:18:34,580 --> 00:18:35,880
+Some other tips.
+
+410
+00:18:35,880 --> 00:18:36,880
+These might work for you.
+
+411
+00:18:36,880 --> 00:18:37,880
+They might not.
+
+412
+00:18:37,880 --> 00:18:39,720
+They're kind of like a rule of thumb, though.
+
+413
+00:18:39,720 --> 00:18:44,000
+You want to keep your features as small as possible, as short-lived as possible so they
+
+414
+00:18:44,000 --> 00:18:47,800
+should live in the code base for as little of time as possible.
+
+415
+00:18:47,800 --> 00:18:49,760
+And they should be kind of as top level as possible.
+
+416
+00:18:49,760 --> 00:18:53,360
+And what I mean by that is that you should try to bubble them up in your code to the
+
+417
+00:18:53,360 --> 00:18:55,380
+highest point possible.
+
+418
+00:18:55,380 --> 00:18:57,960
+That just makes it a little bit easier for you when you're testing.
+
+419
+00:18:57,960 --> 00:19:01,840
+You don't have a lot of various scenarios when you have a lot of branches at the bottom.
+
+420
+00:19:01,840 --> 00:19:05,880
+You just have one branch at the top of the chain.
+
+421
+00:19:05,880 --> 00:19:08,880
+So these are all the things that I've talked about.
+
+422
+00:19:08,880 --> 00:19:13,920
+If we kind of bring it back to the risks that we spoke about before, and we want to talk
+
+423
+00:19:13,920 --> 00:19:14,920
+about tech debt.
+
+424
+00:19:14,920 --> 00:19:17,800
+So which of these things could have mitigated tech debt in your code?
+
+425
+00:19:17,800 --> 00:19:22,840
+If you had expiration, metrics, some procedure, some very small short-lived flags, all of
+
+426
+00:19:22,840 --> 00:19:25,400
+these things would get tech debt out of your code base.
+
+427
+00:19:26,040 --> 00:19:31,200
+If we want to talk about the more middling risks, if we had some metrics alerting and
+
+428
+00:19:31,200 --> 00:19:37,160
+a little bit of procedure on that implementation of a feature flag that added 48 seconds to
+
+429
+00:19:37,160 --> 00:19:40,080
+one of our endpoints, we could have mitigated that risk.
+
+430
+00:19:40,080 --> 00:19:43,920
+And then if we want to talk about the total disaster scenario, these are the things that
+
+431
+00:19:43,920 --> 00:19:49,440
+would have prevented that total disaster from happening.
+
+432
+00:19:49,440 --> 00:19:53,360
+So in summary, we're all going to manage our feature flags.
+
+433
+00:19:53,360 --> 00:19:55,380
+Otherwise, bad things can happen.
+
+434
+00:19:55,380 --> 00:19:57,540
+We're going to follow the best practices of visibility.
+
+435
+00:19:57,540 --> 00:19:58,540
+So everybody's going to go home.
+
+436
+00:19:58,540 --> 00:20:00,740
+We're all going to stock our flags.
+
+437
+00:20:00,740 --> 00:20:01,740
+And we're going to have a lot of accountability.
+
+438
+00:20:01,740 --> 00:20:05,660
+So we're going to monitor and alert on the metrics that we set up and retire the flags
+
+439
+00:20:05,660 --> 00:20:07,980
+when they need to go.
+
+440
+00:20:07,980 --> 00:20:11,540
+And with that, we are all going to go from this giant mess of feature flags that we saw
+
+441
+00:20:11,540 --> 00:20:16,260
+before to a nicely organized feature flagging solution.
+
+442
+00:20:16,260 --> 00:20:17,260
+Thank you.
+
+443
+00:20:18,140 --> 00:20:24,860
+Thank you very much.
+
+444
+00:20:24,860 --> 00:20:25,860
+Cool.
+
+445
+00:20:25,860 --> 00:20:27,580
+I can take some questions.
+
+446
+00:20:27,580 --> 00:20:31,100
+And also, if you want to try feature flags, there's a link there.
+
+447
+00:20:31,100 --> 00:20:33,300
+Optimize Z has a free feature flagging product.
+
+448
+00:20:33,300 --> 00:20:34,300
+You can try it out.
+
+449
+00:20:34,300 --> 00:20:43,180
+If there are any questions, please stand at the microphones in the middle.
+
+450
+00:20:43,180 --> 00:20:44,180
+Is this on?
+
+451
+00:20:44,180 --> 00:20:45,180
+OK, cool.
+
+452
+00:20:45,780 --> 00:20:50,300
+So I was looking at a feature flag that we had the other week.
+
+453
+00:20:50,300 --> 00:20:53,380
+And it had been there for two years at 0%.
+
+454
+00:20:53,380 --> 00:20:57,020
+But it was also enabled for 20 clients.
+
+455
+00:20:57,020 --> 00:21:00,420
+So I guess this feature was fixing something for these people.
+
+456
+00:21:00,420 --> 00:21:02,980
+But it was decided that we weren't going to roll this out.
+
+457
+00:21:02,980 --> 00:21:07,380
+So I guess this is a common abuse of feature flags.
+
+458
+00:21:07,380 --> 00:21:09,100
+But that means I can't take it out now.
+
+459
+00:21:09,100 --> 00:21:10,540
+So have you seen things like that?
+
+460
+00:21:10,540 --> 00:21:12,340
+And do you have any tips on how to deal with it?
+
+461
+00:21:12,340 --> 00:21:13,340
+Yeah, for sure.
+
+462
+00:21:13,380 --> 00:21:17,180
+I definitely have experience with like, you'll work out a short-term solution to something
+
+463
+00:21:17,180 --> 00:21:21,180
+that you gate behind a feature flag and target maybe a large customer or something.
+
+464
+00:21:21,180 --> 00:21:24,820
+The important thing there is that you need to convince your PMs or whoever's making the
+
+465
+00:21:24,820 --> 00:21:28,820
+decision that you need to prioritize the work to actually fix it.
+
+466
+00:21:28,820 --> 00:21:31,260
+It's really the only thing that can come out of it.
+
+467
+00:21:31,260 --> 00:21:39,660
+Could you talk a little bit about writing your tests with the feature flags?
+
+468
+00:21:39,660 --> 00:21:42,580
+Have there a whole number of them?
+
+469
+00:21:42,580 --> 00:21:46,580
+How can you keep your code clean?
+
+470
+00:21:46,580 --> 00:21:47,580
+That's why it's super hard.
+
+471
+00:21:47,580 --> 00:21:51,180
+The only thing I would say for that is that's where it's important to kind of bubble up
+
+472
+00:21:51,180 --> 00:21:52,180
+your feature flags.
+
+473
+00:21:52,180 --> 00:21:56,500
+So keep them at the highest possible level that you can in your code base.
+
+474
+00:21:56,500 --> 00:21:59,620
+But it is hard to test with feature flags and to test them on and off and all of the
+
+475
+00:21:59,620 --> 00:22:01,940
+various combinations.
+
+476
+00:22:01,940 --> 00:22:05,100
+That's something that you kind of have to work out with your QI teams or just write
+
+477
+00:22:05,100 --> 00:22:06,100
+tests for.
+
+478
+00:22:06,180 --> 00:22:12,380
+I've seen people kind of write comments and just block out lines of feature flag tests
+
+479
+00:22:12,380 --> 00:22:14,500
+and make it easier to take them out later.
+
+480
+00:22:14,500 --> 00:22:19,100
+Yeah, it's a difficult problem.
+
+481
+00:22:19,100 --> 00:22:22,780
+I was wondering if you might be able to dig into some details, and I feel like this is
+
+482
+00:22:22,780 --> 00:22:27,580
+probably a loaded question, but implementation details of kind of different feature flag
+
+483
+00:22:27,580 --> 00:22:34,180
+architectures for client and server and what you've found that works best.
+
+484
+00:22:34,180 --> 00:22:40,140
+So yeah, besides like the kind of rules of thumb that I talked about, it's probably more
+
+485
+00:22:40,140 --> 00:22:45,060
+based on like your specific architecture and how you want to use them as a team.
+
+486
+00:22:45,060 --> 00:22:50,220
+I guess if you could make your question a little bit more specific.
+
+487
+00:22:50,220 --> 00:22:56,460
+So like one case I have in mind that we have at my company is we store our feature flags
+
+488
+00:22:57,060 --> 00:23:03,780
+and you can attach user, like, you know, make user groups for which the feature flag is
+
+489
+00:23:03,780 --> 00:23:10,300
+on and off, but we use the same feature flag for our client and our server, so we send
+
+490
+00:23:10,300 --> 00:23:15,140
+a REST API request to our server to get whether the feature flag is on or off, but that means
+
+491
+00:23:15,140 --> 00:23:20,220
+that of course you can't write any client code that is dependent on said feature flag
+
+492
+00:23:20,220 --> 00:23:23,620
+before you actually send the API request to the server to get whether the feature flag
+
+493
+00:23:23,700 --> 00:23:28,580
+is on or off and that also means that when the user is logged out, you can't use said
+
+494
+00:23:28,580 --> 00:23:30,060
+feature flag.
+
+495
+00:23:30,060 --> 00:23:34,340
+So I was wondering, like client side feature flags, implementations?
+
+496
+00:23:34,340 --> 00:23:40,460
+Yeah, I mean, I think we use kind of the same implementation where you're making a request,
+
+497
+00:23:40,460 --> 00:23:46,540
+but that's where kind of our specific implementation, you do that kind of instantiation step that
+
+498
+00:23:46,540 --> 00:23:52,700
+I had before that set up and then it's able to make a decision on whether the user is
+
+499
+00:23:52,740 --> 00:23:55,740
+bucketed or not without making an API request.
+
+500
+00:23:55,740 --> 00:23:56,740
+Okay, interesting.
+
+501
+00:23:56,740 --> 00:23:57,740
+Yeah, thanks.
+
+502
+00:23:57,740 --> 00:23:58,740
+Yeah.
+
+503
+00:23:58,740 --> 00:24:07,740
+I think we have a situation where feature flags and permissions are kind of bumping up against
+
+504
+00:24:09,180 --> 00:24:14,420
+each other where we have certain groups of users and we will give them access to something
+
+505
+00:24:14,420 --> 00:24:19,300
+via feature flags and I'm wondering, yeah, if you have any thoughts on best practices
+
+506
+00:24:19,300 --> 00:24:25,300
+there, how you kind of decide whether something is a feature flag thing or a permissions thing?
+
+507
+00:24:25,300 --> 00:24:31,060
+Yeah, I mean, we definitely do use feature flags with permission gating, so I think it's
+
+508
+00:24:31,060 --> 00:24:34,500
+possible that that can be a pattern for you.
+
+509
+00:24:34,500 --> 00:24:39,540
+I think then it becomes really important to have all of this procedure around feature
+
+510
+00:24:39,540 --> 00:24:40,540
+flags.
+
+511
+00:24:40,540 --> 00:24:44,700
+Because whether it's kind of built into your code base or whether you're controlling it
+
+512
+00:24:44,700 --> 00:24:49,220
+with feature flags, it's kind of doing the same thing in different ways, right?
+
+513
+00:24:50,140 --> 00:24:54,140
+So it's just more important that you know the procedure that's outlining this process.
+
+514
+00:24:54,140 --> 00:24:55,660
+I don't know if you have more specific...
+
+515
+00:24:55,660 --> 00:25:00,660
+We'll just think about the procedures for it.
+
+516
+00:25:00,660 --> 00:25:03,660
+Yeah, for sure.
+
+517
+00:25:03,660 --> 00:25:04,660
+Hi.
+
+518
+00:25:04,660 --> 00:25:10,340
+So at my company, we tend to name our experiments with the platform and then the team name and
+
+519
+00:25:10,340 --> 00:25:15,420
+then whatever feature name that we just want to put so that kind of prevents other teams
+
+520
+00:25:15,420 --> 00:25:18,940
+or other people from reusing our feature flags because it's kind of contained in our
+
+521
+00:25:18,940 --> 00:25:20,380
+team.
+
+522
+00:25:20,380 --> 00:25:26,220
+Is that something you guys do optimisely or is there a stricter permission gating you
+
+523
+00:25:26,220 --> 00:25:28,700
+guys do to prevent feature flag overuse?
+
+524
+00:25:28,700 --> 00:25:33,380
+Yeah, naming conventions are totally a fine way to prevent feature flag overuse.
+
+525
+00:25:33,380 --> 00:25:38,820
+I think having those controls built into your system is obviously safer, but not everybody
+
+526
+00:25:38,820 --> 00:25:39,900
+has that, right?
+
+527
+00:25:39,900 --> 00:25:43,900
+So naming conventions can be a good middle step.
+
+528
+00:25:43,900 --> 00:25:47,580
+I would say try to build in these procedures into your platform if possible.
+
+529
+00:25:47,580 --> 00:25:51,380
+Cool, thanks.
+
+530
+00:25:51,380 --> 00:25:56,460
+How do you typically implement the turning on and off of the feature switch, like API
+
+531
+00:25:56,460 --> 00:25:59,180
+endpoints or file system semaphores or...?
+
+532
+00:25:59,180 --> 00:26:04,940
+Yeah, so we have an API that you can turn a feature on and off with.
+
+533
+00:26:04,940 --> 00:26:06,700
+We also have a UI.
+
+534
+00:26:06,700 --> 00:26:10,420
+That's what I showed in the examples, the actual turning it on and off.
+
+535
+00:26:10,420 --> 00:26:13,460
+I know some people do it with configuration files.
+
+536
+00:26:13,460 --> 00:26:22,500
+We have time for one last question.
+
+537
+00:26:22,500 --> 00:26:31,180
+At least I think Etsy, they use feature flags to drive their single branch development as
+
+538
+00:26:31,180 --> 00:26:32,180
+a way of...
+
+539
+00:26:32,180 --> 00:26:36,300
+I mean, you know, because branches are just versions of the code base and feature flags
+
+540
+00:26:36,300 --> 00:26:41,100
+are the code that implements them and then the data that says what state each one is
+
+541
+00:26:41,900 --> 00:26:45,780
+a bunch of different versions of the code base as well.
+
+542
+00:26:45,780 --> 00:26:50,580
+It looked like you are still using some form of branching as well as feature flags.
+
+543
+00:26:50,580 --> 00:26:56,120
+I wondered if you had noodled through, because I haven't, really the implications of using
+
+544
+00:26:56,120 --> 00:27:00,340
+branches and feature flags and that level of complexity and managing it.
+
+545
+00:27:00,340 --> 00:27:01,620
+Yeah.
+
+546
+00:27:01,620 --> 00:27:04,340
+So I guess what constitutes...
+
+547
+00:27:04,340 --> 00:27:06,860
+You're talking about chunk-based development, right?
+
+548
+00:27:06,860 --> 00:27:07,860
+Yes.
+
+549
+00:27:07,940 --> 00:27:14,260
+So I've heard a couple different things on what makes something chunk-based development.
+
+550
+00:27:14,260 --> 00:27:17,900
+I would say we definitely have branches that are open for longer than a day or longer than
+
+551
+00:27:17,900 --> 00:27:19,200
+a week.
+
+552
+00:27:19,200 --> 00:27:23,540
+We try to merge those into production as soon as possible.
+
+553
+00:27:23,540 --> 00:27:29,540
+But sorry, the question was like how do you manage your flags and branches?
+
+554
+00:27:29,540 --> 00:27:38,260
+Do you merge unfinished feature, like feature flag wrapped chunks of code?
+
+555
+00:27:38,260 --> 00:27:44,780
+In your mainline branch, do you have feature flags that are turned off that house code
+
+556
+00:27:44,780 --> 00:27:48,540
+that just would not work or is broken or a feature that's incomplete?
+
+557
+00:27:48,540 --> 00:27:49,540
+Or do you make...
+
+558
+00:27:49,540 --> 00:27:50,540
+Okay.
+
+559
+00:27:50,540 --> 00:27:54,460
+Yeah, so the important thing to make sure in that case is that the fail state when the
+
+560
+00:27:54,460 --> 00:27:57,500
+feature flag is off is safe.
+
+561
+00:27:57,620 --> 00:28:01,020
+Yeah, we've done that before where we merge parts of features so that you don't have like
+
+562
+00:28:01,020 --> 00:28:03,340
+2,000 line branches.
+
+563
+00:28:03,340 --> 00:28:07,780
+So if you have like a multi-PR feature that you need to get someone still working on the
+
+564
+00:28:07,780 --> 00:28:11,220
+second part, you might merge the first part or something and keep it wrapped in a safe
+
+565
+00:28:11,220 --> 00:28:13,540
+flag like that is what you're saying, something like that?
+
+566
+00:28:13,540 --> 00:28:19,180
+Yeah, we've done some variant of that before.
+
+567
+00:28:19,180 --> 00:28:20,180
+Thank you very much, Caitlin.
+
+568
+00:28:20,180 --> 00:28:21,180
+Cool.
+
+569
+00:28:21,180 --> 00:28:21,680
+Thank you.
+

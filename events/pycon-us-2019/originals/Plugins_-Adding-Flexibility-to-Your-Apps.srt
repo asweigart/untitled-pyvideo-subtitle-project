@@ -1,0 +1,1688 @@
+1
+00:00:00,000 --> 00:00:01,960
+Hello, everyone.
+
+2
+00:00:01,960 --> 00:00:03,680
+It's time to get started.
+
+3
+00:00:03,680 --> 00:00:08,820
+Our first talk is going to be given by Geir Arne Jell on plugins adding flexibility to
+
+4
+00:00:08,820 --> 00:00:09,820
+your apps.
+
+5
+00:00:09,820 --> 00:00:17,800
+Let's give them a big warm welcome.
+
+6
+00:00:17,800 --> 00:00:19,200
+Thank you so much.
+
+7
+00:00:19,200 --> 00:00:24,040
+And yeah, a big thanks to the organizers for letting me speak here.
+
+8
+00:00:24,040 --> 00:00:25,480
+So my name is Geir Arne Jell.
+
+9
+00:00:25,480 --> 00:00:30,720
+I work together with the real Python team to write articles.
+
+10
+00:00:30,720 --> 00:00:35,960
+So this talk is partly based on at least some ideas in those articles.
+
+11
+00:00:35,960 --> 00:00:41,600
+And what I'm going to talk about is essentially a very simple way to add flexibility and modularize
+
+12
+00:00:41,600 --> 00:00:42,600
+your code.
+
+13
+00:00:42,600 --> 00:00:45,500
+So something I call plugins.
+
+14
+00:00:45,500 --> 00:00:49,480
+So the agenda for the talk is essentially I'll try to motivate a little bit why we should
+
+15
+00:00:49,480 --> 00:00:54,120
+care about simple code, although I hope that's also slightly obvious.
+
+16
+00:00:54,120 --> 00:00:59,680
+And then the main part of the talk will be actually giving an example of how to build
+
+17
+00:00:59,680 --> 00:01:00,680
+a small app.
+
+18
+00:01:00,680 --> 00:01:04,640
+We'll try to essentially see how we can make a small command line app that can plot your
+
+19
+00:01:04,640 --> 00:01:10,480
+data and how we can kind of modularize this to support different data formats, different
+
+20
+00:01:10,480 --> 00:01:12,760
+kinds of plots and those kind of things.
+
+21
+00:01:12,760 --> 00:01:17,880
+And then towards the end, I'm just going to say a few words about a small package that
+
+22
+00:01:17,880 --> 00:01:20,880
+kind of supports this kind of infrastructure.
+
+23
+00:01:20,880 --> 00:01:22,780
+OK.
+
+24
+00:01:22,780 --> 00:01:24,680
+So quick motivation.
+
+25
+00:01:24,680 --> 00:01:28,940
+If you have modularized your code, typically what you end up with is something that's less
+
+26
+00:01:28,940 --> 00:01:29,940
+complex.
+
+27
+00:01:29,940 --> 00:01:32,820
+You may have more functions and things like this, but each function is doing one single
+
+28
+00:01:32,820 --> 00:01:33,820
+thing.
+
+29
+00:01:33,820 --> 00:01:38,100
+You have the single responsibility principle kind of built in there, and it's easy to reason
+
+30
+00:01:38,100 --> 00:01:40,660
+about what your code is doing.
+
+31
+00:01:40,660 --> 00:01:45,500
+That also makes everything much easier to maintain, easier to test, those kind of things,
+
+32
+00:01:45,500 --> 00:01:50,860
+and easier to extend later, easier to add extra functionality.
+
+33
+00:01:50,860 --> 00:01:55,800
+So what I'm kind of calling plugins here means, so essentially built on the system you'll
+
+34
+00:01:55,800 --> 00:02:00,040
+see later, that your app can be controlled easily by configuration settings, for instance,
+
+35
+00:02:00,040 --> 00:02:03,220
+or options to your code.
+
+36
+00:02:03,220 --> 00:02:06,440
+You can easily extend and customize your app.
+
+37
+00:02:06,440 --> 00:02:09,680
+Even you can let your users do this.
+
+38
+00:02:09,680 --> 00:02:15,900
+And by having things modularized nicely, things are better structured and often typically
+
+39
+00:02:15,900 --> 00:02:18,620
+means that you can also develop faster, especially if you're on a team.
+
+40
+00:02:18,660 --> 00:02:23,940
+You can have people talk, doing different kind of things without really butting heads
+
+41
+00:02:23,940 --> 00:02:26,620
+against each other.
+
+42
+00:02:26,620 --> 00:02:30,020
+Okay, so let's actually do this.
+
+43
+00:02:30,020 --> 00:02:35,360
+So what I want to do now is just show you how to build a simple plotter app.
+
+44
+00:02:35,360 --> 00:02:40,580
+And what I want this to be is a small command line application that should be able to read
+
+45
+00:02:40,580 --> 00:02:44,540
+data from a CSV file and plot data in a simple line graph.
+
+46
+00:02:44,540 --> 00:02:49,740
+So nothing really revolutionary, but just to kind of have the example going.
+
+47
+00:02:49,740 --> 00:02:55,620
+So what I'm going to do here, and let's see, we can even make this slightly bigger.
+
+48
+00:02:55,620 --> 00:03:00,960
+It's just code up this little plotter function that I have.
+
+49
+00:03:00,960 --> 00:03:05,180
+And what I want this to do is going to be a command line app.
+
+50
+00:03:05,180 --> 00:03:09,700
+So I'm just going to use this sweet little library called click.
+
+51
+00:03:09,700 --> 00:03:14,660
+And what this does is that I can add this small decorator on top and say that this is
+
+52
+00:03:14,660 --> 00:03:17,760
+a command like this.
+
+53
+00:03:17,760 --> 00:03:26,260
+And then I can go to my command line and say that I want to run this.
+
+54
+00:03:26,260 --> 00:03:27,860
+And of course, not much happened.
+
+55
+00:03:27,860 --> 00:03:33,380
+But if I do help here, you can see that I already got some help message popped in here.
+
+56
+00:03:33,380 --> 00:03:37,120
+So this is done just by calling this a click command.
+
+57
+00:03:37,120 --> 00:03:41,280
+And before I actually continue here, because I'm going to use these decorators a little
+
+58
+00:03:41,280 --> 00:03:47,040
+bit, so let me just stop here and take a half a minute crash course in what a decorator
+
+59
+00:03:47,040 --> 00:03:48,640
+is.
+
+60
+00:03:48,640 --> 00:03:54,400
+So the thing you saw with the at symbol on top there is called a decorator.
+
+61
+00:03:54,400 --> 00:03:58,560
+And what this is, it's really just a function that you can use to wrap another function.
+
+62
+00:03:58,560 --> 00:04:01,760
+And what it does is essentially have your original function, and then you call your
+
+63
+00:04:01,760 --> 00:04:03,800
+decorator function on it.
+
+64
+00:04:03,800 --> 00:04:07,760
+So a decorator is really just a function that takes a function as an argument and
+
+65
+00:04:07,760 --> 00:04:09,880
+returns a function.
+
+66
+00:04:09,880 --> 00:04:13,920
+And the thing you get out is the decorated function.
+
+67
+00:04:13,920 --> 00:04:15,120
+So why do you want to do this?
+
+68
+00:04:15,120 --> 00:04:18,420
+Well, you can add common functionality across many functions and methods.
+
+69
+00:04:18,420 --> 00:04:23,040
+So the example here is that we're taking a regular function, the main function I had,
+
+70
+00:04:23,040 --> 00:04:27,640
+and making it into a command that you can run on the command line.
+
+71
+00:04:27,640 --> 00:04:32,200
+And as I said, what Python is doing is to decorate it equals decorator of the original
+
+72
+00:04:32,600 --> 00:04:37,600
+function, but the typical way that you write it is using this pie syntax or at symbol syntax
+
+73
+00:04:37,600 --> 00:04:39,600
+like we see here.
+
+74
+00:04:39,600 --> 00:04:41,520
+Okay.
+
+75
+00:04:41,520 --> 00:04:46,080
+If you want to learn a lot more about the Python decorators, we have an article that
+
+76
+00:04:46,080 --> 00:04:50,880
+I wrote on real Python, so you can go really into the depths there.
+
+77
+00:04:50,880 --> 00:04:51,880
+Okay.
+
+78
+00:04:51,880 --> 00:04:53,600
+So back to our demo.
+
+79
+00:04:53,600 --> 00:04:54,680
+Okay.
+
+80
+00:04:54,680 --> 00:04:59,660
+I have this command, and I want to read in a data file.
+
+81
+00:04:59,660 --> 00:05:05,320
+So that means that I need to take this in as an argument.
+
+82
+00:05:05,320 --> 00:05:10,300
+So I'll have here the argument of a file path.
+
+83
+00:05:10,300 --> 00:05:18,340
+And this magically pops into my main method then by handle by click.
+
+84
+00:05:18,340 --> 00:05:22,460
+And then I prefer my file paths to be pathlib paths.
+
+85
+00:05:22,460 --> 00:05:27,100
+So pathlib is a somewhat new library in the standard library.
+
+86
+00:05:27,100 --> 00:05:34,020
+It's introduced in Python 3.4, and it makes it so much nicer to work with file paths.
+
+87
+00:05:34,020 --> 00:05:40,760
+So I'll just convert the string that I'm really getting in here to a pathlib.
+
+88
+00:05:40,760 --> 00:05:43,840
+So we have the file path like this.
+
+89
+00:05:43,840 --> 00:05:45,700
+And then I want to, what do I want to do?
+
+90
+00:05:45,700 --> 00:05:47,660
+Well, I want to read my data.
+
+91
+00:05:47,660 --> 00:05:51,540
+So let's just read data from the file path.
+
+92
+00:05:51,540 --> 00:05:57,800
+And when I have the data, I want to create a plot.
+
+93
+00:05:57,800 --> 00:06:01,660
+So this is essentially the script I want.
+
+94
+00:06:01,660 --> 00:06:07,820
+But of course, now we need to add in those two methods, read data and create plots.
+
+95
+00:06:07,820 --> 00:06:10,160
+And those are fairly simple.
+
+96
+00:06:10,160 --> 00:06:12,100
+So I first have my read data.
+
+97
+00:06:12,100 --> 00:06:14,920
+It takes in a file path.
+
+98
+00:06:14,920 --> 00:06:16,480
+And let's see, what do we want this one to do?
+
+99
+00:06:16,480 --> 00:06:26,520
+I want this to read, in this case, actually CSV data and return a pandas data frame.
+
+100
+00:06:26,520 --> 00:06:31,800
+And with the magic of pandas, this is fairly simple.
+
+101
+00:06:31,800 --> 00:06:39,440
+I just need to do return pandas, read CSV of the file path.
+
+102
+00:06:39,440 --> 00:06:42,860
+And now I've gotten another dependency here.
+
+103
+00:06:42,860 --> 00:06:47,420
+So let's import pandas like this.
+
+104
+00:06:47,420 --> 00:06:48,620
+Okay.
+
+105
+00:06:48,620 --> 00:06:51,780
+So now I have my data and they're stored now in the data frame.
+
+106
+00:06:51,780 --> 00:06:57,260
+So the next thing I want to do, if we go back to down here, is that we need to create the
+
+107
+00:06:57,260 --> 00:07:00,680
+plot or something like this.
+
+108
+00:07:00,680 --> 00:07:04,460
+So let's add that.
+
+109
+00:07:04,460 --> 00:07:08,660
+So I'm getting the data and I want to plot them.
+
+110
+00:07:08,660 --> 00:07:11,420
+And again, through magic of pandas, this is fairly simple.
+
+111
+00:07:11,420 --> 00:07:13,820
+We just do data plot.
+
+112
+00:07:13,820 --> 00:07:17,300
+And finally, I want to just make sure that I show the plots.
+
+113
+00:07:17,300 --> 00:07:19,680
+So then I'm using matplotlib.
+
+114
+00:07:19,680 --> 00:07:24,180
+So we need to import that as well.
+
+115
+00:07:24,180 --> 00:07:28,520
+So let's see, matplotlib.
+
+116
+00:07:28,520 --> 00:07:29,520
+Like this.
+
+117
+00:07:29,520 --> 00:07:30,520
+Okay.
+
+118
+00:07:30,520 --> 00:07:33,700
+So now we created a small app.
+
+119
+00:07:33,700 --> 00:07:36,820
+Let's be good citizens and document this one as well.
+
+120
+00:07:36,820 --> 00:07:44,780
+So plot the pandas data frame.
+
+121
+00:07:44,780 --> 00:07:49,820
+And when we have all of this set up, we should be able to run this.
+
+122
+00:07:49,820 --> 00:07:54,700
+So this is, I guess, the exciting part of the talk.
+
+123
+00:07:54,700 --> 00:07:58,380
+So first of all, now we can see that click has actually told me that, okay, I need a
+
+124
+00:07:58,380 --> 00:07:59,840
+file path.
+
+125
+00:07:59,840 --> 00:08:01,860
+So that's cool.
+
+126
+00:08:01,860 --> 00:08:05,620
+And then I should have some data hidden away here.
+
+127
+00:08:05,620 --> 00:08:08,180
+So I have a CSV file with the iris data.
+
+128
+00:08:08,180 --> 00:08:14,260
+It's a fairly well-known data set about some iris flowers.
+
+129
+00:08:14,260 --> 00:08:18,180
+And when we run this, we get our plot up.
+
+130
+00:08:18,180 --> 00:08:22,460
+So so far, we built a fairly simple app.
+
+131
+00:08:22,460 --> 00:08:23,460
+Okay.
+
+132
+00:08:23,460 --> 00:08:26,900
+No plugins, nothing magic really happening here, but just okay.
+
+133
+00:08:26,900 --> 00:08:31,120
+We have something up and running.
+
+134
+00:08:31,120 --> 00:08:33,780
+So let's now expand this.
+
+135
+00:08:33,780 --> 00:08:36,580
+Let's say that, okay, people have, I have a JSON data.
+
+136
+00:08:36,580 --> 00:08:40,180
+I have data in some weird format over there.
+
+137
+00:08:40,180 --> 00:08:48,400
+And of course, if we try this, so let's say that I have the iris data also as a JSON file.
+
+138
+00:08:48,400 --> 00:08:54,600
+And if I plot this, of course, it won't work because I'm expecting to get the CSV file.
+
+139
+00:08:54,600 --> 00:09:00,660
+So I want now to be able to expand the plot wrap so I can support more file formats.
+
+140
+00:09:00,660 --> 00:09:04,900
+I want to be able to support more kinds of plots, not just the line plot I had there,
+
+141
+00:09:04,900 --> 00:09:08,540
+and possibly add in some control on which kind of data I want to plot and all those
+
+142
+00:09:08,540 --> 00:09:10,460
+kind of things.
+
+143
+00:09:10,460 --> 00:09:16,100
+We probably won't be able to do all of these things, but a few things at least fairly quickly.
+
+144
+00:09:16,100 --> 00:09:18,400
+So let's see.
+
+145
+00:09:18,400 --> 00:09:24,580
+Let's see if we can, instead of just reading CSV data here, see that we want to read at
+
+146
+00:09:24,580 --> 00:09:29,860
+least CSV and JSON, all kinds of data would be fun.
+
+147
+00:09:30,140 --> 00:09:34,980
+One way to do this then is that, okay, I need to figure out which format do I have here.
+
+148
+00:09:34,980 --> 00:09:37,820
+So this is one of the neat things with this.
+
+149
+00:09:37,820 --> 00:09:42,180
+With the pathlib is that I can just ask for the file suffix.
+
+150
+00:09:42,180 --> 00:09:45,060
+And that would be .csv or .json.
+
+151
+00:09:45,060 --> 00:09:48,780
+So I'll strip off the dot.
+
+152
+00:09:48,780 --> 00:09:56,380
+And then I can just do if format is CSV.
+
+153
+00:09:56,380 --> 00:09:59,100
+Then we're doing the same kind of thing, right?
+
+154
+00:09:59,340 --> 00:10:07,060
+Well, if our format is JSON, then we should do something else.
+
+155
+00:10:07,060 --> 00:10:12,500
+And in this case, we can just create the JSON dictionary or a dictionary from a JSON, I
+
+156
+00:10:12,500 --> 00:10:17,540
+guess, using the JSON library.
+
+157
+00:10:17,540 --> 00:10:24,860
+And then I just, again, the pathlib, I can just read this in as a text string like this.
+
+158
+00:10:24,860 --> 00:10:28,820
+And then pandas can create a data frame from this.
+
+159
+00:10:30,100 --> 00:10:36,220
+So if we do this and then JSON dict, that should work.
+
+160
+00:10:36,220 --> 00:10:38,660
+Now we need to import JSON.
+
+161
+00:10:40,660 --> 00:10:43,380
+Like this.
+
+162
+00:10:43,380 --> 00:10:50,620
+And I guess, again, we could be nice citizens and erase an error if this goes wrong.
+
+163
+00:10:50,620 --> 00:10:57,620
+Something like format not supported.
+
+164
+00:11:00,100 --> 00:11:01,420
+OK.
+
+165
+00:11:01,420 --> 00:11:05,500
+So now, hopefully my CSV will still work.
+
+166
+00:11:05,500 --> 00:11:08,420
+So I can still read a CSV file.
+
+167
+00:11:08,420 --> 00:11:11,700
+And let's see if I can now read the JSON file as well.
+
+168
+00:11:11,700 --> 00:11:13,020
+Yes.
+
+169
+00:11:13,020 --> 00:11:14,020
+So now we got both of these.
+
+170
+00:11:14,020 --> 00:11:21,300
+And I have, just for fun, we also have a bigger JSON file with more data.
+
+171
+00:11:21,300 --> 00:11:23,980
+That's not really that important for now.
+
+172
+00:11:23,980 --> 00:11:27,100
+But OK.
+
+173
+00:11:27,100 --> 00:11:28,100
+This is fine.
+
+174
+00:11:28,100 --> 00:11:29,100
+I'm doing this right.
+
+175
+00:11:29,100 --> 00:11:35,060
+In the typical application, handling a format might be more work than just the one line
+
+176
+00:11:35,060 --> 00:11:37,180
+reader CSV reader JSON and so on.
+
+177
+00:11:37,180 --> 00:11:39,700
+So this will be terrible to maintain after a while.
+
+178
+00:11:39,700 --> 00:11:43,540
+If I have 10 different formats, maybe each of them takes five, 10 lines to do something
+
+179
+00:11:43,540 --> 00:11:46,100
+with, this doesn't really work.
+
+180
+00:11:46,100 --> 00:11:50,420
+So what we want to do is actually modularize this out so that the read data is not responsible
+
+181
+00:11:50,420 --> 00:11:55,580
+for handling 10 different formats, but that we have one function that kind of handles
+
+182
+00:11:55,580 --> 00:11:57,300
+each format.
+
+183
+00:11:57,300 --> 00:12:04,860
+So if we do that, let's say that we then create ourselves a reader's module that can read
+
+184
+00:12:04,860 --> 00:12:07,980
+data from different formats.
+
+185
+00:12:07,980 --> 00:12:19,220
+And if I now, let's see, I'll just go here and then I copy the code that we have here
+
+186
+00:12:19,220 --> 00:12:29,500
+and throw this into this one and say that, OK, this should now be a function that's responsible
+
+187
+00:12:29,500 --> 00:12:43,100
+for reading a file, read CSV file, and return data frame.
+
+188
+00:12:43,260 --> 00:12:52,700
+And then I have a second function that reads a file path.
+
+189
+00:12:52,700 --> 00:13:00,900
+So this should read JSON file and return data frame.
+
+190
+00:13:00,900 --> 00:13:03,060
+And this is almost like this.
+
+191
+00:13:03,060 --> 00:13:04,460
+Let's see.
+
+192
+00:13:04,460 --> 00:13:10,260
+One small little thing here is that actually I get my JSON function and the JSON library
+
+193
+00:13:10,260 --> 00:13:14,100
+kind of name clash there, so I'll just call the JSON library JSON lib.
+
+194
+00:13:14,100 --> 00:13:20,500
+Do this, and then we need pandas.
+
+195
+00:13:20,500 --> 00:13:21,500
+Like this.
+
+196
+00:13:21,500 --> 00:13:22,500
+OK.
+
+197
+00:13:22,500 --> 00:13:26,260
+So now I moved the functionality out so I have nice small little modular functions that
+
+198
+00:13:26,260 --> 00:13:29,260
+have one single thing that they want to do.
+
+199
+00:13:29,260 --> 00:13:33,500
+How do I actually now call this from a main code?
+
+200
+00:13:33,500 --> 00:13:38,660
+Because now I don't need these things.
+
+201
+00:13:38,660 --> 00:13:44,140
+Instead I want to import my readers, the module I just created, and somehow I now need
+
+202
+00:13:44,140 --> 00:13:46,860
+to call the correct function here.
+
+203
+00:13:46,860 --> 00:13:53,980
+So one way to do this could be that I get a function that tests the name of the format
+
+204
+00:13:53,980 --> 00:13:58,740
+from my readers module.
+
+205
+00:13:58,740 --> 00:14:04,500
+And then I'll just, let's see, I'll call that function.
+
+206
+00:14:04,500 --> 00:14:08,260
+So, let's see.
+
+207
+00:14:08,260 --> 00:14:13,780
+So if we do this, now what I'm doing here is that I'm getting, for instance, a CSV
+
+208
+00:14:13,780 --> 00:14:17,980
+function from the readers module and I'm calling that with the file path.
+
+209
+00:14:17,980 --> 00:14:22,580
+So if we, let's see if that still works.
+
+210
+00:14:22,580 --> 00:14:28,300
+So this now, what this has just done is now actually call the readers JSON function through
+
+211
+00:14:28,300 --> 00:14:31,820
+this getAther thing.
+
+212
+00:14:31,820 --> 00:14:33,240
+So this is definitely better.
+
+213
+00:14:33,240 --> 00:14:35,320
+Now we kind of move the responsibility away.
+
+214
+00:14:35,320 --> 00:14:39,240
+So now the only thing that's a little bit nasty here is that this looks a little bit
+
+215
+00:14:39,240 --> 00:14:41,040
+cryptical for your readers.
+
+216
+00:14:41,040 --> 00:14:45,200
+So if you kind of come into your code and say, okay, what happened here?
+
+217
+00:14:45,200 --> 00:14:50,560
+So what would be lovely to do here is that we would instead in kind of main application
+
+218
+00:14:50,560 --> 00:14:58,940
+be able to write something like readers read CSV from file path.
+
+219
+00:14:58,940 --> 00:15:04,860
+So if I could change this kind of slightly scary getAther thing and so on to something
+
+220
+00:15:04,860 --> 00:15:09,400
+like this, that would be even nicer.
+
+221
+00:15:09,400 --> 00:15:11,140
+So let's see.
+
+222
+00:15:11,140 --> 00:15:14,480
+One way to do this, so what I'm actually doing now is I'm kind of moving a little bit of
+
+223
+00:15:14,480 --> 00:15:20,820
+the, say the scary code that I have in my main application out to the, out to my data
+
+224
+00:15:20,820 --> 00:15:23,800
+file or my readers file here.
+
+225
+00:15:24,060 --> 00:15:32,200
+Then I need to have a function here called read, which takes in the name of formats or
+
+226
+00:15:32,200 --> 00:15:35,940
+I'll actually start calling this now a plugin.
+
+227
+00:15:35,940 --> 00:15:42,340
+And then it will take whatever arguments and keyword arguments that it's given and just
+
+228
+00:15:42,340 --> 00:15:46,980
+pass this on to the function that it wants to call.
+
+229
+00:15:46,980 --> 00:15:51,100
+So here again, I could do the same thing where I do some kind of getAther to do this, but
+
+230
+00:15:51,120 --> 00:15:59,320
+instead what I want to do here is that I'll create myself just a dictionary that's a list
+
+231
+00:15:59,320 --> 00:16:03,480
+of all the reader functions that are available.
+
+232
+00:16:03,480 --> 00:16:13,180
+And then I could look up in this dictionary for a function and then call my arguments
+
+233
+00:16:13,180 --> 00:16:16,400
+and keyword arguments.
+
+234
+00:16:16,420 --> 00:16:25,340
+And if we'll go back to actually do a slight amount of error handling, we can do something
+
+235
+00:16:25,340 --> 00:16:27,180
+like this.
+
+236
+00:16:27,180 --> 00:16:34,220
+If it's there and if it's not, we should raise a type error.
+
+237
+00:16:37,420 --> 00:16:43,780
+Saying something like, let's see, plugin not, say not available.
+
+238
+00:16:44,720 --> 00:16:50,560
+And let's see, finally this should actually return.
+
+239
+00:16:50,560 --> 00:16:57,200
+So now I have something that can call these functions down here, which is kind of what
+
+240
+00:16:57,200 --> 00:17:02,240
+I wanted to do over here.
+
+241
+00:17:02,240 --> 00:17:05,400
+What's missing now is actually populating the dictionary.
+
+242
+00:17:05,400 --> 00:17:09,880
+So if you see here now, the reader's dictionary is empty and I never do anything to actually
+
+243
+00:17:09,880 --> 00:17:11,720
+put the functions in there.
+
+244
+00:17:11,720 --> 00:17:16,500
+So now I need to just populate it and that's where we come back to our decorators that
+
+245
+00:17:16,500 --> 00:17:18,920
+I mentioned earlier.
+
+246
+00:17:18,920 --> 00:17:25,120
+So I said a decorator is just a function that takes a function as an argument and returns
+
+247
+00:17:25,120 --> 00:17:27,220
+a function.
+
+248
+00:17:27,220 --> 00:17:31,980
+So what I want to do now is just create the decorator that just registers the plugins.
+
+249
+00:17:31,980 --> 00:17:37,580
+So I want to populate my reader's dictionary and I'll do that by picking out the name of
+
+250
+00:17:37,580 --> 00:17:41,500
+each function and having that point to the function itself.
+
+251
+00:17:41,500 --> 00:17:45,340
+And then as a decorator it should return a function, so I just return the same function
+
+252
+00:17:45,340 --> 00:17:48,660
+without doing anything to it.
+
+253
+00:17:48,660 --> 00:17:54,460
+And what this allows me to do now is just say that I want to register the CSV and the
+
+254
+00:17:54,460 --> 00:18:00,020
+JSON functions here as plugins.
+
+255
+00:18:00,020 --> 00:18:06,340
+So when this code now is imported, what happens here is that the register function is called
+
+256
+00:18:07,180 --> 00:18:13,860
+and puts the CSV into the reader's dictionary with the link to the function itself and similarly
+
+257
+00:18:13,860 --> 00:18:16,180
+for JSON.
+
+258
+00:18:16,180 --> 00:18:20,020
+So let's see, so now we have code here that says okay pick out the format and then call
+
+259
+00:18:20,020 --> 00:18:24,900
+the right reader and let's see if this works.
+
+260
+00:18:24,900 --> 00:18:29,700
+Else raise, yeah there's a colon missing there.
+
+261
+00:18:29,700 --> 00:18:34,900
+There we go.
+
+262
+00:18:35,460 --> 00:18:38,500
+And there's even more stuff happening.
+
+263
+00:18:38,500 --> 00:18:39,900
+Data is not returned.
+
+264
+00:18:39,900 --> 00:18:42,900
+Let's see where did we not return?
+
+265
+00:18:42,900 --> 00:18:45,900
+Ah yeah, sorry in the main.
+
+266
+00:18:45,900 --> 00:18:47,900
+Ah you're correct.
+
+267
+00:18:47,900 --> 00:18:48,900
+There we go.
+
+268
+00:18:48,900 --> 00:18:49,900
+Thank you so much.
+
+269
+00:18:49,900 --> 00:18:53,100
+There we go.
+
+270
+00:18:53,100 --> 00:18:55,860
+Now we have it.
+
+271
+00:18:55,860 --> 00:19:00,060
+So let's see what we actually have done here now.
+
+272
+00:19:00,060 --> 00:19:05,820
+So now I kind of moved the complexity that I started to grow as I wanted to support more
+
+273
+00:19:05,820 --> 00:19:08,140
+formats out of my kind of main file.
+
+274
+00:19:08,140 --> 00:19:10,220
+I have my main structure going.
+
+275
+00:19:10,220 --> 00:19:19,500
+It's moved over to my module here where I have each little function doing just one single
+
+276
+00:19:19,500 --> 00:19:20,500
+thing.
+
+277
+00:19:20,500 --> 00:19:29,100
+So now we have a lot of modularized code so it's much easier to handle.
+
+278
+00:19:29,140 --> 00:19:33,900
+I could now, let's see if we go back to what we're talking about, I want to also support
+
+279
+00:19:33,900 --> 00:19:36,140
+more kinds of plots.
+
+280
+00:19:36,140 --> 00:19:42,140
+I could then add a plotter functionality that kind of works the same way and what I would
+
+281
+00:19:42,140 --> 00:19:48,180
+end up doing is typically that okay these things on top here I could just copy these
+
+282
+00:19:48,180 --> 00:19:55,180
+guys over into say a plotters module.
+
+283
+00:19:55,260 --> 00:20:01,780
+Let's see here.
+
+284
+00:20:01,780 --> 00:20:10,500
+So if I have a plotters module like this then I could copy this thing into here and probably
+
+285
+00:20:10,500 --> 00:20:17,020
+want to change the names to something that's plotters.
+
+286
+00:20:17,020 --> 00:20:21,740
+There we go.
+
+287
+00:20:21,740 --> 00:20:23,020
+And then I could do the same for the plots.
+
+288
+00:20:23,020 --> 00:20:27,620
+So I have line plots, I would have scatter plots, all kind of plots here.
+
+289
+00:20:27,620 --> 00:20:32,580
+Now this is a small code small, right?
+
+290
+00:20:32,580 --> 00:20:37,180
+I have a fair bit of setup that I don't want to copy around and things like this.
+
+291
+00:20:37,180 --> 00:20:43,180
+So what we have instead is a small little package.
+
+292
+00:20:43,180 --> 00:20:49,420
+It's called PyPlugs that is available on PyPI which is a simple decorator based plugin architecture
+
+293
+00:20:49,420 --> 00:20:50,980
+for Python.
+
+294
+00:20:51,020 --> 00:20:55,260
+And it essentially works with things like what you've seen here.
+
+295
+00:20:55,260 --> 00:20:59,900
+You can create simple plugin packages.
+
+296
+00:20:59,900 --> 00:21:03,900
+Instead of stuffing everything into the same file like I did here, what I typically do
+
+297
+00:21:03,900 --> 00:21:10,740
+is actually move it up a level so that I have a plugin package, so full directory with readers.
+
+298
+00:21:10,740 --> 00:21:17,740
+So with this kind of setup, let me actually show it to you.
+
+299
+00:21:17,980 --> 00:21:20,540
+PyPlugs, there we go.
+
+300
+00:21:20,540 --> 00:21:27,900
+So here is an implementation of the same thing but using the PyPlugs package.
+
+301
+00:21:27,900 --> 00:21:31,900
+So in this case what I've done is that I've actually taken each of the readers and split
+
+302
+00:21:31,900 --> 00:21:34,700
+them out into their own files.
+
+303
+00:21:34,700 --> 00:21:40,540
+So then I create a plugin package that I call readers and plugin package called plotters.
+
+304
+00:21:40,540 --> 00:21:48,340
+And then the plugins is typically the whole module but with a called function in between.
+
+305
+00:21:48,340 --> 00:21:52,180
+And then it's possible to also add in several functions if you want.
+
+306
+00:21:52,180 --> 00:21:57,140
+But typically the way it's looked at is with packages and then plugins really.
+
+307
+00:21:57,140 --> 00:22:02,580
+And the code, so let me show you that.
+
+308
+00:22:02,580 --> 00:22:05,820
+So if we first look at the plotter.py.
+
+309
+00:22:05,820 --> 00:22:14,060
+So this is the simple plotting application and it's exactly the same as what we have done.
+
+310
+00:22:14,060 --> 00:22:16,060
+So you can see here I import readers.
+
+311
+00:22:16,060 --> 00:22:18,140
+Readers is now a package, not just a module.
+
+312
+00:22:18,140 --> 00:22:25,780
+And then I call readers read with the reader I want and then it runs off.
+
+313
+00:22:25,780 --> 00:22:29,500
+How does the CSV thing look?
+
+314
+00:22:29,500 --> 00:22:35,020
+So as you can see this is now very small.
+
+315
+00:22:35,020 --> 00:22:39,140
+The only thing you need to do is import pyplugs and use the register decorator.
+
+316
+00:22:39,140 --> 00:22:42,500
+And this does essentially the same thing as the register thing we wrote.
+
+317
+00:22:42,500 --> 00:22:46,820
+It adds a little bit more bookkeeping so we can also pick out doc strings and things like
+
+318
+00:22:46,820 --> 00:22:50,180
+this, have those easily available.
+
+319
+00:22:50,180 --> 00:23:00,980
+And then in the readers dundra init file, so this is the one that defines the package.
+
+320
+00:23:00,980 --> 00:23:07,140
+And then when I have the read function inside of there, that's just a call function, so
+
+321
+00:23:07,140 --> 00:23:08,380
+call a plugin.
+
+322
+00:23:08,380 --> 00:23:11,700
+So you can see there's a call factory that just creates call functions.
+
+323
+00:23:11,700 --> 00:23:18,540
+So for readers it's nice to call it read, makes it more humanized I guess.
+
+324
+00:23:18,540 --> 00:23:21,980
+The names factory would just list the available names that you have.
+
+325
+00:23:21,980 --> 00:23:25,140
+There's a doc factory and things like this.
+
+326
+00:23:25,140 --> 00:23:27,020
+Okay.
+
+327
+00:23:27,180 --> 00:23:28,980
+Okay.
+
+328
+00:23:28,980 --> 00:23:34,540
+So with plugins like this, I've been using it now for several years in different projects
+
+329
+00:23:34,540 --> 00:23:36,660
+and it works really nicely.
+
+330
+00:23:36,660 --> 00:23:39,340
+We used it for readers for different file formats.
+
+331
+00:23:39,340 --> 00:23:43,000
+So one thing you kind of need to be careful with there is that you have a well-defined
+
+332
+00:23:43,000 --> 00:23:44,740
+interface into your readers, right?
+
+333
+00:23:44,740 --> 00:23:51,460
+So in this case we had readers should take in a file path and return a data frame, for
+
+334
+00:23:51,460 --> 00:23:52,460
+instance.
+
+335
+00:23:52,460 --> 00:23:55,500
+If you don't have the same interface for all of them it will be a hassle to keep track
+
+336
+00:23:55,500 --> 00:23:56,500
+of.
+
+337
+00:23:56,500 --> 00:24:01,420
+So if you have sort of like equal things that you want to call like this, this makes a lot
+
+338
+00:24:01,420 --> 00:24:02,420
+of sense.
+
+339
+00:24:02,420 --> 00:24:05,100
+We used it for different models for flexible calculations.
+
+340
+00:24:05,100 --> 00:24:09,660
+I can then in my config file say that I want to use this or that, say, machine learning
+
+341
+00:24:09,660 --> 00:24:12,340
+library to call my models or things like this.
+
+342
+00:24:12,340 --> 00:24:17,540
+Filters, writers for storing data in different formats, notifiers for sending notifications
+
+343
+00:24:17,540 --> 00:24:22,980
+to different places, and also for components just for building my GUI so I can kind of
+
+344
+00:24:22,980 --> 00:24:26,140
+say okay, for this use case I want to have these kind of buttons.
+
+345
+00:24:26,140 --> 00:24:29,300
+This drop down and things like this.
+
+346
+00:24:29,300 --> 00:24:30,700
+Okay.
+
+347
+00:24:30,700 --> 00:24:32,460
+So let's finish up.
+
+348
+00:24:32,460 --> 00:24:35,380
+Thank you so much for hanging out with me.
+
+349
+00:24:35,380 --> 00:24:43,460
+And if you want to know more, you find me at GA Gjellet at most places.
+
+350
+00:24:43,460 --> 00:24:45,900
+The code here I'll put up on GitHub.
+
+351
+00:24:45,900 --> 00:24:48,820
+Pyplugs is, as I said, on PyPI.
+
+352
+00:24:48,820 --> 00:24:54,260
+And I write for real Python so you can find more articles there, including some that at
+
+353
+00:24:54,300 --> 00:24:56,980
+least mention these kind of plugins.
+
+354
+00:24:56,980 --> 00:24:59,980
+So thank you very much.
+
+355
+00:24:59,980 --> 00:25:11,700
+If anyone has any questions, please come up to the mic and please remember to put your
+
+356
+00:25:11,700 --> 00:25:19,020
+question in the form of a question.
+
+357
+00:25:19,020 --> 00:25:21,980
+So maybe I missed something.
+
+358
+00:25:21,980 --> 00:25:31,460
+So in the Pyplugs readers module, or it was the readers under init module, I think, I
+
+359
+00:25:31,460 --> 00:25:36,420
+didn't see you importing any of the submodules there.
+
+360
+00:25:36,420 --> 00:25:40,780
+So it just imports it or, because you seem to be kind of flipping the import.
+
+361
+00:25:40,780 --> 00:25:43,940
+Does it just dynamically import when it needs to?
+
+362
+00:25:43,940 --> 00:25:45,860
+How does that importing process work?
+
+363
+00:25:45,860 --> 00:25:46,860
+Exactly.
+
+364
+00:25:46,900 --> 00:25:48,980
+So you can see it just imports Pyplugs.
+
+365
+00:25:48,980 --> 00:25:54,300
+And then the crucial thing is actually that it sends off a reference to this directory
+
+366
+00:25:54,300 --> 00:26:01,300
+essentially with the package reference there to the Pyplugs thing.
+
+367
+00:26:01,300 --> 00:26:06,700
+So when things are actually called, it will go, it knows that because, well, I have the
+
+368
+00:26:06,700 --> 00:26:10,420
+package and I'm looking for a file, a module inside of this package.
+
+369
+00:26:10,420 --> 00:26:13,340
+And then it will dynamically import that package.
+
+370
+00:26:13,380 --> 00:26:17,100
+And then what, for instance, this names factory, which is just listing everything, it will
+
+371
+00:26:17,100 --> 00:26:21,780
+just go in the folder and actually import all the files it sees there.
+
+372
+00:26:21,780 --> 00:26:26,700
+So that will be a fairly slow process, possibly if you have lots of sub imports.
+
+373
+00:26:26,700 --> 00:26:29,340
+But the call just goes directly to the module file.
+
+374
+00:26:29,340 --> 00:26:34,540
+And that's also one of the, an extra bonus, I guess, with moving everything up to the
+
+375
+00:26:34,540 --> 00:26:38,700
+module level instead of the function level, is that you can go directly to the function
+
+376
+00:26:38,700 --> 00:26:39,700
+you need.
+
+377
+00:26:39,700 --> 00:26:40,700
+Thank you.
+
+378
+00:26:40,700 --> 00:26:41,700
+Yeah.
+
+379
+00:26:41,700 --> 00:26:42,700
+Thank you for your talk.
+
+380
+00:26:42,740 --> 00:26:48,740
+If you were to allow external plugins in your application, external as in I can write a
+
+381
+00:26:48,740 --> 00:26:55,020
+plugin for different types of files and plug it into your application, how would you do
+
+382
+00:26:55,020 --> 00:26:58,300
+that with Pyplugs?
+
+383
+00:26:58,300 --> 00:27:03,740
+So essentially what you need to expose is the register thing.
+
+384
+00:27:03,740 --> 00:27:14,500
+So what I've done, I think, is that you would typically just say that, have a directory
+
+385
+00:27:14,500 --> 00:27:19,780
+for custom plugins and then have them just import the Pyplugs register there and then
+
+386
+00:27:19,780 --> 00:27:25,020
+it will, you can set it up so that it picks up that package as well, essentially.
+
+387
+00:27:25,020 --> 00:27:29,820
+And there is a very nice example of an application called Glue for visualization.
+
+388
+00:27:29,820 --> 00:27:34,060
+It's part of the Anaconda distribution that does exactly this thing.
+
+389
+00:27:34,060 --> 00:27:37,460
+It doesn't use Pyplugs, but it uses essentially the same kind of system in the background
+
+390
+00:27:37,460 --> 00:27:41,020
+where you can add your own data readers.
+
+391
+00:27:41,020 --> 00:27:43,460
+Hi.
+
+392
+00:27:43,460 --> 00:27:50,420
+How do you feel about Setup Tools entry points?
+
+393
+00:27:50,420 --> 00:27:56,380
+We have had these for years and they work pretty well for setting up a plugin system.
+
+394
+00:27:56,380 --> 00:27:57,380
+Right.
+
+395
+00:27:57,580 --> 00:28:04,900
+No, there are many different plugin systems and I haven't used Setup Tools entry points
+
+396
+00:28:04,900 --> 00:28:08,340
+outside of setting up entry points essentially.
+
+397
+00:28:08,340 --> 00:28:12,100
+So I don't know if that could kind of do some of these things.
+
+398
+00:28:12,100 --> 00:28:13,580
+I think this is at a different level.
+
+399
+00:28:13,580 --> 00:28:18,180
+The thing is with Setup Tools entry points you don't actually have to explicitly import
+
+400
+00:28:18,180 --> 00:28:19,180
+your plugins.
+
+401
+00:28:19,180 --> 00:28:21,820
+They can be auto discovered.
+
+402
+00:28:21,820 --> 00:28:22,820
+Right.
+
+403
+00:28:22,820 --> 00:28:31,060
+Yeah, I don't know enough about that to say much.
+
+404
+00:28:31,060 --> 00:28:35,820
+You mentioned Pyplugs works great when you have a consistent method signature for all
+
+405
+00:28:35,820 --> 00:28:37,460
+the different plugins.
+
+406
+00:28:37,460 --> 00:28:43,020
+Many real world examples that may not be the case, like the CSV reader may take in the
+
+407
+00:28:43,020 --> 00:28:49,020
+delimiter how strings are escaped, where JSON, those parameters make no sense.
+
+408
+00:28:49,220 --> 00:28:54,940
+Is Pyplugs not really extended that case or how would you go about that?
+
+409
+00:28:54,940 --> 00:28:56,540
+So let's see if we have this here.
+
+410
+00:28:56,540 --> 00:29:01,140
+So if we, yeah, let's have a look at the readers.py.
+
+411
+00:29:01,140 --> 00:29:06,340
+So what really happens in the read case is that it just passes through whatever arguments
+
+412
+00:29:06,340 --> 00:29:07,340
+it has.
+
+413
+00:29:07,340 --> 00:29:11,180
+So if you on the outside know that, okay, for CSV I have this and that argument, you
+
+414
+00:29:11,180 --> 00:29:13,660
+can just pass it through and it should work.
+
+415
+00:29:13,660 --> 00:29:15,940
+So it's just that you need to keep track of it on your side.
+
+416
+00:29:15,940 --> 00:29:18,740
+You can't just switch between the formats as easily.
+
+417
+00:29:19,460 --> 00:29:23,420
+So like in a CLI you might have like plugin args is another parameter and it can take
+
+418
+00:29:23,420 --> 00:29:24,420
+anything.
+
+419
+00:29:24,420 --> 00:29:25,420
+Exactly.
+
+420
+00:29:25,420 --> 00:29:28,420
+So you can kind of pass them on.
+
+421
+00:29:28,420 --> 00:29:29,420
+Okay.
+
+422
+00:29:29,420 --> 00:29:30,420
+Thank you so much.
+

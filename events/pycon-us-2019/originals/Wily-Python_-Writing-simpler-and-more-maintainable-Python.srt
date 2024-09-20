@@ -1,0 +1,1152 @@
+1
+00:00:00,000 --> 00:00:07,080
+Hello, everybody. The next talk is Wild Python, writing simpler and more maintainable Python
+
+2
+00:00:07,080 --> 00:00:11,080
+by Anthony Shaw.
+
+3
+00:00:11,080 --> 00:00:23,080
+Hi, everybody. My name is Anthony Shaw, and I'm giving a talk about simplicity and trying
+
+4
+00:00:23,080 --> 00:00:29,840
+to write more simple Python. This is my first time speaking at PyCon. I'm super nervous,
+
+5
+00:00:29,840 --> 00:00:35,000
+and I was researching some tips about public speaking for this kind of event, and I found
+
+6
+00:00:35,000 --> 00:00:41,640
+three rules. Rule number one was to have frequent pauses. Rule number two was to never start
+
+7
+00:00:41,640 --> 00:00:48,240
+with an apology. And then rule number three was to never thank people for coming to your
+
+8
+00:00:48,240 --> 00:00:54,200
+talk and just assume that they're here to listen. So thank you for coming. We've got
+
+9
+00:00:54,360 --> 00:01:00,400
+a lot to get through, so I'm going to go quickly, so I apologize for that. And we're going to
+
+10
+00:01:00,400 --> 00:01:06,920
+talk about code complexity today. So what does that mean? How would you inspect if your
+
+11
+00:01:06,920 --> 00:01:13,520
+code is complicated? And then we're going to look at not really just how is your code
+
+12
+00:01:13,520 --> 00:01:18,800
+complicated, but how do you actually measure that? Because everybody thinks that they write
+
+13
+00:01:18,800 --> 00:01:23,080
+simple code because it makes sense to you, but it's more about communicating with other
+
+14
+00:01:23,080 --> 00:01:27,280
+people and sharing your code and your ideas with others. So we're going to talk about
+
+15
+00:01:27,280 --> 00:01:33,040
+code metrics, and we can then talk about how do you actually simplify the code once you
+
+16
+00:01:33,040 --> 00:01:39,000
+realize whether or not it's complicated. And the title of the talk is about Wiley Python,
+
+17
+00:01:39,000 --> 00:01:42,880
+so I'm going to introduce a tool called Wiley, which I wrote, which basically helps you manage
+
+18
+00:01:42,880 --> 00:01:48,560
+this process of understanding whether your code is complicated or not, by what measure,
+
+19
+00:01:48,560 --> 00:01:54,400
+and how do you simplify it, and then basically doing that in a loop. I know there's probably
+
+20
+00:01:54,400 --> 00:01:59,400
+quite a mixed audience here today, so in terms of the complexity of the talk itself, this
+
+21
+00:01:59,400 --> 00:02:05,000
+is got meta, I see the first section is really kind of a beginner level, and then the second
+
+22
+00:02:05,000 --> 00:02:09,400
+part is intermediate to advanced. If anyone has any questions, please come and speak to
+
+23
+00:02:09,400 --> 00:02:15,440
+me afterwards, and if we get time later in the talk, we can open it up for Q&A. And also
+
+24
+00:02:15,440 --> 00:02:20,880
+I've written an extensive article on this topic on realpython.com as well, which takes
+
+25
+00:02:20,880 --> 00:02:26,920
+about an hour and a half to read, so it's probably one of my shorter articles. So yeah,
+
+26
+00:02:26,920 --> 00:02:33,920
+I encourage you to read that because there's a lot more detail in that post. Okay, so I
+
+27
+00:02:33,920 --> 00:02:39,400
+now need to convince everyone that simple code is good. So why should you care if your
+
+28
+00:02:39,680 --> 00:02:46,080
+code is complicated or simple? So remember that your code is written not just for computers,
+
+29
+00:02:46,080 --> 00:02:51,160
+it's written for humans, and Python especially is almost written in a language that's easy
+
+30
+00:02:51,160 --> 00:02:57,280
+for people to understand. And when you write an application in code, you're leaving instructions
+
+31
+00:02:57,280 --> 00:03:02,840
+for the computer, but also for your fellow developers. So not just in code comments,
+
+32
+00:03:02,840 --> 00:03:07,200
+but in the actual code itself, in the way you name your functions, your classes, your
+
+33
+00:03:07,520 --> 00:03:12,260
+the way you structure it, it should be a set of instructions for people. So it should be
+
+34
+00:03:12,260 --> 00:03:16,600
+clear that what you're trying to achieve and what you're trying to do with the code, which
+
+35
+00:03:16,600 --> 00:03:21,920
+is why you want simpler code rather than more complex code. Also code is a living thing,
+
+36
+00:03:21,920 --> 00:03:28,580
+it changes often. So if your code is complicated to understand, when people want to make changes
+
+37
+00:03:28,580 --> 00:03:33,760
+to it, they're more likely to misunderstand what it was you were trying to do and introduce
+
+38
+00:03:33,760 --> 00:03:38,240
+it to other people. So you want simple code because it's easier to maintain the code,
+
+39
+00:03:38,240 --> 00:03:44,280
+it's easier to adapt the code, and it's easier to add more functionality. And then lastly,
+
+40
+00:03:44,280 --> 00:03:50,200
+complicated code is hard to test. And testing is good. Hopefully we can all agree on that.
+
+41
+00:03:50,200 --> 00:03:54,760
+So you want simple code so that you can test it, so that people can understand it, and
+
+42
+00:03:54,760 --> 00:04:01,760
+so that you can adapt it over time. So how do you measure if code is complicated? So
+
+43
+00:04:01,760 --> 00:04:07,640
+this really, really simple sample uses the crudest measure for measuring the size of
+
+44
+00:04:07,640 --> 00:04:12,840
+code, and that is the lines of code. It's really easy to calculate the number of lines
+
+45
+00:04:12,840 --> 00:04:18,680
+of code we have in this application. And in theory, you want fewer code, so you'd want
+
+46
+00:04:18,680 --> 00:04:25,680
+fewer lines of code. But I can represent that same code example in fewer lines of code,
+
+47
+00:04:26,440 --> 00:04:33,440
+but there's one massive issue with this example. So I've used a few funky Python syntax here.
+
+48
+00:04:34,240 --> 00:04:39,080
+It basically does exactly the same as this, but it's on three lines. So there's less
+
+49
+00:04:39,080 --> 00:04:46,080
+code, so that should be a good thing. But as Tim Peters famously said, readability counts.
+
+50
+00:04:48,480 --> 00:04:53,240
+So lines of code is not really a measure of complexity, but more about volume. You're
+
+51
+00:04:53,280 --> 00:04:57,560
+really looking at how big the application is, and encouraging people to write less code
+
+52
+00:04:57,560 --> 00:05:01,640
+can actually encourage the wrong behavior, because people end up condensing stuff down
+
+53
+00:05:01,640 --> 00:05:07,080
+to a point where it's less readable. So lines of code doesn't really talk about complexity,
+
+54
+00:05:07,080 --> 00:05:12,680
+it's just about volume. And there are other measures you can use for complexity. One of
+
+55
+00:05:12,680 --> 00:05:18,680
+those measures is called cyclomatic complexity, and I want to explain it in terms of ordering
+
+56
+00:05:18,680 --> 00:05:24,480
+a burger at McDonald's at a drive-thru. So you start off with one decision, which is
+
+57
+00:05:24,480 --> 00:05:28,920
+what do you actually want to eat? So let's say you want to eat a Big Mac, and there are
+
+58
+00:05:28,920 --> 00:05:33,440
+other burgers available from other restaurants. So you start off with a cyclomatic complexity
+
+59
+00:05:33,440 --> 00:05:39,060
+of one, you've made one decision. They then ask you, do you want to make that a meal,
+
+60
+00:05:39,060 --> 00:05:44,200
+so that increases the complexity by one. They then say, do you want what size do you want?
+
+61
+00:05:44,200 --> 00:05:48,380
+This is another one. What drink would you like? And then if you want diet or regular
+
+62
+00:05:48,380 --> 00:05:55,380
+coke with that. So the cyclomatic complexity of ordering a Big Mac from Maccas is five.
+
+63
+00:05:56,800 --> 00:06:01,520
+So if you imagine you went to McDonald's and they asked you 16 different questions, at
+
+64
+00:06:01,520 --> 00:06:07,640
+which point would you say it got really complicated? So cyclomatic complexity is like this, because
+
+65
+00:06:07,640 --> 00:06:12,720
+when you're trying to read a piece of code, you've got to understand all the decisions
+
+66
+00:06:12,760 --> 00:06:19,760
+and how they get made. And I picked this code example. I apologize if it's a bit small.
+
+67
+00:06:19,760 --> 00:06:25,200
+This is actually from the Python standard library in a module called locale.py. So
+
+68
+00:06:25,200 --> 00:06:31,720
+every time in Python there's an if, an else if, a for, try statement, it counts as increasing
+
+69
+00:06:31,720 --> 00:06:35,720
+the cyclomatic complexity by one, because that's the decision that's got to be made
+
+70
+00:06:35,720 --> 00:06:40,520
+in code. So why does that have to do with complexity? Well, when you read this code
+
+71
+00:06:40,520 --> 00:06:46,720
+sample, and if I ask you to articulate what this does, you're not just reading down a
+
+72
+00:06:46,720 --> 00:06:51,640
+set of statements. You're actually looking at each if block and thinking, okay, well
+
+73
+00:06:51,640 --> 00:06:56,720
+what would that variable be if it's this and that happens, if it's this and that happens,
+
+74
+00:06:56,720 --> 00:07:02,440
+and you've got to store in your head basically like your own value stack and start to evaluate
+
+75
+00:07:02,440 --> 00:07:07,800
+the code. Whereas if it's just a series of flat statements, you can see one by one what
+
+76
+00:07:07,800 --> 00:07:14,800
+that code does. So this is a complicated piece of code. It has a high cyclomatic complexity.
+
+77
+00:07:14,820 --> 00:07:21,240
+It does take a bit of time to read and understand, but there's also, I think, an easier way to
+
+78
+00:07:21,240 --> 00:07:28,240
+see cyclomatic complexity. If you turn the code on its side and then get a pen and draw
+
+79
+00:07:28,480 --> 00:07:35,480
+a line around the white space, you'll see this. So I'd say that instead of just trying
+
+80
+00:07:35,480 --> 00:07:40,480
+to calculate cyclomatic complexity, if your code looks like a mountain range when you
+
+81
+00:07:40,480 --> 00:07:46,640
+turn it on its side, then it has a high complexity. And also another quote from Tim Peters, flat
+
+82
+00:07:46,640 --> 00:07:53,420
+is better than nested. So flatter code is easier to understand, is easier to process,
+
+83
+00:07:53,420 --> 00:07:59,080
+and this example has a high complexity. So you could walk into this and think, okay,
+
+84
+00:07:59,080 --> 00:08:04,920
+well let's just make it flatter and simpler. But I think you're missing one principle,
+
+85
+00:08:04,960 --> 00:08:10,720
+and that is there's actually wisdom in complicated code, and I will talk about this as well.
+
+86
+00:08:10,720 --> 00:08:17,720
+So most IDEs have a git blame tool. If you've ever used git blame, I've turned on git blame
+
+87
+00:08:17,840 --> 00:08:23,840
+on the same module, but just a few more lines down. And you can actually see here who and
+
+88
+00:08:23,840 --> 00:08:30,480
+when and why each piece of code was changed. And we've got changes from 19 years ago, 15,
+
+89
+00:08:30,800 --> 00:08:37,800
+12, 6. Every time somebody has to fix an issue, fix a bug, add an edge case, they go in and
+
+90
+00:08:37,800 --> 00:08:44,040
+make that change. So that's normally in the form of an if statement or a small change
+
+91
+00:08:44,040 --> 00:08:48,720
+which therefore increases the complexity of the code. So just trying to charge in and
+
+92
+00:08:48,720 --> 00:08:53,720
+say let's just make this simpler, you actually need to understand all the reasons why the
+
+93
+00:08:53,760 --> 00:09:00,760
+code is like the way it is. The other thing you might miss is if you don't introduce this,
+
+94
+00:09:00,880 --> 00:09:07,880
+you could reintroduce bugs which have already been resolved, which could upset users. So
+
+95
+00:09:08,240 --> 00:09:15,240
+to simplify what I've just said, when you start off with a new application, you typically
+
+96
+00:09:15,800 --> 00:09:22,720
+have a little amount of functionality and a few users. So you should have a little amount
+
+97
+00:09:22,720 --> 00:09:29,720
+of code and a small amount of cyclomatic complexity. As you add more features, you
+
+98
+00:09:29,760 --> 00:09:36,760
+tend to write more code. So the lines of code measure will go up. As you have more users,
+
+99
+00:09:38,280 --> 00:09:43,160
+you have to support more edge cases, more platforms, more scenarios, and you tend to
+
+100
+00:09:43,160 --> 00:09:48,280
+increase cyclomatic complexity of the code as well. And then a double whammy is when
+
+101
+00:09:48,320 --> 00:09:54,000
+you've got a lot of users and a lot of functionality. So C Python itself is a good example. It's
+
+102
+00:09:54,000 --> 00:09:58,840
+used by millions of people. It has a lot of users. It's got a lot of functionality. So
+
+103
+00:09:58,840 --> 00:10:04,920
+it has a lot of complexity. So if lines of code and cyclomatic complexity can't really
+
+104
+00:10:04,920 --> 00:10:11,920
+be used as measures for big applications, what can you use instead? So I'm going to
+
+105
+00:10:12,480 --> 00:10:19,480
+talk about Halsted metrics. I do warn that there's a bit of math in this section. So
+
+106
+00:10:19,480 --> 00:10:24,920
+if you feel like the math is a bit too complicated or outside of your comfort zone, don't worry.
+
+107
+00:10:24,920 --> 00:10:29,880
+There are tools that can calculate this stuff for you. This metric has actually been around
+
+108
+00:10:29,880 --> 00:10:36,880
+since 1977, predating Python. And the research behind it as well is very old by this point.
+
+109
+00:10:37,440 --> 00:10:44,440
+How many years is that? 50 years. So the research behind this is actually 50 years old, just
+
+110
+00:10:44,440 --> 00:10:51,440
+over 50. Okay, so let's introduce two things. There's a value called operands. Operand is
+
+111
+00:10:54,680 --> 00:10:59,360
+the sum of the values you've used and the sum of the variables you've used. So the number
+
+112
+00:10:59,360 --> 00:11:05,920
+one or string constant would count as a value, and a name would count as a variable. So if
+
+113
+00:11:05,920 --> 00:11:11,560
+you add all of those up, you get operands. If you add up the amount of built-in syntax
+
+114
+00:11:11,560 --> 00:11:18,560
+you've used in the application, that's called operators. If you take the sum of the operators
+
+115
+00:11:19,320 --> 00:11:25,120
+and the sum of the operands you've used, you end up with a measure called length. And if
+
+116
+00:11:25,120 --> 00:11:30,440
+you take the amount of unique operators you've used and unique operands you've used, you
+
+117
+00:11:30,440 --> 00:11:36,200
+end up with a measure called vocabulary. So this probably sounds a bit complicated compared
+
+118
+00:11:36,200 --> 00:11:41,560
+to lines of code, which is quite an easy way to measure things. But there's reasons behind
+
+119
+00:11:41,560 --> 00:11:47,980
+it. So if anyone's familiar with the abstract syntax tree, it's basically what happens when
+
+120
+00:11:47,980 --> 00:11:53,160
+your code is compiled, is turned into a tree, and then it's interpreted as a tree. So this
+
+121
+00:11:53,160 --> 00:11:57,520
+simple code example I've got here with a function with three statements. I'm going to assign
+
+122
+00:11:57,600 --> 00:12:02,760
+the value one to a variable called a. I'm going to increment that by one and assign
+
+123
+00:12:02,760 --> 00:12:08,600
+it to a variable called b, and then I'm going to return b. So in the tree you've got the
+
+124
+00:12:08,600 --> 00:12:13,560
+two assignments, and then you've got the return statement. In the first assignment you've
+
+125
+00:12:13,560 --> 00:12:20,560
+got the name, which is the variable a, and the number, which is the number one. So everything
+
+126
+00:12:20,560 --> 00:12:25,040
+in green would be added up, and then everything in yellow would be added up to give you operators
+
+127
+00:12:25,040 --> 00:12:30,840
+and operands. And then this is where it gets slightly more complicated, unfortunately.
+
+128
+00:12:30,840 --> 00:12:36,200
+We've then got volume and difficulty. So you multiply the length by a logarithm of the
+
+129
+00:12:36,200 --> 00:12:42,080
+vocabulary to get volume, which is better than lines of code. And then this one had
+
+130
+00:12:42,080 --> 00:12:48,000
+me stumped for a while, but basically it more or less tries to calculate how you've reused
+
+131
+00:12:48,000 --> 00:12:52,160
+code and how much code you've used to achieve something, and then gives you that as a variable
+
+132
+00:12:52,160 --> 00:12:57,440
+called difficulty. And then lastly, you get effort, which is a multiple of both of those
+
+133
+00:12:57,440 --> 00:13:07,360
+two things. Okay. So all of that's very theoretical, but basically there are better ways of measuring
+
+134
+00:13:07,360 --> 00:13:11,760
+the amount of code in an application and the amount of variables you've used and the amount
+
+135
+00:13:11,760 --> 00:13:15,240
+of syntax you've used. So all these things are really just basically a way of measuring
+
+136
+00:13:15,240 --> 00:13:20,680
+the amount of code you have. There's actually a better measure than this. Don't worry too
+
+137
+00:13:20,720 --> 00:13:24,480
+much about the equation. There's different versions of this equation, but this is called
+
+138
+00:13:24,480 --> 00:13:30,480
+the maintainability index. And the output is just a number from zero to a hundred, and
+
+139
+00:13:30,480 --> 00:13:35,640
+it's a scale. So if you run the maintainability index over your code, it will just give you
+
+140
+00:13:35,640 --> 00:13:42,440
+a single number. If that number's between zero and 25, it means your code is unmaintainable.
+
+141
+00:13:42,440 --> 00:13:50,080
+It's a bit of a mess. If it's between 25 and 50, it would be like my high school teachers
+
+142
+00:13:50,480 --> 00:13:57,960
+say, cause of the concern. If it's between 50 and 75, that's realistically where most
+
+143
+00:13:57,960 --> 00:14:05,520
+applications are, but you can still definitely see improvement. And then if it's over 75,
+
+144
+00:14:05,520 --> 00:14:13,120
+I don't believe you. So this is actually, this metric is actually used in Microsoft
+
+145
+00:14:13,120 --> 00:14:19,080
+applications, in Java applications as well. And in Python, this is the equation we're
+
+146
+00:14:19,080 --> 00:14:24,960
+using widely for calculating the index. So if you don't want to go and sit and calculate
+
+147
+00:14:24,960 --> 00:14:29,480
+that by hand, basically it's taking the Halsted volume, the cyclomatic complexity, and the
+
+148
+00:14:29,480 --> 00:14:37,320
+number of lines of code. So your maintainability index is going to be lower if you've used
+
+149
+00:14:37,320 --> 00:14:42,800
+a lot of code, a lot of variables, a lot of syntax, and a lot of nesting to achieve something.
+
+150
+00:14:42,800 --> 00:14:46,920
+That's when you're going to have something in the red. So it's going to be in the green,
+
+151
+00:14:46,920 --> 00:14:51,160
+where you've got nice flat code, you don't have too many functions, too many variables,
+
+152
+00:14:51,160 --> 00:14:55,960
+and there's not that much code volume. So that's where it's going to be in the green.
+
+153
+00:14:55,960 --> 00:15:01,560
+So you don't have to calculate this stuff by hand. You can use a package called Radon.
+
+154
+00:15:01,560 --> 00:15:06,400
+On the command line, you can run Radon and then the algorithm that you want to use, so
+
+155
+00:15:06,400 --> 00:15:11,640
+CC is cyclomatic complexity, and you give it the file name you want to run, and it will
+
+156
+00:15:11,640 --> 00:15:16,840
+basically calculate the number for you and give you that output. You can also do MI,
+
+157
+00:15:16,840 --> 00:15:22,520
+which is the maintainability index I just spoke about. It says that my application was 87.42,
+
+158
+00:15:22,520 --> 00:15:27,160
+which is pretty impressive, but it's only four lines of code, so that's understandable.
+
+159
+00:15:30,280 --> 00:15:35,960
+And then lastly, you can run Hal as the algorithm, and it will give you all of the measures I spoke
+
+160
+00:15:35,960 --> 00:15:40,200
+about. It also outputs another one, which I've cropped from the image, which is actually the
+
+161
+00:15:40,200 --> 00:15:45,480
+number of bugs it spotted in your code. Halsted actually theorized that you could calculate the
+
+162
+00:15:45,480 --> 00:15:51,960
+number of bugs based on the amount of code, but this theory was 50 years old. So you got the
+
+163
+00:15:51,960 --> 00:15:59,880
+numbers, you look at the numbers and you think, okay, that's interesting. I've got a vocabulary
+
+164
+00:15:59,880 --> 00:16:05,640
+of nine and a calculated length of 20.26. What now? So does that tell you whether your code is
+
+165
+00:16:05,640 --> 00:16:11,720
+maintainable or not? So really, I was looking at this problem, and this is where I came up with
+
+166
+00:16:11,720 --> 00:16:19,480
+Wiley. So Wiley is a tool that basically looks at the way that the maintainability of your code,
+
+167
+00:16:19,480 --> 00:16:25,800
+the complexity of it, changes over time. So it assumes that your code is in a Git repository,
+
+168
+00:16:27,000 --> 00:16:32,920
+and it will go back through the Git history and basically run complexity metrics over each
+
+169
+00:16:32,920 --> 00:16:38,600
+revision. And it will then store that in a flat file database, and it will let you query that
+
+170
+00:16:38,600 --> 00:16:42,200
+and see trends of maintainability and complexity in your code applications.
+
+171
+00:16:43,640 --> 00:16:45,720
+So I'm going to give you a demo of this.
+
+172
+00:16:52,280 --> 00:16:54,680
+And because I don't trust live demos,
+
+173
+00:16:59,400 --> 00:17:07,000
+I'm going to do magic hands. So the way that you run Wiley is you run Wiley build
+
+174
+00:17:07,640 --> 00:17:13,400
+and then give it the path to your application. It will go and check out all the revisions in Git
+
+175
+00:17:13,400 --> 00:17:18,360
+and then basically go and run metrics over them. So the Halstead metrics, the cyclomatic complexity
+
+176
+00:17:18,360 --> 00:17:24,120
+metrics, lines of code, all of those sorts of things, and put those in the database.
+
+177
+00:17:25,080 --> 00:17:29,720
+So it's quite straightforward to get started with Wiley. It's also really useful for test
+
+178
+00:17:29,720 --> 00:17:36,120
+applications, which I'll talk about later. You can just type Wiley index, and it will give you
+
+179
+00:17:36,120 --> 00:17:42,760
+a list of all the Git revisions that it's checked out. And then when you run Wiley report
+
+180
+00:17:43,800 --> 00:17:52,040
+with the name of a file, it will give you a table with some metrics in it. So each line is a Git
+
+181
+00:17:52,040 --> 00:17:59,480
+revision. And then if the complexity changed for any reason, so the maintainability index
+
+182
+00:17:59,480 --> 00:18:06,120
+went down here, you can see the amount that it went down and the cyclomatic complexity increased.
+
+183
+00:18:09,320 --> 00:18:13,640
+So this is useful for basically looking at specific files and seeing how they trend over time.
+
+184
+00:18:16,120 --> 00:18:22,520
+You can also use it as a pre-commit hook. So when you're making changes to code, if you run Wiley
+
+185
+00:18:22,520 --> 00:18:28,040
+diff, it will actually go and show you how the complexity of the code has changed for that
+
+186
+00:18:28,040 --> 00:18:33,400
+particular file. So if you use it as a pre-commit hook, basically when you run Git commit, it will
+
+187
+00:18:33,400 --> 00:18:38,120
+go and look at all the changes you've made in code, and it will print out to the screen whether
+
+188
+00:18:38,120 --> 00:18:43,400
+you've made the maintainability of the application worse, the cyclomatic complexity, and it will give
+
+189
+00:18:43,400 --> 00:18:49,720
+you that down to a function level. So in this case, I've just added a test function called test8,
+
+190
+00:18:49,720 --> 00:18:54,760
+which just adds a few lines of code and another test case. So it's going to go and print the
+
+191
+00:18:54,760 --> 00:19:01,640
+information for me. And then lastly, you can graph any of these metrics. So if I were to graph
+
+192
+00:19:03,640 --> 00:19:08,040
+my test file and I wanted to look at the maintainability index over time,
+
+193
+00:19:11,880 --> 00:19:14,600
+then it's going to print that out for me in an interactive graph,
+
+194
+00:19:15,160 --> 00:19:17,880
+and each point on the graph will actually be the Git revision
+
+195
+00:19:17,880 --> 00:19:24,920
+and the reasons why, and also the author of the Git commit. So this is a small toy demo,
+
+196
+00:19:25,800 --> 00:19:30,200
+but for a big application, you can use this. Let me try for another one.
+
+197
+00:19:35,800 --> 00:19:39,800
+So I can see how the maintainability index of my code has changed with each Git commit.
+
+198
+00:19:40,840 --> 00:19:44,760
+And then lastly, you can combine metrics together. So if you wanted to look at
+
+199
+00:19:44,840 --> 00:19:48,280
+maintainability index and lines of code, you can give it multiple measures,
+
+200
+00:19:49,160 --> 00:19:53,880
+and it will add a second metric as the bubble size. So I can basically look at how my code
+
+201
+00:19:53,880 --> 00:20:09,160
+has changed over time. Okay, so using Wiley, you can track the complexity of your code,
+
+202
+00:20:10,120 --> 00:20:14,600
+and then you can start to refactor it to make it simpler. There's something else I wanted to
+
+203
+00:20:14,600 --> 00:20:18,440
+point out, which is that when you start to look at complexity in your applications,
+
+204
+00:20:19,320 --> 00:20:24,120
+you're going to find that some of your modules, some of your files have a complexity which is
+
+205
+00:20:24,120 --> 00:20:31,240
+far higher than some others. And the reason behind that is that complexity has its own gravity.
+
+206
+00:20:31,880 --> 00:20:38,280
+So if you've got a function which you've started to add edge cases to, as your application matures,
+
+207
+00:20:38,280 --> 00:20:43,160
+you're going to find yourself adding more and more edge cases to that function. If you've got
+
+208
+00:20:43,160 --> 00:20:49,160
+what they call like a God class or something, or a module that basically ends up catching every kind
+
+209
+00:20:49,160 --> 00:20:54,040
+of situation, that will draw more and more complexity. So I wanted to point out this
+
+210
+00:20:54,040 --> 00:20:57,640
+principle because I think that if you're going to add a function to your application, you're going
+
+211
+00:20:57,640 --> 00:21:01,560
+to have more and more complexity. So I wanted to point out this principle because I think it's
+
+212
+00:21:01,560 --> 00:21:07,640
+important when you start to refactor, is that one of the things you need to start to do is to spread
+
+213
+00:21:07,640 --> 00:21:12,920
+complexity around your code, break it up, and follow something called the single responsibility
+
+214
+00:21:12,920 --> 00:21:18,600
+principle. The single responsibility principle is that any function or any piece of code should
+
+215
+00:21:18,600 --> 00:21:24,120
+have one responsibility. You shouldn't have a piece of code which is trying to achieve everything
+
+216
+00:21:25,080 --> 00:21:30,040
+because then it becomes unmaintainable, it has too many characteristics, and it becomes very hard to
+
+217
+00:21:30,040 --> 00:21:37,320
+test. This lovely creature is the cane toad. Is anyone here from Australia? One at the back.
+
+218
+00:21:38,280 --> 00:21:45,080
+You probably recognize it. So the venomous cane toads were introduced in 1935 to Australia
+
+219
+00:21:45,640 --> 00:21:49,240
+in the hope that they would control the destructive cane beetle population.
+
+220
+00:21:49,320 --> 00:21:54,040
+So why am I talking about this? They turned out to be really bad at controlling beetles,
+
+221
+00:21:54,040 --> 00:22:00,680
+but remarkably successful at reproducing. They also have no natural predators in Australia.
+
+222
+00:22:02,360 --> 00:22:09,080
+So basically they've infested Queensland, the northern state. The reason I point this out is
+
+223
+00:22:09,080 --> 00:22:13,400
+because when you're looking at refactoring code, if you don't have a good test suite,
+
+224
+00:22:13,400 --> 00:22:18,200
+because I think that the testing coverage of the cane beetle population was quite bad,
+
+225
+00:22:18,200 --> 00:22:22,440
+the beetle population was quite poor, there really wasn't a good understanding of the complexity of
+
+226
+00:22:22,440 --> 00:22:28,040
+the actual environment. It just thought this would be a quick fix and we can sort this problem out.
+
+227
+00:22:29,160 --> 00:22:35,320
+So high test coverage should be given before you start refactoring any application.
+
+228
+00:22:36,440 --> 00:22:43,880
+However, high test coverage doesn't mean you've checked all the behaviors. So when you're looking
+
+229
+00:22:43,880 --> 00:22:48,840
+at refactoring an application, you need to understand all the ways in which the application
+
+230
+00:22:48,840 --> 00:22:56,760
+can behave so that the new code behaves in the same way as the old code. Testing is one way to
+
+231
+00:22:56,760 --> 00:23:04,280
+do that. Another way is to help your users to find the bugs for you. And then lastly,
+
+232
+00:23:05,080 --> 00:23:09,960
+one of the difficult situations you might find yourself in is when you're refactoring actually
+
+233
+00:23:09,960 --> 00:23:18,440
+coming across a bug. And not just a bug, but a known bug and a bug that's expected. So if anyone's
+
+234
+00:23:18,440 --> 00:23:23,000
+ever faced this before, it's one of the most fun and challenging things in refactoring.
+
+235
+00:23:24,120 --> 00:23:27,000
+It's where you've refactored a code base and you've come across this and you think,
+
+236
+00:23:27,000 --> 00:23:34,440
+how could this ever work? And you realize it doesn't work and it has a side effect
+
+237
+00:23:34,440 --> 00:23:40,360
+which makes something else work. And the only way to refactor it is to either reproduce the
+
+238
+00:23:40,360 --> 00:23:45,960
+bug in your new code, solve the problem and explain to all your users why you're breaking
+
+239
+00:23:45,960 --> 00:23:53,480
+compatibility. And there's a third option, but I don't know what it is. So this is a really
+
+240
+00:23:53,480 --> 00:24:02,600
+tricky one to look out for. But like I say, testing is critical. So I guess in conclusion,
+
+241
+00:24:02,600 --> 00:24:08,600
+Wiley can benefit you in tracking complexity in your code base and measuring that over time
+
+242
+00:24:08,600 --> 00:24:15,160
+with the principle that you're going to improve it. Complexity measures are long term. Just
+
+243
+00:24:15,160 --> 00:24:20,360
+calculating the complexity of your application is interesting, but the whole point is that you want
+
+244
+00:24:20,360 --> 00:24:28,200
+it to improve. And make sure you've got good behavioral test coverage. There are some
+
+245
+00:24:28,200 --> 00:24:36,440
+tools you can use to do this. PyTest obviously is great as a test suite and there are some
+
+246
+00:24:36,440 --> 00:24:40,840
+coverage tools for PyTest, but they just look at line coverage. They don't actually look at the
+
+247
+00:24:40,840 --> 00:24:46,600
+way you're testing different behaviors. There are some automated tools to do that, but really the
+
+248
+00:24:46,600 --> 00:24:50,920
+best way to do it is to look at features and functionality to describe those and make sure
+
+249
+00:24:50,920 --> 00:24:57,960
+you're testing each one of those features. Refactor often. This shouldn't be an annual event.
+
+250
+00:24:58,840 --> 00:25:02,760
+That you sit down and say, let's clean up our code base. This should be something that's done
+
+251
+00:25:02,760 --> 00:25:07,880
+frequently. And if you refactor your code often, you'll find that the amount of refactoring you
+
+252
+00:25:07,880 --> 00:25:12,600
+have to do, the amount of yak shaving, the amount of edge cases you have to deal with is far smaller.
+
+253
+00:25:13,400 --> 00:25:18,920
+So if you think about measuring complexity using a tool like Wiley and you can see sprint by sprint
+
+254
+00:25:18,920 --> 00:25:24,840
+or day by day how that is increasing or decreasing in your code, that should encourage your team to
+
+255
+00:25:24,840 --> 00:25:32,200
+refactor. And then lastly, divide and conquer. If you're going to refactor any substantial code base,
+
+256
+00:25:32,200 --> 00:25:36,440
+it can be very daunting at first. So my advice is to start with something small.
+
+257
+00:25:37,000 --> 00:25:40,120
+Start with something that's got good test coverage and something that you understand
+
+258
+00:25:40,760 --> 00:25:47,320
+and refactor that one module first and then work your way out from there. Don't try and rewrite
+
+259
+00:25:47,320 --> 00:25:54,920
+the entire code base in one go with the intention of improving simplicity. Everyone starts out with
+
+260
+00:25:54,920 --> 00:25:59,960
+the best intentions, but you might find yourself with a population of cane toads.
+
+261
+00:26:02,760 --> 00:26:09,480
+So that really wraps up my talk. If you want to read more detail on techniques for refactoring,
+
+262
+00:26:09,480 --> 00:26:14,840
+there's an article on realpython.com that I wrote to explain this. If you want to check out my
+
+263
+00:26:14,840 --> 00:26:20,520
+website, it's on github. If you have any questions and you want to email me, that's my email address
+
+264
+00:26:21,320 --> 00:26:26,600
+and if you want to tweet me, then that's my handle. And we have five minutes remaining for questions,
+
+265
+00:26:26,600 --> 00:26:27,480
+so thank you very much.
+
+266
+00:26:35,960 --> 00:26:38,360
+Anyone that has questions, please come to this microphone.
+
+267
+00:26:39,640 --> 00:26:43,560
+Oh, there's actually a microphone back there too. So go to any microphone.
+
+268
+00:26:44,840 --> 00:27:02,120
+Go ahead.
+
+269
+00:27:02,120 --> 00:27:08,360
+Oh, okay. Sorry. I thought you were getting somewhere. What is Wiley? How do you get it? Is that a product or?
+
+270
+00:27:08,360 --> 00:27:13,480
+It's a package from PyPI. So just pip install Wiley and you can run it on the command line.
+
+271
+00:27:13,960 --> 00:27:22,440
+Awesome. Thank you. Hi. The equation for the Halstead thing, I can't remember what it's called.
+
+272
+00:27:22,440 --> 00:27:28,760
+There was a constant in there. There's like 171. What was that? I've got no idea.
+
+273
+00:27:34,200 --> 00:27:39,480
+Hi. The examples that you showed with Wiley, they seem to operate on a single file. Is it
+
+274
+00:27:39,480 --> 00:27:42,760
+possible to run it for an entire project or do I have to do it in a folder?
+
+275
+00:27:42,760 --> 00:27:48,200
+Yeah, I'm toyed with this, but yes is the answer. You typically give it the path to your whole project
+
+276
+00:27:49,240 --> 00:27:53,880
+and if you want to run a report on a folder, it will give you the metrics for every single file
+
+277
+00:27:53,880 --> 00:27:57,640
+or you can roll them up into a single metric. It's designed for big applications,
+
+278
+00:27:58,280 --> 00:28:02,920
+but I just used it for a tiny sample. Otherwise, it would take too long to compile.
+
+279
+00:28:03,800 --> 00:28:04,300
+Thank you.
+
+280
+00:28:04,540 --> 00:28:11,180
+Cool. Hey, great talk. Loved everything. Question, I agree with everything you're saying. How do you get team buy-in?
+
+281
+00:28:15,340 --> 00:28:22,620
+I think if you look at the times when people have to make changes and they appreciate that
+
+282
+00:28:22,620 --> 00:28:30,540
+complexity makes it harder to make change, if you pin them down then and see, see, this is why we
+
+283
+00:28:30,540 --> 00:28:36,380
+need simpler code. I think that's probably the opportunity to do it. If you phrase it as a,
+
+284
+00:28:36,380 --> 00:28:41,260
+let's have a massive refactoring of our code base and you're basically going to put yourself in a
+
+285
+00:28:41,260 --> 00:28:46,940
+position where you're going to have unusable code or a branch that doesn't compile or whatever you
+
+286
+00:28:46,940 --> 00:28:54,140
+measure that for multiple sprints, that's a really hard sell. So it needs to be a small piece of work.
+
+287
+00:28:54,140 --> 00:28:55,500
+Right. Cool. Thank you.
+
+288
+00:29:00,540 --> 00:29:02,780
+Thank you.
+

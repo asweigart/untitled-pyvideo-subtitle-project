@@ -1,0 +1,1984 @@
+1
+00:00:00,000 --> 00:00:03,120
+Today, Robert Myers is going to present about taking the web
+
+2
+00:00:03,120 --> 00:00:04,620
+back with GraphQL.
+
+3
+00:00:04,620 --> 00:00:06,700
+So if everyone could give him a warm welcome.
+
+4
+00:00:06,700 --> 00:00:12,600
+Thank you.
+
+5
+00:00:12,600 --> 00:00:13,420
+Yes.
+
+6
+00:00:13,420 --> 00:00:21,020
+So we want to get back control of the web from JavaScript.
+
+7
+00:00:21,020 --> 00:00:26,220
+For the past 13 years, I've been a web developer in Python.
+
+8
+00:00:26,220 --> 00:00:29,060
+Six of those years have been spent at Rackspace.
+
+9
+00:00:29,060 --> 00:00:31,180
+And at this point in my career, I
+
+10
+00:00:31,180 --> 00:00:33,860
+consider myself a senior sanitation engineer.
+
+11
+00:00:33,860 --> 00:00:37,020
+What that means is I don't develop software.
+
+12
+00:00:37,020 --> 00:00:40,060
+I maintain other people's software.
+
+13
+00:00:40,060 --> 00:00:43,220
+And I'm including myself in that other people
+
+14
+00:00:43,220 --> 00:00:46,260
+because I'm sort of a different person than I was a few years
+
+15
+00:00:46,260 --> 00:00:46,760
+ago.
+
+16
+00:00:46,760 --> 00:00:47,900
+I use different tools.
+
+17
+00:00:47,900 --> 00:00:49,340
+I know different things.
+
+18
+00:00:49,340 --> 00:00:55,100
+I have different patterns to solve problems.
+
+19
+00:00:55,100 --> 00:00:57,700
+And I've learned from my mistakes.
+
+20
+00:00:57,700 --> 00:00:58,780
+So no more.
+
+21
+00:00:58,780 --> 00:01:04,540
+So maintenance usually revolves around developers
+
+22
+00:01:04,540 --> 00:01:08,060
+who come and go in your project, sprinkling in little knowledge
+
+23
+00:01:08,060 --> 00:01:11,000
+and taking it with them when they leave.
+
+24
+00:01:11,000 --> 00:01:16,700
+Code that you write usually lives in prod forever
+
+25
+00:01:16,700 --> 00:01:20,940
+and never dies.
+
+26
+00:01:20,940 --> 00:01:25,780
+And if you're unlucky, you have a five-year-old JavaScript
+
+27
+00:01:25,780 --> 00:01:27,740
+framework that you're using.
+
+28
+00:01:27,740 --> 00:01:29,220
+And it's impossible to update.
+
+29
+00:01:32,100 --> 00:01:34,540
+Maybe you can greenfield.
+
+30
+00:01:34,540 --> 00:01:41,580
+But it is increasingly hard to move from your large legacy
+
+31
+00:01:41,580 --> 00:01:45,740
+code base to another code base.
+
+32
+00:01:45,740 --> 00:01:47,320
+So what we're going to talk about today
+
+33
+00:01:47,320 --> 00:01:51,340
+is changing an existing site.
+
+34
+00:01:51,340 --> 00:01:55,340
+Using GraphQL to create a thin wrapper around your data
+
+35
+00:01:55,340 --> 00:02:01,620
+sources, such as databases, REST APIs, static files, even
+
+36
+00:02:01,620 --> 00:02:04,180
+mainframes.
+
+37
+00:02:04,180 --> 00:02:06,300
+And bring back the business logic that
+
+38
+00:02:06,300 --> 00:02:11,700
+was secretly put into your JavaScript UIs
+
+39
+00:02:11,700 --> 00:02:14,420
+and bring them back to the server.
+
+40
+00:02:14,420 --> 00:02:20,340
+This will improve testability and hopefully maintenance.
+
+41
+00:02:20,340 --> 00:02:22,780
+So here's an example.
+
+42
+00:02:22,780 --> 00:02:26,580
+We have a little Angular 1.0 application.
+
+43
+00:02:26,580 --> 00:02:28,780
+This is a simple server list page.
+
+44
+00:02:28,780 --> 00:02:32,020
+It does an API call to fetch the data and renders
+
+45
+00:02:32,020 --> 00:02:32,540
+the table.
+
+46
+00:02:32,540 --> 00:02:36,620
+Pretty simple, basic stuff.
+
+47
+00:02:36,620 --> 00:02:39,980
+But somebody says, well, can you just add the IP address
+
+48
+00:02:39,980 --> 00:02:41,260
+to that list?
+
+49
+00:02:41,260 --> 00:02:42,780
+Which sounds easy.
+
+50
+00:02:42,780 --> 00:02:45,540
+We have the IP addresses on these servers
+
+51
+00:02:45,540 --> 00:02:47,180
+in the details page.
+
+52
+00:02:47,180 --> 00:02:49,580
+How hard could it be?
+
+53
+00:02:49,580 --> 00:02:51,820
+Well, you look at the API call of the servers,
+
+54
+00:02:51,820 --> 00:02:53,620
+and it doesn't have an IP address.
+
+55
+00:02:53,620 --> 00:02:55,700
+And you're like, hmm, that's strange.
+
+56
+00:02:55,700 --> 00:03:00,060
+We look at the details page, the code for the details page,
+
+57
+00:03:00,060 --> 00:03:02,620
+and we realize that it's using a completely separate networks
+
+58
+00:03:02,620 --> 00:03:05,020
+API, which takes in the server ID
+
+59
+00:03:05,020 --> 00:03:07,380
+to get back your IP address.
+
+60
+00:03:07,380 --> 00:03:11,220
+OK, well, how can we fix this?
+
+61
+00:03:11,220 --> 00:03:15,540
+Well, we could do a hacky API solution,
+
+62
+00:03:15,540 --> 00:03:19,500
+which would add a query parameter for include network
+
+63
+00:03:19,500 --> 00:03:22,100
+and sprinkle in the network.
+
+64
+00:03:22,100 --> 00:03:25,620
+And this might work if you own the APIs.
+
+65
+00:03:25,620 --> 00:03:28,900
+But if you don't, or if they're two separate teams,
+
+66
+00:03:28,900 --> 00:03:34,180
+or there's different data sources for these,
+
+67
+00:03:34,180 --> 00:03:39,700
+like a different database, a different system altogether,
+
+68
+00:03:39,700 --> 00:03:42,060
+it might not be possible to do this.
+
+69
+00:03:42,060 --> 00:03:44,180
+So you could come up with a hacky UI solution
+
+70
+00:03:44,180 --> 00:03:47,740
+that you could use lazy loading in your pattern,
+
+71
+00:03:47,740 --> 00:03:50,980
+or you could do multiple API calls and join them.
+
+72
+00:03:50,980 --> 00:03:54,340
+But these are all kind of non-standard,
+
+73
+00:03:54,340 --> 00:03:58,260
+and you might already have all of these solutions
+
+74
+00:03:58,260 --> 00:04:02,100
+in place in your old UI code.
+
+75
+00:04:02,100 --> 00:04:05,060
+It gets hard to maintain those, hard to change them,
+
+76
+00:04:05,060 --> 00:04:07,940
+hard to duplicate those patterns.
+
+77
+00:04:07,940 --> 00:04:11,180
+So what can GraphQLT do?
+
+78
+00:04:11,180 --> 00:04:13,460
+Your data doesn't fit in neat little buckets.
+
+79
+00:04:13,460 --> 00:04:17,380
+It has relations, some hard, and others are soft.
+
+80
+00:04:17,380 --> 00:04:19,540
+And GraphQL helps to separate your data structures
+
+81
+00:04:19,540 --> 00:04:22,300
+from your sources.
+
+82
+00:04:22,300 --> 00:04:27,100
+So what I like to do is practice schema-first design, which
+
+83
+00:04:27,100 --> 00:04:33,260
+is we start with the schema that we want, the GraphQL schema,
+
+84
+00:04:33,260 --> 00:04:37,220
+and put in the fields that we want to exist.
+
+85
+00:04:37,220 --> 00:04:41,660
+So for the server, we're going to add in the network field that
+
+86
+00:04:41,660 --> 00:04:43,300
+points to the network type.
+
+87
+00:04:43,300 --> 00:04:44,680
+And then we have our query, which
+
+88
+00:04:45,680 --> 00:04:49,620
+servers, which returns us a list of servers.
+
+89
+00:04:49,620 --> 00:04:51,800
+Now, to make GraphQL work, we have
+
+90
+00:04:51,800 --> 00:04:57,560
+to wire it together with some resolvers to get that data.
+
+91
+00:04:57,560 --> 00:05:03,600
+And we can use little functions, these asynchronous functions,
+
+92
+00:05:03,600 --> 00:05:08,680
+that you can write them however you want to.
+
+93
+00:05:08,680 --> 00:05:11,040
+They take a source as the first argument
+
+94
+00:05:11,040 --> 00:05:13,840
+and info as the second argument, and the optional keyword
+
+95
+00:05:13,840 --> 00:05:14,840
+arguments.
+
+96
+00:05:14,840 --> 00:05:17,540
+We won't get into that too much.
+
+97
+00:05:17,540 --> 00:05:23,300
+You get the original request in the context of the info.
+
+98
+00:05:23,300 --> 00:05:28,640
+And then you can use that to make your asynchronous requests.
+
+99
+00:05:28,640 --> 00:05:33,160
+And then you'll see the resolve network takes in the server
+
+100
+00:05:33,160 --> 00:05:37,400
+object, which was resolved from this resolve servers.
+
+101
+00:05:37,400 --> 00:05:40,480
+And then it does another API request
+
+102
+00:05:40,480 --> 00:05:44,520
+to get the network info.
+
+103
+00:05:44,520 --> 00:05:48,280
+And these are simple functions that are easy to write,
+
+104
+00:05:48,280 --> 00:05:50,280
+and they're easy to read, and they're
+
+105
+00:05:50,280 --> 00:05:54,560
+easy to test independently of all your base.
+
+106
+00:05:54,560 --> 00:05:56,440
+So anything you can write in Python,
+
+107
+00:05:56,440 --> 00:05:59,480
+you can create a resolver function for.
+
+108
+00:05:59,480 --> 00:06:05,000
+So now to wire it together, this is a little clunky.
+
+109
+00:06:05,000 --> 00:06:10,280
+You load your schema, and then iterate over those fields,
+
+110
+00:06:10,280 --> 00:06:14,920
+and add in for the query fields for the servers,
+
+111
+00:06:14,920 --> 00:06:17,000
+you set the resolver there.
+
+112
+00:06:17,000 --> 00:06:19,120
+And then for the server type fields,
+
+113
+00:06:19,120 --> 00:06:20,280
+you add in the network.
+
+114
+00:06:20,280 --> 00:06:21,200
+There are some libraries out there
+
+115
+00:06:21,200 --> 00:06:22,400
+that make this a little bit better,
+
+116
+00:06:22,400 --> 00:06:23,880
+so don't worry too much about that.
+
+117
+00:06:23,880 --> 00:06:27,520
+But this is just the raw syntax.
+
+118
+00:06:27,520 --> 00:06:31,960
+So now that we have it, we can fire up the GraphQL Playground.
+
+119
+00:06:31,960 --> 00:06:33,040
+It's kind of hard to see.
+
+120
+00:06:33,040 --> 00:06:33,880
+Sorry about that.
+
+121
+00:06:33,880 --> 00:06:37,480
+But basically what you're able to do here in the GraphQL
+
+122
+00:06:37,480 --> 00:06:43,560
+Playground is since the schema is typed,
+
+123
+00:06:43,560 --> 00:06:47,000
+there is a way of doing an introspection query.
+
+124
+00:06:47,000 --> 00:06:49,000
+This is the first thing that this thing does.
+
+125
+00:06:49,000 --> 00:06:51,160
+It hits the server, does an introspection query,
+
+126
+00:06:51,160 --> 00:06:53,360
+gets all the types and all the information,
+
+127
+00:06:53,360 --> 00:06:58,440
+all the documentation for it, and allows you to quickly add
+
+128
+00:06:58,440 --> 00:07:02,320
+in the fields that you want, and then execute that query,
+
+129
+00:07:02,320 --> 00:07:03,440
+and get back your results.
+
+130
+00:07:03,440 --> 00:07:05,520
+And I guess you can sort of see it,
+
+131
+00:07:05,520 --> 00:07:09,400
+but we have the networking for now.
+
+132
+00:07:09,400 --> 00:07:11,640
+So great.
+
+133
+00:07:11,640 --> 00:07:12,840
+That's mostly done.
+
+134
+00:07:12,840 --> 00:07:15,680
+Also, and you can look at the documentation.
+
+135
+00:07:15,680 --> 00:07:20,560
+So you can see what other types are available.
+
+136
+00:07:20,560 --> 00:07:24,480
+And you only get the data back that you asked for.
+
+137
+00:07:24,480 --> 00:07:30,060
+So if you want to query and see what you can do,
+
+138
+00:07:30,060 --> 00:07:31,920
+this is a neat way of going through.
+
+139
+00:07:31,920 --> 00:07:35,080
+This is very, very good for a developer experience.
+
+140
+00:07:35,080 --> 00:07:38,680
+You can also add in markdown in your schema.
+
+141
+00:07:38,680 --> 00:07:41,480
+At the top there, you see list of servers and connection info.
+
+142
+00:07:41,480 --> 00:07:44,880
+That's a little markdown documentation
+
+143
+00:07:44,880 --> 00:07:47,320
+that I added to the schema to show it off.
+
+144
+00:07:49,840 --> 00:07:55,560
+Now, at this point, we have our new API
+
+145
+00:07:55,560 --> 00:07:57,800
+that we can use, GraphQL.
+
+146
+00:07:57,800 --> 00:08:03,320
+And we need to connect it to the UI.
+
+147
+00:08:03,320 --> 00:08:06,600
+One of the main selling points is how easy it is to use.
+
+148
+00:08:06,600 --> 00:08:12,360
+And all you need to do is write these small components that
+
+149
+00:08:12,360 --> 00:08:16,720
+take a query, execute that query, and then
+
+150
+00:08:16,720 --> 00:08:18,920
+iterate over the results.
+
+151
+00:08:18,920 --> 00:08:24,920
+Which is OK, but I've written this pattern before,
+
+152
+00:08:24,920 --> 00:08:27,280
+I think in college.
+
+153
+00:08:27,280 --> 00:08:28,520
+Yes, PHP.
+
+154
+00:08:28,520 --> 00:08:32,960
+See where we connect to a MySQL server, do an SQL query,
+
+155
+00:08:33,000 --> 00:08:36,080
+and then iterate over the results and show a table.
+
+156
+00:08:36,080 --> 00:08:40,920
+Is this the pattern we want to use?
+
+157
+00:08:40,920 --> 00:08:44,560
+Remember, also, we're dealing with an old UI.
+
+158
+00:08:44,560 --> 00:08:47,040
+If you want to pull in a new client,
+
+159
+00:08:47,040 --> 00:08:50,560
+you're just adding in a little bit of technical debt
+
+160
+00:08:50,560 --> 00:08:54,680
+and moving all of this logic into your UI,
+
+161
+00:08:54,680 --> 00:08:57,000
+where it's already complex.
+
+162
+00:08:57,000 --> 00:08:59,600
+We want to reduce the complexity.
+
+163
+00:08:59,600 --> 00:09:05,160
+What if we just cut out the middleman of the UI sending
+
+164
+00:09:05,160 --> 00:09:10,760
+the query down to the server and just rendered it on the server?
+
+165
+00:09:10,760 --> 00:09:14,520
+We can do that just simply by parsing the query
+
+166
+00:09:14,520 --> 00:09:19,680
+and storing it in a variable on the server side.
+
+167
+00:09:19,680 --> 00:09:25,760
+And our request now is just doing the GraphQL request
+
+168
+00:09:25,760 --> 00:09:29,920
+and sending back the JSON results.
+
+169
+00:09:29,920 --> 00:09:34,080
+Now, this endpoint, all you need to do
+
+170
+00:09:34,080 --> 00:09:38,400
+is change your server list page to point at this new API,
+
+171
+00:09:38,400 --> 00:09:41,080
+and you get the network info.
+
+172
+00:09:41,080 --> 00:09:42,960
+Great.
+
+173
+00:09:42,960 --> 00:09:46,200
+So we can apply this to all the other routes.
+
+174
+00:09:46,200 --> 00:09:53,360
+We can say, oh, we got networks, we got the details view,
+
+175
+00:09:53,360 --> 00:09:57,240
+and all these are kind of similar.
+
+176
+00:09:57,240 --> 00:09:58,920
+They're all kind of doing the same thing.
+
+177
+00:09:58,920 --> 00:10:02,040
+So we can refactor this a little bit.
+
+178
+00:10:02,040 --> 00:10:07,560
+We can store all the queries in a folder in these GraphQL files
+
+179
+00:10:07,560 --> 00:10:11,400
+and then load them for each route.
+
+180
+00:10:11,400 --> 00:10:15,600
+We have the path args of the query that we want to get.
+
+181
+00:10:15,600 --> 00:10:20,560
+So for API GraphQL servers, we'll load the servers query
+
+182
+00:10:20,560 --> 00:10:23,160
+and return those results.
+
+183
+00:10:23,160 --> 00:10:27,360
+So now you only have two functions you need to write.
+
+184
+00:10:27,360 --> 00:10:33,880
+Problem is, is this any better than REST?
+
+185
+00:10:33,880 --> 00:10:36,760
+What we're doing is we're just kind of wrapping it
+
+186
+00:10:36,760 --> 00:10:43,880
+into another bundle of you're tying your resources to a URL.
+
+187
+00:10:43,880 --> 00:10:50,280
+So the way I like to approach it is to think of my UI
+
+188
+00:10:50,280 --> 00:10:52,720
+as a set of views.
+
+189
+00:10:53,720 --> 00:11:02,000
+And with GraphQL, you can gather data from multiple sources
+
+190
+00:11:02,000 --> 00:11:05,360
+using just a query.
+
+191
+00:11:05,360 --> 00:11:07,080
+I don't even know what they call it.
+
+192
+00:11:07,080 --> 00:11:14,600
+Writing your query with lots of things.
+
+193
+00:11:14,600 --> 00:11:16,640
+Here's an example.
+
+194
+00:11:16,640 --> 00:11:22,640
+Basically, what we're doing here is we're doing all these queries
+
+195
+00:11:22,640 --> 00:11:29,200
+and we're keying them with that first argument is the field
+
+196
+00:11:29,200 --> 00:11:30,880
+that's going to come back in the results.
+
+197
+00:11:30,880 --> 00:11:35,520
+So server quota is going to have the quota fields in it.
+
+198
+00:11:35,520 --> 00:11:39,720
+And what you do here is you can ask for all the data
+
+199
+00:11:39,720 --> 00:11:45,600
+that you want for that view in one query
+
+200
+00:11:45,600 --> 00:11:48,400
+and return that all in one result.
+
+201
+00:11:48,400 --> 00:11:55,440
+And so a lot of that data is seemingly static.
+
+202
+00:11:55,440 --> 00:11:58,680
+So like navigation, for example.
+
+203
+00:11:58,680 --> 00:12:02,760
+You have navigation is mostly static,
+
+204
+00:12:02,760 --> 00:12:06,520
+but a lot of times there's a little bit of business logic
+
+205
+00:12:06,520 --> 00:12:10,280
+in your navigation where different users are
+
+206
+00:12:10,280 --> 00:12:11,960
+going to see a URL.
+
+207
+00:12:11,960 --> 00:12:18,720
+Some users will not, or that URL will not be enabled for them,
+
+208
+00:12:18,720 --> 00:12:22,400
+but you want to display a message for them instead.
+
+209
+00:12:22,400 --> 00:12:24,480
+And you could do that all with this query.
+
+210
+00:12:27,080 --> 00:12:35,040
+And there's also, I came up with a new concept called resource,
+
+211
+00:12:35,040 --> 00:12:41,520
+which combines three separate API calls into one stream.
+
+212
+00:12:41,560 --> 00:12:44,880
+And we can use the type name to display different fields
+
+213
+00:12:44,880 --> 00:12:45,840
+in the query.
+
+214
+00:12:45,840 --> 00:12:48,960
+And the UI can use that to include different components
+
+215
+00:12:48,960 --> 00:12:49,600
+to display them.
+
+216
+00:12:52,400 --> 00:12:57,200
+And another thing you can do with these queries
+
+217
+00:12:57,200 --> 00:12:58,960
+is to set up fragments.
+
+218
+00:12:58,960 --> 00:13:01,400
+You see that dot, dot, dot notation.
+
+219
+00:13:01,400 --> 00:13:05,120
+That allows you to not repeat your queries over and over.
+
+220
+00:13:05,120 --> 00:13:08,520
+You can just have these fields defined.
+
+221
+00:13:08,520 --> 00:13:13,360
+And you'll notice that this query has gotten really large.
+
+222
+00:13:13,360 --> 00:13:14,840
+It's really hard to maintain.
+
+223
+00:13:18,120 --> 00:13:20,920
+It really deserves to be in its own file
+
+224
+00:13:20,920 --> 00:13:25,040
+and separated from your code.
+
+225
+00:13:25,040 --> 00:13:31,840
+That way it's not tied directly to your UI.
+
+226
+00:13:31,840 --> 00:13:36,280
+It seems like bundling all in the same source
+
+227
+00:13:36,280 --> 00:13:37,600
+is very complicated.
+
+228
+00:13:48,440 --> 00:13:51,720
+Here's the navigation.
+
+229
+00:13:51,720 --> 00:13:53,960
+Navigation is just a simple name tuple.
+
+230
+00:13:53,960 --> 00:13:56,640
+And we create a list of these and return them.
+
+231
+00:13:56,640 --> 00:13:59,960
+And you'll notice that I have not included the enabled field
+
+232
+00:13:59,960 --> 00:14:01,360
+in the name tuple.
+
+233
+00:14:01,360 --> 00:14:03,680
+That is actually done through the resolver.
+
+234
+00:14:04,640 --> 00:14:09,280
+This resolver is going to get the info object, which
+
+235
+00:14:09,280 --> 00:14:10,720
+has the user information.
+
+236
+00:14:10,720 --> 00:14:13,400
+And we can check to see if they have the role
+
+237
+00:14:13,400 --> 00:14:18,600
+to enable this navigation item.
+
+238
+00:14:18,600 --> 00:14:24,320
+And then we're just adding it to the schema as before.
+
+239
+00:14:24,320 --> 00:14:29,280
+And also, here is my little resources thing that I made up.
+
+240
+00:14:29,280 --> 00:14:33,240
+I'm going to do three separate HTTP calls.
+
+241
+00:14:33,240 --> 00:14:36,280
+And then return those with an async I will gather.
+
+242
+00:14:39,200 --> 00:14:42,120
+And at this point, we have two options.
+
+243
+00:14:42,120 --> 00:14:43,840
+Now that we have one single query that
+
+244
+00:14:43,840 --> 00:14:46,620
+has all the data for the view, we could just
+
+245
+00:14:46,620 --> 00:14:52,200
+use Jinja templates, which would be zero JavaScript at all.
+
+246
+00:14:52,200 --> 00:14:59,320
+If your data isn't as dynamic as other things,
+
+247
+00:14:59,320 --> 00:15:01,960
+like if it doesn't have to update constantly,
+
+248
+00:15:01,960 --> 00:15:03,520
+then you could easily use this.
+
+249
+00:15:03,520 --> 00:15:05,760
+And you can pick and choose how you
+
+250
+00:15:05,760 --> 00:15:09,160
+want to display it, either using a template
+
+251
+00:15:09,160 --> 00:15:11,000
+or creating a mini SPA.
+
+252
+00:15:14,960 --> 00:15:18,840
+Here is the standard just using a template.
+
+253
+00:15:18,840 --> 00:15:22,440
+We're just going to execute that dashboard query
+
+254
+00:15:22,440 --> 00:15:27,280
+and return the JSON response as a context argument.
+
+255
+00:15:28,280 --> 00:15:31,120
+And for the mini SPA, what we're going to do
+
+256
+00:15:31,120 --> 00:15:34,800
+is we're just going to add a little if statement for a query
+
+257
+00:15:34,800 --> 00:15:37,080
+parameter for XHR.
+
+258
+00:15:37,080 --> 00:15:39,800
+And if that is in the request, we're
+
+259
+00:15:39,800 --> 00:15:44,200
+going to do the GraphQL request and return a JSON response.
+
+260
+00:15:44,200 --> 00:15:46,720
+Otherwise, we're just going to load the template
+
+261
+00:15:46,720 --> 00:15:52,680
+with just the base HTML.
+
+262
+00:15:52,680 --> 00:15:55,400
+And that HTML looks like this, which
+
+263
+00:15:55,400 --> 00:15:56,400
+is pretty simple.
+
+264
+00:15:56,400 --> 00:15:58,760
+It just has a little dashboard component
+
+265
+00:15:58,760 --> 00:16:00,520
+that's going to be loaded.
+
+266
+00:16:00,520 --> 00:16:05,760
+And this is not using NPM or anything like that.
+
+267
+00:16:05,760 --> 00:16:11,760
+It takes advantage of the type equals module, which
+
+268
+00:16:11,760 --> 00:16:14,200
+is available in Chrome and hopefully in browsers
+
+269
+00:16:14,200 --> 00:16:16,720
+everywhere soon.
+
+270
+00:16:16,720 --> 00:16:19,240
+The future is coming where you can actually
+
+271
+00:16:19,240 --> 00:16:23,320
+write JavaScript with import statements.
+
+272
+00:16:24,000 --> 00:16:27,000
+Just like a real programming language without a transpiler.
+
+273
+00:16:27,000 --> 00:16:28,800
+That would be great.
+
+274
+00:16:28,800 --> 00:16:33,720
+So here's my little dashboard view component,
+
+275
+00:16:33,720 --> 00:16:38,280
+which just does on its first load,
+
+276
+00:16:38,280 --> 00:16:47,600
+it's going to do an XHR request and sets a data property.
+
+277
+00:16:47,600 --> 00:16:49,960
+And then it renders the HTML, and it
+
+278
+00:16:50,360 --> 00:16:53,120
+passes the data down to the subcomponents
+
+279
+00:16:53,120 --> 00:16:56,000
+that I've written for my view.
+
+280
+00:16:56,000 --> 00:16:59,160
+So all these components don't need to know about where they
+
+281
+00:16:59,160 --> 00:17:00,160
+get the data.
+
+282
+00:17:00,160 --> 00:17:02,480
+All they need to do is be able to iterate over the data
+
+283
+00:17:02,480 --> 00:17:03,880
+and display it.
+
+284
+00:17:03,880 --> 00:17:09,840
+So you can pick and choose which components you
+
+285
+00:17:09,840 --> 00:17:11,160
+include on your site.
+
+286
+00:17:11,160 --> 00:17:17,760
+And you can also change what you want to see.
+
+287
+00:17:18,760 --> 00:17:24,640
+What data you pass to them to make them a little bit more
+
+288
+00:17:24,640 --> 00:17:25,520
+dynamic for you.
+
+289
+00:17:28,480 --> 00:17:32,240
+And the final results is here's my little dashboard view
+
+290
+00:17:32,240 --> 00:17:36,760
+that I created, which has a bunch of reusable components.
+
+291
+00:17:36,760 --> 00:17:38,360
+And I have a table component that I
+
+292
+00:17:38,360 --> 00:17:44,080
+can pass in more attributes or less, depending on what it is,
+
+293
+00:17:44,080 --> 00:17:45,600
+and have some sorting.
+
+294
+00:17:45,600 --> 00:17:49,040
+And then I also have some application action logic,
+
+295
+00:17:49,040 --> 00:17:53,240
+which passes down some form information for me to render.
+
+296
+00:17:57,120 --> 00:18:03,760
+So all the tools you need to do, you need to go up to Python 3.6.
+
+297
+00:18:03,760 --> 00:18:07,080
+That's to get the async I O. And you
+
+298
+00:18:07,080 --> 00:18:10,080
+have to use GraphQL Core Next, which
+
+299
+00:18:10,080 --> 00:18:12,320
+is slightly different than Graphene,
+
+300
+00:18:13,320 --> 00:18:17,440
+if you've heard of Graphene and Graphene Django.
+
+301
+00:18:17,440 --> 00:18:20,000
+Those are written with GraphQL Core,
+
+302
+00:18:20,000 --> 00:18:24,680
+which is a 2.7 compatible version of GraphQL.
+
+303
+00:18:24,680 --> 00:18:27,680
+The GraphQL Core Next is a total rewrite
+
+304
+00:18:27,680 --> 00:18:31,240
+that closely follows the JavaScript implementation,
+
+305
+00:18:31,240 --> 00:18:35,000
+the reference implementation that's written in JavaScript.
+
+306
+00:18:35,000 --> 00:18:39,920
+And it uses async I O and allows you
+
+307
+00:18:39,920 --> 00:18:42,920
+to do the schema first design, which I think
+
+308
+00:18:42,920 --> 00:18:45,840
+is really the best way to go.
+
+309
+00:18:45,840 --> 00:18:49,520
+The Graphene Django and Graphene style,
+
+310
+00:18:49,520 --> 00:18:53,160
+where you're actually creating objects and tying those back
+
+311
+00:18:53,160 --> 00:18:57,000
+to your schema, is not as flexible as the schema first
+
+312
+00:18:57,000 --> 00:18:57,920
+design.
+
+313
+00:18:57,920 --> 00:19:01,880
+One of the main reasons why is because once you write
+
+314
+00:19:01,880 --> 00:19:04,500
+your schema, that GraphQL file can
+
+315
+00:19:04,500 --> 00:19:07,360
+be exported to any other programming language that
+
+316
+00:19:07,360 --> 00:19:09,480
+can read that SDL file.
+
+317
+00:19:09,480 --> 00:19:11,880
+So you could use Node.js if you wanted to,
+
+318
+00:19:11,880 --> 00:19:18,200
+or you could use Go, or Rust, or whatever.
+
+319
+00:19:18,200 --> 00:19:21,000
+But having that flexibility is better than not having
+
+320
+00:19:21,000 --> 00:19:22,760
+that flexibility, I think.
+
+321
+00:19:22,760 --> 00:19:24,680
+And also the way it ties it together
+
+322
+00:19:24,680 --> 00:19:30,000
+with those asynchronous functions, it's a lot cleaner.
+
+323
+00:19:30,000 --> 00:19:36,040
+The logic always usually ends up being easier to maintain
+
+324
+00:19:36,040 --> 00:19:41,080
+because it's not tied to a hard model or to a hard object.
+
+325
+00:19:41,080 --> 00:19:46,000
+I usually use named tuples to define my data types,
+
+326
+00:19:46,000 --> 00:19:47,800
+and then I pass in information to them.
+
+327
+00:19:52,880 --> 00:19:54,880
+And the GraphQL core next library,
+
+328
+00:19:54,880 --> 00:19:56,760
+this is just to read me for that.
+
+329
+00:19:56,760 --> 00:20:04,640
+Another tool that I've used, Ariadne, is pretty neat.
+
+330
+00:20:04,640 --> 00:20:07,320
+It allows you to do the schema first design approach,
+
+331
+00:20:07,320 --> 00:20:12,360
+and it provides you with little decorators
+
+332
+00:20:12,360 --> 00:20:20,480
+to add in to connect your schema to your resolvers.
+
+333
+00:20:20,480 --> 00:20:23,560
+And it also comes with the GraphQL playground
+
+334
+00:20:23,560 --> 00:20:24,760
+that's built in.
+
+335
+00:20:24,760 --> 00:20:29,600
+So like you saw before, where I showed that you can easily
+
+336
+00:20:29,600 --> 00:20:33,920
+do that with Ariadne.
+
+337
+00:20:33,920 --> 00:20:37,720
+And then there's another library that I started writing
+
+338
+00:20:37,720 --> 00:20:42,080
+before I found Ariadne called Canula, which is still
+
+339
+00:20:42,080 --> 00:20:44,040
+kind of alpha.
+
+340
+00:20:44,040 --> 00:20:51,200
+But it has some useful tools, such as some mocking middleware
+
+341
+00:20:51,200 --> 00:20:54,080
+and a profile middleware and a debugging middleware
+
+342
+00:20:54,080 --> 00:20:59,440
+that you can use with the GraphQL core next.
+
+343
+00:21:00,440 --> 00:21:04,680
+And I can show you that now because I have a few minutes
+
+344
+00:21:04,680 --> 00:21:07,360
+left.
+
+345
+00:21:07,360 --> 00:21:09,280
+The approach that I've taken to testing
+
+346
+00:21:09,280 --> 00:21:12,880
+is to use HTTP headers to set up my mocks.
+
+347
+00:21:12,880 --> 00:21:17,440
+And I have the Canula middleware, the mock middleware,
+
+348
+00:21:17,440 --> 00:21:20,480
+which allows you to automatically create mocks based
+
+349
+00:21:20,480 --> 00:21:22,640
+on the schema types in your schema.
+
+350
+00:21:25,400 --> 00:21:28,520
+And here is an example of that header.
+
+351
+00:21:28,520 --> 00:21:32,920
+Kind of hard to read, but we just set the header xmoxobjects
+
+352
+00:21:32,920 --> 00:21:35,400
+and we pass it a JSON string of things
+
+353
+00:21:35,400 --> 00:21:37,520
+we want to replace in our schema.
+
+354
+00:21:37,520 --> 00:21:41,200
+So for every string type in my schema,
+
+355
+00:21:41,200 --> 00:21:43,240
+I'm going to return a fake string.
+
+356
+00:21:43,240 --> 00:21:46,360
+And you can do this with any of your custom types as well.
+
+357
+00:21:48,960 --> 00:21:51,800
+And to set up the middleware, there's a couple of ways.
+
+358
+00:21:51,800 --> 00:21:53,680
+You could do the header approach.
+
+359
+00:21:53,680 --> 00:21:56,440
+You can also do pass mock objects,
+
+360
+00:21:56,440 --> 00:22:00,840
+which is just a dictionary of the fields
+
+361
+00:22:00,840 --> 00:22:02,840
+that you want to replace, such as a query.
+
+362
+00:22:02,840 --> 00:22:07,240
+You can replace the whole query with a response of mocked
+
+363
+00:22:07,240 --> 00:22:09,000
+objects.
+
+364
+00:22:09,000 --> 00:22:11,960
+Or you could selectively go in and pick and choose
+
+365
+00:22:11,960 --> 00:22:14,440
+what you want to mock out.
+
+366
+00:22:14,440 --> 00:22:17,440
+And the great thing about this is you're not
+
+367
+00:22:17,440 --> 00:22:19,580
+mocking out the entire response.
+
+368
+00:22:19,580 --> 00:22:23,240
+You're only mocking out the resolver portion.
+
+369
+00:22:23,240 --> 00:22:29,120
+And you could get it down to one specific resolver type.
+
+370
+00:22:29,120 --> 00:22:33,280
+And that allows you to do some fancy stuff that we'll
+
+371
+00:22:33,280 --> 00:22:34,520
+look at a little bit later.
+
+372
+00:22:34,520 --> 00:22:38,600
+Here is basically roughly how the mock middleware works.
+
+373
+00:22:41,040 --> 00:22:44,960
+It has this resolve function, which
+
+374
+00:22:44,960 --> 00:22:48,760
+takes one extra argument than a normal resolve function, which
+
+375
+00:22:48,760 --> 00:22:50,160
+is the next.
+
+376
+00:22:50,160 --> 00:22:56,420
+And that is the next resolver in the chain to run.
+
+377
+00:22:56,420 --> 00:23:01,360
+So if you don't resolve anything, you should call next.
+
+378
+00:23:01,360 --> 00:23:07,000
+And this just takes in the, it looks for the field type
+
+379
+00:23:07,000 --> 00:23:10,360
+and the return type, and gets the schema type
+
+380
+00:23:10,360 --> 00:23:12,860
+that you're asking for, and checks
+
+381
+00:23:12,860 --> 00:23:15,760
+to see if there's any mocks registered for it,
+
+382
+00:23:15,760 --> 00:23:16,720
+and returns that.
+
+383
+00:23:20,560 --> 00:23:25,040
+So what you can do in your end-to-end test
+
+384
+00:23:25,040 --> 00:23:28,120
+is set up mocks through headers.
+
+385
+00:23:28,120 --> 00:23:32,440
+So this is using Cypress.
+
+386
+00:23:32,440 --> 00:23:38,600
+You'll see in the test setup, for all requests,
+
+387
+00:23:38,600 --> 00:23:42,840
+I'm going to set the xmocks header to this mock resource.
+
+388
+00:23:42,840 --> 00:23:48,160
+And then I'm just going to call that resource URL.
+
+389
+00:23:48,160 --> 00:23:54,320
+And that passes the mocks down to the GraphQL server, which
+
+390
+00:23:54,320 --> 00:23:56,480
+responds with that fake object, which
+
+391
+00:23:56,480 --> 00:24:00,520
+is slightly different than mocking out the entire response.
+
+392
+00:24:00,520 --> 00:24:03,560
+Because if you mock out the response,
+
+393
+00:24:03,560 --> 00:24:07,560
+then you're stopping at the test layer.
+
+394
+00:24:07,560 --> 00:24:10,560
+This actually runs through all of your UI code
+
+395
+00:24:10,560 --> 00:24:14,360
+and all of your server code down to the GraphQL portion,
+
+396
+00:24:14,360 --> 00:24:17,760
+where it hits the middleware, and then returns that response.
+
+397
+00:24:17,760 --> 00:24:21,960
+So it's almost a true end-to-end test.
+
+398
+00:24:21,960 --> 00:24:27,840
+Or it's as if you're going into the database underneath
+
+399
+00:24:27,840 --> 00:24:34,160
+and mocking that out, and then performing your end-to-end test.
+
+400
+00:24:34,160 --> 00:24:39,400
+The beauty of that is you can set this up.
+
+401
+00:24:39,400 --> 00:24:41,940
+You can actually run it in production if you wanted to,
+
+402
+00:24:41,940 --> 00:24:42,560
+I guess.
+
+403
+00:24:42,560 --> 00:24:47,040
+But you don't have to get in underneath and change anything.
+
+404
+00:24:48,760 --> 00:24:53,520
+So that's about all I have.
+
+405
+00:24:53,520 --> 00:24:58,880
+Here's some links to all of the technology that I used,
+
+406
+00:24:58,880 --> 00:25:03,560
+Canula, Ariadne, and GraphQL Core Next.
+
+407
+00:25:03,560 --> 00:25:06,680
+So I guess we could take questions if we have any.
+
+408
+00:25:12,680 --> 00:25:14,160
+So we've got some time for questions.
+
+409
+00:25:14,160 --> 00:25:16,400
+If you do have a question, please step up to the mic.
+
+410
+00:25:16,400 --> 00:25:18,760
+I'm going to ask that you please state your question
+
+411
+00:25:18,760 --> 00:25:21,120
+in the form of a question, just one question.
+
+412
+00:25:21,120 --> 00:25:23,160
+Thank you.
+
+413
+00:25:23,160 --> 00:25:24,280
+This is OK.
+
+414
+00:25:24,280 --> 00:25:24,760
+Hi, Robert.
+
+415
+00:25:24,760 --> 00:25:26,280
+Thanks for the presentation.
+
+416
+00:25:26,280 --> 00:25:27,680
+This is really great.
+
+417
+00:25:27,680 --> 00:25:28,960
+And I plan to use a lot of it.
+
+418
+00:25:28,960 --> 00:25:32,880
+The question I have is, how do you handle situations
+
+419
+00:25:32,880 --> 00:25:38,640
+where the UI is complicated enough that you really
+
+420
+00:25:38,640 --> 00:25:41,720
+need a designer to be manipulating
+
+421
+00:25:41,720 --> 00:25:43,440
+a lot of those JSON objects?
+
+422
+00:25:43,440 --> 00:25:46,000
+So for me, I'm a back-end developer.
+
+423
+00:25:46,000 --> 00:25:48,880
+I write APIs.
+
+424
+00:25:48,880 --> 00:25:51,880
+I have talented designers that usually take those JSON objects
+
+425
+00:25:51,880 --> 00:25:55,720
+and manipulate them with a lot of JavaScript and CS stuff
+
+426
+00:25:55,720 --> 00:25:57,240
+to get it to look the way I want.
+
+427
+00:25:57,240 --> 00:26:03,600
+And I can imagine them barking at providing them HTML snippets
+
+428
+00:26:03,600 --> 00:26:06,320
+because what you demonstrated wasn't so clean.
+
+429
+00:26:06,320 --> 00:26:09,000
+How do you get around that negotiation?
+
+430
+00:26:09,000 --> 00:26:14,560
+Well, so I guess the way I was using it,
+
+431
+00:26:14,600 --> 00:26:17,360
+the web components that I used, you
+
+432
+00:26:17,360 --> 00:26:20,000
+could use any web framework you wanted to.
+
+433
+00:26:20,000 --> 00:26:22,400
+I was just showing using web components
+
+434
+00:26:22,400 --> 00:26:25,520
+because they're kind of the new fancy thing to use.
+
+435
+00:26:25,520 --> 00:26:31,800
+But if your UI designers, they use React or Angular 1.0,
+
+436
+00:26:31,800 --> 00:26:34,920
+they could continue to use that, use whatever they want.
+
+437
+00:26:34,920 --> 00:26:38,360
+They're just going to get the JSON payload with all the data
+
+438
+00:26:38,360 --> 00:26:39,440
+that they have.
+
+439
+00:26:39,440 --> 00:26:43,200
+The main reason why I like this approach
+
+440
+00:26:43,200 --> 00:26:48,040
+is that you divorce the UI from knowing
+
+441
+00:26:48,040 --> 00:26:51,600
+where the data comes from because you can just say,
+
+442
+00:26:51,600 --> 00:26:59,200
+just hit the parent view, hit the same URL, fetch the data,
+
+443
+00:26:59,200 --> 00:27:03,120
+and then display the results.
+
+444
+00:27:03,120 --> 00:27:05,440
+Does that make sense?
+
+445
+00:27:05,440 --> 00:27:07,240
+It does.
+
+446
+00:27:07,240 --> 00:27:08,600
+I'm just limited to one question,
+
+447
+00:27:08,600 --> 00:27:10,040
+so I'll try to follow up with you.
+
+448
+00:27:10,040 --> 00:27:12,520
+OK.
+
+449
+00:27:12,520 --> 00:27:14,680
+Does it work?
+
+450
+00:27:14,680 --> 00:27:19,320
+So I have a kind of a naive question a little bit.
+
+451
+00:27:19,320 --> 00:27:22,920
+There are a lot of debates on the internet
+
+452
+00:27:22,920 --> 00:27:29,960
+about what is better than GraphQL or RESTful APIs.
+
+453
+00:27:29,960 --> 00:27:35,480
+And you gave one of the examples of kind of mixed APIs.
+
+454
+00:27:35,480 --> 00:27:37,600
+When you control one API, the other one
+
+455
+00:27:37,600 --> 00:27:39,840
+is not controlled or something.
+
+456
+00:27:39,840 --> 00:27:43,960
+Well, let's say I want to start a new project,
+
+457
+00:27:43,960 --> 00:27:46,480
+and I know that I'm going to control my API.
+
+458
+00:27:46,480 --> 00:27:47,960
+Why should I use GraphQL?
+
+459
+00:27:51,200 --> 00:27:54,640
+If you're going to be the only consumer of that API,
+
+460
+00:27:54,640 --> 00:27:56,960
+then you might not need GraphQL.
+
+461
+00:27:56,960 --> 00:27:59,880
+That's what I thought.
+
+462
+00:27:59,880 --> 00:28:01,760
+It depends.
+
+463
+00:28:01,760 --> 00:28:06,040
+If you want to do the client-side stuff
+
+464
+00:28:06,040 --> 00:28:09,080
+and put it all in JavaScript, then GraphQL
+
+465
+00:28:09,080 --> 00:28:11,560
+is the way to go and use the Apollo client.
+
+466
+00:28:11,560 --> 00:28:16,320
+But I think it's way more complex than you need.
+
+467
+00:28:16,320 --> 00:28:18,880
+That's my opinion.
+
+468
+00:28:18,880 --> 00:28:22,280
+Time for one more short question.
+
+469
+00:28:22,280 --> 00:28:23,280
+Hi there.
+
+470
+00:28:23,280 --> 00:28:24,960
+I was hoping you could speak a little bit
+
+471
+00:28:24,960 --> 00:28:28,960
+to if you have some experience working with Apollo,
+
+472
+00:28:28,960 --> 00:28:31,600
+and particularly Apollo 2, and how
+
+473
+00:28:31,600 --> 00:28:36,920
+they're trying to move away from having you use Redux to manage
+
+474
+00:28:36,920 --> 00:28:38,920
+your state on the front end.
+
+475
+00:28:39,320 --> 00:28:42,440
+So that's one of the main reasons
+
+476
+00:28:42,440 --> 00:28:46,600
+why I dislike using the Apollo client
+
+477
+00:28:46,600 --> 00:28:51,480
+is because they've transitioned from one way of doing things
+
+478
+00:28:51,480 --> 00:28:55,000
+to another completely different way of doing things.
+
+479
+00:28:55,000 --> 00:28:59,120
+And that is out of your control.
+
+480
+00:28:59,120 --> 00:29:06,480
+If you give up all of your UI logic to some third-party tool,
+
+481
+00:29:06,520 --> 00:29:09,920
+they control how it works, the interstate.
+
+482
+00:29:09,920 --> 00:29:14,280
+So the way I've been doing it has been removing the Apollo
+
+483
+00:29:14,280 --> 00:29:16,000
+client, because that's where we started.
+
+484
+00:29:16,000 --> 00:29:19,040
+We started with Apollo Server, started working.
+
+485
+00:29:19,040 --> 00:29:19,840
+It was great.
+
+486
+00:29:19,840 --> 00:29:22,400
+Worked with React.
+
+487
+00:29:22,400 --> 00:29:23,840
+Some things worked.
+
+488
+00:29:23,840 --> 00:29:26,960
+And it worked with React and Redux.
+
+489
+00:29:26,960 --> 00:29:30,280
+But then they've changed, and now we can't update.
+
+490
+00:29:30,280 --> 00:29:32,440
+So we're stuck with a lot of legacy code.
+
+491
+00:29:32,440 --> 00:29:34,200
+So ripping all of that out and just
+
+492
+00:29:34,200 --> 00:29:37,320
+replacing it with just JSON, which
+
+493
+00:29:37,320 --> 00:29:38,960
+works with all frameworks.
+
+494
+00:29:41,800 --> 00:29:43,080
+Thank you.
+
+495
+00:29:43,080 --> 00:29:44,840
+Let's give our speaker a round of applause.
+
+496
+00:29:44,840 --> 00:29:46,400
+Thank you.
+

@@ -1,0 +1,1304 @@
+1
+00:00:00,000 --> 00:00:08,680
+Okay, great. Good afternoon, everyone. This is great. Looks like a full room Instagram
+
+2
+00:00:08,680 --> 00:00:15,600
+celebrity status. Okay. A little bit by myself. My name is Dui, and I am not cool enough to
+
+3
+00:00:15,600 --> 00:00:21,160
+have a Twitter handle, but that's my LinkedIn custom URL, Pugs rule. So if you want to connect
+
+4
+00:00:21,160 --> 00:00:24,560
+with me, go ahead and do that. And if you're looking for a bit.ly link, it's bit.ly PyCon
+
+5
+00:00:24,560 --> 00:00:34,320
+Pogge. So pronounce my name. It's like that with all the E's afterwards. Dui. And so currently
+
+6
+00:00:34,320 --> 00:00:41,800
+I live in Boulder, Colorado, and I work as a software engineer at Google. We... These
+
+7
+00:00:41,800 --> 00:00:49,360
+awful products. And I work on an organization known as Core Systems. So it's like this horizontal
+
+8
+00:00:49,360 --> 00:00:54,560
+infrastructure layer. I particularly care about gender equality and mentorship in tech.
+
+9
+00:00:54,560 --> 00:01:00,840
+These are just areas that are very near and dear to my heart. Before that, though, I used to lead
+
+10
+00:01:00,840 --> 00:01:05,680
+the data team at an ed tech startup in Boston, Elevation Education, and then I left to travel
+
+11
+00:01:05,680 --> 00:01:11,200
+the world. I lived out of a suitcase for a year and a half, and I bummed off friends, and then I
+
+12
+00:01:11,200 --> 00:01:14,440
+wandered from hostel to hostel, but programming was still a passion of mine. So it's something I
+
+13
+00:01:14,440 --> 00:01:22,200
+continue to do. And I even continue to program in a rainforest, like here. So I lived in that musty
+
+14
+00:01:22,200 --> 00:01:29,400
+van for three weeks. Surprise, it had access to Wi-Fi. How's that for accommodation? And one of
+
+15
+00:01:29,400 --> 00:01:33,760
+the projects I worked on while traveling was this idea I had about Pokemon. So that's what we're
+
+16
+00:01:33,760 --> 00:01:40,160
+going to be discussing today. Let's get into it. So I really do love Pokemon. I am not referring to
+
+17
+00:01:40,160 --> 00:01:45,920
+Pokemon Go. So I am referring to the classic handheld games. And there's a site online where
+
+18
+00:01:45,920 --> 00:01:50,320
+you can go and you can play other people online. But one thing that I didn't love about it is that
+
+19
+00:01:50,320 --> 00:01:56,160
+the community is not that welcoming to newer players. So more experienced players, they actually
+
+20
+00:01:56,160 --> 00:02:01,280
+go through great lengths to hide their strategies. It does make sense. There's precedence for this.
+
+21
+00:02:01,280 --> 00:02:06,920
+So if you know Amon's moveset and their EV spread, it becomes very formulaic about how you deal with
+
+22
+00:02:06,920 --> 00:02:12,600
+it. So if you told me you had physically offensive setup sweeper Mega Charizard X, there's a very
+
+23
+00:02:12,600 --> 00:02:18,040
+finite set of checks and counters for that Pokemon. But still, this was not okay with me. I thought
+
+24
+00:02:18,040 --> 00:02:22,760
+that we should be better supporting to our newer players and we should be able to democratize that
+
+25
+00:02:22,760 --> 00:02:29,080
+information. And then one day, I noticed that all of the battles do not require authentication to
+
+26
+00:02:29,080 --> 00:02:35,000
+look at them. And so here I am in the middle of a rainforest and I signed myself up for that free
+
+27
+00:02:35,080 --> 00:02:40,120
+tier AWS account, which is ridiculous. And then I started scraping all their battles.
+
+28
+00:02:40,840 --> 00:02:44,440
+So that's what we're going to do today. We're going to talk about this passion project of mine
+
+29
+00:02:44,440 --> 00:02:49,960
+and use it to draw specific examples so that we can better understand working with distributed
+
+30
+00:02:49,960 --> 00:02:58,040
+systems, working with microservice architectures in the cloud. I will mention that when it comes to,
+
+31
+00:02:58,840 --> 00:03:03,080
+I refer to this as Distributed Systems 102. So at the bottom there, you can see that link
+
+32
+00:03:03,080 --> 00:03:09,400
+for LVH's Distributed Systems 101 for PyCon 2015. Disclaimer, it is an exceedingly technical talk.
+
+33
+00:03:09,960 --> 00:03:15,080
+However, I do want to continue that discussion. And today I want to talk about how can we maybe
+
+34
+00:03:15,080 --> 00:03:19,400
+ground some of the concepts for working with distributed systems and make them more practical.
+
+35
+00:03:19,400 --> 00:03:23,480
+I want you to leave today and think, oh, you know, I'm working on this new design. Hold on,
+
+36
+00:03:23,480 --> 00:03:26,760
+I've seen this pattern before. I've seen this problem before. How can I reproduce this?
+
+37
+00:03:27,480 --> 00:03:32,760
+When it comes to, so this is how I break down with distributed systems. Oftentimes teams will
+
+38
+00:03:32,760 --> 00:03:37,880
+pursue distributed systems because they care about scalability. Maybe they want to scale compute,
+
+39
+00:03:37,880 --> 00:03:42,680
+they want to scale storage, they want to even scale human resources. These all make sense.
+
+40
+00:03:43,800 --> 00:03:48,440
+A common way you do that is with concurrency. However, there are non-trivial consequences.
+
+41
+00:03:48,440 --> 00:03:53,160
+So two that I'm going to call it right away. One, holistically the system just becomes more
+
+42
+00:03:53,640 --> 00:03:59,080
+difficult to reason about. And two, you have to come to grips with the fact that your system
+
+43
+00:03:59,080 --> 00:04:05,000
+will now fail. So how can we compensate for these two things? So today that's the framework that
+
+44
+00:04:05,000 --> 00:04:08,440
+we're going to be working with. We're going to be talking about distributed systems. I'm going to
+
+45
+00:04:08,440 --> 00:04:13,480
+show you how we can achieve the concurrency while also providing techniques for compensating for
+
+46
+00:04:13,480 --> 00:04:17,560
+this, how do we assert the correctness of our system? In other words, how do we test our
+
+47
+00:04:17,560 --> 00:04:22,520
+distributed system? And at the same time, how do we build in resilience against failures?
+
+48
+00:04:24,120 --> 00:04:28,680
+Okay. So oftentimes when we're talking about these technical presentations, it's helpful to
+
+49
+00:04:28,680 --> 00:04:32,840
+start with an architecture overview. On the right side here, this is what a Pokemon battle looks
+
+50
+00:04:32,840 --> 00:04:36,440
+like. So as you might imagine, there are two players, they have their respective teams,
+
+51
+00:04:36,440 --> 00:04:42,440
+and they're battling each other. This is, yeah, Shift Gear Megina and Specs Ashgrin Ninja.
+
+52
+00:04:44,440 --> 00:04:50,040
+It's actually all open source. So that's also how this made it a lot easier. It's a reverse
+
+53
+00:04:50,040 --> 00:04:54,040
+engineer. So if you go take a look at their GitHub page, it turns out that the web UI,
+
+54
+00:04:54,040 --> 00:04:59,160
+it's communicating with the server using this text protocol that resembles a domain-specific
+
+55
+00:04:59,160 --> 00:05:05,000
+language. If you spend enough time looking at that text protocol and you're able to replay all the
+
+56
+00:05:05,000 --> 00:05:10,760
+logs, you can exactly replicate the state of the battle. Okay. So then I started thinking, well,
+
+57
+00:05:10,760 --> 00:05:14,920
+what if I just create a little bot and the bot just sat on the page and then when the battle was
+
+58
+00:05:14,920 --> 00:05:19,800
+done, it just scrapes all the battle logs from the DOM. It's like, oh, that seems pretty reasonable
+
+59
+00:05:19,800 --> 00:05:26,440
+to me. But that only gets us one battle. How do we get all the battles? On the left side,
+
+60
+00:05:26,440 --> 00:05:31,720
+if you go to the main chat room, there's this list of battles. It's something like the most recent
+
+61
+00:05:31,720 --> 00:05:36,200
+10 or 20 battles or so. The reason they have this feature is maybe you're visiting the site and you
+
+62
+00:05:36,200 --> 00:05:41,960
+want to spectate on a battle, you can go check out those. It only shows the most recent 10 or 20 or
+
+63
+00:05:41,960 --> 00:05:46,360
+so, but that's not really a problem when it comes to programming. I figured if we have a process
+
+64
+00:05:46,360 --> 00:05:53,080
+that's on a tight enough loop, then we could definitely collect all of those URLs without any
+
+65
+00:05:53,080 --> 00:05:58,760
+gaps in them. And then that way we would have all the battles on the entire site. So now we have a
+
+66
+00:05:58,760 --> 00:06:03,480
+way to download the logs for a single battle and replicate the exact state and we have a way to
+
+67
+00:06:03,480 --> 00:06:09,000
+get every single battle on the website. And a link if you want to play is at the bottom.
+
+68
+00:06:10,120 --> 00:06:15,960
+So I implemented this using Python and they were on Docker containers in EC2. But a bit
+
+69
+00:06:15,960 --> 00:06:21,480
+higher level, so this is the flow of the system. So starting from the upper left, we have this
+
+70
+00:06:21,480 --> 00:06:26,280
+component that watches the list of rooms, gets all the battles, and then as it scrapes those URLs,
+
+71
+00:06:26,280 --> 00:06:32,840
+it pushes it onto an SQS queue. Then there's this some farm of download bots that will slowly pop
+
+72
+00:06:32,840 --> 00:06:36,760
+work off this queue and then sits on the battle, waits for the battle to finish, and then scrapes
+
+73
+00:06:36,760 --> 00:06:42,040
+the battle logs. The battle logs are persisted in S3. I also had a lambda function that would be
+
+74
+00:06:42,040 --> 00:06:46,760
+triggered on S3 puts and every time there's a new blob there, it's going to index it in ElastiCache.
+
+75
+00:06:47,320 --> 00:06:55,480
+Yes, when you're unemployed, you have so much time. So much time. Okay. So for today, we're
+
+76
+00:06:55,480 --> 00:07:00,440
+going to really focus in on that left column. So the component that watches for all the battles
+
+77
+00:07:00,440 --> 00:07:05,800
+on the site, it putting all the work onto the queue, and then a farm of bots downloading those
+
+78
+00:07:05,800 --> 00:07:14,760
+battles. Okay. So take a look here. This is the code snippet that we're going to be working with.
+
+79
+00:07:14,760 --> 00:07:18,920
+I hope it's not inspiring code to anybody. Pretty straightforward. We have a roomless
+
+80
+00:07:18,920 --> 00:07:23,400
+watcher. It scrapes for all the battles and gets a list of URLs. We iterate through the URLs and
+
+81
+00:07:23,400 --> 00:07:28,840
+then we serially download them. This was great for an MVP, but then I quickly already ran into problems.
+
+82
+00:07:30,040 --> 00:07:34,120
+Already, like, in my head, I wasn't able to keep track of everything that was going on.
+
+83
+00:07:34,120 --> 00:07:37,880
+Sometimes I'm working on the bot that's just downloading the battle and then I forget, like,
+
+84
+00:07:38,520 --> 00:07:43,560
+maybe do I need to do some special authentication thing for SQS here or do I need some special
+
+85
+00:07:43,560 --> 00:07:47,800
+retry logic when I'm working with the roomless watcher? I always had to keep the whole breadth
+
+86
+00:07:47,800 --> 00:07:52,840
+of the application in my mind at the same time. People here who are working with microservice
+
+87
+00:07:52,840 --> 00:07:57,880
+archers, I think you're already picking up on the language here, right? When the application grows
+
+88
+00:07:57,880 --> 00:08:01,800
+too big to fit into your head, this is often a good sign that we should decompose our application.
+
+89
+00:08:02,600 --> 00:08:07,320
+There's more that we can push this because the download bot, it just wasn't achieving the
+
+90
+00:08:07,320 --> 00:08:11,400
+throughput that I wanted. So these were all these indicators I thought, like, okay, maybe this is
+
+91
+00:08:11,400 --> 00:08:16,040
+time. Maybe I should start to make this into a distributed system to get the scale that I want.
+
+92
+00:08:18,280 --> 00:08:22,200
+On the left side there, this is how I view it. So I saw, okay, the roomless watcher, the download bot,
+
+93
+00:08:22,200 --> 00:08:26,680
+they achieved some type of business logic. Whereas the URLs in the middle, this is just state. This
+
+94
+00:08:26,680 --> 00:08:33,560
+is just data. So we have components that when we talk about them, they get highlighted as some type
+
+95
+00:08:33,560 --> 00:08:39,000
+of component. We have a roomless watcher. We have a queue that holds state. We have a download bot.
+
+96
+00:08:39,000 --> 00:08:44,520
+And in addition, there's a separation between business logic and state. This was not quite
+
+97
+00:08:44,520 --> 00:08:49,720
+persuasive enough for me, though. And so I started to take a look at how my different components
+
+98
+00:08:49,720 --> 00:08:56,280
+differ in terms of rate of work, specifically magnitude. That's a mouthful. Let's unpack it.
+
+99
+00:08:57,080 --> 00:09:02,040
+Okay. So the roomless watcher. So I'm using Selenium as the web automation framework.
+
+100
+00:09:02,040 --> 00:09:05,960
+So once you've initialized the page, let's say that takes on the magnitude of three seconds or
+
+101
+00:09:05,960 --> 00:09:10,200
+something like that, it's fine. We have the page open. But you see that refresh button in the upper
+
+102
+00:09:10,200 --> 00:09:16,120
+left in the red rectangle. It turns out that the list of the most recent 10 or 20 battles,
+
+103
+00:09:16,120 --> 00:09:21,240
+you can refresh it with just a simple async call. So now that means that the magnitude, once you've
+
+104
+00:09:21,240 --> 00:09:26,280
+initialized the page, is actually on the magnitude of only 300 milliseconds. So that's pretty fast.
+
+105
+00:09:26,280 --> 00:09:30,760
+That's like acceptably fast. But the download bot, it's very different. It's much more erratic.
+
+106
+00:09:31,640 --> 00:09:36,760
+Let's say that, I don't know, you and I were battling. And then it might be that once as
+
+107
+00:09:36,760 --> 00:09:41,000
+soon as we get into the battle, I have to DC. I have to disconnect because whatever, my girlfriend
+
+108
+00:09:41,000 --> 00:09:43,640
+says we have to go eat dinner or something. So the battle could just take two seconds.
+
+109
+00:09:44,440 --> 00:09:49,960
+But maybe in some other situations, the battle could take 45 minutes because both players
+
+110
+00:09:49,960 --> 00:09:56,760
+brought stall. And by stall, what that means is you bring fat mons, mons like Chansey or Venusaur
+
+111
+00:09:56,760 --> 00:10:02,280
+or Clefable, these Pokemon that have really high HP stats and just take forever to wear down. So
+
+112
+00:10:02,280 --> 00:10:07,160
+yeah, a battle could take 45 minutes. But now that we've seen that there's a difference in
+
+113
+00:10:07,160 --> 00:10:12,200
+responsibility, there's a difference in the type of components, business logic or state, and there's
+
+114
+00:10:12,200 --> 00:10:17,320
+also a very significant difference in how the rates of work are operating. We're talking
+
+115
+00:10:17,320 --> 00:10:22,120
+magnitudes of difference. So this was the evidence that I needed. So I understood the
+
+116
+00:10:22,120 --> 00:10:26,440
+characteristics of my system. So you start by analyzing the characteristics of your system.
+
+117
+00:10:26,440 --> 00:10:30,680
+And now this is when we can decompose the application. You've probably seen the diagram
+
+118
+00:10:30,680 --> 00:10:36,360
+a million times. You take this monolith, which is like a blob of colors, and then you break it into
+
+119
+00:10:36,360 --> 00:10:41,000
+subcomponents. And that's basically what I did here. I partitioned the application along these
+
+120
+00:10:41,000 --> 00:10:45,960
+responsibilities. And another phrase you might hear is to draw seams through the application.
+
+121
+00:10:46,680 --> 00:10:50,760
+So we've analyzed the characteristics of the system. We've seen where would be appropriate
+
+122
+00:10:50,760 --> 00:10:55,800
+to partition along responsibilities. And now what can we do? Well, now we can layer on top of this
+
+123
+00:10:56,520 --> 00:11:05,560
+a model of concurrency. Okay? On the left side, what you can do is we can have producers on the
+
+124
+00:11:05,560 --> 00:11:10,200
+left side. And maybe there's a main thread and it spins off one to end child threads for the
+
+125
+00:11:10,200 --> 00:11:16,520
+rimless watcher. On the right side there are some consumers. And the same thing, maybe one to end
+
+126
+00:11:16,520 --> 00:11:21,480
+child threads for these download bots. Between them they communicate on some thread safe queue.
+
+127
+00:11:21,480 --> 00:11:26,520
+We have this in the standard library. It's queue.queue. So this is the model of computation
+
+128
+00:11:26,520 --> 00:11:30,680
+that I'm using here. Producers on the left side, consumers on the right side communicating over a
+
+129
+00:11:30,680 --> 00:11:36,680
+thread safe message queue. At the bottom there, I draw a link, okay, to Raymond Heddinger's
+
+130
+00:11:36,680 --> 00:11:42,120
+fantastic talk from PyCon Russia 2016. If you haven't seen it, I strongly recommend that you do
+
+131
+00:11:42,120 --> 00:11:46,520
+specifically if you're getting started working with concurrency or you just need a refresher.
+
+132
+00:11:47,320 --> 00:11:53,720
+I would strongly argue this is the must have first go to talk. Absolutely. So he starts by positing
+
+133
+00:11:53,720 --> 00:11:58,520
+that and I paraphrase it at the top there. Unless you're implementing an operating system,
+
+134
+00:11:58,520 --> 00:12:03,720
+you should strongly favor using higher level primitives such as thread safe message queues.
+
+135
+00:12:03,720 --> 00:12:08,680
+And in this case it would be queue.queue for Python. He also includes something called
+
+136
+00:12:08,680 --> 00:12:14,440
+Raymond rules. These are rules of thumbs. These are best practices for working with concurrency.
+
+137
+00:12:14,440 --> 00:12:19,160
+And some of them, if you don't, it's not like, A, maybe you should follow this if you feel like it.
+
+138
+00:12:19,160 --> 00:12:24,360
+It's really if you don't follow these rules, your algorithm is simply not correct. So I strongly
+
+139
+00:12:24,360 --> 00:12:30,360
+recommend thinking about concurrency by Raymond Heddinger. This gave us throughput, right? So on
+
+140
+00:12:30,360 --> 00:12:36,040
+the right side there, if I wanted to, I could more or less achieve linear scalability. If I double
+
+141
+00:12:36,040 --> 00:12:40,440
+or quadruple the number of download dots, I will double or quadruple the throughput of that right
+
+142
+00:12:40,440 --> 00:12:46,360
+side. Again, for those of you who have experience working microservice architectures, you notice a
+
+143
+00:12:46,360 --> 00:12:51,800
+problem. And that's the state in the middle. So if we're working in the cloud, you need to assume a
+
+144
+00:12:51,800 --> 00:12:57,480
+node is going to drop. It's not like maybe it's going to drop, but it will definitely drop
+
+145
+00:12:57,480 --> 00:13:02,760
+eventually. Maybe through maintenance or maybe just through, I don't know, a freak storm and
+
+146
+00:13:02,760 --> 00:13:08,600
+somebody trips over the power wire. If I had something like 100,000 URLs in that queue, what
+
+147
+00:13:08,600 --> 00:13:13,320
+happens to those? Do they just all disappear and I just lose all those URLs? So that's not good
+
+148
+00:13:13,320 --> 00:13:17,880
+enough. However, because we've partitioned the application, because we've decomposed into smaller
+
+149
+00:13:17,880 --> 00:13:24,120
+subcomponents, we can swap it out really quickly. So instead of just having queue.queue,
+
+150
+00:13:27,480 --> 00:13:32,600
+you can swap it out for an SQS queue. And this was a really easy solution. All of a sudden, by
+
+151
+00:13:32,600 --> 00:13:37,640
+swapping out that component, I achieved this rich feature set of cloud services, right? The message
+
+152
+00:13:37,640 --> 00:13:42,280
+durability, the scalability, the instrumentation, you just get that out of the box. But that's only
+
+153
+00:13:42,280 --> 00:13:46,840
+possible because beforehand, we've analyzed the characteristics of our system, we've decomposed
+
+154
+00:13:46,840 --> 00:13:51,960
+it properly, and we're focusing on not like these implementation details, but how do we get that
+
+155
+00:13:52,440 --> 00:13:56,840
+out of the box. So in Go, concurrency is a first-class citizen. So what that means is that
+
+156
+00:13:56,840 --> 00:14:01,800
+concurrency was a conscious decision to include into the language specification. It's not
+
+157
+00:14:01,800 --> 00:14:07,240
+implemented as a library. Think async IO, which is implemented as a library. It's not
+
+158
+00:14:07,240 --> 00:14:13,240
+a library. It's a language specification. It's not a library. It's a language specification.
+
+159
+00:14:13,240 --> 00:14:18,280
+So it's not a library. It's a language specification. It's not a library. It's a
+
+160
+00:14:18,280 --> 00:14:21,400
+language specification. It's not implemented as a library. Think async IO, which is implemented
+
+161
+00:14:21,400 --> 00:14:26,520
+as a library. But concurrency is part of the runtime. That gives us three constructs. Go
+
+162
+00:14:26,520 --> 00:14:29,800
+routines, channels, and selects. I'm just going to talk about go routines and channels today.
+
+163
+00:14:30,600 --> 00:14:35,000
+And so this is how the analogy plays out. So if I want to do the same solution in Go,
+
+164
+00:14:35,640 --> 00:14:41,560
+on the left side, maybe I'll launch one-to-end go routines to watch that list of new battles.
+
+165
+00:14:42,280 --> 00:14:47,480
+On the right side, maybe I'll watch, I'll launch one-to-end go routines to download the battles.
+
+166
+00:14:47,480 --> 00:14:51,160
+And in the middle, they still need to communicate. How do I get the work from the producers to the
+
+167
+00:14:51,160 --> 00:14:56,280
+consumers? So in Go, we have a contract called channels. And channels, what you do is from one
+
+168
+00:14:56,280 --> 00:15:01,000
+side, you can send in work or messages. And from the other side, you can receive that work.
+
+169
+00:15:01,960 --> 00:15:06,520
+I want to point out that across all three of these examples, whether it be Python or AWS or Go,
+
+170
+00:15:07,240 --> 00:15:11,480
+three technologies that were written by three different teams and written across multiple
+
+171
+00:15:11,480 --> 00:15:16,920
+decades, they all arrive at the same solution. So the reason for that is because we're not focusing
+
+172
+00:15:16,920 --> 00:15:22,280
+on small implementation details, but we're focusing on how we are composing our components.
+
+173
+00:15:22,280 --> 00:15:25,800
+How are we orchestrating the work? And that's what I urge you to focus on as well.
+
+174
+00:15:26,440 --> 00:15:33,400
+Same solution, three different technologies. So that's great. And now I have the scalability
+
+175
+00:15:33,400 --> 00:15:37,800
+in my system and I'm able to download like, you know, hundreds of thousands of Pokemon battles,
+
+176
+00:15:37,800 --> 00:15:42,760
+and it's a really good time. But I have no idea if it actually works. So it introduces several
+
+177
+00:15:42,760 --> 00:15:49,560
+problems. Loss of determinism. Let's say I had five URLs in the queue. Well, on one run of the
+
+178
+00:15:49,560 --> 00:15:55,160
+test, maybe I get through all five and the work is processed sequentially. That's great. On the
+
+179
+00:15:55,160 --> 00:16:00,200
+next run of the test, I might only get halfway through and maybe the order is scrambled. In
+
+180
+00:16:00,200 --> 00:16:05,320
+exchange for the concurrency, you give up the predictability of the system. We also have longer
+
+181
+00:16:05,320 --> 00:16:10,120
+startup time. Starting up an in-memory queue, that is trivial. Starting up an SQS resource,
+
+182
+00:16:10,120 --> 00:16:14,520
+that could take on the magnitude of minutes. That's something to think about. And in addition,
+
+183
+00:16:14,520 --> 00:16:20,440
+everything, my processes are now in different memory spaces. Maybe they're on different nodes.
+
+184
+00:16:20,440 --> 00:16:25,320
+And all of a sudden, we've introduced flakiness. I could have a network partition. I have to deal
+
+185
+00:16:25,320 --> 00:16:32,520
+with loss of availability for dependent services. When we have these types of problems, we still
+
+186
+00:16:32,520 --> 00:16:36,680
+can handle them. But they all revolve around this problem of how do I deal with these external
+
+187
+00:16:36,760 --> 00:16:41,960
+dependencies? Let's get aligned on terminology really quickly. I want to talk about mocks and
+
+188
+00:16:41,960 --> 00:16:47,960
+fakes. With mocks, mocks are these objects that we can just extend on demand. You interact with
+
+189
+00:16:47,960 --> 00:16:52,440
+them and then afterwards you can introspect them to understand the history of the interactions.
+
+190
+00:16:53,000 --> 00:16:57,080
+We can understand who called you, how many times were you called, with what arguments were you
+
+191
+00:16:57,080 --> 00:17:04,120
+called. Fakes are a bit different. With fakes, they should be able to serve as drop-in replacements
+
+192
+00:17:04,120 --> 00:17:08,440
+for the real resource. This means that they fulfill two criteria. One, they have to implement
+
+193
+00:17:08,440 --> 00:17:12,680
+the same interface and two, they have to guarantee the same invariances as the real resource.
+
+194
+00:17:13,320 --> 00:17:17,640
+For example, if for whatever reason I was trying to implement a fake queue, there has to be a way
+
+195
+00:17:17,640 --> 00:17:22,440
+for me to put and pull work from that queue. In addition, if the original queue were FIFO,
+
+196
+00:17:22,440 --> 00:17:27,320
+I can't suddenly have a fake queue that does not maintain sort order. That would break one of the
+
+197
+00:17:27,320 --> 00:17:36,200
+invariances. How did these come into play? I'm going to talk about testing external dependencies.
+
+198
+00:17:37,560 --> 00:17:45,560
+Currently I work at Google. The complexity and scale of Google is mind boggling. It's surprising
+
+199
+00:17:45,560 --> 00:17:50,760
+that testing external dependencies is a challenge we deal with on a day-to-day basis. It is that
+
+200
+00:17:50,760 --> 00:17:55,080
+technical. It is that overwhelming. I'm going to break this down into three different segments.
+
+201
+00:17:55,080 --> 00:17:59,240
+I'm going to talk about how I tested external dependencies in my Pokemon project,
+
+202
+00:17:59,240 --> 00:18:03,320
+how Google subscribes for testing external dependencies, and how we think we as a Python
+
+203
+00:18:03,320 --> 00:18:09,400
+community should do it. All three actually are different answers. So for me, I went with fakes.
+
+204
+00:18:09,960 --> 00:18:16,600
+Keep in mind, I had no steady income and no job, and I was living in a rain forest and hitchhiking
+
+205
+00:18:16,600 --> 00:18:22,520
+to get everywhere. If I went past that AWS free tier, that would not be okay. I have no money.
+
+206
+00:18:23,080 --> 00:18:28,120
+So that's why when I did my testing, I really wanted to prefer something that was a bit more
+
+207
+00:18:28,120 --> 00:18:33,240
+realistic. Fakes give you that. Fakes are a little bit more realistic, but they cost developer time.
+
+208
+00:18:33,240 --> 00:18:38,120
+That's okay. I have tons of time. I have nothing to do on a day-to-day basis. So that's why I
+
+209
+00:18:38,120 --> 00:18:42,680
+preferred fakes. I needed the realism, and I was willing to trade the developer time. What do we
+
+210
+00:18:42,680 --> 00:18:46,920
+do at Google? At Google, we have this document that's actually linked to the bottom. Don't
+
+211
+00:18:46,920 --> 00:18:51,400
+bother clicking on it. It doesn't go anywhere. You don't have access to it. But at Google,
+
+212
+00:18:51,400 --> 00:18:57,000
+we prefer using the real resources. The reason for that is at Google, saving developer time
+
+213
+00:18:57,000 --> 00:19:03,000
+is paramount. Just full stop saving developer time. That's what we need to be doing. And what
+
+214
+00:19:03,000 --> 00:19:07,400
+are we willing to trade in exchange? Let's say that you have some test that runs and you need
+
+215
+00:19:07,400 --> 00:19:11,640
+to start up a spanner instance. That's fine. Just start up a real spanner instance. If you need a
+
+216
+00:19:11,640 --> 00:19:16,840
+thousand of them, that's fine. Just start up a thousand spanner instances. And I put the word
+
+217
+00:19:16,840 --> 00:19:21,560
+they're computationally expensive. What I mean by that is if you want to use the real resources,
+
+218
+00:19:21,560 --> 00:19:26,280
+I can't sit here and wait for a thousand spanners. It's a startup. We just can't do that
+
+219
+00:19:26,280 --> 00:19:30,040
+serially. So what do we have to do? We have to bring them all up at the same time. If you have
+
+220
+00:19:30,040 --> 00:19:35,960
+a server farm as large as Google, that is possible. Now, that does take way longer, but ultimately,
+
+221
+00:19:35,960 --> 00:19:39,480
+because Google is trying to save developer time, we're willing to make those tradeoffs. We're
+
+222
+00:19:39,480 --> 00:19:46,600
+willing to use the real resources. How about us as a community? So over at the Instagram team,
+
+223
+00:19:47,080 --> 00:19:52,920
+Mike Krieger, the CEO and co-founder, he mentions how, and this was a talk at Airbnb, maybe from,
+
+224
+00:19:52,920 --> 00:19:57,880
+I don't know, 2015 or something, but one of the engineering philosophies over at Instagram is
+
+225
+00:19:57,880 --> 00:20:03,080
+do the simple thing first. There's no question that will definitely fail one day, right? But
+
+226
+00:20:03,080 --> 00:20:07,800
+that's fine. When you get to that point, just do the next simplest thing. In practice, what that
+
+227
+00:20:07,800 --> 00:20:13,080
+means is I really believe that we as a Python community, when we're working with distributed
+
+228
+00:20:13,080 --> 00:20:17,000
+systems and we have all these external dependencies, I believe that our default
+
+229
+00:20:17,000 --> 00:20:22,120
+should be to start with mocks. Now, mocks are fast, they're lightweight, they're easy to reason
+
+230
+00:20:22,120 --> 00:20:26,600
+about, and most importantly, if you have a newer developer, let's say you have an undergrad right
+
+231
+00:20:26,600 --> 00:20:30,440
+out of college, it's okay. They could spend a day reading through the source docs or maybe a couple
+
+232
+00:20:30,440 --> 00:20:35,560
+days, but they will be able to get started rather quickly. That has real tangible benefits. There
+
+233
+00:20:35,560 --> 00:20:40,120
+are drawbacks. It's the furthest from production, right? And in addition, you get some issues with
+
+234
+00:20:40,120 --> 00:20:44,120
+interface drift. Anything you throw to mock is going to work. So there are some problems with
+
+235
+00:20:44,120 --> 00:20:50,120
+that. But I would still argue that the benefits of mocking in this scenario are well worth it.
+
+236
+00:20:50,120 --> 00:20:56,760
+So, again, to summarize, I decided to go with fakes because I needed the realism. Google prefers
+
+237
+00:20:56,760 --> 00:21:02,120
+to use the real resources because they have oodles of money. And then we as a Python community,
+
+238
+00:21:02,120 --> 00:21:06,520
+I strongly believe that we should just focus on mocks. It's the simplest solution. Good enough is
+
+239
+00:21:06,520 --> 00:21:12,360
+good enough. So what do we have here? So now we have this Pokemon application. We have all these
+
+240
+00:21:12,360 --> 00:21:16,440
+bots everywhere and they're downloading tons of battles. And we also know it's correct. So I know
+
+241
+00:21:16,440 --> 00:21:22,680
+that I'm not just burning through EC2 instances. However, it fails all the time now. The system is
+
+242
+00:21:22,680 --> 00:21:28,440
+just getting big enough that it fails purely through coincidence. So we need some way to figure
+
+243
+00:21:28,440 --> 00:21:34,120
+out that how can we build in resilience against this failure? There is a .NET C sharp framework
+
+244
+00:21:34,120 --> 00:21:40,920
+called Polly. Don't let me lose you. I'm not going to talk about C sharp. The reason that I found it
+
+245
+00:21:40,920 --> 00:21:45,800
+is just that the way that if you go to their GitHub page, I link it at the bottom, the way that they
+
+246
+00:21:45,800 --> 00:21:50,440
+help you digest the problem is fantastic. If you're thinking about, like, oh, I've got the system and
+
+247
+00:21:50,440 --> 00:21:54,760
+it just keeps failing. And there are so many policies out there. I'm sure you've heard of
+
+248
+00:21:55,400 --> 00:21:58,840
+Hystrix over at Netflix. They have the circuit breaker pattern. And you're thinking, like, I don't
+
+249
+00:21:58,840 --> 00:22:03,480
+even know when I use a circuit breaker or when I use fallbacks or when I use retries. The way that
+
+250
+00:22:03,480 --> 00:22:08,600
+Polly describes the problem space is really helpful to think about. So here's an example of
+
+251
+00:22:08,600 --> 00:22:12,440
+what they'll do. They'll have this, like, little witty saying on the right side, like, don't wait
+
+252
+00:22:12,440 --> 00:22:17,080
+forever. Or maybe it's just a blip. So now I'm going to show you how I use timeout retries and
+
+253
+00:22:17,080 --> 00:22:24,120
+fallbacks in my Pokemon project to make sure it's resilient. So starting off, this is the easiest
+
+254
+00:22:24,120 --> 00:22:28,600
+part, right? On the download bot, when you get to a battle, it doesn't mean that the battle is
+
+255
+00:22:28,680 --> 00:22:34,280
+immediately completed. I mentioned earlier that it could be going on for 45 minutes. So using the
+
+256
+00:22:34,280 --> 00:22:38,440
+Selenium Web Automation framework, this is what it looks like. You can see on line two, it says
+
+257
+00:22:38,440 --> 00:22:42,200
+element to be clickable. So that's the condition that I'm waiting for. I'm waiting for that download
+
+258
+00:22:42,200 --> 00:22:46,840
+button on the bottom right to be done because that tells me that the battle logs in the DOM are ready
+
+259
+00:22:46,840 --> 00:22:51,960
+to be scraped. That's the element. That's the checkpoint that I'm waiting for. So this one's
+
+260
+00:22:51,960 --> 00:22:55,960
+pretty simple, right? I just have this at the smallest unit. I have my download bot. And I say,
+
+261
+00:22:55,960 --> 00:22:59,960
+hey, go to that page, check it out for three seconds or so, and if you don't see anything,
+
+262
+00:22:59,960 --> 00:23:03,880
+let's just wait a while. It's probably not ready yet. So timeout. That's pretty simple.
+
+263
+00:23:04,760 --> 00:23:11,480
+At the same time, it's not good enough. So all these different external dependencies and most
+
+264
+00:23:11,480 --> 00:23:16,760
+importantly, the Chrome WebDriver. So the Chrome WebDriver is implemented using something called
+
+265
+00:23:16,760 --> 00:23:21,800
+the Gang of Four command pattern. It's a very cool-looking pattern, but what it makes is
+
+266
+00:23:21,800 --> 00:23:27,160
+debuggability is basically impossible. It becomes a total black box system. It's very
+
+267
+00:23:27,160 --> 00:23:31,080
+possible that while my download bot is trying to operate with this page, it just gets into a bad
+
+268
+00:23:31,080 --> 00:23:36,840
+state, and I just have no idea what's wrong. In addition, so Pokemon Showdown, it's a chat
+
+269
+00:23:36,840 --> 00:23:40,600
+application. So let's think about the characteristics of that system. It means that a lot of the
+
+270
+00:23:40,600 --> 00:23:44,840
+connections are very long-lasting, right? We're going to try to persist connections from minutes,
+
+271
+00:23:44,840 --> 00:23:49,720
+if not hours. Unfortunately, there are only two developers or something like that for the website,
+
+272
+00:23:49,720 --> 00:23:54,760
+so reliability is not the greatest. I could have a bot sitting on a battle, and they just get dc'd.
+
+273
+00:23:54,760 --> 00:23:58,920
+They just get booted by the server for no reason other than the server can't maintain all these
+
+274
+00:23:58,920 --> 00:24:05,400
+connections at the same time. So if you take a look at lines 10, 11, and 12, so on line 10,
+
+275
+00:24:05,400 --> 00:24:09,320
+connection loss, that's what that means. So the server for whatever reason just booted me,
+
+276
+00:24:09,320 --> 00:24:14,040
+but that's okay. That's an acceptable error condition. If that occurs, just try again on
+
+277
+00:24:14,040 --> 00:24:18,840
+another attempt. We're not going to kill the runtime because of that. A WebDriver error,
+
+278
+00:24:18,840 --> 00:24:23,640
+so this is something because maybe when working with a Chrome WebDriver, I get into a bad state.
+
+279
+00:24:24,600 --> 00:24:28,280
+This is expected, though. So it's fine. We're going to continue to try again. And the last one is the
+
+280
+00:24:28,280 --> 00:24:33,560
+most obvious one. If the bot goes to the page and the bot finds out the battle is not yet completed,
+
+281
+00:24:33,560 --> 00:24:39,080
+again, that's fine. We're going to continue. This code here, it's inspired by our holder's
+
+282
+00:24:39,080 --> 00:24:45,480
+Guava retrying. Guava, for people who don't know, it's Google's common libraries for Java,
+
+283
+00:24:45,480 --> 00:24:51,880
+and then our holder, he wrote an extension to it. And then inspired on his design for retrying,
+
+284
+00:24:51,880 --> 00:24:57,480
+it's how I wrote this code here. So what we had at the smallest level, we have a download bot that
+
+285
+00:24:57,480 --> 00:25:01,640
+has this retry logic, and now when it goes to the page, it might not work, but that's fine. We'll
+
+286
+00:25:01,640 --> 00:25:06,760
+try again. And this is what really brings in the resilience at a higher level. Now we account for
+
+287
+00:25:06,760 --> 00:25:11,640
+the WebDriver, we account for the server, we account for the Selenium Web Automation framework
+
+288
+00:25:11,640 --> 00:25:19,720
+not working well. But lastly, there's also a fallback. You can see there on line 9, so let's
+
+289
+00:25:19,720 --> 00:25:24,280
+say that I exhaust all my retries. Let's say I expect that the battle will take 45 minutes,
+
+290
+00:25:24,280 --> 00:25:28,360
+and for whatever reason it's just gone on for an hour and a half. Okay, we're not going to wait much
+
+291
+00:25:28,360 --> 00:25:32,360
+longer. At a certain point, we're going to kill the retries, we're going to assume that it just fails,
+
+292
+00:25:32,360 --> 00:25:37,160
+and I need to return something. So in this case, I just return an empty list, a zero-valued object
+
+293
+00:25:37,160 --> 00:25:44,920
+on line 9. But even cooler than that is on line 13. So I learned this from PyCon 2017. There's a
+
+294
+00:25:44,920 --> 00:25:49,720
+talk on error handling paradigms, and there's just like this little nugget that she mentions about a
+
+295
+00:25:49,720 --> 00:25:54,520
+project from Microsoft called Midori. And over in Midori, they use this technique called abandonment.
+
+296
+00:25:55,320 --> 00:25:59,400
+I've never had a term for it, but so when we're working in the cloud, we assume that resources
+
+297
+00:25:59,400 --> 00:26:02,520
+will fail. We assume there will be network partition, we assume there will be loss of
+
+298
+00:26:02,520 --> 00:26:06,360
+availability, and we assume that nodes will just get into a bad state. So what do we do in those
+
+299
+00:26:06,360 --> 00:26:10,600
+cases? Well, it's fine. They should be very trivial occurrences. We just kill the node and
+
+300
+00:26:10,600 --> 00:26:15,880
+we instantiate a new one. The same thing here. So sometimes my download bot would just get into a
+
+301
+00:26:15,880 --> 00:26:20,840
+bad state, and I had no idea how to handle this. I couldn't debug it because the Chrome driver is
+
+302
+00:26:20,840 --> 00:26:26,760
+too confusing or maybe like the number of network calls with the server and maybe there's like some
+
+303
+00:26:26,760 --> 00:26:32,360
+bad state there. And so what I did is I would force garbage collect that download bot and then
+
+304
+00:26:32,360 --> 00:26:36,600
+reconstruct the entire object graph. I'm not going to go into the implementation details here,
+
+305
+00:26:36,600 --> 00:26:42,520
+but it's a technique that I think is just so, so cool. And that was definitely what set this
+
+306
+00:26:42,520 --> 00:26:46,920
+project over in terms of just making it rock solid, that abandonment strategy on line 13.
+
+307
+00:26:48,600 --> 00:26:53,720
+So we've seen how at first I started with this tiny project and was all running in a single process,
+
+308
+00:26:53,720 --> 00:26:58,200
+and then I needed to scale. I couldn't keep it all in my head and I wasn't getting the throughput
+
+309
+00:26:58,200 --> 00:27:03,000
+that I wanted, so I sought to achieve concurrency and I did that using the message passing.
+
+310
+00:27:03,720 --> 00:27:07,320
+But even though I had the concurrency, I had no idea if things were working correctly.
+
+311
+00:27:07,320 --> 00:27:12,040
+So we really had to step up our game on how we test, right? And we use those strategies like
+
+312
+00:27:12,040 --> 00:27:17,320
+in my particular case I use fakes. So now that we have the concurrency, we know that the application
+
+313
+00:27:17,320 --> 00:27:22,200
+works pretty well. And then with these resilient strategies, we also have some kind of backup
+
+314
+00:27:22,200 --> 00:27:24,920
+strategies for when things will fail, which they inevitably will.
+
+315
+00:27:29,080 --> 00:27:36,600
+So unfortunately, I don't have time for questions. However, I hope that it's like
+
+316
+00:27:36,600 --> 00:27:42,280
+reasonably apparent that I'm an okay approachable person. So if you see me in the hallway,
+
+317
+00:27:42,280 --> 00:27:47,320
+I'm more than happy to talk about Hawaii or gender equality, or if you're interested about
+
+318
+00:27:47,320 --> 00:27:52,280
+what it's like working at Google or interviewing for Google, it's the worst. Interviewing for Google
+
+319
+00:27:52,280 --> 00:27:59,640
+is so hard. Feel free to just come grab me and talk to me. And also if that's uncomfortable,
+
+320
+00:27:59,640 --> 00:28:04,840
+you're happy to just talk to me on LinkedIn as well. And I did want to leave with this mention
+
+321
+00:28:04,840 --> 00:28:10,600
+though. So Jack Dietrich from 2012, he said this on the top line there. So we don't ship code,
+
+322
+00:28:10,600 --> 00:28:15,960
+we ship features. And I want to build on that. So I would also say that we don't solve problems
+
+323
+00:28:15,960 --> 00:28:21,480
+for computers. We're solving problems for people. I think it can be very easy to forget about that
+
+324
+00:28:21,480 --> 00:28:27,800
+sometimes and just want to work on the newest, sexiest technology. But I would urge the Python
+
+325
+00:28:27,800 --> 00:28:32,120
+community, as great as we are, to really focus in on the user. And I think that's how we can
+
+326
+00:28:32,120 --> 00:28:45,560
+deliver great value. So thanks for your time, gang. I'll see you around.
+

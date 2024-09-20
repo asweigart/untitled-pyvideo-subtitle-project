@@ -1,0 +1,1444 @@
+1
+00:00:00,000 --> 00:00:09,740
+Okay. So we'll be starting now, so please everyone take your seats. So in the next 30
+
+2
+00:00:09,740 --> 00:00:14,240
+minutes or so, Joe will tell us about syntax trees and Python, so make a big cheer for
+
+3
+00:00:14,240 --> 00:00:15,240
+him.
+
+4
+00:00:15,240 --> 00:00:24,760
+Hi. Thanks, everybody, for attending. So today we're going to talk about syntax trees and
+
+5
+00:00:24,760 --> 00:00:30,320
+Python and specifically around automated code transformations. First a little introduction
+
+6
+00:00:30,320 --> 00:00:34,600
+about myself. I am an SRE at Pinterest on the API team. I've been there for, I think,
+
+7
+00:00:34,600 --> 00:00:41,440
+four years this summer. And Pinterest's mission is to bring everyone the inspiration to create
+
+8
+00:00:41,440 --> 00:00:46,400
+a life they love. Who here has actually heard of Pinterest? Okay. That's good. Who here
+
+9
+00:00:46,400 --> 00:00:52,120
+has not heard of us? Okay. For you over there, the inspiration I get from Pinterest is dogs.
+
+10
+00:00:52,120 --> 00:00:55,720
+There's many other things on Pinterest, but it's useful for lots of things, and so I think
+
+11
+00:00:55,720 --> 00:01:01,520
+pugs are adorable, and so I have lots of pugs. A little bit about Python at Pinterest. We
+
+12
+00:01:01,520 --> 00:01:05,800
+use Python to serve over 250 million monthly active users, and every single request to
+
+13
+00:01:05,800 --> 00:01:11,120
+Pinterest, whether it's on mobile or desktop in Europe or the U.S. or anywhere, goes through
+
+14
+00:01:11,120 --> 00:01:16,280
+Python, and it's been that way since day one. We actually started as a big Django app, and
+
+15
+00:01:16,280 --> 00:01:20,820
+ever since then we've been using Python. We have over 2.6 million lines of Python code
+
+16
+00:01:20,820 --> 00:01:25,820
+along with 600,000 lines of comments, so our code base is not small, and so a lot of
+
+17
+00:01:25,820 --> 00:01:30,220
+the challenges we have that are very simple and small code base are exceedingly difficult
+
+18
+00:01:30,220 --> 00:01:35,540
+when you have 2.6 million lines of code. For a bit of a data point, CPython itself is about
+
+19
+00:01:35,540 --> 00:01:39,620
+a million lines of code, roughly, and so we are quite a bit bigger, and so we have quite
+
+20
+00:01:39,620 --> 00:01:44,740
+a few problems as well. So the problem that we were actually dealing with is this is a
+
+21
+00:01:44,740 --> 00:01:49,300
+talk I actually gave yesterday with my coworker Jordan Adler, which is reporting our giant
+
+22
+00:01:49,300 --> 00:01:54,660
+code base, 2.6 million lines of it from Python 2 to Python 3, and it turns out refactoring
+
+23
+00:01:54,660 --> 00:01:57,780
+at this scale is really, really painful if you don't have any sort of automated ways
+
+24
+00:01:57,780 --> 00:02:01,500
+to do it, and so there's a few things you want to do. We want to have a safe and a quick
+
+25
+00:02:01,500 --> 00:02:05,820
+way to apply transformations to a large code base. Safe so it doesn't introduce any new
+
+26
+00:02:05,820 --> 00:02:09,940
+issues. If you make a transformation, you make a change. You don't want to hunt all
+
+27
+00:02:09,940 --> 00:02:14,020
+these new bugs that you caused. Quick in this case isn't actually about the runtime it takes
+
+28
+00:02:14,020 --> 00:02:17,740
+to apply. This is much more about the developer time it takes to apply. If you need to apply
+
+29
+00:02:17,740 --> 00:02:23,700
+this, a 2.6 million lines of code, something that takes five times as long could be a really,
+
+30
+00:02:23,700 --> 00:02:27,700
+really long time given you have to do it so many times, and in general, this is sort of
+
+31
+00:02:27,700 --> 00:02:30,980
+a bigger problem that a lot of people have. Maybe many of you in the audience have a similar
+
+32
+00:02:30,980 --> 00:02:36,340
+problem here, which is refactoring anything at scale is really complicated and requires
+
+33
+00:02:36,340 --> 00:02:41,100
+something that is safe and quick. So let's talk a bit about some theory behind what we're
+
+34
+00:02:41,100 --> 00:02:46,740
+trying to do here. Automated code transformations have a few ways of working, but the most common
+
+35
+00:02:46,740 --> 00:02:51,420
+way to do it is you have source and you convert into some sort of syntax tree. You do a transformation
+
+36
+00:02:51,420 --> 00:02:55,100
+on the tree. Sometimes you're called code mods, code transformations, a whole bunch
+
+37
+00:02:55,100 --> 00:02:58,500
+of different terms out there. I have looked for a standard definition for what these are
+
+38
+00:02:58,500 --> 00:03:02,880
+called. I cannot figure one out, so I called it automated code transformations. You modify
+
+39
+00:03:02,880 --> 00:03:06,900
+the syntax tree and then you convert the syntax tree back into source code. And the way these
+
+40
+00:03:06,900 --> 00:03:11,060
+often work is you apply a series of fixers to transform the source code. So you have
+
+41
+00:03:11,060 --> 00:03:14,500
+one fixer to do one thing, another one to do another thing, and so you have maybe a
+
+42
+00:03:15,260 --> 00:03:19,140
+dozen or several dozen of these that you apply sequentially. And this is a fairly safe way
+
+43
+00:03:19,140 --> 00:03:23,620
+to automate very tedious tasks, and many of them are, for example, part of the Python
+
+44
+00:03:23,620 --> 00:03:29,500
+2 to 3 migration that many of you have or will be experiencing. So there's many applications
+
+45
+00:03:29,500 --> 00:03:34,500
+of automated code transformations out there. One application is in style guides. For example,
+
+46
+00:03:34,500 --> 00:03:39,100
+black is one tool that does that. YAP, I think, is yet another Python formatter, is another
+
+47
+00:03:39,100 --> 00:03:43,140
+one. We primarily use it at Pinterest to port Python code, but we've used it for many other
+
+48
+00:03:43,180 --> 00:03:47,980
+cases as well. It's also useful for the general refactoring. If you're changing an internal
+
+49
+00:03:47,980 --> 00:03:51,780
+interface from moving a module from somewhere in one directory to another directory, that's
+
+50
+00:03:51,780 --> 00:03:56,300
+really this is a nice way to do it. If you're changing the definition of a function, this
+
+51
+00:03:56,300 --> 00:04:03,300
+is also a nice tool to use as well. Automated code transformations are really popular in
+
+52
+00:04:03,300 --> 00:04:07,980
+the general development ecosystem. Anybody here use any of these tools before? Okay,
+
+53
+00:04:07,980 --> 00:04:12,380
+good. So GoFormat is a nice one. This is actually, I think, one of the more interesting ones
+
+54
+00:04:12,380 --> 00:04:16,820
+out there. This converts the code to an abstract syntax tree and then it walks the tree and
+
+55
+00:04:16,820 --> 00:04:20,820
+prints the code out in a standard format. And one of the things this allowed Go to do
+
+56
+00:04:20,820 --> 00:04:25,980
+is actually to have this tool called GoFix, which allows them to update code automatically
+
+57
+00:04:25,980 --> 00:04:30,860
+to support new syntaxes and things like that. And one of the main motivations at GoFormat
+
+58
+00:04:30,860 --> 00:04:34,820
+was actually to support this behavior so you could have code that could be automatically
+
+59
+00:04:34,820 --> 00:04:40,580
+rewritten instead of having to deal with handling format or anything like that. And this means
+
+60
+00:04:40,580 --> 00:04:45,380
+that any Go code always has the same format if you use GoFormat. Another interesting tool,
+
+61
+00:04:45,380 --> 00:04:50,140
+BabelJS, this is used to the same pattern here. It converts the code into abstract syntax
+
+62
+00:04:50,140 --> 00:04:54,780
+tree and in this case it's often used to convert code into backwards compatible versions to
+
+63
+00:04:54,780 --> 00:04:59,660
+support older versions of JavaScript and things like it. And C in the C family has clang format
+
+64
+00:04:59,660 --> 00:05:05,260
+out of LLVM that does very similar things as well. So how do these all work? How do
+
+65
+00:05:05,260 --> 00:05:10,540
+syntax trees work? And how do code transformations work in general? The most common case I've
+
+66
+00:05:10,540 --> 00:05:14,980
+actually still think is regex, who here has done something like this. Okay. That's a lot
+
+67
+00:05:14,980 --> 00:05:19,740
+more people than I was hoping. I've done this too. This is actually not a real example that
+
+68
+00:05:19,740 --> 00:05:24,500
+we use, but I've used many similar examples. So often regular expressions are really simple.
+
+69
+00:05:24,500 --> 00:05:28,300
+They work really well for really simple cases. And this is sort of like the first thing many
+
+70
+00:05:28,300 --> 00:05:32,180
+people try. So here's a nice simple example we have for you throughout the presentation,
+
+71
+00:05:32,180 --> 00:05:35,940
+which is let's say you want to remove the author tags from code. So here's a simple
+
+72
+00:05:35,940 --> 00:05:40,660
+way to do it. You could do something like said to say remove the author tag. And in
+
+73
+00:05:40,660 --> 00:05:45,700
+this case, so we actually this code will work. It will remove the line and everything should
+
+74
+00:05:45,700 --> 00:05:51,260
+hopefully work. But this doesn't actually work for all cases. This isn't very safe.
+
+75
+00:05:51,260 --> 00:05:54,880
+This is very quick and it works in the very simple cases. I'm sure many of you like me
+
+76
+00:05:54,880 --> 00:05:58,260
+have tried to do a regular expression for a really long complicated thing. It turns
+
+77
+00:05:58,260 --> 00:06:02,420
+out it causes lots of problems. And so regular expressions are often not really a great long-term
+
+78
+00:06:02,420 --> 00:06:06,580
+solution for transformations. I personally find them really good for one-off transformations
+
+79
+00:06:06,580 --> 00:06:11,140
+where you're making some change very quickly. Maybe it's in one file, makes it a bit safer.
+
+80
+00:06:11,140 --> 00:06:15,260
+But you often have to manually review all the changes for safeness. Some examples this
+
+81
+00:06:15,260 --> 00:06:19,500
+wouldn't have caught this regex here is if your author tag had a bunch of spaces in it,
+
+82
+00:06:19,500 --> 00:06:23,120
+it wouldn't have caught that. If you had a comment after the line, it may actually remove
+
+83
+00:06:23,120 --> 00:06:26,780
+that or may ignore the line and leave it in depending on the regular expression. And if
+
+84
+00:06:26,780 --> 00:06:30,460
+your author tag was inside a doc string, it actually would catch it, which may not be
+
+85
+00:06:30,460 --> 00:06:34,020
+technically valid because it isn't an author tag and you actually maybe should leave it
+
+86
+00:06:34,020 --> 00:06:38,740
+in. Although in this case you may want to remove it, but either way it actually makes
+
+87
+00:06:38,740 --> 00:06:42,820
+the regular expression fairly complicated to deal with.
+
+88
+00:06:42,820 --> 00:06:46,500
+So this is where abstract syntax trees work really well. And so this is a model we're
+
+89
+00:06:46,500 --> 00:06:50,620
+trying to use the rest of the presentation here. So here's a basic piece of code we have.
+
+90
+00:06:50,620 --> 00:06:55,540
+We have a function and we're returning a plus b. We're summing two values here. So in the
+
+91
+00:06:55,540 --> 00:06:59,540
+top we have the function definition and this function is called sum. We have two arguments,
+
+92
+00:06:59,540 --> 00:07:03,780
+a and b, and then we return a binary operator bin op. And this is as opposed to simply a
+
+93
+00:07:03,780 --> 00:07:08,300
+tertiary operator with three values. And the operator is add and we're adding a and b and
+
+94
+00:07:08,300 --> 00:07:13,780
+returning it. So abstract syntax trees, who here has actually learned about these ever?
+
+95
+00:07:13,780 --> 00:07:18,660
+Okay, quite a few of you. Good. So this is sort of a textbook example of a syntax tree
+
+96
+00:07:18,660 --> 00:07:23,220
+here from computer science classes and it represents the structure of the source code.
+
+97
+00:07:23,220 --> 00:07:27,260
+And it's abstract since it does not represent every detail of the real syntax and instead
+
+98
+00:07:27,260 --> 00:07:32,740
+contains the structural content related details. And so a bit of a better example that is actually
+
+99
+00:07:32,740 --> 00:07:37,740
+here. So this is a bit of a more complex example. So in this case we have a importing OS and we
+
+100
+00:07:37,740 --> 00:07:41,740
+have a similar function before. In this case we have an extra variable total and we have a comment.
+
+101
+00:07:41,740 --> 00:07:46,660
+So now we have module imports OS. Then we have the function in this case is called sum. It has
+
+102
+00:07:46,660 --> 00:07:53,020
+two arguments, a and b, and here we can see the default values added in. We are assigning two name,
+
+103
+00:07:53,020 --> 00:07:58,740
+a plus b, and we have total is what we're returning. Sorry, we're assigning two total a plus b.
+
+104
+00:07:58,740 --> 00:08:04,060
+And note here that the comment is not actually stored in the syntax tree. This is because it's
+
+105
+00:08:04,060 --> 00:08:09,420
+abstract and that information is not really relevant for the abstract syntax tree. And so you
+
+106
+00:08:09,420 --> 00:08:15,260
+see here compared to the previous example, abstract syntax trees get very complex very quickly. I don't
+
+107
+00:08:15,260 --> 00:08:18,940
+know about you but this is not more readable than the source code. But if you're a computer you would
+
+108
+00:08:18,940 --> 00:08:23,140
+think otherwise. And this is actually much easier for computers to sort of scan over and do things
+
+109
+00:08:23,140 --> 00:08:28,380
+on it. This is why compilers and many other things use abstract syntax trees to do analysis
+
+110
+00:08:28,380 --> 00:08:34,580
+instead of using the source code. So let's go to our example. Before we're trying to actually find
+
+111
+00:08:34,580 --> 00:08:39,900
+this author tag over here and potentially remove it. So abstract syntax trees are not actually very
+
+112
+00:08:39,900 --> 00:08:43,940
+good for code transformations because they don't have the original information. But they are useful
+
+113
+00:08:43,940 --> 00:08:48,860
+of finding problems and reporting them back. So for example, Flake8 actually supports doing a
+
+114
+00:08:48,860 --> 00:08:55,060
+linter using an AST, an abstract syntax tree. And so let's see what that actually looks like. So this
+
+115
+00:08:55,060 --> 00:08:58,780
+is actually an example of a linter that we actually do use at Pinterest, something very similar to what
+
+116
+00:08:58,780 --> 00:09:04,660
+we use. In this case we're trying to find the author node. So we have four node in tree body. If it's
+
+117
+00:09:04,660 --> 00:09:08,420
+not in the sign operator, for example, we ignore the function def a whole block so you know that's
+
+118
+00:09:08,420 --> 00:09:15,700
+not related. And then we want to scan all the sign operators here. And if it has, you look at all the
+
+119
+00:09:15,700 --> 00:09:20,140
+targets of the sign and if it's assigning to author, then we return the node and we actually have found
+
+120
+00:09:20,140 --> 00:09:24,860
+this node here that we're trying to do something with. And so while this is a bit more complicated
+
+121
+00:09:24,860 --> 00:09:28,580
+than the regex, it's actually a bit safer I think and it's actually much easier to read. And I think
+
+122
+00:09:28,580 --> 00:09:35,740
+it also makes the more complex cases easier to comprehend as well. So we talked a bit about for
+
+123
+00:09:35,740 --> 00:09:39,300
+linting, but let's talk about it for actual code transformation. Syntax trees are often much safer
+
+124
+00:09:39,300 --> 00:09:45,180
+than regular expressions. It's often much easier to handle the edge cases. And a big part of this is
+
+125
+00:09:45,180 --> 00:09:48,900
+because you can leverage the syntax trees such as here to actually do a lot of the heavy lifting.
+
+126
+00:09:48,900 --> 00:09:53,660
+You know exactly what kind of object it is. You actually have a lot more information about the code
+
+127
+00:09:53,660 --> 00:09:58,580
+you're looking at than actually just trying to look at it by string. It's often much easier to do
+
+128
+00:09:58,580 --> 00:10:03,140
+things are multi-line transformations. Say you're trying to refactor the name of an import, but you
+
+129
+00:10:03,140 --> 00:10:08,980
+maybe have a local variable in some files where you're not actually importing the module you're
+
+130
+00:10:08,980 --> 00:10:13,500
+trying to rename. And so you have to say is this file, is this module imported? If so, rename it at
+
+131
+00:10:13,500 --> 00:10:17,780
+the import and rename all cases of it. If you do a regular expression, that'll get really complex
+
+132
+00:10:17,780 --> 00:10:22,900
+really quickly. But if you're using a syntax tree, it makes it much easier to do. And even though
+
+133
+00:10:22,900 --> 00:10:27,300
+it's much easier to do a lot of things in abstract syntax trees and concrete syntax trees, it often
+
+134
+00:10:27,300 --> 00:10:32,220
+gets really complex quickly and the hard cases are always complex. But I think this makes the
+
+135
+00:10:32,220 --> 00:10:39,620
+hard cases possible but complex and the easy cases easier. So this is a direct quote from the concrete
+
+136
+00:10:39,620 --> 00:10:44,860
+syntax tree in Python. So this is a very concrete parse tree. We need to keep every token and every
+
+137
+00:10:44,860 --> 00:10:49,020
+comment and even the comments in whitespace between tokens. So there's two kinds of syntax trees here.
+
+138
+00:10:49,020 --> 00:10:52,980
+We talked about abstract syntax trees and now we're talking about concrete syntax trees. Abstract
+
+139
+00:10:52,980 --> 00:10:57,180
+has none of the extra information. It doesn't include any whitespace, any comments, anything like
+
+140
+00:10:57,180 --> 00:11:01,540
+that. But in this case, because Python doesn't have a standard format, we actually need to keep all
+
+141
+00:11:01,540 --> 00:11:06,700
+that information to solve the problem of recreating the original source code. And so we have the second
+
+142
+00:11:06,700 --> 00:11:10,700
+option besides abstract, which is concrete, and this is what we're going to actually be using for
+
+143
+00:11:10,700 --> 00:11:14,820
+everything else, these concrete syntax trees. This is something that's often not taught and this is,
+
+144
+00:11:14,820 --> 00:11:19,180
+I think, part because it's a weird edge case wherein we're actually trying to convert code back to the
+
+145
+00:11:19,180 --> 00:11:25,500
+original formatting as much as possible while modifying very small pieces of information. So
+
+146
+00:11:25,500 --> 00:11:31,020
+there's actually three different parsers in Python to do syntax trees. The two I talk about here,
+
+147
+00:11:31,020 --> 00:11:36,340
+there's another one which is parser. And this uses Python's internal code to actually do it
+
+148
+00:11:36,340 --> 00:11:41,260
+internally. And this is optimized to generate byte code and is often too low level for code
+
+149
+00:11:41,260 --> 00:11:46,220
+refactoring. So we're sort of going to ignore it here. But the other two, AST, which was introduced
+
+150
+00:11:46,220 --> 00:11:50,620
+in Python 2.6, is for abstract syntax trees. As I mentioned before, it's often used in things like
+
+151
+00:11:50,620 --> 00:11:57,780
+flake 8. And lib 2.3, which is also introduced in Python 2.6, is a concrete syntax tree. And this
+
+152
+00:11:57,780 --> 00:12:03,540
+was primarily introduced to actually do the Python 2.3 transformation. And it does things like, it's
+
+153
+00:12:03,540 --> 00:12:08,260
+bundled with built-in fixers to do things like changing the accept format from accept x,t to
+
+154
+00:12:08,260 --> 00:12:13,860
+accept x as t. And as we talked a bit about before, this preserves all the relevant information about
+
+155
+00:12:13,860 --> 00:12:19,860
+whitespace and all kinds of formatting information that AST does not include. So we see here we have
+
+156
+00:12:19,860 --> 00:12:25,620
+an example x equals 1 plus 1, so that should be 2 for x. But the important bit here actually is it's
+
+157
+00:12:25,620 --> 00:12:30,300
+hard to read, but there's actually two spaces in front of that 1. And so in the AST, we actually do
+
+158
+00:12:30,300 --> 00:12:34,620
+not preserve that information. But in lib 2.3, we actually preserve that information. You see the
+
+159
+00:12:34,620 --> 00:12:40,940
+node on leaf as the equal operator. We actually could get the suffix, and there we see that it
+
+160
+00:12:40,940 --> 00:12:46,060
+actually has two spaces instead of one. As an interesting side note, I think, related to this
+
+161
+00:12:46,060 --> 00:12:49,380
+conference today, there's actually a lot of interesting work being done by people in the
+
+162
+00:12:49,380 --> 00:12:55,620
+community right now around new syntax tree libraries for Python. The Facebook booth actually has
+
+163
+00:12:55,620 --> 00:13:01,100
+an interesting presentation that they're doing about a new parser they're building that sort of
+
+164
+00:13:01,100 --> 00:13:04,940
+merges lib 2.3 and AST in ways that makes it a bit easier to do. And there's a bunch of work, I think,
+
+165
+00:13:04,940 --> 00:13:09,900
+in Python 3.8 about a new parser module. And so this is actually a very interesting sort of relevant
+
+166
+00:13:09,900 --> 00:13:16,020
+bit of development in this space right now, which I think is very welcoming. So I talked a bit about
+
+167
+00:13:16,020 --> 00:13:19,620
+the tooling. We're going to talk about... We talked a bit about the concepts and the theory. Let's talk
+
+168
+00:13:19,620 --> 00:13:25,980
+about some of the tooling here around lib 2.3. So one option is to use lib 2.3 directly instead of
+
+169
+00:13:25,980 --> 00:13:30,540
+using any tools built on top of it. There's some gotchas with this. Lib 2.3 was bundled, as I
+
+170
+00:13:30,540 --> 00:13:35,460
+mentioned before, with the tool 2.3, and that's called, according to the docs in Python, that's
+
+171
+00:13:35,460 --> 00:13:41,020
+for automated Python 2.3 code translation. And as you mentioned, it's a concrete syntax tree. It has
+
+172
+00:13:41,020 --> 00:13:46,180
+a fairly complex interface that actually makes it really sort of funny to do ad hoc one-off
+
+173
+00:13:46,180 --> 00:13:51,140
+transformations and to actually write new fixers and run them if you're not shipping your code in
+
+174
+00:13:51,140 --> 00:13:56,820
+any or installing your code in any standard way. It's very powerful and very safe because you use
+
+175
+00:13:56,820 --> 00:14:01,620
+a concrete syntax tree. If you have any concerns about edge cases, it's very easy to handle. And
+
+176
+00:14:01,620 --> 00:14:06,020
+it has a very useful framework around fixers, and so it actually makes it fairly easy to write these.
+
+177
+00:14:06,020 --> 00:14:10,660
+And it has some nice tooling around it. For example, you could optionally show the change you're about
+
+178
+00:14:10,660 --> 00:14:13,620
+to make, or you could actually apply the change and things like that. So if you write a fixer,
+
+179
+00:14:13,620 --> 00:14:19,340
+you get a lot of things for free. So let's dive into a bit how Lib 2.3 works. So it could be very
+
+180
+00:14:19,340 --> 00:14:25,700
+confusing at first, and it often is sort of not what you expect, and the syntax tree produces is
+
+181
+00:14:25,700 --> 00:14:31,460
+a bit complex, but it's very, very powerful. There's two types of nodes. There are nodes and
+
+182
+00:14:31,460 --> 00:14:38,140
+leaves. Leaf nodes actually contain all the code in this case, and leaf nodes have a type telling
+
+183
+00:14:38,140 --> 00:14:42,500
+you what it contains. There's things like indent, such as indentation increased, string, for all
+
+184
+00:14:42,500 --> 00:14:46,980
+strings, including doc strings, a number for any kind of number, integer, float, hexadecimal,
+
+185
+00:14:46,980 --> 00:14:52,300
+octal, et cetera, right parentheses, left parentheses for parentheses, name for keywords or
+
+186
+00:14:52,300 --> 00:14:56,660
+variables, et cetera. And note here that a lot of these things are actually overloaded for different
+
+187
+00:14:56,660 --> 00:15:01,660
+meanings. So we have name for keywords and variables, or number for string or integers and
+
+188
+00:15:01,660 --> 00:15:06,620
+floats and hexadecimal. And this is, I think, in part because Lib 2.3 was designed for the code
+
+189
+00:15:06,620 --> 00:15:11,260
+transformations and not for actually understanding if something is an octal or hexadecimal. That
+
+190
+00:15:11,260 --> 00:15:14,900
+wasn't really the goal of Lib 2.3. And so this is a place where if you're trying to do that kind of
+
+191
+00:15:14,900 --> 00:15:21,420
+analysis, it gets a bit complex and you need a bit more work to sort of understand that. So here is
+
+192
+00:15:21,420 --> 00:15:26,460
+a, I think, the smallest Lib 2.3 transpiration I could find at the standard library. So here's a
+
+193
+00:15:26,460 --> 00:15:32,220
+fairly simple one. This is actually changing the format of longs and octal in this case. Both of
+
+194
+00:15:32,220 --> 00:15:39,700
+those have changed under Python 2 to Python 3. 1L is now 1 because there's no concept of longs. 0755,
+
+195
+00:15:39,700 --> 00:15:44,580
+that was actually in base 8. That makes it confusing. So you have a different octal format,
+
+196
+00:15:44,580 --> 00:15:51,500
+which would be 00755. So here's a fairly basic example. Let's walk through it. We have this
+
+197
+00:15:51,500 --> 00:15:58,180
+base fixer case, this class which you have to override two methods, match and transform. Match
+
+198
+00:15:58,180 --> 00:16:02,860
+or return either false if you don't care about the thing you're looking at, the node you're looking
+
+199
+00:16:02,860 --> 00:16:07,500
+at, or return something that is not false if you want to actually pass it on to transform. And
+
+200
+00:16:07,500 --> 00:16:11,500
+transform takes the node you're trying to transform and the result of match. So in this
+
+201
+00:16:11,500 --> 00:16:16,740
+case, what match is doing is it's looking if we're starting with a 0 or ending with a L of some sort
+
+202
+00:16:16,740 --> 00:16:20,700
+and then we pass the information into transform, although we don't use it in this case, and then
+
+203
+00:16:20,700 --> 00:16:24,420
+we check the node and if it ends with the L, we just truncate the L here because that's all we
+
+204
+00:16:24,420 --> 00:16:29,740
+have to do in that case. But if it starts with a 0 and it passes val is digit, in this case,
+
+205
+00:16:29,740 --> 00:16:38,740
+that means that there is no 0 O character in the string here and there are no other values
+
+206
+00:16:38,740 --> 00:16:45,140
+besides 0 in the string, then we actually want to prefix the thing with remove the first value
+
+207
+00:16:45,140 --> 00:16:52,060
+and prefix this thing with 0 O instead. There's another bit here which is accept type. And accept
+
+208
+00:16:52,060 --> 00:16:58,220
+type is optimization here because otherwise match will take every single type of thing. It'll take
+
+209
+00:16:58,220 --> 00:17:02,100
+too long to scan. So in this case, we know we only care about numbers. So here we say we only match
+
+210
+00:17:02,100 --> 00:17:07,660
+numbers and then we run it through match and then if it passes match, we actually do the transformation.
+
+211
+00:17:07,660 --> 00:17:15,900
+So here's a bit of a more complex case but still a fairly basic one here. So this is a second
+
+212
+00:17:15,900 --> 00:17:22,140
+transformation from the standard library. In this case, this is changing asserts. So a lot of asserts
+
+213
+00:17:22,140 --> 00:17:25,900
+have been deprecated so this is renaming them. So in this case, we actually don't have match,
+
+214
+00:17:25,980 --> 00:17:32,860
+we have pattern. Pattern is another way we could do it. So when we set pattern in the base fix itself,
+
+215
+00:17:32,860 --> 00:17:38,220
+we'll actually compile the pattern into a matcher and use it for matching and it also takes care of
+
+216
+00:17:38,220 --> 00:17:43,140
+accept type as well. So you automatically get both of those for you and there is actually a tool out
+
+217
+00:17:43,140 --> 00:17:47,420
+there called find pattern that allows you to find these patterns. I don't know about you but I don't
+
+218
+00:17:47,420 --> 00:17:51,140
+think I've ever written one of those patterns by hand. I don't know anybody, maybe there's people
+
+219
+00:17:51,140 --> 00:17:54,820
+here who can but I know I can't. And so the tool out there that actually goes through code and
+
+220
+00:17:54,820 --> 00:17:58,340
+essentially it's a very basic tool and it prints out the pattern for each line and allows you to
+
+221
+00:17:58,340 --> 00:18:02,580
+sort of introspect it and dig in a bit more and do different things. So this pattern is entering
+
+222
+00:18:02,580 --> 00:18:07,780
+essentially what it's saying is we're looking for a dot and then we have the variable meth,
+
+223
+00:18:07,780 --> 00:18:12,020
+M-E-T-H in this here for method and we're looking for a certain method. Anything that is the dot
+
+224
+00:18:12,020 --> 00:18:17,060
+after that then matches and we do this joining of the map here and we get all the values and names
+
+225
+00:18:17,060 --> 00:18:24,020
+over here. And then in transform, we actually take the result, we look up, we get the name there and
+
+226
+00:18:24,100 --> 00:18:28,100
+we actually look up in the names dictionary what the new name should be and we put it inside. And
+
+227
+00:18:28,100 --> 00:18:32,420
+the important thing to note here is we have prefix equals name prefix. This is a way of actually
+
+228
+00:18:32,420 --> 00:18:37,860
+taking the prefix and the concrete syntax tree to preserve all the extra formatting and keep it in
+
+229
+00:18:37,860 --> 00:18:43,380
+the new syntax tree so we don't actually lose that data. So the interesting thing here is we
+
+230
+00:18:43,380 --> 00:18:48,460
+actually have the pattern actually is a bunch of patterns joined by or and we actually this is a
+
+231
+00:18:48,460 --> 00:18:53,060
+fairly common way in lib 2 to 3 to apply similar transformations to slightly different things. You
+
+232
+00:18:53,060 --> 00:18:56,900
+have a dictionary with key values and you can look up all these different things and map them
+
+233
+00:18:56,900 --> 00:19:03,540
+together. This one is probably not very readable and that's somewhat intentional. Lib 2 to 3 gets
+
+234
+00:19:03,540 --> 00:19:09,620
+very complex very quickly. This is a fixer for generator.throw. The format has changed once
+
+235
+00:19:09,620 --> 00:19:13,740
+again from Python 2 to Python 3 and this is actually one of the smaller examples in the
+
+236
+00:19:13,740 --> 00:19:18,300
+standard library. So they actually get very complicated very quickly and so they could still
+
+237
+00:19:18,300 --> 00:19:22,940
+be very complex to write. So going back to our case before, we try to remove the author tag
+
+238
+00:19:22,940 --> 00:19:27,580
+here. So here we have the input author equals Bob and this is the fixer we would have here. So in
+
+239
+00:19:27,580 --> 00:19:31,140
+this case we're using a pattern. So we have a simple statement and an expression statement. We
+
+240
+00:19:31,140 --> 00:19:37,500
+look for author equals anything and in this case note that we have the return character at the end
+
+241
+00:19:37,500 --> 00:19:41,420
+of what this actually does in the output here you can see the bottom that actually returns removes
+
+242
+00:19:41,420 --> 00:19:46,060
+the new line. Otherwise the new line would be included and the trade-off here is if you remove
+
+243
+00:19:46,060 --> 00:19:51,620
+if you look for the new line here anything after the author tag a comment or anything like that
+
+244
+00:19:51,620 --> 00:19:58,340
+will actually be removed as well. This case is actually still fairly naive. We actually if you
+
+245
+00:19:58,340 --> 00:20:02,780
+have extra spaces in author equals it actually will not catch that. We could definitely handle
+
+246
+00:20:02,780 --> 00:20:06,940
+that in Lib 2 to 3 but the transformation will get much more complex here and I want to keep it
+
+247
+00:20:06,940 --> 00:20:12,420
+simple for example. Also this is what I mentioned before about the runner. You have to do weird
+
+248
+00:20:12,420 --> 00:20:16,440
+things with the path to sort of inject the path and that's because Lib 2 to 3 has all these
+
+249
+00:20:16,440 --> 00:20:22,180
+assumptions on how the fixers are named. For example this is fix author. So if you actually
+
+250
+00:20:22,180 --> 00:20:29,240
+use Lib 2 to 3 and you say author and it automatically look up fix author in the module in this case named
+
+251
+00:20:29,240 --> 00:20:35,480
+fix author. So there's a bunch of Lib 2 to 3 based tools out there so you don't actually have to write
+
+252
+00:20:35,480 --> 00:20:42,760
+sort of stock Lib 2 to 3 code. The first two are fairly similar. This one's Python feature. This is
+
+253
+00:20:42,760 --> 00:20:48,120
+a compatibility layer between to concurrently support Python 2 and Python 3 and it uses Python
+
+254
+00:20:48,120 --> 00:20:53,400
+3 idioms and it's based on Lib 2 to 3 and it has quite a few additional fixers besides the ones
+
+255
+00:20:53,400 --> 00:20:59,500
+Lib 2 to 3 provides. A Python modernize is a very similar one. It does a very similar thing. In this
+
+256
+00:20:59,500 --> 00:21:04,700
+case it uses 6 and the idea is you actually convert Python 2 code to a subset of Python 2 and 3 that
+
+257
+00:21:04,700 --> 00:21:10,080
+are overlap and so it actually is a slightly different mechanism but it uses the same basic
+
+258
+00:21:10,080 --> 00:21:15,640
+concepts. It uses in this case 6 and Lib 2 to 3 underneath and in comparison it tries to convert
+
+259
+00:21:15,640 --> 00:21:20,840
+Python 2 code into almost standard Python 3 code. So here's an example. We have a fairly simple
+
+260
+00:21:20,840 --> 00:21:25,120
+example here. We have iter values. In this case it's important to know that iter values does not
+
+261
+00:21:25,120 --> 00:21:30,600
+exist under Python 3. So under modernize we actually have 6 iter values and we have 6 string
+
+262
+00:21:30,600 --> 00:21:36,680
+types for this instance over here but under futureize we actually do a few different things. We
+
+263
+00:21:36,680 --> 00:21:41,960
+have pass built in space string and we do x.values which is much more aligned with the Python 3
+
+264
+00:21:41,960 --> 00:21:47,840
+syntax. Another tool out there is BOLR. This came from Facebook. Has anybody here heard of BOLR?
+
+265
+00:21:47,840 --> 00:21:53,720
+Okay, a few of you. This is actually my tool of choice currently for writing any kind of code
+
+266
+00:21:53,720 --> 00:21:59,600
+transformation. It requires Python 3.6 but it can be run against Python 2 code. It is Lib 2 to 3
+
+267
+00:21:59,600 --> 00:22:07,360
+based although it uses a slight upstream copy of Lib 2 to 3 called physics, I believe. It's a much
+
+268
+00:22:07,360 --> 00:22:11,280
+easier interface. It's very simple to run things. You just do BOLR run and you do the transformation.
+
+269
+00:22:11,280 --> 00:22:17,280
+It's a much cleaner API. You do query, select, modify, execute. Query you select which files
+
+270
+00:22:17,280 --> 00:22:22,400
+you're looking for. Select which methods and things like that you're actually looking to modify,
+
+271
+00:22:22,400 --> 00:22:26,320
+which piece of code. Modify tells you how to modify it and execute is what to do. Do you want
+
+272
+00:22:26,320 --> 00:22:29,920
+to show the diff? Do you want to save it? Do you want it to be interactive output so you can say
+
+273
+00:22:29,920 --> 00:22:36,000
+yes or no to apply each thing? This actually makes the really easy cases really easy but it also,
+
+274
+00:22:36,000 --> 00:22:42,440
+it still reveals all the powerful features of Lib 2 to 3 and oftentimes you have to dig into those
+
+275
+00:22:42,440 --> 00:22:48,160
+and use some of the more complex features of Lib 2 to 3. Here's a fairly simple example of what
+
+276
+00:22:48,160 --> 00:22:52,560
+Lib 2 to 3, of BOLR supports. BOLR supports the select statement here. You can actually still use
+
+277
+00:22:52,560 --> 00:22:58,000
+the Python Lib 2 to 3 pattern mechanism or you can actually do all these different selects. You
+
+278
+00:22:58,000 --> 00:23:03,440
+can say select root, select module, class, subclass, etc. This is I think a much easier interface to use
+
+279
+00:23:03,440 --> 00:23:08,080
+in that Lib 2 to 3 native. Here's that same example we talked about before but in this case we're
+
+280
+00:23:08,080 --> 00:23:13,120
+using BOLR. In this case if you look at the bottom line, line 11, we have BOLR query the input file.
+
+281
+00:23:13,120 --> 00:23:18,160
+In this case it's a single file but also takes a list of files if you choose instead. We're selecting
+
+282
+00:23:18,160 --> 00:23:22,160
+a variable here, in this case author, and we're going to modify it. It turns out there is no built
+
+283
+00:23:22,160 --> 00:23:26,400
+in modifier for remove so we have a very simple one that looks for the parent node here and then
+
+284
+00:23:26,400 --> 00:23:31,120
+it just says if they're a parent then remove the parent and that fixes everything. We see in the
+
+285
+00:23:31,120 --> 00:23:36,640
+output here we actually remove on line four, remove the author tag although we do add that extra line
+
+286
+00:23:36,640 --> 00:23:43,680
+over there. This is the same comparisons I showed you, the same two transformations I showed before.
+
+287
+00:23:43,680 --> 00:23:47,520
+The top one here is the BOLR one and the bottom one is actually the Lib 2 to 3 native one.
+
+288
+00:23:47,520 --> 00:23:52,480
+As if you note here the native one actually is smaller. I do think that the BOLR one is
+
+289
+00:23:52,480 --> 00:23:56,640
+actually easier to comprehend and easy to read. I don't know about you but I find the pattern
+
+290
+00:23:56,640 --> 00:24:00,480
+sort of things much harder to read than actually a few lines of code here and I think it's a much
+
+291
+00:24:00,480 --> 00:24:05,760
+easier interface and it's been very good for us to sort of see the actual, be able to break it down
+
+292
+00:24:05,760 --> 00:24:09,680
+nicely and actually be able to use the BOLR interface instead of Lib 2 to 3 directly.
+
+293
+00:24:11,280 --> 00:24:15,520
+So in addition to these transformations another really common tool that's gotten popular the
+
+294
+00:24:15,520 --> 00:24:20,320
+past number of years is Black. Black is an uncomprising Python code formatter and once again
+
+295
+00:24:20,320 --> 00:24:25,920
+it requires Python 3.6 but it runs against Python 2 code as well. It uses Lib 2 to 3, in this case
+
+296
+00:24:25,920 --> 00:24:31,520
+it's also a slight fork of Lib 2 to 3. This is something currently at Pinterest we do not use
+
+297
+00:24:31,520 --> 00:24:35,760
+but we are looking to use it hopefully in the very near future and interestingly enough this
+
+298
+00:24:35,760 --> 00:24:40,000
+validates the concrete syntax tree transformations it makes against the abstract syntax tree. The
+
+299
+00:24:40,000 --> 00:24:45,520
+idea is if you're making any sort of style changes to the code it should still mean the same thing
+
+300
+00:24:45,520 --> 00:24:50,720
+which means your abstract syntax trees before and after should still map up. So this is a good
+
+301
+00:24:50,720 --> 00:24:56,320
+example where you actually could use a syntax tree to actually transform your code in a very elegant
+
+302
+00:24:56,320 --> 00:25:00,400
+way instead of having Flake8 report to you a bunch of hours and you have to spend 20 minutes fixing
+
+303
+00:25:00,400 --> 00:25:08,080
+it all by hand doing very silly things like adding new lines and adding spaces. So in conclusion
+
+304
+00:25:08,160 --> 00:25:12,240
+while popular in other ecosystems code transformations I think are underutilized in
+
+305
+00:25:12,240 --> 00:25:16,080
+the Python community. I think that's really starting to change. I think all of you should
+
+306
+00:25:16,080 --> 00:25:20,080
+be looking into them for any problems you think they could solve. They often make really hard
+
+307
+00:25:20,080 --> 00:25:26,080
+problems quick and safe. They've saved us countless hours of tedious labor for things like the Python
+
+308
+00:25:26,080 --> 00:25:33,440
+2 to Python 3 migration refactoring code in general hopefully soon to be enforcing style guides
+
+309
+00:25:33,440 --> 00:25:37,680
+and although they're really great the complex edge cases are unfortunately still very complex.
+
+310
+00:25:38,080 --> 00:25:44,240
+And thank you very much for listening and I think I have two or three minutes if anybody has any questions.
+
+311
+00:25:44,240 --> 00:25:45,520
+Thank you.
+
+312
+00:25:51,520 --> 00:25:52,560
+So anyone has a question?
+
+313
+00:25:52,560 --> 00:26:09,360
+Hi I was wondering if there was such a tool that is able to work on Jupyter notebooks would you know?
+
+314
+00:26:10,160 --> 00:26:13,600
+That's a good question. I don't know the answer to that. I imagine there it
+
+315
+00:26:13,600 --> 00:26:16,400
+shouldn't be too hard to do but I do not know of anything. That's a great question though.
+
+316
+00:26:16,400 --> 00:26:17,840
+Okay.
+
+317
+00:26:21,120 --> 00:26:21,840
+Anyone else?
+
+318
+00:26:28,960 --> 00:26:33,840
+Do you know of any experiments that have done been done with optimization on the AST?
+
+319
+00:26:33,840 --> 00:26:39,200
+Yeah that's a great question. Under Python I do not know but this is how compilers work in general
+
+320
+00:26:39,200 --> 00:26:45,200
+and so there is a rich academic you know corpus information on how to do this. Roughly the way
+
+321
+00:26:45,200 --> 00:26:49,360
+compilers work is they convert the code into computer readable code and they do optimizations.
+
+322
+00:26:49,920 --> 00:26:53,760
+I imagine there are optimizations you could do in this in this way but you probably could also
+
+323
+00:26:53,760 --> 00:26:58,160
+do it in a different layer probably inside of Python itself but I think that'd be probably
+
+324
+00:26:58,160 --> 00:26:59,920
+an interesting space to explore more.
+
+325
+00:27:02,960 --> 00:27:08,480
+There was a really interesting talk earlier about feature flags. Have you looked into maybe using
+
+326
+00:27:08,480 --> 00:27:12,160
+this to automatically remove feature flags from code?
+
+327
+00:27:12,160 --> 00:27:18,240
+Yeah that's that is a great question. We have not done that yet although that's a very good
+
+328
+00:27:18,240 --> 00:27:20,960
+idea. I think that's probably something worth exploring. We definitely have had problems
+
+329
+00:27:20,960 --> 00:27:25,680
+in the past where you use a feature flag to launch something and you leave it there for three years
+
+330
+00:27:25,680 --> 00:27:29,200
+and maybe cause problems in three years. I think that's something that's probably
+
+331
+00:27:29,200 --> 00:27:30,560
+that's a really great suggestion. Thank you.
+
+332
+00:27:39,440 --> 00:27:44,080
+Would you recommend using these type of tools if you were trying to undertake the ambitious task
+
+333
+00:27:44,080 --> 00:27:48,720
+of making your code base that your team uses more readable just from a general readability standpoint?
+
+334
+00:27:48,720 --> 00:27:52,880
+Yeah I would. I think for a few reasons it makes makes the general transformations easier.
+
+335
+00:27:54,160 --> 00:27:59,600
+I think readable is a very subjective thing and I am a big believer in like a standard style guide
+
+336
+00:27:59,600 --> 00:28:02,640
+and I think that's not because nobody has to agree on what it is they all could disagree on
+
+337
+00:28:02,640 --> 00:28:07,600
+like what's right but the important part is it looks the same and so I think having a standard
+
+338
+00:28:07,680 --> 00:28:10,720
+style guide and something like black to sort of standardize that and make all the work done for
+
+339
+00:28:10,720 --> 00:28:16,560
+you is really nice. Things like lib 2 to 3 make refactoring in general really nice if you have to
+
+340
+00:28:16,560 --> 00:28:23,200
+you want to let's say you're moving a module from you know module a to module b this kind
+
+341
+00:28:23,200 --> 00:28:27,040
+of transformation makes it really easy to do in a general way very quickly. Cool thank you.
+
+342
+00:28:30,720 --> 00:28:36,000
+I would have a question so you said it can easily get really complicated so what is the line where
+
+343
+00:28:36,000 --> 00:28:40,160
+you like still done it? Sorry what is what? What is the line where you would say it gets
+
+344
+00:28:40,160 --> 00:28:45,440
+the way too complicated to work it like would you do like I don't know comprehension generation
+
+345
+00:28:45,440 --> 00:28:50,320
+for for loops it's too complicated or? I think it's the I think the more complicated cases are
+
+346
+00:28:50,320 --> 00:28:56,080
+often the ones that require analysis of an entire module or an entire function to understand something
+
+347
+00:28:56,080 --> 00:29:00,000
+so often it's the multi-line sort of analysis that you have to do if you're looking at like
+
+348
+00:29:00,000 --> 00:29:03,920
+the definition of one thing or maybe one line it's usually not so bad well if you're trying
+
+349
+00:29:03,920 --> 00:29:11,040
+to solve something here's actually a pretty good example. Let me go back. This one's actually
+
+350
+00:29:11,040 --> 00:29:19,600
+surprisingly complex over here so it turns out actually knowing what is a test case using assert
+
+351
+00:29:19,600 --> 00:29:24,160
+or assert true versus something else that's not inheriting from test is actually not very easy in
+
+352
+00:29:24,160 --> 00:29:28,400
+this case so if you look at this transformation we actually do not make any assumptions or any
+
+353
+00:29:28,400 --> 00:29:32,720
+introspection about where this is coming from we're making the general assumption here that
+
+354
+00:29:32,720 --> 00:29:36,720
+if you're calling assert equals it's actually coming from the standard library somehow which
+
+355
+00:29:36,720 --> 00:29:42,000
+is clearly not always true but it's true enough in most cases that there are edge cases you will hit
+
+356
+00:29:42,000 --> 00:29:45,600
+and it's really hard to not hit these edge cases but they're usually small enough that you could
+
+357
+00:29:45,600 --> 00:29:53,360
+catch them by hand. Have you ever considered any use cases where you use this for code generation
+
+358
+00:29:53,360 --> 00:29:59,040
+instead of transformation? We have not I have seen cases where code does use something like two to
+
+359
+00:29:59,040 --> 00:30:04,720
+three to actually do on the fly migrations of code to make it two compatible or three compatible.
+
+360
+00:30:04,720 --> 00:30:08,720
+In general I don't think we have uses for on the fly code transformation or code generation.
+
+361
+00:30:10,720 --> 00:30:19,440
+That was all thank you very much. Thank you.
+

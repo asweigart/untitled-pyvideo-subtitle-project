@@ -1,0 +1,1188 @@
+1
+00:00:00,000 --> 00:00:08,720
+All right. And speaking of presentations, I would like to introduce you to the first
+
+2
+00:00:08,720 --> 00:00:13,740
+presentation of this block at PyCon 2019, Shu Hong Wong, speaking about releasing the
+
+3
+00:00:13,740 --> 00:00:19,240
+world's largest Python site every seven minutes. Please make him feel welcome.
+
+4
+00:00:19,240 --> 00:00:30,600
+Hi. Hi. Good morning. My name is Shu Hong. And my talk is about continuous deployment
+
+5
+00:00:30,600 --> 00:00:36,560
+and how we do it at Instagram. So something about me first. Who am I? I'm a father of
+
+6
+00:00:36,560 --> 00:00:40,960
+three lovely kids. I went to Instagram since 2014 to about four and a half years now. I'm
+
+7
+00:00:40,960 --> 00:00:47,840
+a production engineer and manager. So the state of server release right now. In Instagram,
+
+8
+00:00:47,840 --> 00:00:54,680
+we release server code 70 to 100 times daily. This is about every seven minutes at PyG.
+
+9
+00:00:54,680 --> 00:01:00,360
+So at Instagram, we operate a very large fleet of web servers, serving Instagram.com. And
+
+10
+00:01:00,360 --> 00:01:05,040
+every weekday, we deploy new code. So during PyG deployment hours, it can be as fast as
+
+11
+00:01:05,040 --> 00:01:09,960
+every seven minutes. In this talk, I will walk through the series of evolution that
+
+12
+00:01:09,960 --> 00:01:15,340
+brought Instagram here, sharing the insights we learned and the problems we had. Everyone
+
+13
+00:01:15,340 --> 00:01:19,940
+can identify with at least a stage of this continuous evolution. And I hope that this
+
+14
+00:01:19,940 --> 00:01:27,340
+can either be an inspiration or a blueprint for your continuous deployment system. Just
+
+15
+00:01:27,340 --> 00:01:34,140
+like every one of you, we started with a deploy script. A deploy script that copies a package,
+
+16
+00:01:34,140 --> 00:01:38,980
+unpack it on the host, change the system link and reload the server. We made this script
+
+17
+00:01:38,980 --> 00:01:44,780
+accessible to all engineers and encourage anyone to deploy the site and take down the
+
+18
+00:01:44,940 --> 00:01:50,940
+site themselves. So to make it accessible so that any engineer can deploy at any time,
+
+19
+00:01:50,940 --> 00:01:54,540
+we added a simple locking mechanism so that we don't have more than one person deploying
+
+20
+00:01:54,540 --> 00:02:00,140
+the site at a time. We have very good test coverage from day one. So we hook up the script
+
+21
+00:02:00,140 --> 00:02:05,860
+to run our test suite before deploying. However, tests can have its blind sides. So we then
+
+22
+00:02:05,860 --> 00:02:11,460
+build a simple process that deploy the code to a few machines and monitor the written
+
+23
+00:02:11,540 --> 00:02:17,020
+HTTP status code. So you can see in this simplified table, we compare the 200 HTTP status code
+
+24
+00:02:17,020 --> 00:02:24,020
+returned for the Dynas overview. And since the change is small, it's safe to deploy.
+
+25
+00:02:24,260 --> 00:02:28,740
+As we have more engineers and become harder to track what commits were being deployed,
+
+26
+00:02:28,740 --> 00:02:34,300
+we built a system to track deployments. This gave us better visibility and we are able
+
+27
+00:02:34,300 --> 00:02:40,220
+to correlate what changed when we saw errors in production. Then we also want to notify
+
+28
+00:02:40,260 --> 00:02:44,060
+the authors so they can be around to support their changes. The call me author is usually
+
+29
+00:02:44,060 --> 00:02:48,980
+the best person to figure out if an error we see in production is related to that change.
+
+30
+00:02:48,980 --> 00:02:53,540
+Eventually, we also needed to upgrade our parallelism engine as one machine couldn't
+
+31
+00:02:53,540 --> 00:02:57,740
+handle deployment just quite fast enough. So we have a tier of machines that allow us
+
+32
+00:02:57,740 --> 00:03:04,740
+to do parallel SSH execution. So what I'm trying to say over here is that we have a
+
+33
+00:03:04,780 --> 00:03:09,540
+deployment script and it matured over time. There are a lot of features. We kept on building
+
+34
+00:03:09,540 --> 00:03:14,500
+it. It's been deploying Instagram for many, many years. It also laid the foundation on
+
+35
+00:03:14,500 --> 00:03:19,140
+how we do deployment in Instagram. This is a simple yet very significant phase of our
+
+36
+00:03:19,140 --> 00:03:24,340
+deployment journey. Much of our deployment process was conceived and codified during
+
+37
+00:03:24,340 --> 00:03:29,740
+this time when it was easy and fast to prototype and improvement. Implement running our tests
+
+38
+00:03:29,740 --> 00:03:36,740
+can be done in a day, canary can be done in a week. Automation doesn't need to be complex.
+
+39
+00:03:36,740 --> 00:03:41,740
+Improvement to the script also came organically. When anyone can deploy code, actually encourage
+
+40
+00:03:41,740 --> 00:03:47,140
+the commit authors to own the process. So when Instagram engineering team was small,
+
+41
+00:03:47,140 --> 00:03:51,340
+many people actually contributed code to the deployment script. A lot of ideas that went
+
+42
+00:03:51,340 --> 00:03:57,700
+to the deployment script came from the people that used the script. So human is also the
+
+43
+00:03:57,700 --> 00:04:03,020
+weak link. So we wanted to empower engineers to deploy their own code. However, you can
+
+44
+00:04:03,020 --> 00:04:07,620
+push code or deploy code. It doesn't mean you will deploy code. I can land code on Friday
+
+45
+00:04:07,620 --> 00:04:13,620
+night and promise to deploy on Monday morning. But Saturday came, we need to deploy a hot
+
+46
+00:04:13,620 --> 00:04:19,620
+fix and my broken code that I landed in trunk just went out together with the hot fix and
+
+47
+00:04:19,620 --> 00:04:26,220
+caused a lot of confusion where the additional breakage came from. So there are also escape
+
+48
+00:04:26,220 --> 00:04:32,100
+doors and options in the script. When put in the hands of humans, sometimes inconsistent,
+
+49
+00:04:32,100 --> 00:04:36,820
+I can say I know I broke this test, but it's just a test. We can still deploy and I'll
+
+50
+00:04:36,820 --> 00:04:42,060
+fix it in a little commit. So the deployment script empowered humans, state control and
+
+51
+00:04:42,060 --> 00:04:49,740
+ownership. We also found that humans were not the most trustworthy lot. So for example,
+
+52
+00:04:49,740 --> 00:04:54,300
+do you want to run tests before pushing? Yes, of course. Test failed. Do you want to continue
+
+53
+00:04:54,300 --> 00:04:59,260
+pushing? No. So at the same time, we noticed that all the options in the deployment script
+
+54
+00:04:59,260 --> 00:05:04,940
+can have safe defaults. Most of the time, people should just use automatic safe defaults.
+
+55
+00:05:04,940 --> 00:05:09,580
+Lessons learned is do not present them with options to override. So override only became
+
+56
+00:05:09,580 --> 00:05:15,740
+explicit and only when we needed to take calculated risk to fix an urgent problem. So what happens
+
+57
+00:05:15,740 --> 00:05:21,820
+when you have safe defaults? So if you manage to take a log, manage to run tests successfully,
+
+58
+00:05:21,820 --> 00:05:26,060
+canary successfully, deploy successfully, it can just go to the next one. So when all
+
+59
+00:05:26,620 --> 00:05:33,140
+the stars are aligned, we don't need any human input. So it came after a while, we think
+
+60
+00:05:33,140 --> 00:05:38,740
+about it. We have a commit. As the safe defaults in the deployment script continue to mature,
+
+61
+00:05:38,740 --> 00:05:43,980
+we realized that we can probably hook it up to the post-commit hook so that it runs the
+
+62
+00:05:43,980 --> 00:05:47,820
+deployment script with the auto defaults. And this is the start of our continuous deployment
+
+63
+00:05:47,820 --> 00:05:52,340
+journey. Starting with the script, polishing it, putting in the automation brush to the
+
+64
+00:05:52,340 --> 00:05:58,340
+point where we can do continuous deployment. And maybe you have all the ingredients that
+
+65
+00:05:58,340 --> 00:06:03,220
+you need and it's already primed to do your own continuous deployment. So what do we get
+
+66
+00:06:03,220 --> 00:06:08,340
+at this stage? The computer is doing deployment for us. We deploy every single commit consistently
+
+67
+00:06:08,340 --> 00:06:12,900
+and as soon as it lands, it reduces time taken to narrow down the error to a change we know
+
+68
+00:06:12,900 --> 00:06:19,420
+as soon as the build breaks. Continuous deployment also became a service. So we noticed a shift
+
+69
+00:06:19,420 --> 00:06:27,580
+in paradigm. The whole intent of setting up the post-commit hook is to remove the human
+
+70
+00:06:27,580 --> 00:06:32,540
+and we were successful. The paradigm shifted from I'm going to deploy this myself to I'm
+
+71
+00:06:32,540 --> 00:06:37,540
+going to land this and let automation take over. There are a few side effects to this.
+
+72
+00:06:37,540 --> 00:06:42,780
+So fewer people actually know how it works, how to deploy the site and how to roll back.
+
+73
+00:06:42,780 --> 00:06:48,020
+As we scale and we have more and more engineers committing code, we have more instances of
+
+74
+00:06:48,020 --> 00:06:53,340
+the build breaking because people accidentally commit broken code. So this is not scalable.
+
+75
+00:06:53,340 --> 00:06:59,380
+The deployment team became the bottleneck. So we came up with an idea. Why not just don't
+
+76
+00:06:59,380 --> 00:07:05,940
+break trunk? So trunk was often broken because engineers unwittingly land broken code. Can
+
+77
+00:07:05,940 --> 00:07:10,900
+we stop them from doing so when build is broken? It's almost always extra effort to resolve
+
+78
+00:07:10,900 --> 00:07:16,860
+because the people who notice the breakage are not the people who are not the best people
+
+79
+00:07:16,860 --> 00:07:21,820
+to understand the breakage. When a post-commit doesn't pass, it doesn't deploy. It runs
+
+80
+00:07:21,820 --> 00:07:28,140
+block and slow down. So we built a land blocking flow. As soon as an engineer tries to land
+
+81
+00:07:28,140 --> 00:07:36,980
+a diff, it's based on the master. Run test, run canary and many of these instances can
+
+82
+00:07:36,980 --> 00:07:44,060
+happen in parallel. Dozens of changes can be in flight at the same time. And we only
+
+83
+00:07:44,140 --> 00:07:51,660
+allow a change to land on the master when it passes test and canary. So the commits are
+
+84
+00:07:51,660 --> 00:07:55,220
+stacked on the master branch. We only use the master branch. We know the last deployed
+
+85
+00:07:55,220 --> 00:08:02,420
+marker. As soon as commits are landed, we run test and canary on them again. The reason
+
+86
+00:08:02,420 --> 00:08:06,900
+why we run test and canary again on them is because commits can raise when they land.
+
+87
+00:08:06,900 --> 00:08:12,700
+Two independently passing commits can conflict and fail post-commit. So test and canary
+
+88
+00:08:12,700 --> 00:08:18,300
+run at their own speed. Sometimes a diff that landed later might finish testing earlier.
+
+89
+00:08:18,300 --> 00:08:24,460
+When we have a commit that passed test, we immediately deploy to that commit. And this
+
+90
+00:08:24,460 --> 00:08:31,460
+goes on and on. So what does this land blocking flow give us? So we ensure that the commit
+
+91
+00:08:31,820 --> 00:08:36,980
+is production-worthy before allowing the land. So we push back the ownership back to the
+
+92
+00:08:36,980 --> 00:08:40,660
+commit author to own the change. This is very effective because they are the best people
+
+93
+00:08:40,700 --> 00:08:45,500
+to understand what went wrong when test failed. And this also localizes the impact of breaking
+
+94
+00:08:45,500 --> 00:08:49,540
+the bill to the engineer himself. Also putting back the responsibility back to the hands
+
+95
+00:08:49,540 --> 00:08:54,400
+of the engineer. So everyone moves faster when they are not blocked. And this reduces
+
+96
+00:08:54,400 --> 00:08:59,660
+the load on release engineering. And it actually reduces release engineering as the bottleneck.
+
+97
+00:08:59,660 --> 00:09:06,660
+So lesser incidence of trauma broken means that commits are now deployed more reliably.
+
+98
+00:09:06,820 --> 00:09:12,340
+Commits will be pushed to production within one hour of the commit landing. Because of
+
+99
+00:09:12,340 --> 00:09:17,660
+the land blocking flow, we have a higher guarantee that the commits that landed will be deployable.
+
+100
+00:09:17,660 --> 00:09:22,380
+So now we could establish an SLA of deploying commit within one hour of it landing. The
+
+101
+00:09:22,380 --> 00:09:27,340
+real upside is that now we can put forth the expectation for the engineer to be online
+
+102
+00:09:27,340 --> 00:09:33,060
+to support the other changes when they are deployed. There's no risk that when we deploy
+
+103
+00:09:33,060 --> 00:09:38,620
+the change, we realize the engineer has already left the company. So another important control
+
+104
+00:09:38,620 --> 00:09:43,700
+flow is the landlock. Sometimes we need to pause the pipeline. So production is in trouble.
+
+105
+00:09:43,700 --> 00:09:47,580
+We need to roll back or do manual investigation. We usually take a deploy log so that, well,
+
+106
+00:09:47,580 --> 00:09:51,820
+we don't deploy anything right now. We also have a landlock where we can take to stop
+
+107
+00:09:51,820 --> 00:09:57,980
+anyone from committing code. It happens sometimes. We have to take all the logs, manually understand
+
+108
+00:09:57,980 --> 00:10:02,700
+and resolve the situation before resuming the pipeline again. This allows us not to
+
+109
+00:10:02,700 --> 00:10:07,740
+pull out commits waiting to deploy. We typically do not accumulate more than tens of commits
+
+110
+00:10:07,740 --> 00:10:13,020
+waiting to deploy. So what really happens when an error slips past test and canary?
+
+111
+00:10:13,020 --> 00:10:18,300
+We take all the logs and do manual firefight. So Instagram, so what's worth pointing out
+
+112
+00:10:18,300 --> 00:10:23,900
+is that Instagram has a culture around building tests. We always ask in post-mortem, why wasn't
+
+113
+00:10:23,900 --> 00:10:29,340
+that error caught by test or canary? This culture actually is a backbone and reinforces
+
+114
+00:10:29,340 --> 00:10:35,740
+continuous deployment. Of course, test and canary are not bulletproof. Sometimes you
+
+115
+00:10:35,740 --> 00:10:40,060
+need volume to overload a back end. Some of the slow firing errors only become obvious
+
+116
+00:10:40,060 --> 00:10:46,580
+at scale. Test coverage is good, but humans do make mistakes. So to catch errors that
+
+117
+00:10:46,580 --> 00:10:52,140
+are only obvious at scale, we're set up to improve the deployment system that can do
+
+118
+00:10:52,140 --> 00:10:58,380
+deployment in phases. So canary used to be our last time in defence. We go through div,
+
+119
+00:10:58,380 --> 00:11:05,900
+testing, canary, and deploy to everything. We added the C1 tier. So the C1 tier is the
+
+120
+00:11:05,900 --> 00:11:11,380
+first tier we deploy to is about 2% of all hosts. So the div now goes from div, testing,
+
+121
+00:11:11,380 --> 00:11:15,820
+canary. We let it sit in C1 for five minutes, and if we don't see an increase in errors
+
+122
+00:11:15,820 --> 00:11:21,700
+in C1s, then we deploy to everything. So for a single commit, the time taken to reach all
+
+123
+00:11:21,700 --> 00:11:26,420
+production increases by the time you need to sit in C1. So test, canary, type check,
+
+124
+00:11:26,420 --> 00:11:32,460
+typically takes about ten minutes. C1, seven, C2, seven. So at this point in time, you're
+
+125
+00:11:32,460 --> 00:11:37,860
+thinking, hey, how is this deploying every seven minutes? So if you're the first commit
+
+126
+00:11:37,860 --> 00:11:41,660
+of the day, the first deployment takes about 24 minutes from the time the commit landed
+
+127
+00:11:41,660 --> 00:11:47,100
+until it's pushed to the end of production. Remember that test, canary, and type checks,
+
+128
+00:11:48,100 --> 00:11:52,540
+so as soon as if you have six, ten divs that land, they'll all run in parallel at the same
+
+129
+00:11:52,540 --> 00:11:59,220
+time. Then we have a list of ready commits to deploy. So C1, with a keyword hazard commits,
+
+130
+00:11:59,220 --> 00:12:02,860
+the throughput of the system actually depends on how fast we can move commits through C1
+
+131
+00:12:02,860 --> 00:12:06,620
+and C2 because they are pipelined. As soon as something passes, it will move to C1, C1
+
+132
+00:12:06,620 --> 00:12:14,100
+passes, it will move to the next commit. So C1 and C2 moves every seven minutes. So at
+
+133
+00:12:14,100 --> 00:12:18,980
+this point in time, our deployment script gets way too complex. There's massive coordination
+
+134
+00:12:18,980 --> 00:12:25,140
+needed to do deployment in phases. Script was just doing too many things. It was a nightmare.
+
+135
+00:12:25,140 --> 00:12:28,860
+So we finally threw our many thousand lines of deployment script. But note that we came
+
+136
+00:12:28,860 --> 00:12:34,020
+a really long way. We used our deployment script for a really long time. So we still
+
+137
+00:12:34,020 --> 00:12:40,420
+have the post-commit hook. What it does is it pushes commit info into a database. We
+
+138
+00:12:40,420 --> 00:12:45,580
+build a controller that is a decision maker to move deployments along. So the controller
+
+139
+00:12:45,580 --> 00:12:50,060
+queries the DB for a list of commits, understands what is last deployed, what is ready to be
+
+140
+00:12:50,060 --> 00:12:56,260
+deployed and makes a decision to promote a version to a tier of machines. Then we have
+
+141
+00:12:56,260 --> 00:13:02,140
+two runners. So the runners are responsible for the tier that they belong to. So the runner
+
+142
+00:13:02,140 --> 00:13:10,340
+pulls the version for the tier from the database and broadcasts the instruction to roll to
+
+143
+00:13:10,340 --> 00:13:17,580
+all the machines. And within those machines, we have a deployment agent that implements
+
+144
+00:13:17,580 --> 00:13:24,940
+the roll and the log interface. So rock simply means that I'm going to the machine itself
+
+145
+00:13:24,940 --> 00:13:31,180
+knows how to pull a package, load a new code, reload itself, and yep, you're done with it.
+
+146
+00:13:31,180 --> 00:13:35,540
+Log just means that we do not move the version until the end of TTR. So we can log a machine
+
+147
+00:13:35,540 --> 00:13:43,100
+and say that please do not continuously deploy on. So in this system, solve a few problems
+
+148
+00:13:43,100 --> 00:13:49,300
+for us. We were able to codify a state system that we can deploy in phases. And it actually
+
+149
+00:13:49,300 --> 00:13:54,620
+decomposed a complex system that was a script into simpler components as a controller, a
+
+150
+00:13:54,620 --> 00:14:01,580
+runner, and various agents that we can reason, debug, and improve iteratively. So we have
+
+151
+00:14:02,460 --> 00:14:08,260
+a pipeline deployment system that's deploying once every seven minutes. C1 became our second
+
+152
+00:14:08,260 --> 00:14:16,300
+line of defense for the site. And the system is modular. But it is still a fact that a
+
+153
+00:14:16,300 --> 00:14:21,180
+single commit takes longer to deploy to production. The line became longer by the time taken to
+
+154
+00:14:21,180 --> 00:14:26,140
+sit at C1 and C2. And how fast C1 and C2 can progress depends on how fast we can reload
+
+155
+00:14:26,140 --> 00:14:35,340
+the code. Next, so we try to deploy as fast as we can. But really, we want to answer why
+
+156
+00:14:35,340 --> 00:14:40,580
+do we want it fast? So you see the commit on the right very often. We definitely care
+
+157
+00:14:40,580 --> 00:14:45,820
+about iteration speed. But it's actually more than that. Being able to deploy fast means
+
+158
+00:14:45,820 --> 00:14:52,260
+that we get better support from the commit authors when the code is being rolled out.
+
+159
+00:14:52,260 --> 00:14:56,780
+So this means we can react faster to breakages. And our engineers, they don't slow down for
+
+160
+00:14:56,780 --> 00:15:02,500
+us. The longer it takes to deploy means that more commits are batched at once. This makes
+
+161
+00:15:02,500 --> 00:15:09,540
+deploying even more dangerous. So this just, like, deploying faster just means better productivity
+
+162
+00:15:09,540 --> 00:15:17,540
+and safety for us. So when there's only one commit in Cure, we just obviously deploy a
+
+163
+00:15:17,540 --> 00:15:22,060
+single commit. So when there are two commits in Cure, so we know that the time taken to
+
+164
+00:15:22,060 --> 00:15:27,500
+deploy the first commit is 24 minutes. Pipeline deploy means that the next one takes several
+
+165
+00:15:27,500 --> 00:15:32,220
+more minutes after the first. Still deploy commits one by one because we have time to
+
+166
+00:15:32,220 --> 00:15:38,340
+deploy both in an hour. But what if we have 20 commits in a Cure? So theoretically, we
+
+167
+00:15:38,340 --> 00:15:43,580
+can deploy about eight times an hour. So we need to deploy three at once to go through
+
+168
+00:15:44,260 --> 00:15:49,460
+20 of them in one hour. So it's just a balance between batching as little as we can and still
+
+169
+00:15:49,460 --> 00:15:56,460
+deploying within one hour of commit landing. So we can only deploy at the speed of a lot
+
+170
+00:15:56,460 --> 00:16:02,740
+of capacity loss. Ideally, we want to widen that rate band over there so that we deploy
+
+171
+00:16:02,740 --> 00:16:07,240
+the many machines at once and be done with deployment as soon as possible. But that also
+
+172
+00:16:07,360 --> 00:16:14,360
+means that we need to have machines sitting idly around waiting for us to deploy, and
+
+173
+00:16:14,840 --> 00:16:20,880
+that's a waste of capacity. So how do we go about making sure that we are reloading as
+
+174
+00:16:20,880 --> 00:16:27,880
+fast as we can by using as little capacity to reload as we can? So we use UHG. We build
+
+175
+00:16:29,240 --> 00:16:36,240
+a hop swap mechanism to reload code without draining the server. So the idea is that we
+
+176
+00:16:37,400 --> 00:16:43,920
+fork and re-exec a new master. We shut down the idle worker that we find as idling between
+
+177
+00:16:43,920 --> 00:16:50,920
+requests. We spawn a new worker on the new master, eventually moving all workers to the
+
+178
+00:16:52,440 --> 00:16:58,640
+new master, and then shut down master with the old code. And the server reload is done.
+
+179
+00:16:58,640 --> 00:17:05,640
+So throughout this time, the server is continuously taking traffic. Yeah, the server is continuously
+
+180
+00:17:05,800 --> 00:17:10,280
+taking traffic during this time. So what this gives us is that it exploits all the minute
+
+181
+00:17:10,280 --> 00:17:15,440
+idle time that we have when a server is sitting waiting between requests to reload the code
+
+182
+00:17:15,440 --> 00:17:21,080
+as fast as possible. So during low load time, low traffic, the servers reload faster. During
+
+183
+00:17:21,080 --> 00:17:28,080
+high load, servers reload slower. But the message here is that we can't limit the volume
+
+184
+00:17:28,280 --> 00:17:35,280
+of commits that engineers chose at us. In fact, we kind of exist to enable the development
+
+185
+00:17:35,880 --> 00:17:39,440
+of the server. So how fast we can deploy really affects how many deployments we can do in
+
+186
+00:17:39,440 --> 00:17:44,440
+one hour and how many commits we need a batch for deployment. Deploying faster, smaller
+
+187
+00:17:44,440 --> 00:17:51,200
+batches of commit equals to easier to find out if something broke. As we grew, we increasingly
+
+188
+00:17:51,200 --> 00:17:56,840
+met problems such as needing to run slightly different versions of server runtime, scaling
+
+189
+00:17:56,840 --> 00:18:03,840
+parallelism for our runners. Our fleet used to be 100% homogeneous. But it wasn't always
+
+190
+00:18:05,800 --> 00:18:10,840
+so. Sometimes there was once we did a pi 2 to pi 3 migration. We needed to run different
+
+191
+00:18:10,840 --> 00:18:16,120
+Python runtime for different parts of the fleet. C1, C2 is now a permanent feature.
+
+192
+00:18:16,120 --> 00:18:20,680
+They move at different times. Maybe we do a runtime upgrade and we need to leave it
+
+193
+00:18:20,680 --> 00:18:26,200
+for a few days. Another team needs to test a new version of a library in a virtual. And
+
+194
+00:18:26,200 --> 00:18:30,880
+the point is that we need different configuration at parts of the fleet. And in Trollkey 3,
+
+195
+00:18:30,880 --> 00:18:34,920
+we use various hacking methods to make that happen. Sometimes we're taking a file into
+
+196
+00:18:34,920 --> 00:18:41,320
+the machine, teaching our pieces of tools to understand that. So we came up with the
+
+197
+00:18:41,320 --> 00:18:46,640
+thought, what if each individual server knows exactly what code is supposed to run and does
+
+198
+00:18:46,640 --> 00:18:53,640
+its own deployment? So when we need to run different configuration in production, the
+
+199
+00:18:54,120 --> 00:18:59,360
+runners quickly become unwieldy. Like, we need a different runner for each of the different
+
+200
+00:18:59,360 --> 00:19:06,160
+configuration we run. And the scale to more machine, we need to shut them. So we remove
+
+201
+00:19:06,160 --> 00:19:11,000
+the runners. And we have each server's agent read its own tier mapping to understand what
+
+202
+00:19:11,000 --> 00:19:18,000
+version it needs to be at. So this is... So on a single server, the server reads the tier
+
+203
+00:19:19,080 --> 00:19:25,200
+assigned package. It fetches the package itself. It promotes itself. It reloads. And this repeats
+
+204
+00:19:25,200 --> 00:19:31,440
+again. So with this, we do not need to worry. Or we work the system when we need to add
+
+205
+00:19:31,440 --> 00:19:38,440
+more machines to the fleet. So over the years, we solved one problem after another and ended
+
+206
+00:19:41,040 --> 00:19:46,480
+up with this system here that's deploying seven to 100 times a day and every seven minutes
+
+207
+00:19:46,480 --> 00:19:52,040
+a peak. So the landing strip enforces the land blocking flow. It's our first line of
+
+208
+00:19:52,800 --> 00:19:58,240
+is a parallel workflow. An engineer should only block him or herself. Without signal
+
+209
+00:19:58,240 --> 00:20:03,400
+from the landing strip, we will never be able to operate our continuous deployment system.
+
+210
+00:20:03,400 --> 00:20:08,880
+The controller does what a very disciplined human would do with 100% consistency. This
+
+211
+00:20:08,880 --> 00:20:15,880
+is the part that moves aside every seven minutes. Then each machine in the fleet is then responsible
+
+212
+00:20:16,880 --> 00:20:23,680
+for itself and deploys as fast as possible through hot reloading code. This is the grand
+
+213
+00:20:23,680 --> 00:20:30,400
+overview of the system. However, in this presentation, I want to point out that it is not the system
+
+214
+00:20:30,400 --> 00:20:35,560
+or that we deploy 70 to 100 times a day or we do that every seven minutes that's interesting.
+
+215
+00:20:35,560 --> 00:20:41,640
+I feel that the cool parts are the problem that we had and the north stars that guided
+
+216
+00:20:41,640 --> 00:20:48,400
+us to build this deployment system. In Instagram, we always say do the simple things first.
+
+217
+00:20:48,400 --> 00:20:52,720
+So, it is true that we never had a grand plan of what continuous deployment and Instagram
+
+218
+00:20:52,720 --> 00:20:59,080
+will be like. We did what is enough for us to scale. When a step was mundane and repetitive,
+
+219
+00:20:59,080 --> 00:21:03,160
+we let the computer take over. When lands were breaking trunk, we made it compulsory
+
+220
+00:21:03,160 --> 00:21:09,820
+to pass all tests and canary before landing. When we discovered that one single big push
+
+221
+00:21:09,820 --> 00:21:15,100
+was breaking production, we broke it up in phases and we still run the controller on
+
+222
+00:21:15,100 --> 00:21:22,100
+a cron job. So, next thing, like pushing as fast as we can, this is a rather simple yet
+
+223
+00:21:23,380 --> 00:21:28,940
+important concept that regular pushes make production change these things. Remember the
+
+224
+00:21:28,940 --> 00:21:32,900
+XKCD comic? That's what we tell people that we care about their experience and deploying
+
+225
+00:21:32,900 --> 00:21:39,860
+faster. But really deploying faster allows us to deploy in smaller batches and it turns
+
+226
+00:21:39,860 --> 00:21:46,860
+out to be safer for production too. So, this also means that when we push more frequently,
+
+227
+00:21:49,940 --> 00:21:53,420
+the more we do this, the easier it gets. We are definitely bolder when we know that each
+
+228
+00:21:53,420 --> 00:22:00,420
+deployment changes small. And this is the last slide and the most important one. There
+
+229
+00:22:01,260 --> 00:22:07,460
+is no continuous deployment without signal if the change that we are about to make is
+
+230
+00:22:07,460 --> 00:22:11,220
+going to break production. And the truth is that my team would never be able to build
+
+231
+00:22:11,220 --> 00:22:16,180
+such a system without a culture around code quality and testing that is held to a very
+
+232
+00:22:16,180 --> 00:22:23,020
+high standard by the engineers in Instagram. It is the hard work by the larger Instagram
+
+233
+00:22:23,020 --> 00:22:27,460
+infrastructure team to push type checking to 100% in our behemoth code base, the push
+
+234
+00:22:27,460 --> 00:22:33,740
+for comprehensive test coverage, relentlessly asking why wasn't this caught in test, the
+
+235
+00:22:33,740 --> 00:22:38,460
+server-side frameworks that made building new features safe that made all of this possible.
+
+236
+00:22:38,460 --> 00:22:41,260
+And some of the amazing people from Instagram that are carrying this culture are sitting
+
+237
+00:22:41,260 --> 00:22:45,780
+amongst you right now. So, go grab them at Instagram booth at the exhibition. Talk to
+
+238
+00:22:45,780 --> 00:22:50,540
+them and learn more about engineering at Instagram. So, in short, the last slide is just saying
+
+239
+00:22:50,540 --> 00:22:56,540
+about you can't do continuous deployment without signal. That's the end of my presentation.
+
+240
+00:22:57,460 --> 00:23:04,460
+Yeah, I can do that. Thank you very much, Xiong. We have a couple of minutes for questions.
+
+241
+00:23:08,820 --> 00:23:12,020
+If there are any people who would like to ask them, there are microphones in the aisles.
+
+242
+00:23:12,020 --> 00:23:19,020
+Please step up if you have a question. Thank you. That was very interesting. One thing
+
+243
+00:23:19,020 --> 00:23:26,020
+that I'm wondering is you seem to kind of rely on the fact that every possible program
+
+244
+00:23:29,540 --> 00:23:33,700
+that could be introduced by a commit actually shows up within these, well, seven minutes
+
+245
+00:23:33,700 --> 00:23:40,460
+or 24 minutes. Is that really true? I would expect there is often problems that only show
+
+246
+00:23:40,460 --> 00:23:45,020
+up like maybe after six hours or so, and if you've deployed another 10 times since then,
+
+247
+00:23:45,020 --> 00:23:52,020
+can you really easily attribute this back? Okay, so six hours is too long. So, usually,
+
+248
+00:23:53,620 --> 00:24:00,620
+at Instagram's rate of scale and traffic, you know it the minute it hits production.
+
+249
+00:24:00,660 --> 00:24:07,660
+To come back to that question, I would say that the pre-landing flow is just about running
+
+250
+00:24:09,260 --> 00:24:13,780
+tests and making sure that the things that the engineer put in is not complete garbage.
+
+251
+00:24:13,780 --> 00:24:19,300
+The canary is the one that saves the site a lot of times. Typically, we catch one or
+
+252
+00:24:19,300 --> 00:24:26,300
+two bad commits a day. The C1 is the extended coverage that we say that, well, if production
+
+253
+00:24:27,060 --> 00:24:32,220
+looks right, then there is a small amount of things that actually slips through. This
+
+254
+00:24:32,220 --> 00:24:37,220
+is the part that keeps the team awake at night, right? To keep reiterating on that, taking
+
+255
+00:24:37,220 --> 00:24:41,660
+a look at, oh, how did this actually get to production? And those small bits of things.
+
+256
+00:24:41,660 --> 00:24:46,980
+So sometimes it's about increasing canary coverage, like increasing the number of machines
+
+257
+00:24:46,980 --> 00:24:52,780
+that we run canary on so that we get better signals. Sometimes it's about whether if we
+
+258
+00:24:52,780 --> 00:24:59,780
+actually surface that signal at all through logging or metrics into our logging system.
+
+259
+00:25:00,180 --> 00:25:07,180
+So I feel that I went about answering your question. So in short, usually if something
+
+260
+00:25:08,180 --> 00:25:15,180
+is obvious in production, it's really obvious in the first minute. And if we miss it in
+
+261
+00:25:16,780 --> 00:25:21,780
+the pipeline, we iterate on it and find ways to improve it.
+
+262
+00:25:21,780 --> 00:25:28,780
+Hi. Did you ever think of doing a more traditional alpha beta production staging?
+
+263
+00:25:29,380 --> 00:25:36,380
+No. I thought about that, but is it like the best, I keep saying that you can't do continuous
+
+264
+00:25:43,700 --> 00:25:48,500
+deployment without signal. The best signal comes from actually the real code hitting
+
+265
+00:25:48,500 --> 00:25:54,500
+production. That is, I mean, this is not to say that it has in production, but like the
+
+266
+00:25:54,500 --> 00:26:01,500
+slower when it hits every user, the slower that we get that signal back to iterate. I
+
+267
+00:26:04,860 --> 00:26:10,500
+wouldn't completely reject that thought, but it's just that we care a lot about development
+
+268
+00:26:10,500 --> 00:26:17,220
+speed as well. And this model works very well for us right now.
+
+269
+00:26:17,220 --> 00:26:20,620
+How many different services is this deploy pipeline interacting with? Are you pushing
+
+270
+00:26:20,620 --> 00:26:25,620
+multiple services at the same time, or is this infrastructure running for each individual
+
+271
+00:26:25,620 --> 00:26:28,820
+service? This is a monolith. So Instagram.com runs
+
+272
+00:26:28,820 --> 00:26:35,820
+on a monolith right now. And this system over here pushed the main Instagram.com site. And
+
+273
+00:26:37,420 --> 00:26:44,420
+there are also other microservices that we have, but they have their own push cycles.
+
+274
+00:26:44,420 --> 00:26:51,420
+I'm interested to know how much your engineers rely on the deploy time tests and the canary
+
+275
+00:26:51,860 --> 00:26:57,700
+versus tests they run themselves before they make the commit in the first place to know
+
+276
+00:26:57,700 --> 00:27:02,460
+the quality, like the signal, if their code is good or not.
+
+277
+00:27:02,460 --> 00:27:09,460
+So I have no data point on this, actually. I have this hunch that people usually put
+
+278
+00:27:10,100 --> 00:27:17,100
+a change through the system and test if the system catches that error for them.
+
+279
+00:27:20,180 --> 00:27:26,640
+Hi, I've got two questions, actually. First one, do Instagram engineers also use feature
+
+280
+00:27:26,640 --> 00:27:29,380
+flagging, and how does that fit into the deployment system?
+
+281
+00:27:29,380 --> 00:27:34,020
+Sorry, can you repeat your question again? Do you use feature flagging, and how does
+
+282
+00:27:34,020 --> 00:27:39,380
+that fit into your deployments? Feature flags, yes.
+
+283
+00:27:39,380 --> 00:27:46,300
+We do use that. So it is not affected into this at all. So we want to expand our canary
+
+284
+00:27:46,300 --> 00:27:51,060
+system to also cover that surface.
+
+285
+00:27:51,060 --> 00:27:57,020
+And one more question. How do you deploy your deployment system?
+
+286
+00:27:57,020 --> 00:28:04,020
+How do we deploy our deployment system? That's a really good question. So we deploy our deployment
+
+287
+00:28:05,020 --> 00:28:12,020
+system continuously as well. It breaks, but we also like to know as soon as it breaks.
+
+288
+00:28:13,300 --> 00:28:20,300
+And usually when a deployment system breaks, it is always under control, and we can always
+
+289
+00:28:20,780 --> 00:28:27,780
+roll it back really fast. So it's more about maybe a 10, 20 minutes outage of the deployment
+
+290
+00:28:28,740 --> 00:28:35,740
+system, and we can bring it back online, turn ourselves in the bag, and move on.
+
+291
+00:28:37,740 --> 00:28:40,620
+Last question here. Hello? Okay. I'm curious if you could talk a little bit more about
+
+292
+00:28:40,620 --> 00:28:47,620
+how the UWSGI removal master process fix up works, or is that like a trade secret?
+
+293
+00:28:48,620 --> 00:28:55,620
+Yes. So one of my ex-collegues gave a talk at PyCon Australia. So for more details, watch
+
+294
+00:28:56,620 --> 00:29:03,620
+that talk. But feel free to look at me at the Instagram booth. We can explain to you.
+
+295
+00:29:04,500 --> 00:29:07,220
+Thank you. Thanks.
+
+296
+00:29:07,220 --> 00:29:08,220
+Thank you again, Shu Hong.
+
+297
+00:29:08,220 --> 00:29:08,660
+Thank you.
+

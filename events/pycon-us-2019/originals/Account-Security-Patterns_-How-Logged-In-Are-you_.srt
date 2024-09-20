@@ -1,0 +1,1340 @@
+1
+00:00:00,000 --> 00:00:10,280
+of Python 2019. We are presenting on account security patterns. Please make Philip James
+
+2
+00:00:10,280 --> 00:00:21,600
+and Ashish Laroia welcome. Hi. We're Philip James and Ashish Laroia. We like giving talks
+
+3
+00:00:21,600 --> 00:00:25,820
+together, but right now you need to know that we have worked on a lot of websites, web applications
+
+4
+00:00:25,820 --> 00:00:30,900
+in Python and back-end API infrastructure things, often in Python. Some of them have been pretty
+
+5
+00:00:30,900 --> 00:00:35,480
+good. Some of them haven't. We've spent a while staying on top of the best account security
+
+6
+00:00:35,480 --> 00:00:41,340
+techniques because we know we've done it badly. This talk is a letter to our past selves.
+
+7
+00:00:41,340 --> 00:00:44,780
+We're going to get right into it with the bad news. People who use your website are
+
+8
+00:00:44,780 --> 00:00:48,780
+going to lose control of their accounts and it might become your problem. Let me define
+
+9
+00:00:48,780 --> 00:00:52,980
+using control of an account. If a sheesh here has an account on your website and someone
+
+10
+00:00:52,980 --> 00:00:57,580
+else can log into it without a sheesh's permission, something has gone wrong. If a sheesh permits
+
+11
+00:00:57,580 --> 00:01:00,540
+someone else to use his account, that's out of scope for this talk.
+
+12
+00:01:00,540 --> 00:01:08,060
+Hi. Who are you? Hi. My name is Ashish. I'm a systems engineer at Reduct and I've worked
+
+13
+00:01:08,060 --> 00:01:11,500
+on the security team back when Philip and I worked together at Eventbrite.
+
+14
+00:01:11,500 --> 00:01:15,340
+If Ashish permits someone else to use his account, that's out of scope for this talk.
+
+15
+00:01:15,340 --> 00:01:19,100
+With that said, I want to define account security. It's all the techniques that go into making
+
+16
+00:01:19,100 --> 00:01:24,100
+sure that Ashish is the only one who can access his account. We're going to focus on
+
+17
+00:01:24,100 --> 00:01:27,380
+techniques that relate to that specifically. You're going to have to make sure your app
+
+18
+00:01:27,380 --> 00:01:31,080
+doesn't have other really big problems like remote code execution or cross site request
+
+19
+00:01:31,080 --> 00:01:36,280
+forgery or whatever. This talk could kind of be considered the precursor to the Django
+
+20
+00:01:36,280 --> 00:01:39,180
+security page because all those things are great, but if people can get access to your
+
+21
+00:01:39,180 --> 00:01:43,460
+users' accounts, they don't matter quite so much.
+
+22
+00:01:43,460 --> 00:01:46,980
+And if you want to learn more about the Django security tips and tricks, Philip and I gave
+
+23
+00:01:46,980 --> 00:01:51,660
+a tutorial along with a bunch of other people a few years ago and Jacinda Shelley gave a
+
+24
+00:01:51,660 --> 00:01:57,420
+new tutorial based on that this year at PyCon. But yeah, account security. We want you to
+
+25
+00:01:57,420 --> 00:02:02,980
+get three big pieces of advice from this talk. Make it costly to take over an account. Help
+
+26
+00:02:02,980 --> 00:02:07,700
+your users stay informed and empower your users to defend themselves. The reason to
+
+27
+00:02:07,700 --> 00:02:15,140
+do these things is that it's a pretty scary place out there.
+
+28
+00:02:15,140 --> 00:02:19,280
+The amazing thing about this montage, if you're looking carefully, is that all of these breaches
+
+29
+00:02:19,280 --> 00:02:24,480
+happened in just the past year. And all of them involved account information being compromised.
+
+30
+00:02:24,480 --> 00:02:27,700
+Each of these breaches increases the chance that one of your users' accounts has been
+
+31
+00:02:27,700 --> 00:02:33,180
+taken over because people reuse email addresses and passwords for accounts. The main thing
+
+32
+00:02:33,180 --> 00:02:36,220
+you can do to protect your users is to make it hard for other people to take over their
+
+33
+00:02:36,220 --> 00:02:41,620
+accounts. Ashish is going to start by talking about passwords.
+
+34
+00:02:41,620 --> 00:02:47,460
+So I've put here a list of the most popular passwords. Honestly, if one of your users
+
+35
+00:02:47,460 --> 00:02:54,420
+uses 123456 as a password, their account is public. But it's still a really popular password.
+
+36
+00:02:54,420 --> 00:03:00,820
+And to avoid these kinds of passwords, security people created the idea of password rules.
+
+37
+00:03:00,820 --> 00:03:06,260
+Here's some special characters. Here's some numbers. These rules, the most common rules,
+
+38
+00:03:07,100 --> 00:03:11,780
+are inspired by a publication from the National Institute of Standards and Technology in 2003.
+
+39
+00:03:11,780 --> 00:03:20,460
+And I recently read an interview with the guy who wrote that 2003 publication.
+
+40
+00:03:20,460 --> 00:03:26,100
+Bill Burr is sorry. He was on a tight deadline in 2003 when he published that advice. It's
+
+41
+00:03:26,100 --> 00:03:31,340
+okay, Bill. We can all get over it now. There's new rules out from NIST published in the past
+
+42
+00:03:31,340 --> 00:03:36,460
+couple of years. And they're primarily about picking passwords that aren't in common use.
+
+43
+00:03:36,460 --> 00:03:43,500
+My favorite way to do that is to use a JavaScript library published by Dropbox. So here is the
+
+44
+00:03:43,500 --> 00:03:50,940
+Python package index account creation form. I've entered three of those top 100 passwords.
+
+45
+00:03:50,940 --> 00:03:55,160
+And the Python package index has a password strength meter at the bottom that prevents
+
+46
+00:03:55,160 --> 00:04:02,960
+you from using them. They're using Dropbox's open source library called zxcvbn. And by
+
+47
+00:04:02,960 --> 00:04:07,680
+the way, if you're curious where this name comes from, take a look under ASDF on a QWERTY
+
+48
+00:04:07,680 --> 00:04:15,760
+keyboard. So zxcvbn checks if a user's password is in the top 30,000 most common passwords
+
+49
+00:04:15,760 --> 00:04:20,920
+based on websites that got broken into. It's JavaScript so you can stop the user before
+
+50
+00:04:20,920 --> 00:04:25,320
+they even submit their bad password to you. There are some other goodies in that NIST
+
+51
+00:04:25,320 --> 00:04:29,160
+publication. I actually met someone from NIST earlier today at the conference. Anyone from
+
+52
+00:04:29,160 --> 00:04:34,240
+NIST here? Okay, well, that's fine. But there are some other goodies in that NIST publication
+
+53
+00:04:34,240 --> 00:04:38,840
+and I really recommend searching for it. The most important aspect is asking users to use
+
+54
+00:04:38,840 --> 00:04:44,400
+uncommon passwords and zxcvbn can help in the JavaScript front end. I also want to talk
+
+55
+00:04:44,960 --> 00:04:51,960
+about back end password strength validation. So Troy Hunt runs a free website and API called
+
+56
+00:04:51,960 --> 00:04:58,400
+have i been owned.com. He publishes a list of SHA-1 hashes of passwords that he has found
+
+57
+00:04:58,400 --> 00:05:04,080
+in breaches along with email addresses of the accounts involved. So there's an email
+
+58
+00:05:04,080 --> 00:05:08,880
+input right there on this website. In a perfect world, your users are searching for their
+
+59
+00:05:08,880 --> 00:05:14,760
+email address in this box on this site. But chances are they are not. There's also an
+
+60
+00:05:14,760 --> 00:05:20,600
+outrageously good chance that they're using the same password across multiple sites. Since
+
+61
+00:05:20,600 --> 00:05:26,040
+Troy only publishes SHA-1 hashes of passwords, you can't really loop across your user database
+
+62
+00:05:26,040 --> 00:05:30,040
+checking people's password against Troy's data set. I'll show you something you can
+
+63
+00:05:30,040 --> 00:05:36,880
+do. You can send the password to the have i been owned API. When the user is setting
+
+64
+00:05:36,920 --> 00:05:42,000
+their password, you have the raw password and you can check then. Have i been owned
+
+65
+00:05:42,000 --> 00:05:46,640
+operates a security conscious API for free where you can send the first five characters
+
+66
+00:05:46,640 --> 00:05:53,220
+of the SHA-1 hash of the password to them and they respond with SHA hashes of passwords
+
+67
+00:05:53,220 --> 00:05:58,200
+that have showed up in breaches. If you don't want to query an API, you can also download
+
+68
+00:05:58,200 --> 00:06:03,720
+the full database for free which is about 11 gigabytes compressed. PyPI and other sites
+
+69
+00:06:03,720 --> 00:06:09,440
+use the have i been owned API. By the way, Django's built-in user system uses the same
+
+70
+00:06:09,440 --> 00:06:16,440
+approach in an offline way. It bundles a list of the top 30,000 passwords as of Django 2.1.
+
+71
+00:06:16,900 --> 00:06:20,200
+If you want to use the have i been owned API, there are two options for integrating with
+
+72
+00:06:20,200 --> 00:06:27,200
+Django. Here are the two projects. And a third thing you can do is read the source code to
+
+73
+00:06:27,440 --> 00:06:31,520
+the Python package index. It uses Pyramid and it integrates directly with the have i
+
+74
+00:06:31,560 --> 00:06:36,960
+been owned API and it should be straightforward to figure out how to map that to Django. So
+
+75
+00:06:36,960 --> 00:06:42,400
+strong passwords are a factor in account security but they're only one factor. You can add more
+
+76
+00:06:42,400 --> 00:06:49,000
+factors to account security and Philip will tell you about that.
+
+77
+00:06:49,000 --> 00:06:53,280
+I love this picture. If I were in a caption contest for this picture, I would say this
+
+78
+00:06:53,280 --> 00:06:58,320
+is a picture of two factor authentication. Most of you in this room probably already
+
+79
+00:06:58,320 --> 00:07:02,400
+know about two factor authentication. It's where you as the application maintainer tell
+
+80
+00:07:02,400 --> 00:07:05,840
+the user they need something more than their password to log in like an access code from
+
+81
+00:07:05,840 --> 00:07:10,640
+a phone. I'm going to talk about different ways people set up multi factor authentication.
+
+82
+00:07:10,640 --> 00:07:15,000
+Before I proceed, I want to briefly know that MFA is harder to fish but is still fishable.
+
+83
+00:07:15,000 --> 00:07:21,160
+MFA is not a panacea against advanced phishing attacks. Sad but true. So the two main ways
+
+84
+00:07:21,160 --> 00:07:25,680
+people set up multi factor authentication is SMS or with an app. With SMS, you send
+
+85
+00:07:25,680 --> 00:07:30,720
+them a short term code and they type it into your website. SMS is not free of cost to send
+
+86
+00:07:30,720 --> 00:07:36,720
+as anyone who has accidentally left a Twilio account running will tell you. This is Google
+
+87
+00:07:36,720 --> 00:07:40,400
+Authenticator. It's an app that implements a standard alternative to SMS for two factor
+
+88
+00:07:40,400 --> 00:07:44,240
+authentication. Actually, how many people have used an app like Google Authenticator
+
+89
+00:07:44,240 --> 00:07:51,880
+or Duo or Okta? Amazing. Great. Okay, good. How many people have set up an integration
+
+90
+00:07:51,880 --> 00:07:57,880
+with it? Okay, so not that many. That's okay. There are packages that can help you. The big
+
+91
+00:07:57,880 --> 00:08:02,520
+thing to know is that app based MFA is really just your server and the user's device agreeing
+
+92
+00:08:02,520 --> 00:08:06,200
+on what number is going to be valid at what time. The app can generate the same number
+
+93
+00:08:06,200 --> 00:08:10,360
+as the server and you don't need to send an SMS. So that's pretty good. If you have users
+
+94
+00:08:10,360 --> 00:08:13,480
+who want two factor security, then you can set this up for them and not pay anything
+
+95
+00:08:13,480 --> 00:08:19,440
+to Twilio. Sorry, Twilio. There's something else you can support for free, too. This is
+
+96
+00:08:19,440 --> 00:08:23,340
+a picture of a security key by Ubico which supports a standard called universal second
+
+97
+00:08:23,340 --> 00:08:27,120
+factor or U2F. I bring it up because it's an alternative to asking people to pull out
+
+98
+00:08:27,120 --> 00:08:33,360
+their phones and either get texted or open an app. Google has eliminated corporate account
+
+99
+00:08:33,360 --> 00:08:37,560
+takeover using U2F devices. The main thing to know about U2F is that the browser sends
+
+100
+00:08:37,560 --> 00:08:43,040
+the domain name to the U2F device and it's therefore more resistant to phishing attacks.
+
+101
+00:08:43,040 --> 00:08:47,120
+Setting up U2F involves creating a certificate so it's a bit more hassle than TOTP which
+
+102
+00:08:47,120 --> 00:08:51,800
+is the app-based method but it's still pretty doable. Also, you have to buy a security key
+
+103
+00:08:51,800 --> 00:08:55,680
+or send them one so you have to take that into consideration. At this point, I'm going
+
+104
+00:08:55,680 --> 00:08:59,560
+to give you a list of resources. You can write these down if you want but we'll also be posting
+
+105
+00:08:59,560 --> 00:09:04,320
+the slides online. U2F is the coolest and it's resistant to phishing but it requires
+
+106
+00:09:04,320 --> 00:09:08,480
+your users to buy a little hardware token or you to buy one for them. Two factor authentication
+
+107
+00:09:08,480 --> 00:09:12,440
+is one way to secure accounts even if the password isn't super secure. Ashish will
+
+108
+00:09:12,440 --> 00:09:19,440
+now talk about another way. So here's how Slack asks users to log in. A user gets an
+
+109
+00:09:20,040 --> 00:09:25,360
+email, they click a link, the app finds an unforderable token in the URL and the app
+
+110
+00:09:25,360 --> 00:09:31,280
+logs the user in. Slack is betting that their users and their users' email providers care
+
+111
+00:09:31,280 --> 00:09:36,600
+more about their account than their Slack passwords. And I think this is pretty interesting
+
+112
+00:09:36,600 --> 00:09:42,820
+because Slack is really leaning on email providers to help prevent account takeovers.
+
+113
+00:09:42,820 --> 00:09:46,540
+For all the Slack users with Gmail accounts, they're asking Google to be the first line
+
+114
+00:09:46,540 --> 00:09:50,780
+of defense against Slack account takeover. Slack is betting that the Google security
+
+115
+00:09:50,780 --> 00:09:54,780
+team is really good at protecting Gmail and that's probably a pretty good bet for you
+
+116
+00:09:54,780 --> 00:10:01,160
+to make too. To me, this fits into the pattern of make it as costly as possible to take over
+
+117
+00:10:01,160 --> 00:10:06,880
+an account. The attacker's not cost now includes the cost of breaking into the user's email
+
+118
+00:10:06,880 --> 00:10:11,940
+account. Slack does also have a username and password prompt. I think they don't want you
+
+119
+00:10:11,940 --> 00:10:15,780
+to use it though. I think Slack wants to be sure that you control your email address at
+
+120
+00:10:15,780 --> 00:10:22,780
+the time of login. So I'll talk about how to implement that. If you use Django, there's
+
+121
+00:10:23,020 --> 00:10:28,360
+a Django package that does this for you. You can just use it. It's called Django token
+
+122
+00:10:28,360 --> 00:10:33,100
+off. If you want to implement this yourself, I have a fancy trick we used at Sandstorm
+
+123
+00:10:33,100 --> 00:10:37,920
+that I want to tell you about. You can store the, when you're generating a random token,
+
+124
+00:10:37,920 --> 00:10:43,200
+instead of storing the random token you emailed the user, you can store a hash of that token
+
+125
+00:10:43,200 --> 00:10:47,700
+in the database. This gives you one tiny useful thing, which is that if somebody runs off
+
+126
+00:10:47,700 --> 00:10:52,760
+with your database, they can't use the data from the database to log in as people. One
+
+127
+00:10:52,760 --> 00:10:56,740
+thing to know about data storage, if you're going to be querying for these, and you are
+
+128
+00:10:56,740 --> 00:11:00,500
+because people are going to be logging in with those links, you might want to know that
+
+129
+00:11:00,500 --> 00:11:05,620
+the database, databases do fancy tricks to save space in their indexes, and most of those
+
+130
+00:11:05,620 --> 00:11:09,860
+tricks won't work for random data. So you might end up with an index that's the same
+
+131
+00:11:09,860 --> 00:11:16,860
+size as your database table. That's just life. By the way, does this approach, does this
+
+132
+00:11:20,380 --> 00:11:25,660
+approach freak anyone else out? I used to be really bothered by this email address,
+
+133
+00:11:25,660 --> 00:11:31,500
+email login thing, and then I realized it's basically the same as doing a password reset.
+
+134
+00:11:31,500 --> 00:11:36,660
+So I guess it's okay. Besides, you have to remember that your users, by and large, have
+
+135
+00:11:36,660 --> 00:11:41,980
+pretty bad passwords. There's a lot more we can say about making it costly to take over
+
+136
+00:11:41,980 --> 00:11:47,100
+an account, and it could be a whole talk on its own, but there are other aspects of account
+
+137
+00:11:47,100 --> 00:11:53,380
+security that I want to make sure we cover. So once you've done the first pass on making
+
+138
+00:11:53,380 --> 00:11:58,160
+accounts hard to take over, your next step is to help your users help themselves. This
+
+139
+00:11:58,160 --> 00:12:04,100
+section could also be called building your users' trust in you. Here's a login alert
+
+140
+00:12:04,100 --> 00:12:09,740
+from Facebook. How many of you have seen one of these before? Cool. Most of the room. Facebook
+
+141
+00:12:09,740 --> 00:12:13,140
+and Google are really good at proactively letting the user know when something weird
+
+142
+00:12:13,140 --> 00:12:19,620
+is happening. They send emails. They also show in-app notifications. Here's a web notification.
+
+143
+00:12:19,620 --> 00:12:23,900
+When I get these notifications, what I feel is a big ball of trust that Google or Facebook
+
+144
+00:12:23,900 --> 00:12:28,100
+are at least paying attention to what's going on with my account. Google and Facebook don't
+
+145
+00:12:28,100 --> 00:12:32,580
+always send you a notification. They try to detect when it's most likely that a new login
+
+146
+00:12:32,580 --> 00:12:37,300
+is a bad one. So here's some code to check if the user is logging in from a new IP address.
+
+147
+00:12:37,300 --> 00:12:42,660
+It's based in Django. It's pretty simplistic. You're using the Django signals here, and
+
+148
+00:12:42,660 --> 00:12:45,780
+we're also checking that the user's last IP address is the one that they normally log
+
+149
+00:12:46,540 --> 00:12:51,060
+We've added that to our user model in this case. We can send an email when we detect that
+
+150
+00:12:51,060 --> 00:12:55,340
+there's a login that seems suspicious. You could detect instead of at last IP, you could
+
+151
+00:12:55,340 --> 00:13:00,020
+detect the user country changes or when they're on a new web browser. Anything that you know
+
+152
+00:13:00,020 --> 00:13:04,100
+about the user or the session, you can use to detect if it's a bad or at least a suspicious
+
+153
+00:13:04,100 --> 00:13:09,020
+login. Once you've unlocked the power of comparing information about logins and sessions, the
+
+154
+00:13:09,020 --> 00:13:14,340
+world is your oyster. This pattern we've just implemented can be reused for all sorts of
+
+155
+00:13:14,340 --> 00:13:18,860
+events that your users would like to know about, like, for instance, password changes.
+
+156
+00:13:18,860 --> 00:13:22,500
+If an attacker broke into a user's account and changed the password, it's going to be
+
+157
+00:13:22,500 --> 00:13:26,700
+really important for that person to get the problem resolved fast. Since we still live
+
+158
+00:13:26,700 --> 00:13:30,920
+in an age where there's no common replacement for passwords, you as the app maintainer should
+
+159
+00:13:30,920 --> 00:13:35,140
+do everything you can to let your users know when their password changes. Slack-style email
+
+160
+00:13:35,140 --> 00:13:39,100
+login makes passwords less critical, which is good, but it doesn't negate you needing
+
+161
+00:13:39,100 --> 00:13:43,180
+to protect the user's password and letting them know when it's changed. So here's some
+
+162
+00:13:43,180 --> 00:13:46,060
+example code. I'm not going to explain it line by line, and again, we're going to publish
+
+163
+00:13:46,060 --> 00:13:50,180
+these slides later. We haven't tested this exact code in production, so your mileage
+
+164
+00:13:50,180 --> 00:13:55,420
+may vary. But the Django model, which is a replacement for the user model, saves the
+
+165
+00:13:55,420 --> 00:14:00,540
+password at the moment that the object is initialized from the ORM and then compares
+
+166
+00:14:00,540 --> 00:14:06,060
+that to a password being changed and then sends a notification if the password is changed
+
+167
+00:14:06,060 --> 00:14:10,100
+from when it was initialized from the database. Hopefully that's straightforward. If not,
+
+168
+00:14:10,100 --> 00:14:17,020
+feel free to come talk to us afterwards. As an aside, here's a picture of Mint.com asking
+
+169
+00:14:17,020 --> 00:14:21,980
+me for my bank password. I bring this up because if you build a useful website, others might
+
+170
+00:14:21,980 --> 00:14:26,700
+want to integrate with it. Users are going to hand out their password if you're not careful.
+
+171
+00:14:26,700 --> 00:14:31,500
+This is why people make OAuth APIs, so that a user can hand over an API token instead.
+
+172
+00:14:31,500 --> 00:14:35,340
+If the API token gets compromised, it's easy enough for a user to revoke it or for you
+
+173
+00:14:35,980 --> 00:14:42,980
+for them. There's something else you can do that shows users you're looking out for them.
+
+174
+00:14:44,060 --> 00:14:47,700
+You can notify them of breaches in general, even if they aren't necessarily related to
+
+175
+00:14:47,700 --> 00:14:54,460
+your site. So remember all these breaches? Troy Hunt's Have I Been Owned database lets
+
+176
+00:14:54,460 --> 00:15:00,980
+you query users' email addresses to see if they show up in any of these breaches. And
+
+177
+00:15:00,980 --> 00:15:05,060
+we've talked about Have I Been Owned earlier. There's one other thing you can do to integrate.
+
+178
+00:15:05,700 --> 00:15:10,860
+If you have the account details from the other site's breach, you can check for a match for
+
+179
+00:15:10,860 --> 00:15:15,820
+email addresses that have accounts on your site. Letting users know when they could be
+
+180
+00:15:15,820 --> 00:15:20,220
+affected by another breach is the highest level of informing and enabling them. But
+
+181
+00:15:20,220 --> 00:15:24,020
+it's also potentially the riskiest. And if you're not sure why that would be, you can
+
+182
+00:15:24,020 --> 00:15:29,500
+ask Phil about it in the hallway track. Check with your legal team. We've talked about a
+
+183
+00:15:29,500 --> 00:15:33,660
+few ways to present information to users to help them know what's going on with their
+
+184
+00:15:33,660 --> 00:15:38,740
+accounts. And I want to close with some specific ways you can help your users act on that
+
+185
+00:15:38,740 --> 00:15:47,900
+information. So here's a picture of what it looks like when I change my Facebook password.
+
+186
+00:15:47,900 --> 00:15:53,220
+Facebook gives the user the option to log out the other devices that are logged in.
+
+187
+00:15:53,220 --> 00:15:57,500
+You could create a session database table, create a web interface for letting the user
+
+188
+00:15:57,500 --> 00:16:02,100
+invalidate sessions one by one, and that will let you do something similar. But that feature
+
+189
+00:16:02,100 --> 00:16:07,820
+can be hard to implement, and users might not go looking for it. There's a simpler approach.
+
+190
+00:16:07,820 --> 00:16:12,500
+If the user changes their password, they might be worried somebody else has the old password.
+
+191
+00:16:12,500 --> 00:16:19,660
+So it can be a good idea to log the attacker out. And in 2012, Dourly Rodriguez asked on
+
+192
+00:16:19,660 --> 00:16:25,560
+the Django user mailing list how to invalidate active sessions after a password change. Dourly
+
+193
+00:16:25,560 --> 00:16:31,840
+implemented it himself and shared the code. Then Albert turned it into a reusable Django
+
+194
+00:16:31,840 --> 00:16:39,880
+app. And for Django 1.7, Tim Graham implemented the same algorithm that Albert and Dourly
+
+195
+00:16:39,880 --> 00:16:46,080
+used. The idea is to store an HMAC of the user's hashed password in the session. Since
+
+196
+00:16:46,080 --> 00:16:51,960
+Django doesn't always have a database table with all sessions, Django can use this algorithmic
+
+197
+00:16:51,960 --> 00:16:55,960
+approach to make sure that past sessions are invalid in the future. That is, if the
+
+198
+00:16:55,960 --> 00:17:01,000
+user's current HMAC password doesn't match what's in the session, then you should log
+
+199
+00:17:01,000 --> 00:17:06,940
+out this session. So being able to muck with sessions is a pretty powerful security tool,
+
+200
+00:17:06,940 --> 00:17:11,200
+and there's an advanced technique that builds on it. But first, let me ask you all a question.
+
+201
+00:17:11,200 --> 00:17:16,780
+How many people here are logged into GitHub on your laptops right now? Yeah. Okay. Cool.
+
+202
+00:17:16,780 --> 00:17:26,700
+Now how many people have ever intentionally logged out of GitHub? Okay. Okay. Good. And
+
+203
+00:17:26,700 --> 00:17:31,300
+I said that I want to help limit the amount of damage that can get caused when an account
+
+204
+00:17:31,300 --> 00:17:36,980
+gets compromised. And if you logged into your GitHub account, let a friend use your laptop,
+
+205
+00:17:36,980 --> 00:17:42,820
+when a friend visits GitHub, they can probably do a lot of damage. So here's a picture of
+
+206
+00:17:42,820 --> 00:17:48,340
+what GitHub calls pseudo mode. They ask you for your password again when you're doing
+
+207
+00:17:48,340 --> 00:17:53,300
+something sensitive, like adding a new SSH key. And I want to talk about how to implement
+
+208
+00:17:53,300 --> 00:17:58,260
+this in Python web apps that you all might have. So there's the question of what your
+
+209
+00:17:58,260 --> 00:18:02,260
+code might look like. Let's say you have a Django view that does something dangerous
+
+210
+00:18:02,260 --> 00:18:09,660
+like this. You've got this giant account upgrade button. You might want to let the user click
+
+211
+00:18:09,660 --> 00:18:18,020
+it to get an upgraded account of some kind. And maybe it requires log in. So here's the
+
+212
+00:18:18,020 --> 00:18:24,180
+Django view code for that. Now, this might be a thing you don't want to let them do unless
+
+213
+00:18:24,180 --> 00:18:32,780
+they've logged in recently. And so I'll enhance this code in a pseudo code kind of way to
+
+214
+00:18:33,580 --> 00:18:41,300
+check. What that will do is when the user clicks the button, it will make a post request
+
+215
+00:18:41,300 --> 00:18:50,780
+to slash upgrade and the server will detect that the user needs to re-authenticate. Here,
+
+216
+00:18:50,780 --> 00:18:54,260
+you can see in our made up page that we ask the user for their password and we explain
+
+217
+00:18:54,260 --> 00:18:59,300
+why we're asking for it, this pseudo mode thing. We'll need to store the URL they need
+
+218
+00:18:59,300 --> 00:19:08,060
+to go back to once they've confirmed their password in the URL. I think we should send
+
+219
+00:19:08,060 --> 00:19:12,420
+them back to the account page so they can finish their upgrade thing. And we also add
+
+220
+00:19:12,420 --> 00:19:17,100
+a query string parameter reason so that you can add some template information to the pseudo
+
+221
+00:19:17,100 --> 00:19:22,340
+mode page. So that's what it looks like from the user perspective. Here's some quick pseudo
+
+222
+00:19:22,340 --> 00:19:31,100
+code for pseudo mode. I'm skipping some decorator magic here. And I'm assuming you have a session
+
+223
+00:19:31,100 --> 00:19:39,100
+system. Django works fine. And here's how it goes. You check when the user was last
+
+224
+00:19:39,100 --> 00:19:43,980
+authenticated and if it's in the right amount of time, you let it happen and otherwise you
+
+225
+00:19:43,980 --> 00:19:50,340
+redirect them. So to wrap up, pseudo mode, also known as elevated privileges mode, lets
+
+226
+00:19:50,340 --> 00:19:55,020
+you limit the damage if a user lends their laptop to a friend or other situations where
+
+227
+00:19:55,020 --> 00:20:00,140
+someone loses control of their account. You can find an implementation of this in an open
+
+228
+00:20:00,140 --> 00:20:06,700
+source package called Django Elevate if you want. And basically the reason you're doing
+
+229
+00:20:06,700 --> 00:20:11,980
+this is you don't trust your users to log out. There is a permanent log out, however,
+
+230
+00:20:11,980 --> 00:20:18,220
+that Philip will tell you about. A funny thing about popular websites is that people start
+
+231
+00:20:18,220 --> 00:20:22,380
+asking for their accounts to be deleted. Sometimes people want their personal data to be visible
+
+232
+00:20:22,380 --> 00:20:25,780
+online in fewer places. Other people want to know no one is going to break into their
+
+233
+00:20:25,780 --> 00:20:30,660
+account. Whatever the reason, if an account is deleted, that's pretty secure. You don't
+
+234
+00:20:30,660 --> 00:20:34,780
+have to hard delete the data depending on your jurisdiction and some GDPR stuff. If
+
+235
+00:20:34,780 --> 00:20:37,900
+no one on the internet can log into the account with its correct username and passwords, that's
+
+236
+00:20:37,900 --> 00:20:43,980
+pretty good. And that's the most secure account. So with that, we want to close. Remember the
+
+237
+00:20:43,980 --> 00:20:47,980
+three big pieces of advice that we want you to get from this talk. Make it costly to take
+
+238
+00:20:47,980 --> 00:20:53,540
+over an account, help your users stay informed, and empower users to defend themselves. If
+
+239
+00:20:53,540 --> 00:20:57,100
+you remember these three things, the techniques we described are hopefully easier to remember
+
+240
+00:20:57,100 --> 00:21:00,780
+and you'll find it easier to come up with techniques that work best for your app. And
+
+241
+00:21:00,780 --> 00:21:04,820
+with that, we'll open it up to questions in the form of a question. You can either ask
+
+242
+00:21:04,820 --> 00:21:08,700
+questions now or you can find us in the hallway afterwards. Thanks.
+
+243
+00:21:13,980 --> 00:21:21,980
+If people have questions, there are microphones in the aisles here. Otherwise...
+
+244
+00:21:21,980 --> 00:21:27,020
+We blew them away. We answered every possible question about account security.
+
+245
+00:21:27,020 --> 00:21:29,020
+Oh, no. Okay, great. Oh, there's one.
+
+246
+00:21:29,020 --> 00:21:35,140
+Testing, testing. So do you have any thoughts on login methodology around like point of
+
+247
+00:21:35,140 --> 00:21:40,180
+sale systems where you need to log in very quickly at very short lived, unprivileged
+
+248
+00:21:40,180 --> 00:21:43,260
+session or something like that? Thank you.
+
+249
+00:21:44,140 --> 00:21:50,100
+I can tell you one specific thing that I've seen. I'm blanking on the company name right
+
+250
+00:21:50,100 --> 00:21:55,220
+now, but there's a company that makes tools for children. And to log in... The children
+
+251
+00:21:55,220 --> 00:22:00,740
+are often like four, five, six years old and need to log in to a computer thing and can't
+
+252
+00:22:00,740 --> 00:22:05,740
+necessarily type or read very well. And so they have a... The teacher puts out a list
+
+253
+00:22:05,740 --> 00:22:12,060
+of QR codes in the classroom and the student grabs theirs and puts it in the right place.
+
+254
+00:22:12,060 --> 00:22:18,140
+This is to say... I think you even mentioned swiping something. But you can have a random
+
+255
+00:22:18,140 --> 00:22:22,460
+token that is a QR code that a person actually does keep secret, unlike in the classroom
+
+256
+00:22:22,460 --> 00:22:25,900
+example. And then they could put it in front of a camera, for example.
+
+257
+00:22:25,900 --> 00:22:29,980
+Well, you mentioned point of sale systems. And what I've observed, and we've also kind
+
+258
+00:22:29,980 --> 00:22:34,060
+of worked for companies that have helped power point of sale systems to some degree. The
+
+259
+00:22:34,060 --> 00:22:38,020
+way that I've seen them solve this problem, which I think is pretty reasonable, is every
+
+260
+00:22:38,020 --> 00:22:41,540
+user of the point of sale system has like a password or an access code or some unique
+
+261
+00:22:41,580 --> 00:22:45,500
+identifier for them that lets them access kind of the basic functionality that they
+
+262
+00:22:45,500 --> 00:22:49,980
+need. But if there's advanced functionality that the business wants more protected, then
+
+263
+00:22:49,980 --> 00:22:54,340
+someone who is a supervisor has like the... Effectively, the pseudo mode password comes
+
+264
+00:22:54,340 --> 00:22:58,700
+in and has to like put in their password to do the operation. And so if you have a system
+
+265
+00:22:58,700 --> 00:23:03,460
+where it's like, I know that there's going to be lots of users using this same terminal,
+
+266
+00:23:03,460 --> 00:23:07,160
+this same computer over and over again, I think the answer is there is like limit how
+
+267
+00:23:07,160 --> 00:23:11,880
+long a logged in session is valid for and like carefully evaluate all the actions for
+
+268
+00:23:11,880 --> 00:23:15,120
+which ones might need like pseudo mode. Question?
+
+269
+00:23:15,120 --> 00:23:22,120
+Do you have any suggestions about what to do when the user loses access to the email
+
+270
+00:23:22,120 --> 00:23:23,720
+address?
+
+271
+00:23:23,720 --> 00:23:30,720
+Oh. Capture... So I've seen some companies and credit card companies are actually kind
+
+272
+00:23:30,720 --> 00:23:35,720
+of great at this in a roundabout way. They have the, you know, the what's your call in
+
+273
+00:23:35,720 --> 00:23:40,720
+password? But another way they can kind of verify that it's you is they can ask you about
+
+274
+00:23:40,720 --> 00:23:44,720
+like recent transactions. And so if you really think that your user has like lost their
+
+275
+00:23:44,720 --> 00:23:49,720
+account, your support rep probably can see details about their account that theoretically
+
+276
+00:23:49,720 --> 00:23:55,720
+only the user would know, right? Alternatively, valid second factor, right? Like if they've
+
+277
+00:23:55,720 --> 00:24:00,720
+lost control of the email but they still have access to their phone and the phone is still
+
+278
+00:24:00,720 --> 00:24:05,720
+connected correctly, I would say that a valid second factor input is worth a password reset
+
+279
+00:24:05,720 --> 00:24:10,720
+email, right? Like if they can prove that they have the second factor, then sending a password
+
+280
+00:24:10,720 --> 00:24:16,720
+reset email to a new email system is probably no less secure than what you had previously.
+
+281
+00:24:16,720 --> 00:24:23,720
+Cool. Any other questions? Or questions?
+
+282
+00:24:23,720 --> 00:24:24,720
+Great.
+
+283
+00:24:24,720 --> 00:24:29,720
+So much of your discussion focused on passwords. But with WebAuthn finally getting adoption,
+
+284
+00:24:35,720 --> 00:24:40,720
+one of the promises of that is to eliminate passwords completely. Just curious your thoughts
+
+285
+00:24:40,720 --> 00:24:41,720
+on that.
+
+286
+00:24:41,720 --> 00:24:45,720
+As I understand it, so I haven't been paying a lot of attention to WebAuthn. Can I actually
+
+287
+00:24:45,720 --> 00:24:51,720
+keep you at the mic for a second? As I understand it, WebAuthn is a more standardized version
+
+288
+00:24:51,720 --> 00:24:57,720
+of U2F, is that right? And so the idea there is you can use something like the security key
+
+289
+00:24:57,720 --> 00:25:03,720
+by Ubico that we showed. And then basically we love it. There's this quote we have from this
+
+290
+00:25:06,720 --> 00:25:12,720
+Google PR person about account security and how they've eliminated corporate account takeovers.
+
+291
+00:25:12,720 --> 00:25:17,720
+I really think that this story by Google is part of what's rocketing WebAuthn and U2F and
+
+292
+00:25:17,720 --> 00:25:23,720
+Ubico to success. One other thing I'd say real quick is if your goal is, and we think this is
+
+293
+00:25:23,720 --> 00:25:29,720
+a very valid goal to get rid of passwords, then a combination of Slack style login through email
+
+294
+00:25:29,720 --> 00:25:35,720
+plus second factor authentication is at least as secure as password plus WebAuthn and probably
+
+295
+00:25:35,720 --> 00:25:39,720
+more secure than password plus WebAuthn. And then the user doesn't have to remember anything.
+
+296
+00:25:39,720 --> 00:25:43,720
+Yeah, it is two things they have instead of one thing they know and one thing they have. But it's
+
+297
+00:25:43,720 --> 00:25:46,720
+still multiple factors.
+
+298
+00:25:46,720 --> 00:25:52,720
+The thing I love about it is it's invulnerable to man in the middle attacks, right? Because if you
+
+299
+00:25:52,720 --> 00:25:58,720
+are, or I shouldn't say invulnerable to man in the middle attacks, although I think it is in some
+
+300
+00:25:58,720 --> 00:26:04,720
+respects. But if you're phishing attacks in particular, right, it's strongly tied to a particular
+
+301
+00:26:04,720 --> 00:26:11,720
+endpoint. And so you know that if you go to a site that looks like that, it's going to present a
+
+302
+00:26:11,720 --> 00:26:14,720
+different credential than if you go to the real site.
+
+303
+00:26:14,720 --> 00:26:16,720
+Totally. Thanks so much.
+
+304
+00:26:16,720 --> 00:26:18,720
+Hi.
+
+305
+00:26:18,720 --> 00:26:20,720
+So what about the third factor?
+
+306
+00:26:20,720 --> 00:26:28,720
+Well, so Philip carefully transitioned in the wording in the talk from saying this is a photo
+
+307
+00:26:28,720 --> 00:26:33,720
+contest of two factor authentication. You've all heard of second factor or multi factor
+
+308
+00:26:33,720 --> 00:26:41,720
+authentication. So like there's a point of diminishing returns, right? And like a thing that
+
+309
+00:26:41,720 --> 00:26:47,720
+you can add to that. So like the thing there is biometrics are a user name, not a password.
+
+310
+00:26:47,720 --> 00:26:51,720
+Just in case anyone was under the illusion that a biometrics like your eyeball or your fingerprint
+
+311
+00:26:51,720 --> 00:26:57,720
+should be a password, no, that is a user name. There are other factors you can add. At some point
+
+312
+00:26:57,720 --> 00:27:03,720
+you have to find that right balance between how much do I want my users to be secure and how much
+
+313
+00:27:03,720 --> 00:27:05,720
+do I want my users to be annoyed?
+
+314
+00:27:05,720 --> 00:27:07,720
+So you and then you.
+
+315
+00:27:07,720 --> 00:27:12,720
+Just a question about multi factor authentication with single sign on. I wonder if there's any
+
+316
+00:27:12,720 --> 00:27:16,720
+implications that come with doing that or if you treat it the same way as a user name and password
+
+317
+00:27:16,720 --> 00:27:18,720
+login.
+
+318
+00:27:18,720 --> 00:27:22,720
+I mean the standard that I've seen a lot of companies adopting in terms of software, I know
+
+319
+00:27:22,720 --> 00:27:27,720
+that both of M-PRIGHT and Patreon, which I currently work for Patreon by the way, I forgot to
+
+320
+00:27:27,720 --> 00:27:33,720
+mention that in the talk. We use Okta, which is single sign on for all of the sub apps but is
+
+321
+00:27:33,720 --> 00:27:38,720
+two factor multi factor authentication to get into Okta. Once you're inside Okta, there's kind of
+
+322
+00:27:38,720 --> 00:27:44,720
+this web of trust that you're in and therefore they almost never make you do a second factor into
+
+323
+00:27:44,720 --> 00:27:48,720
+the sub app. But if you're going to do single sign on, doing second factor is also still
+
+324
+00:27:48,720 --> 00:27:50,720
+recommended.
+
+325
+00:27:50,720 --> 00:27:52,720
+Thank you.
+
+326
+00:27:52,720 --> 00:27:58,720
+I'm still confused from the first moments of the talk and wondering how I can establish that this
+
+327
+00:27:58,720 --> 00:28:00,720
+is in fact a sheesh.
+
+328
+00:28:00,720 --> 00:28:06,720
+Well, so I'm wearing this jacket. It has my name on it except the H lost a bit of a fragment there.
+
+329
+00:28:06,720 --> 00:28:08,720
+As a sheesh.
+
+330
+00:28:08,720 --> 00:28:13,720
+Yeah. I guess maybe I'm still failing that authentication check. It's my corporate uniform for the
+
+331
+00:28:13,720 --> 00:28:15,720
+company I work for, Reduct.
+
+332
+00:28:15,720 --> 00:28:17,720
+We could go through his pockets if you want.
+
+333
+00:28:17,720 --> 00:28:23,720
+We can talk more afterwards. But it is impossible to know.
+
+334
+00:28:23,720 --> 00:28:29,720
+Okay, thanks. I think we're done. Feel free to come talk to us afterwards.
+
+335
+00:28:29,720 --> 00:28:31,720
+Thanks.
+

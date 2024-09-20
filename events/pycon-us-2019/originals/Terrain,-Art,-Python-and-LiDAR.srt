@@ -1,0 +1,1036 @@
+1
+00:00:00,000 --> 00:00:08,000
+Welcome, everybody. Our next talk is going to be Andrew Godwin speaking about Terrain,
+
+2
+00:00:08,000 --> 00:00:15,000
+ART, Python, and LIDAR. Please welcome Andrew Godwin.
+
+3
+00:00:15,000 --> 00:00:24,000
+Good morning, everybody, and welcome to my wonderful talk about Terrain. Quick introduction,
+
+4
+00:00:24,000 --> 00:00:29,000
+I'm Andrew Godwin. I'm perhaps most well-known for my work on Django, migrations, and south,
+
+5
+00:00:29,000 --> 00:00:33,000
+and most recently channels and async. I'm a principal engineer over at Eventbrite in
+
+6
+00:00:33,000 --> 00:00:38,000
+San Francisco. I do own a lot of lasers. I do require more, as you'll see during the
+
+7
+00:00:38,000 --> 00:00:42,000
+course of my presentation. But this talk is not about Django, which is unusual for me.
+
+8
+00:00:42,000 --> 00:00:47,000
+This talk is about landscapes. I am a big fan of the natural world, and particularly
+
+9
+00:00:47,000 --> 00:00:53,000
+of mapping and topography. For centuries, we have tried to map our world to increasing
+
+10
+00:00:53,000 --> 00:00:57,000
+degrees of accuracy. First, it was people with sticks up mountains looking through holes,
+
+11
+00:00:57,000 --> 00:01:02,000
+not particularly accurate. Then we got better. We got ranging. We got lasers. But eventually,
+
+12
+00:01:02,000 --> 00:01:06,000
+we figured we wanted a whole global map of the entire planet. What does it look like?
+
+13
+00:01:06,000 --> 00:01:12,000
+What are all the mountain ranges? What are all the valleys? And so in the 90s, we had
+
+14
+00:01:12,000 --> 00:01:17,000
+this, which is the shuttle radar topography mission. They basically stuck two giant radar
+
+15
+00:01:17,000 --> 00:01:22,000
+dishes on the space shuttle, one in the payload bay, one at the end of a long wire, and flew
+
+16
+00:01:22,000 --> 00:01:27,000
+around the entire earth to get the first ever complete mapping of the earth's surface.
+
+17
+00:01:27,000 --> 00:01:32,000
+It has height values for every single part of the earth they could get to. It's not particularly
+
+18
+00:01:32,000 --> 00:01:37,000
+accurate. It's about 30 meters accuracy. But it is there. And you get decent-looking imagery
+
+19
+00:01:37,000 --> 00:01:43,000
+like this. It works well at those sort of wide scales. It shows islands well. It shows
+
+20
+00:01:43,000 --> 00:01:48,000
+mountains well. It shows valleys well. The problem is, as I said, it's 30 meters. It can't
+
+21
+00:01:48,000 --> 00:01:52,000
+resolve things smaller than that. And it also can't see behind valleys. There's actually
+
+22
+00:01:52,000 --> 00:01:56,000
+quite a lot of holes in the data where the shuttle was at an angle. And as the radar
+
+23
+00:01:56,000 --> 00:02:00,000
+is scanning, it can't actually see over a mountain in the valley behind it. And you
+
+24
+00:02:00,000 --> 00:02:05,000
+look at the raw data, you just have sort of one side of a mountain and a mysterious hole
+
+25
+00:02:05,000 --> 00:02:10,000
+on the other side. And so this is a great start of data. But we've progressed. And we
+
+26
+00:02:10,000 --> 00:02:17,000
+now have, crucially, lasers. Space and lasers. Great combination. And we took these lasers
+
+27
+00:02:17,000 --> 00:02:22,000
+and we did what we do with radar. And with radar, that's radio detection and ranging.
+
+28
+00:02:22,000 --> 00:02:26,000
+We did the same with light, which is light detection and ranging. That's what LiDAR is.
+
+29
+00:02:26,000 --> 00:02:31,000
+LiDAR is like radar. It tells you where things are and how far away they are. But crucially,
+
+30
+00:02:31,000 --> 00:02:35,000
+it's incredibly accurate. It can be accurate down to the centimeter. In fact, these days
+
+31
+00:02:35,000 --> 00:02:40,000
+more accurate than that. And what this means is you can build an incredibly detailed map
+
+32
+00:02:40,000 --> 00:02:44,000
+but of a smaller area. LiDAR usually goes on something like an aircraft, as you can see
+
+33
+00:02:44,000 --> 00:02:48,000
+here in the picture, but also can be on a car or other device that moves along and generally
+
+34
+00:02:48,000 --> 00:02:54,000
+maps things around it. And this is a crucial step. We can take this kind of accurate range
+
+35
+00:02:54,000 --> 00:03:00,000
+finding and map things like cities in perfect detail. In fact, in cities around the world,
+
+36
+00:03:00,000 --> 00:03:05,000
+in most major cities and certainly in a lot of the U.S., LiDAR surveying planes regularly
+
+37
+00:03:05,000 --> 00:03:09,000
+fly over those cities and map them in their entirety. If you've ever seen Google Maps or
+
+38
+00:03:09,000 --> 00:03:14,000
+other things with 3D buildings, those 3D buildings are built often from LiDAR data. It's those
+
+39
+00:03:14,000 --> 00:03:19,000
+samples of the planes flying over regularly and taking those samples. Now, if you ever
+
+40
+00:03:19,000 --> 00:03:25,000
+give me a large amount of interesting data, one thing immediately comes to mind. And that is
+
+41
+00:03:25,000 --> 00:03:31,000
+I want to make things. And so what I'm going to show you is how I took some Python, took some
+
+42
+00:03:31,000 --> 00:03:36,000
+data and made a few things with them and hopefully show you a few ways you can use Python maybe
+
+43
+00:03:36,000 --> 00:03:42,000
+you've not thought of up until now. So first off, let's start with maybe the easier of the
+
+44
+00:03:42,000 --> 00:03:48,000
+ones. So before I get into what I'm making, let's talk about how the data I just talked about
+
+45
+00:03:48,000 --> 00:03:54,000
+comes to you. Now, the first and easiest thing you often see is something people call a DEM, a
+
+46
+00:03:54,000 --> 00:04:00,000
+digital elevation model. If you work in games, this often is called a height map. It's the same
+
+47
+00:04:00,000 --> 00:04:06,000
+kind of idea. It is a big bitmap and it contains data for how high everything is on a 2D plane.
+
+48
+00:04:08,000 --> 00:04:14,000
+On the left here, you can see a small portion of London and the interior buildings and streets. On
+
+49
+00:04:14,000 --> 00:04:20,000
+the right, you can see part of crater lake and the namesake crater in the middle of it. Both of
+
+50
+00:04:20,000 --> 00:04:26,000
+these show you have sort of this gray scale where in this rendering, the white is highest and the
+
+51
+00:04:26,000 --> 00:04:30,000
+black is lowest. Of course, the information in this is more detailed. These are elevations in
+
+52
+00:04:30,000 --> 00:04:36,000
+meters from sea level. But at its core, it's just a big two-dimensional array. You can take that big
+
+53
+00:04:36,000 --> 00:04:42,000
+two-dimensional array of numbers and just look through it and find out how high things are.
+
+54
+00:04:42,000 --> 00:04:48,000
+Every single pixel is just where it is and how high it is. And thankfully in Python, operating on
+
+55
+00:04:48,000 --> 00:04:54,000
+arrays is relatively easy. My first project I wanted to look at was maybe the easiest to fabricate.
+
+56
+00:04:54,000 --> 00:05:00,000
+Fabrication is a big part of this, as we'll see. It is this. This is a laser cut profile of the
+
+57
+00:05:00,000 --> 00:05:06,000
+island of Hawaii. There's a scale here for reference. If you want to see these models, by the way,
+
+58
+00:05:06,000 --> 00:05:12,000
+I'll be outside at the end or find me during the conference. And the key thing is this is laser
+
+59
+00:05:12,000 --> 00:05:16,000
+cutting. Laser cutting is maybe the easiest of the fabrication methods I'm going to show you here
+
+60
+00:05:16,000 --> 00:05:22,000
+today. A laser cutter generally just needs one thing. It needs a cut path. One of the nice things
+
+61
+00:05:22,000 --> 00:05:28,000
+to make this with is SVG. And so what you do is you take an SVG file, you feed it to a laser
+
+62
+00:05:28,000 --> 00:05:34,000
+cutter, it cuts it for you, you take it out, glue it together, and you're done. The gluing is
+
+63
+00:05:34,000 --> 00:05:38,000
+honestly the most annoying part of that whole process. But we have to make the SVG file. As you
+
+64
+00:05:38,000 --> 00:05:44,000
+can see here, what we have is not just that top surface of the parts of the island. We have slices
+
+65
+00:05:44,000 --> 00:05:50,000
+through it taken at certain intervals that have solid bases. In order to make it look solid like
+
+66
+00:05:50,000 --> 00:05:56,000
+you see here, you've got to have those slats that reach the ends so I can glue them together. And
+
+67
+00:05:56,000 --> 00:06:02,000
+to do this, I, of course, use Python. I took that DEM, I turned it into CSV because I'm lazy and
+
+68
+00:06:02,000 --> 00:06:08,000
+don't want to use geospatial libraries just yet, read it in with Python's CSV library, and then
+
+69
+00:06:08,000 --> 00:06:14,000
+did a very simple thing of just picking every 200th row, sampling the data in that, and drawing a
+
+70
+00:06:14,000 --> 00:06:20,000
+contour out using the SVG write library. It's a relatively sort of simple set of things to put
+
+71
+00:06:20,000 --> 00:06:26,000
+together. There's a lot of debugging. Obviously it's not simple in itself. One of the fascinating
+
+72
+00:06:26,000 --> 00:06:32,000
+things you find is if you just do this as you expect it, you get incredibly flat vectors out.
+
+73
+00:06:32,000 --> 00:06:38,000
+It turns out that the way you think the earth looks from height is not how it actually looks.
+
+74
+00:06:38,000 --> 00:06:44,000
+It's actually much flatter than you expect. So everything you see for me today is exaggerated in
+
+75
+00:06:44,000 --> 00:06:50,000
+the what I'm going to call the Z dimension, the height axis, by 1.5 to 2 times at least. And that's
+
+76
+00:06:50,000 --> 00:06:56,000
+what this is applied to as well. So we take those rows, we write them out to an SVG file, we feed
+
+77
+00:06:56,000 --> 00:07:02,000
+them to a laser cutter like this one, my local makerspace, and then we glue them together. One of
+
+78
+00:07:02,000 --> 00:07:08,000
+the fun things about this particular adventure was that this method works very well for small
+
+79
+00:07:08,000 --> 00:07:14,000
+islands. It works very poorly for anything else. If you can even see it, this is Scotland. I love
+
+80
+00:07:14,000 --> 00:07:20,000
+Scotland. It's an amazing mountainous place, but you couldn't tell. It's a case of like the
+
+81
+00:07:20,000 --> 00:07:26,000
+exaggeration you get. Hawaii is perfect. New Zealand is too. They rise out of the sea sharply and
+
+82
+00:07:26,000 --> 00:07:32,000
+have a defined shape. When you take Scotland, it's full of wonderful locks and valleys, but when you
+
+83
+00:07:32,000 --> 00:07:38,000
+shrink it down, it just doesn't work at small scale. A part of Scotland, like one of the isles, would
+
+84
+00:07:38,000 --> 00:07:44,000
+work fantastic, but it does not work as an overall project. This is why I start thinking in different
+
+85
+00:07:44,000 --> 00:07:50,000
+scales. But first, I'm going to go to a smaller scale, to cities. This is maybe the project I got
+
+86
+00:07:50,000 --> 00:07:54,000
+most press about, which I'm quite happy about. There was a write-up in Forbes at one point, which is
+
+87
+00:07:54,000 --> 00:08:00,000
+exciting. But let's go back to that LIDAR image. What I've shown you is very large scale data. The
+
+88
+00:08:00,000 --> 00:08:06,000
+Hawaii data is from that original shuttle mission. It's very wide ranging. You can get the whole
+
+89
+00:08:06,000 --> 00:08:12,000
+earth in about a gigabyte or two of data. It's not too bad. But cities are a different matter entirely.
+
+90
+00:08:12,000 --> 00:08:18,000
+Cities are so precise. The LIDAR imagery of London that you see on the left here is accurate within
+
+91
+00:08:18,000 --> 00:08:24,000
+half a meter. It's about this much if you're from America, which most of you are. And what that means
+
+92
+00:08:24,000 --> 00:08:30,000
+is you can not just render individual buildings. You can render individual trees. You can see things like
+
+93
+00:08:30,000 --> 00:08:36,000
+cars and railway lines that you just couldn't see from any other data. It's incredible. The result, by the
+
+94
+00:08:36,000 --> 00:08:42,000
+way, looks like this. This is a thing about this big that sits on my wall at home, which is a full detailed
+
+95
+00:08:42,000 --> 00:08:48,000
+map of San Francisco in this case, another one of London I'll show you later, in its entire detail. That is the entire
+
+96
+00:08:48,000 --> 00:08:54,000
+San Francisco peninsula rendered about this big. You can see every individual building in San Francisco.
+
+97
+00:08:54,000 --> 00:09:00,000
+I can literally see where I live, which is very exciting and kind of the point of this. For reference,
+
+98
+00:09:00,000 --> 00:09:08,000
+I have a size code here. This is a one square kilometer tile salvaged as one of the failures from that
+
+99
+00:09:08,000 --> 00:09:16,000
+particular print. There are over 100 of these in each of those because when you want to print something, I don't have a 3D printer
+
+100
+00:09:16,000 --> 00:09:22,000
+that is a meter long. I'd love one if anyone's selling one for cheap, but I don't have one of those.
+
+101
+00:09:22,000 --> 00:09:28,000
+But the real problem you get to is not the fabrication that is a problem. The first problem you get to is the data.
+
+102
+00:09:28,000 --> 00:09:32,000
+So remember I said there's those nice height maps, they read nice, they're big arrays, you can easily put them to
+
+103
+00:09:32,000 --> 00:09:38,000
+CSV. No. When you get lidar data, it often comes in the form of what's called a point cloud.
+
+104
+00:09:38,000 --> 00:09:46,000
+Now, a point cloud is basically a big collection of here's the raw data the plane's lidar pod got back as it flew over the city.
+
+105
+00:09:46,000 --> 00:09:52,000
+If you're lucky, they're already gridded up into one by one kilometer squares and aligned for you.
+
+106
+00:09:52,000 --> 00:09:58,000
+And if you look at it from distance, it looks relatively sensible. It looks solid, you can see some features.
+
+107
+00:09:58,000 --> 00:10:04,000
+If you're familiar with San Francisco, that is the AT&T ballpark on the coastline.
+
+108
+00:10:04,000 --> 00:10:10,000
+The problem is if you zoom in, that illusion quickly vanishes. It's not solid. It's merely a series of points.
+
+109
+00:10:10,000 --> 00:10:16,000
+All it is is literally the raw radar returns from every individual part of the landscape that the plane saw.
+
+110
+00:10:16,000 --> 00:10:24,000
+There is no continuous surface here. You can't take this and print it out. You can't print zero dimensional dots.
+
+111
+00:10:24,000 --> 00:10:32,000
+And so the problem we have is we have to take this raw file and for reference, a point cloud is literally a file full of three dimensional vectors like this pretty much.
+
+112
+00:10:32,000 --> 00:10:38,000
+They come with some extra data like attributes and the intensity of the return. But you're basically working with this kind of data.
+
+113
+00:10:38,000 --> 00:10:44,000
+And you have to turn it into a solid model. Now, this is a challenge I would love to take on.
+
+114
+00:10:44,000 --> 00:10:52,000
+But I have only so much spare time and way too many hobbies. And so what I do is I turn to existing tools.
+
+115
+00:10:52,000 --> 00:11:04,000
+In particular, there is something called the point cloud library, which is a very good way of handling point clouds, not only in terms of reducing them down and making it easy to work with, but also extracting height maps or 3D surfaces.
+
+116
+00:11:04,000 --> 00:11:10,000
+There's also a standalone program called LAS tools. It's not free, but it's free for small amounts of data.
+
+117
+00:11:10,000 --> 00:11:17,000
+That's much more of a plug and play. Give it a point cloud. It will dump you out a height map. No real sort of extra Python work required.
+
+118
+00:11:17,000 --> 00:11:27,000
+But crucially, both of these will take a raw point cloud like you saw, a few variables like do you want to eliminate things that look like trees or do you want to try and find the actual height of the landscape?
+
+119
+00:11:27,000 --> 00:11:33,000
+And they will then return you a height map out of that code. Then you've got the challenge of manufacturing it.
+
+120
+00:11:33,000 --> 00:11:42,000
+Now, a height map, again, is just that top surface of the landscape. A 3D printer can't print a basically two dimensional surface mapped in a 3D plane.
+
+121
+00:11:42,000 --> 00:11:50,000
+It needs something solid. And you have to take that top surface and you have to turn it into a fully sealed three dimensional model.
+
+122
+00:11:50,000 --> 00:11:59,000
+Now, I happen to have a little bit of history in doing some game engine stuff and playing around on my spare time, and that's where these kind of hobbies overlap.
+
+123
+00:11:59,000 --> 00:12:05,000
+A three dimensional model that a 3D printer takes has to be fully sealed. That means it has to have no gaps in it.
+
+124
+00:12:05,000 --> 00:12:10,000
+If you have a polygon missing, it will just sit there and get very confused if you're unlucky.
+
+125
+00:12:10,000 --> 00:12:17,000
+So the resulting file looks a bit like this. This is a very, very close zoom in of one of these tiles I showed you just now.
+
+126
+00:12:17,000 --> 00:12:23,000
+Every single individual point on that height map has some polygons on the top surface.
+
+127
+00:12:23,000 --> 00:12:29,000
+But you see around the side, there's a wall built to make sure that it's solid. And again, there's a wall on the base of it as well.
+
+128
+00:12:29,000 --> 00:12:37,000
+And how do we do this? Well, a couple of steps. First of all, again, we have to load in that digital elevation map, the DEM.
+
+129
+00:12:37,000 --> 00:12:47,000
+And then there's some interesting steps because I didn't do the middle two steps of this the first time, and the result was spectacular in that it was totally impossible to print.
+
+130
+00:12:47,000 --> 00:12:55,000
+First of all, you could click on maximum height. LIDAR is interesting. It works on light. It turns out things are reflective.
+
+131
+00:12:55,000 --> 00:13:04,000
+And when the laser bounces off a reflective surface, it often gets very confused, especially over water or lots of glass buildings or even worse, like fields of solar panels.
+
+132
+00:13:04,000 --> 00:13:09,000
+The laser returns will be incredibly spiky. They'll just randomly jump up 100 meters and back down again.
+
+133
+00:13:09,000 --> 00:13:17,000
+So you've got to do a first pass of taking that data and eliminating those high points that obviously outliers or look suspicious.
+
+134
+00:13:17,000 --> 00:13:22,000
+Then you've got to make sure that you actually can fit the entire height of your model in.
+
+135
+00:13:22,000 --> 00:13:29,000
+London's got some very tall skyscrapers in it, and so you have to make sure that you're actually going to fit that in the size you want to print your 3D model.
+
+136
+00:13:29,000 --> 00:13:37,000
+The higher your print is, the longer it takes to print, and I'm an impatient man. And so I try and go for like two or three hours for each one.
+
+137
+00:13:37,000 --> 00:13:43,000
+But then the really fun part is you've got to clip the bottom. So London is a very big city.
+
+138
+00:13:43,000 --> 00:13:54,000
+And at the time this laser data was taken, they were building the big new railway line, which runs around 50 meters underneath London because it's very dense, really far down.
+
+139
+00:13:54,000 --> 00:14:02,000
+There is a giant pit in the middle of London that is 50 meters deep. And so the laser returns in this pit read as minus 50.
+
+140
+00:14:02,000 --> 00:14:12,000
+If you're trying to print out with like, oh, well, the base of this is sea level, you get a model that goes la la la and then just dips below itself and cuts through itself to 50 meters below itself.
+
+141
+00:14:12,000 --> 00:14:18,000
+And rather than print a giant base and make the giant hole appear, I just cut it off at sea level.
+
+142
+00:14:18,000 --> 00:14:22,000
+So there's a few things like that you have to massage the data and make sure it fits.
+
+143
+00:14:22,000 --> 00:14:28,000
+And a lot of this is in the pursuit of making it look good, right? Like this is not meant to be an accurate representation of the model.
+
+144
+00:14:28,000 --> 00:14:31,000
+It's meant to be a form of art. It's meant to look pleasant.
+
+145
+00:14:31,000 --> 00:14:39,000
+And part of this, as you'll see later on with the other stuff I have, is maybe lying a bit about reality, but making sure it looks nice.
+
+146
+00:14:39,000 --> 00:14:43,000
+For example, when I said is that your heights, that's not quite true. It's not just linear.
+
+147
+00:14:43,000 --> 00:14:49,000
+The small buildings are exaggerated a bit more and the big buildings are shrunk a bit so that you can see all those buildings individually.
+
+148
+00:14:49,000 --> 00:14:58,000
+They still look relatively bigger to each other, but you can actually see the small buildings more closely rather than being like a fraction of the height of those giant buildings.
+
+149
+00:14:58,000 --> 00:15:01,000
+Once you've got that, you have to smooth out the rough features.
+
+150
+00:15:01,000 --> 00:15:07,000
+Even when it's not on reflective surfaces, LIDAR is just rough. It just reflects a bit and has some jaggedness.
+
+151
+00:15:07,000 --> 00:15:12,000
+So you're going to run a smoothing pass. Again, in Python, this is written as an array pass.
+
+152
+00:15:12,000 --> 00:15:18,000
+And then finally, you write out an STL file. STL is a pretty common 3D model format.
+
+153
+00:15:18,000 --> 00:15:22,000
+If you're not familiar with 3D models, you basically write out a series of what's called polygons.
+
+154
+00:15:22,000 --> 00:15:26,000
+They are triangles with three corners on them in 3D space.
+
+155
+00:15:26,000 --> 00:15:32,000
+And thankfully, STL is a relatively simple format. It's a giant binary file full of binary polygons.
+
+156
+00:15:32,000 --> 00:15:35,000
+We have the struct module for that. Thank you, struct.
+
+157
+00:15:35,000 --> 00:15:47,000
+You pop in your normal, which is like the angle of the face of the polygon, your three corners, and then for some reason, there's a zero in every part of the polygons in the file.
+
+158
+00:15:47,000 --> 00:15:53,000
+That is an extension that no software can read. It's very exciting. Thank you, formats.
+
+159
+00:15:53,000 --> 00:15:58,000
+But you can do this in a Python for loop. So you just go through that array.
+
+160
+00:15:58,000 --> 00:16:03,000
+It writes out every single grid square as two polygons, then runs around the edges of the array to write out the walls,
+
+161
+00:16:03,000 --> 00:16:10,000
+and then just does the floor underneath. So it's a lot of work, a lot of complicated maths, but it ends up being there in the end.
+
+162
+00:16:10,000 --> 00:16:18,000
+Now, maybe thinking here, should I have used NumPy? Yes, I should. Did I? No.
+
+163
+00:16:18,000 --> 00:16:28,000
+I have this tendency to just go in full speed and just start writing like on normal Python lists rather than actual proper NumPy arrays.
+
+164
+00:16:28,000 --> 00:16:37,000
+This is a failure of mine. If you do this, please use NumPy. It has many of these things built in as standard operators, and it's much faster than my script is.
+
+165
+00:16:37,000 --> 00:16:42,000
+If you want to use this particular script, it is up on GitHub. The URL will be up again at the end of the presentation.
+
+166
+00:16:42,000 --> 00:16:48,000
+It is a bit rough and ready. There is some documentation, but not a lot. But other people have made it work.
+
+167
+00:16:48,000 --> 00:16:57,000
+And if you want to and have a lot of 3D printing time and space, you can make San Francisco as seen here, or you can make London as seen here.
+
+168
+00:16:57,000 --> 00:17:02,000
+But let's go to one more kind of fabrication, and this is the most difficult one.
+
+169
+00:17:02,000 --> 00:17:07,000
+So I want to go from the small scale of cities, which I enjoy, to the big scale.
+
+170
+00:17:07,000 --> 00:17:15,000
+I have a personal goal of visiting every single national park in the US. This may seem infeasible. It is.
+
+171
+00:17:15,000 --> 00:17:24,000
+Do I like invisible goals? Yes, I do. There are 59 of them, if you're counting, and at least three of them have no roads to them. It's very exciting.
+
+172
+00:17:24,000 --> 00:17:31,000
+One of them you would get a boat from a local fisherman. It's great. But I want to go visit them, and I want to represent that in a certain way.
+
+173
+00:17:31,000 --> 00:17:39,000
+And so what I did is I started making miniature landscapes of those national parks, but this time not out of plastic from the 3D printer, but out of metal.
+
+174
+00:17:40,000 --> 00:17:48,000
+And for size reference, this is one of the ones you see on screen. That on screen there is Great Sand Dunes National Park in Colorado.
+
+175
+00:17:48,000 --> 00:17:54,000
+Fantastic place. I recommend it highly if you want to go there. There's some really big sand dunes. I mean, they're seriously big.
+
+176
+00:17:54,000 --> 00:18:01,000
+But the fun thing about this is it's not just a case of shipping a model through a 3D printer the same way it was before.
+
+177
+00:18:01,000 --> 00:18:08,000
+You have to use a milling machine. Rather than adding to nothing, you have to subtract from a block of aluminium.
+
+178
+00:18:08,000 --> 00:18:13,000
+And so you have this giant spinning machine of death. It sits there for like four hours grinding away at it.
+
+179
+00:18:13,000 --> 00:18:19,000
+And crucially, one of the big problems I faced is that I have to find these outlines. I can't just cut out a square.
+
+180
+00:18:19,000 --> 00:18:24,000
+I want the actual outline of the park and the shape of that, because I find that quite memorable.
+
+181
+00:18:24,000 --> 00:18:32,000
+Now, this requires a little bit of GIS work. This is like the only, I say it's non-Python. QGIS runs a lot of Python inside of itself.
+
+182
+00:18:33,000 --> 00:18:41,000
+But as an example of what you do, you can take the US National DEM, which as its name suggests is a height map of the entire United States,
+
+183
+00:18:41,000 --> 00:18:48,000
+which is amazing. Thank you USGS for that. You can then take a different data set of outlines of national parks.
+
+184
+00:18:48,000 --> 00:18:58,000
+And then you can use QGIS to cut out the park from the national map. And so you get that just outline of the national park.
+
+185
+00:18:58,000 --> 00:19:06,000
+The problem is the format you're using for DEMs, it's still a 2D array. It's still just a grid of values.
+
+186
+00:19:06,000 --> 00:19:12,000
+But the shape you want is irregular. The way you represent that in a DEM is a thing called no data,
+
+187
+00:19:12,000 --> 00:19:19,000
+which in an amazing programming fashion is just the value minus 9999, because someone figured there's nothing on Earth that's low.
+
+188
+00:19:19,000 --> 00:19:26,000
+And so you have to sit there and filter that out. But crucially, also my software I wrote, that I showed you just now for the city tiles,
+
+189
+00:19:26,000 --> 00:19:33,000
+assumed a square because I was lazy, as I said previously. And so you have to go back and modify that software to make it understand,
+
+190
+00:19:33,000 --> 00:19:39,000
+well, there might be edges in here. And rather than going around the edge of the square, you have to work out where the edges are,
+
+191
+00:19:39,000 --> 00:19:45,000
+bring that in, and then it now basically works out the outer perimeter of that part of the model.
+
+192
+00:19:45,000 --> 00:19:53,000
+And that's where it builds its wall and builds its solidity. The nice thing is the driving programs for the many machines do also take STL,
+
+193
+00:19:53,000 --> 00:20:00,000
+so I can still use that part of my code again. As a brief idea of what this looks like, you take a DEM on the left there.
+
+194
+00:20:00,000 --> 00:20:05,000
+You can then make it into a 3D model, as you see in the middle. And then you can take that 3D model,
+
+195
+00:20:05,000 --> 00:20:12,000
+spend a good hour in a tooling program for a milling machine saying, well, you should use this kind of milling bit and run over it this way,
+
+196
+00:20:12,000 --> 00:20:17,000
+and then come over. It's a massive pain to make things milled. I really want to have that simplified.
+
+197
+00:20:17,000 --> 00:20:24,000
+But you end up with one of these small little metal things like this. For reference, each of these is eight hours of milling.
+
+198
+00:20:24,000 --> 00:20:30,000
+It is not speedy, and it's not at home, so I just sit in a nice warm workshop for eight hours.
+
+199
+00:20:30,000 --> 00:20:35,000
+But it is worth the result, and the goal is to try and make one of these for each park I've been to.
+
+200
+00:20:35,000 --> 00:20:39,000
+But let's stop for a bit and talk about one thing I kind of skimmed over here.
+
+201
+00:20:39,000 --> 00:20:46,000
+I talked about, well, you take the national elevation data set, and you take the outlines of the parks, and you just pop them over each other.
+
+202
+00:20:46,000 --> 00:20:54,000
+No, no, no, no, no, no, map projections. So if you're familiar with map projections, and I'm sure you laughed if you were,
+
+203
+00:20:54,000 --> 00:21:00,000
+there is no accurate way to represent the spherical earth on a 2D plane.
+
+204
+00:21:00,000 --> 00:21:04,000
+And so for this reason, we have different projections of the earth onto the 2D plane.
+
+205
+00:21:04,000 --> 00:21:08,000
+The one on Google Maps you're probably most familiar with, that's called spherical micartor.
+
+206
+00:21:08,000 --> 00:21:11,000
+It works really well at the equator, and it sucks anywhere near the poles.
+
+207
+00:21:11,000 --> 00:21:14,000
+You've seen how big Greenland is on that map? It's ridiculous.
+
+208
+00:21:14,000 --> 00:21:20,000
+And so different countries and different parts of the country pick different projections.
+
+209
+00:21:20,000 --> 00:21:26,000
+For example, a projection you'd use in Alaska is not going to look good if you use it down here in the lower 48.
+
+210
+00:21:26,000 --> 00:21:34,000
+And so on this way, on this screen, you see two different projections of the raw data of Crater Lake.
+
+211
+00:21:34,000 --> 00:21:38,000
+They are both valid. Both of these are projections you might use.
+
+212
+00:21:38,000 --> 00:21:43,000
+On the left is spherical micartor. On the right is the U.S. national projection.
+
+213
+00:21:43,000 --> 00:21:47,000
+Which one of these is right? Nobody knows.
+
+214
+00:21:47,000 --> 00:21:52,000
+But thankfully, we're doing art, so we can get past the I don't care about how accurate it is phase and go,
+
+215
+00:21:52,000 --> 00:21:55,000
+which one looks good? Obviously the one on the left. So we go with that one.
+
+216
+00:21:55,000 --> 00:22:01,000
+But this does make map projections add to my extensive list of things I refuse to work with.
+
+217
+00:22:01,000 --> 00:22:05,000
+So congratulations to map projections for making that.
+
+218
+00:22:05,000 --> 00:22:12,000
+The list will continue forth with. I look forward to doing a whole track next year on just these.
+
+219
+00:22:12,000 --> 00:22:18,000
+But the nice thing about this is this is like a different kind of project again.
+
+220
+00:22:18,000 --> 00:22:22,000
+These are the six ones I've made so far. I've been to more national parks.
+
+221
+00:22:22,000 --> 00:22:26,000
+Again, it's eight hours sitting in a hot room. I'm kind of lazy again. I haven't done it a lot.
+
+222
+00:22:26,000 --> 00:22:33,000
+But the idea is I want to have this big magnetic board on the wall with all the national parks in it, and I can go into them.
+
+223
+00:22:33,000 --> 00:22:38,000
+So let's talk a little bit about some challenges here in the future of this kind of project.
+
+224
+00:22:38,000 --> 00:22:43,000
+The future, obviously, I want to do more of them. As I said, there are 59 of them.
+
+225
+00:22:43,000 --> 00:22:48,000
+The exciting ones like American Samoa National Park is very far away.
+
+226
+00:22:48,000 --> 00:22:55,000
+And as previously mentioned, a good half of it, the official recommendation is find a local fisherman and ask to borrow their boat.
+
+227
+00:22:55,000 --> 00:22:58,000
+And they might let you get to the other half of it, which is very exciting.
+
+228
+00:22:58,000 --> 00:23:03,000
+Several Alaskan ones fly in only, so thankfully I've got a pilot's license.
+
+229
+00:23:03,000 --> 00:23:07,000
+And there's a couple of them that are boat-owned, like one off the coast of California.
+
+230
+00:23:07,000 --> 00:23:12,000
+There's another thing here as well. These small pieces are incredibly fragile.
+
+231
+00:23:12,000 --> 00:23:16,000
+And the size of the milling bits you have to use to make them is incredibly small.
+
+232
+00:23:16,000 --> 00:23:25,000
+I have broken a good nine or 10 of them by doing it wrong and making the milling bit try to drill into the side of the milling bit just snaps off straight away.
+
+233
+00:23:25,000 --> 00:23:29,000
+Finding an easier way to make this toolpath stuff work would be great.
+
+234
+00:23:29,000 --> 00:23:33,000
+Milling machines actually understand a thing called G-code, which is the same as 3D printers.
+
+235
+00:23:33,000 --> 00:23:37,000
+You can just pass them a set of tooling instructions directly from your software.
+
+236
+00:23:37,000 --> 00:23:42,000
+So there actually is scope here to have Python make the tooling instructions directly for the milling machine,
+
+237
+00:23:42,000 --> 00:23:48,000
+rather than spending an hour in a CAD CAM program importing that model and manually trying to toolpath it.
+
+238
+00:23:48,000 --> 00:23:53,000
+So that could be really interesting too. I hear someone very enthusiastic there about G-code. Thank you.
+
+239
+00:23:54,000 --> 00:23:59,000
+Another thing here too is bed optimization. So I showed you the grid of how those polygons look.
+
+240
+00:23:59,000 --> 00:24:08,000
+Well, it makes two polygons for every single grid point. Even if it's a totally flat lake surface, it just makes like 400 polygons on that surface.
+
+241
+00:24:08,000 --> 00:24:15,000
+And so the result is a file with between 5 million and 20 million polygons.
+
+242
+00:24:15,000 --> 00:24:21,000
+Now try and load that into a 3D modeling program. It will complain but do it eventually.
+
+243
+00:24:21,000 --> 00:24:26,000
+Try loading that into a CAD CAM program that's used to like nice rectangles. It just quits.
+
+244
+00:24:26,000 --> 00:24:31,000
+Like Fusion 360 just went, nope, and just quit every time I tried to open it.
+
+245
+00:24:31,000 --> 00:24:39,000
+Right now I have to take that model, take it into Blender, which is a 3D modeling program, run the mesh optimizer, which takes like five minutes.
+
+246
+00:24:39,000 --> 00:24:46,000
+And the whole computer is unresponsive at that point because Blender is very demanding. Then re-export it and then use it again.
+
+247
+00:24:46,000 --> 00:24:52,000
+I'd love to do that particular optimization in the code again. So it's much more of a single pass operation.
+
+248
+00:24:52,000 --> 00:24:57,000
+But writing optimization code in Python is a little bit tricky. There actually is some in there already.
+
+249
+00:24:57,000 --> 00:25:05,000
+It tries to snap the heights together and tries to merge them together. But again, I think using NumPy would help a lot with making those things faster.
+
+250
+00:25:05,000 --> 00:25:15,000
+Finally, I'd like more lasers. In particular, I'd like some personal LIDAR, which is basically person scale ability to go and scan interiors of things.
+
+251
+00:25:15,000 --> 00:25:23,000
+One of my biggest passions is subterranean architecture and landscapes, caves and underground buildings and things like this conference center fascinate me.
+
+252
+00:25:23,000 --> 00:25:31,000
+And those just aren't done by any existing programs. You don't get open street map working underground. That's not just what they do.
+
+253
+00:25:31,000 --> 00:25:36,000
+LIDAR is thankfully coming down thanks to self-driving cars. Thanks, self-driving cars.
+
+254
+00:25:36,000 --> 00:25:44,000
+And hopefully soon we'll have a sort of a person-sized LIDAR system that you can actually buy for, let's say, a few thousand dollars rather than tens of thousands.
+
+255
+00:25:44,000 --> 00:25:51,000
+And at that point, I think it opens this whole thing up to a much more wide landscape of like, what can I map? Where can I map it? And that kind of thing.
+
+256
+00:25:51,000 --> 00:25:59,000
+If you're interested in what I've talked about here, as I mentioned, the all-in-one tile output thing for cities is the top URL there.
+
+257
+00:25:59,000 --> 00:26:08,000
+And then some of the other things like the irregular shape one and a few other processing tools for the laser cut stuff is in the bottom, the process on GitHub as well.
+
+258
+00:26:08,000 --> 00:26:15,000
+And if you want to look at any of the models I bought, come and find me today or sometimes during the conference and I'll let you play around with them and handle them.
+
+259
+00:26:15,000 --> 00:26:17,000
+And thank you very much.
+

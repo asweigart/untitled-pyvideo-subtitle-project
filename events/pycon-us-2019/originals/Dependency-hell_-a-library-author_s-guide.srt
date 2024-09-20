@@ -1,0 +1,2268 @@
+1
+00:00:00,000 --> 00:00:07,880
+Good morning, everyone. We're going to get started here. Please welcome Angela and Brian.
+
+2
+00:00:07,880 --> 00:00:16,800
+They will be talking about dependency hell, a library author's guide.
+
+3
+00:00:16,800 --> 00:00:21,900
+Yay.
+
+4
+00:00:27,120 --> 00:00:32,580
+Good.
+
+5
+00:00:32,580 --> 00:00:34,060
+Ah, good.
+
+6
+00:00:39,820 --> 00:00:42,020
+Perfect.
+
+7
+00:00:42,020 --> 00:00:44,300
+So I'm the Brian one in the pair.
+
+8
+00:00:44,300 --> 00:00:49,300
+So this is a talk about compatibility issues
+
+9
+00:00:49,300 --> 00:00:53,380
+that can occur when you're packaging Python libraries,
+
+10
+00:00:53,380 --> 00:01:01,180
+like for distribution on PyPI or internal repository,
+
+11
+00:01:01,180 --> 00:01:04,140
+if your company has one of those.
+
+12
+00:01:04,140 --> 00:01:06,400
+This might be useful for people who
+
+13
+00:01:06,400 --> 00:01:08,100
+are just kind of interested in packaging
+
+14
+00:01:08,100 --> 00:01:09,900
+but not doing that explicitly.
+
+15
+00:01:09,900 --> 00:01:12,580
+But if you are not really familiar with packaging,
+
+16
+00:01:12,580 --> 00:01:16,620
+this talk will probably move a bit fast for you.
+
+17
+00:01:16,620 --> 00:01:19,540
+So that's just a bit of a warning.
+
+18
+00:01:23,620 --> 00:01:26,700
+So we're going to talk about just do a bit of an overview
+
+19
+00:01:26,700 --> 00:01:27,500
+about the problem.
+
+20
+00:01:27,500 --> 00:01:30,980
+Then Angela will dive into some of the technical details.
+
+21
+00:01:30,980 --> 00:01:33,500
+We're going to talk about all the packaging dependency
+
+22
+00:01:33,500 --> 00:01:34,700
+problems that can happen.
+
+23
+00:01:34,700 --> 00:01:39,860
+And then finally, end with some best practices.
+
+24
+00:01:39,860 --> 00:01:43,340
+So all the examples that we're going to show you, by the way,
+
+25
+00:01:43,340 --> 00:01:46,860
+are real ones, or at least they were real at the time
+
+26
+00:01:46,860 --> 00:01:49,460
+I was making these slides.
+
+27
+00:01:49,460 --> 00:01:54,020
+So let's imagine that I'm going to do some data science stuff.
+
+28
+00:01:54,020 --> 00:01:57,760
+I'm going to use TensorFlow for my machine learning stuff.
+
+29
+00:01:57,800 --> 00:02:01,000
+And I'm going to use Apache Beam for my kind of data flow.
+
+30
+00:02:01,000 --> 00:02:02,720
+So I make my new virtual environment.
+
+31
+00:02:02,720 --> 00:02:07,080
+And I go pip install Apache Beam, TensorFlow,
+
+32
+00:02:07,080 --> 00:02:10,520
+wait a couple seconds, and then I get this crap.
+
+33
+00:02:10,520 --> 00:02:12,200
+I'm in dependency hell now.
+
+34
+00:02:12,200 --> 00:02:16,280
+And the reason this is hell and not just another minor little
+
+35
+00:02:16,280 --> 00:02:19,720
+inconvenience, like you hit all the time when you're programming,
+
+36
+00:02:19,720 --> 00:02:24,640
+is I seriously do not understand this error message at all
+
+37
+00:02:24,640 --> 00:02:26,200
+as a user.
+
+38
+00:02:26,200 --> 00:02:27,920
+So let's see what it says.
+
+39
+00:02:27,920 --> 00:02:31,040
+So it says TensorBoard.
+
+40
+00:02:31,040 --> 00:02:32,840
+So it's good that it starts up with a word
+
+41
+00:02:32,840 --> 00:02:34,280
+that I don't understand, because I don't know
+
+42
+00:02:34,280 --> 00:02:35,400
+anything about TensorBoard.
+
+43
+00:02:35,400 --> 00:02:37,000
+I didn't ask for TensorBoard.
+
+44
+00:02:37,000 --> 00:02:39,880
+It's not on the list of things I asked for.
+
+45
+00:02:39,880 --> 00:02:42,360
+And it says a version number that I don't care about,
+
+46
+00:02:42,360 --> 00:02:45,280
+because I didn't care about TensorBoard overall.
+
+47
+00:02:45,280 --> 00:02:47,840
+And it talks about protobuf, which I also don't care about,
+
+48
+00:02:47,840 --> 00:02:50,220
+because I didn't ask for protobuf.
+
+49
+00:02:50,220 --> 00:02:51,160
+And then it falls out.
+
+50
+00:02:51,160 --> 00:02:56,960
+It'll say I have protobuf version 3.3.0,
+
+51
+00:02:56,960 --> 00:02:59,400
+which is incompatible.
+
+52
+00:02:59,400 --> 00:03:01,120
+But incompatible with what?
+
+53
+00:03:01,120 --> 00:03:03,160
+I didn't ask for it, and I didn't ask
+
+54
+00:03:03,160 --> 00:03:04,920
+for anything that uses it.
+
+55
+00:03:04,920 --> 00:03:08,520
+So as a user, I have no idea what this is telling me.
+
+56
+00:03:08,520 --> 00:03:11,740
+And even as a packaging expert, OK, let's imagine
+
+57
+00:03:11,740 --> 00:03:15,200
+I fully understand what this is saying to me.
+
+58
+00:03:15,200 --> 00:03:17,960
+What am I supposed to do about it?
+
+59
+00:03:18,000 --> 00:03:21,840
+So this isn't a syntax error I can fix.
+
+60
+00:03:21,840 --> 00:03:26,160
+My choices are I can assume that someone on the Apache Beam
+
+61
+00:03:26,160 --> 00:03:29,560
+team or the TensorFlow team is just a liar,
+
+62
+00:03:29,560 --> 00:03:33,200
+and that this is a bogus error, and just ignore it.
+
+63
+00:03:33,200 --> 00:03:36,720
+And that would just be yoloing the entire situation.
+
+64
+00:03:36,720 --> 00:03:39,600
+And hopefully, it won't explode on me.
+
+65
+00:03:39,600 --> 00:03:42,800
+Or I could just say, look, I've heard
+
+66
+00:03:42,800 --> 00:03:44,760
+TensorFlow is kind of good, but I just
+
+67
+00:03:44,760 --> 00:03:46,960
+can't use it for this project.
+
+68
+00:03:46,960 --> 00:03:47,800
+I just can't use it.
+
+69
+00:03:47,800 --> 00:03:50,440
+It's incompatible with this other thing I need.
+
+70
+00:03:50,440 --> 00:03:53,360
+So yeah, we're just done with this.
+
+71
+00:03:53,360 --> 00:03:57,200
+And so neither of those solutions
+
+72
+00:03:57,200 --> 00:03:58,880
+is at all reasonable for the user.
+
+73
+00:04:02,160 --> 00:04:06,120
+And this isn't some theoretical thing.
+
+74
+00:04:06,120 --> 00:04:07,200
+This is an actual problem.
+
+75
+00:04:07,200 --> 00:04:10,600
+And Angela and I actually both work for Google.
+
+76
+00:04:10,600 --> 00:04:13,120
+And we started looking into this because our customers were
+
+77
+00:04:13,120 --> 00:04:16,120
+complaining, hey, we get errors like this,
+
+78
+00:04:16,120 --> 00:04:19,840
+but we don't know how to fix them.
+
+79
+00:04:19,840 --> 00:04:22,000
+And this isn't just a Google project.
+
+80
+00:04:22,000 --> 00:04:27,240
+If you look at the top 100 Pi PI downloads,
+
+81
+00:04:27,240 --> 00:04:31,880
+seven out of 10 of them have a dependency conflict
+
+82
+00:04:31,880 --> 00:04:35,560
+with another top 100 package.
+
+83
+00:04:35,560 --> 00:04:37,200
+And this is actually super surprising
+
+84
+00:04:37,200 --> 00:04:39,480
+if you think about it, because most of these packages
+
+85
+00:04:39,480 --> 00:04:43,320
+are foundational and don't really have dependencies.
+
+86
+00:04:43,320 --> 00:04:45,380
+But even though a good chunk of them
+
+87
+00:04:45,380 --> 00:04:50,380
+don't have any dependencies at all, still seven out of 100
+
+88
+00:04:50,380 --> 00:04:53,460
+of them will conflict with at least one other top 100
+
+89
+00:04:53,460 --> 00:04:53,960
+package.
+
+90
+00:04:57,020 --> 00:05:02,340
+And the big problem here is this is one of the few things
+
+91
+00:05:02,340 --> 00:05:05,380
+where a user can encounter an error
+
+92
+00:05:05,380 --> 00:05:07,220
+and be totally helpless to fix it.
+
+93
+00:05:07,220 --> 00:05:14,180
+So our job is library packagers to take this problem seriously
+
+94
+00:05:14,180 --> 00:05:15,860
+and try and make sure this doesn't happen
+
+95
+00:05:15,860 --> 00:05:19,900
+to other Python developers.
+
+96
+00:05:19,900 --> 00:05:23,340
+Off to Angela to explain why this actually happens.
+
+97
+00:05:23,340 --> 00:05:25,860
+ANGELA LIU, M.D. Thanks, Brian, for talking about the introduction
+
+98
+00:05:25,860 --> 00:05:27,540
+and motivation part.
+
+99
+00:05:27,540 --> 00:05:29,900
+Next, let's look at the technical details
+
+100
+00:05:29,900 --> 00:05:34,620
+behind the example that Brian just talked about.
+
+101
+00:05:34,620 --> 00:05:37,940
+In this diagram, it shows that this application uses
+
+102
+00:05:37,940 --> 00:05:40,220
+Apache Beam and TensorFlow.
+
+103
+00:05:40,220 --> 00:05:42,660
+And both of the two packages, depending
+
+104
+00:05:42,660 --> 00:05:45,860
+on a shared dependency called protobuf.
+
+105
+00:05:45,860 --> 00:05:49,660
+But as we can see that they are requiring different version
+
+106
+00:05:49,660 --> 00:05:52,420
+ranges of their shared dependency.
+
+107
+00:05:52,420 --> 00:05:55,100
+Apache Beam is requiring protobuf less
+
+108
+00:05:55,100 --> 00:05:57,600
+or equal to 3.3.0.
+
+109
+00:05:57,600 --> 00:06:00,460
+And TensorFlow is requiring protobuf greater
+
+110
+00:06:00,460 --> 00:06:03,100
+or equal to 3.6.1.
+
+111
+00:06:03,100 --> 00:06:07,100
+So when the user is trying to pip install these two packages
+
+112
+00:06:07,100 --> 00:06:09,580
+together, they will see a warning message
+
+113
+00:06:09,580 --> 00:06:12,860
+saying that the dependency requirements for the two
+
+114
+00:06:12,860 --> 00:06:16,220
+packages installed do not agree with each other.
+
+115
+00:06:16,220 --> 00:06:19,820
+And that's why the dependency conflicts occur.
+
+116
+00:06:19,820 --> 00:06:23,580
+And if we look at the shape of this diagram,
+
+117
+00:06:23,580 --> 00:06:24,740
+it looks like a diamond.
+
+118
+00:06:24,740 --> 00:06:28,780
+So that's why this kind of dependency conflict problem
+
+119
+00:06:28,780 --> 00:06:32,980
+is called diamond dependency problem.
+
+120
+00:06:32,980 --> 00:06:37,240
+And in here, let's look at a setup.py file of the Apache
+
+121
+00:06:37,240 --> 00:06:40,080
+Beam package and TensorFlow package.
+
+122
+00:06:40,080 --> 00:06:44,560
+Using setup.py file is a common approach for Python library
+
+123
+00:06:44,560 --> 00:06:48,120
+authors to set the dependency version requirements.
+
+124
+00:06:48,120 --> 00:06:50,720
+And in the install requires part,
+
+125
+00:06:50,720 --> 00:06:54,880
+we can see that that's where the protobuf dependency
+
+126
+00:06:54,880 --> 00:06:56,320
+requirements is set.
+
+127
+00:06:56,320 --> 00:06:59,880
+And that's how the dependency conflicts
+
+128
+00:06:59,880 --> 00:07:03,480
+comes for that example.
+
+129
+00:07:03,480 --> 00:07:06,340
+After knowing about the technical details,
+
+130
+00:07:06,340 --> 00:07:09,580
+let's talk about the two common reasons that often lead
+
+131
+00:07:09,580 --> 00:07:11,140
+to diamond dependency problem.
+
+132
+00:07:14,100 --> 00:07:16,980
+As we all know that package owners often
+
+133
+00:07:16,980 --> 00:07:21,860
+use a three digits version number to represent the version.
+
+134
+00:07:21,860 --> 00:07:23,620
+And a question comes here.
+
+135
+00:07:23,620 --> 00:07:27,100
+Who thinks that it is problematic to release
+
+136
+00:07:27,100 --> 00:07:29,940
+a breaking change that only bumps the third digit
+
+137
+00:07:29,940 --> 00:07:32,660
+in the version number?
+
+138
+00:07:32,660 --> 00:07:36,180
+OK, thank you.
+
+139
+00:07:36,180 --> 00:07:39,980
+Next, I will explain why it's not OK to do that.
+
+140
+00:07:39,980 --> 00:07:43,260
+Actually, releasing breaking changes in the minor release
+
+141
+00:07:43,260 --> 00:07:46,240
+is the most common reason that often causes
+
+142
+00:07:46,240 --> 00:07:48,260
+a diamond dependency problem.
+
+143
+00:07:48,260 --> 00:07:51,820
+And here, I will use an example, the all-usk-to-client library
+
+144
+00:07:51,820 --> 00:07:54,300
+to explain that.
+
+145
+00:07:54,300 --> 00:07:58,740
+In version 4.1.2, it removes an API that previously
+
+146
+00:07:58,740 --> 00:08:01,860
+existed in version 4.1.1.
+
+147
+00:08:01,860 --> 00:08:05,060
+And this is definitely a breaking change.
+
+148
+00:08:05,100 --> 00:08:10,100
+And it is bringing three kinds of problems to the users.
+
+149
+00:08:10,100 --> 00:08:12,700
+The first problem is that the version number
+
+150
+00:08:12,700 --> 00:08:15,940
+isn't communicating the changes accurately.
+
+151
+00:08:15,940 --> 00:08:19,100
+As it only bumps the third digit in the version number,
+
+152
+00:08:19,100 --> 00:08:22,500
+the user may still assume that the latest version is
+
+153
+00:08:22,500 --> 00:08:24,500
+a backward compatible change.
+
+154
+00:08:24,500 --> 00:08:27,540
+And if they just migrate to use the latest version
+
+155
+00:08:27,540 --> 00:08:32,860
+without doing any code change, their code will be broken.
+
+156
+00:08:32,860 --> 00:08:36,620
+And the second problem is that it makes it hard for the users
+
+157
+00:08:36,620 --> 00:08:40,460
+to depend on the latest version of that library.
+
+158
+00:08:40,460 --> 00:08:43,380
+Because the API was removed, the user
+
+159
+00:08:43,380 --> 00:08:45,700
+will have to find the replacement
+
+160
+00:08:45,700 --> 00:08:49,160
+or implement the replacement for the removed API, which
+
+161
+00:08:49,160 --> 00:08:52,900
+could be a nontrivial amount of work.
+
+162
+00:08:52,900 --> 00:08:56,020
+The third problem is that it makes it hard for the users
+
+163
+00:08:56,020 --> 00:08:58,900
+to specify dependency ranges.
+
+164
+00:08:58,900 --> 00:09:02,060
+Imagine if every future version of all-usk-to-client
+
+165
+00:09:02,060 --> 00:09:04,660
+releases some breaking changes and just bumps
+
+166
+00:09:04,660 --> 00:09:07,020
+the third digit in the version number.
+
+167
+00:09:07,020 --> 00:09:09,340
+The user will have no way to figure out
+
+168
+00:09:09,340 --> 00:09:13,260
+whether the latest version is backward compatible or not.
+
+169
+00:09:13,260 --> 00:09:16,340
+So they will need to test each single version
+
+170
+00:09:16,340 --> 00:09:18,340
+between the dependency version range
+
+171
+00:09:18,340 --> 00:09:20,580
+to make sure every version in that range
+
+172
+00:09:20,580 --> 00:09:22,540
+can work well with their code.
+
+173
+00:09:22,540 --> 00:09:24,460
+And the testing part can also take
+
+174
+00:09:24,460 --> 00:09:28,580
+a significant amount of time.
+
+175
+00:09:28,580 --> 00:09:31,700
+Speaking of using version ranges to set the dependency version
+
+176
+00:09:31,700 --> 00:09:34,980
+requirement, breaking changes in the minor release
+
+177
+00:09:34,980 --> 00:09:38,620
+can also cause trouble to the user.
+
+178
+00:09:38,620 --> 00:09:40,820
+In here, this graph shows that my package,
+
+179
+00:09:40,820 --> 00:09:43,500
+depending on three dependencies, we
+
+180
+00:09:43,500 --> 00:09:46,500
+use ABC to represent the dependency name.
+
+181
+00:09:46,500 --> 00:09:48,700
+And at the beginning, the user is
+
+182
+00:09:48,700 --> 00:09:52,900
+using version painting, which points to an exact version
+
+183
+00:09:52,900 --> 00:09:56,580
+number to set a version requirement.
+
+184
+00:09:56,580 --> 00:10:00,380
+They are using version painting because their dependency is
+
+185
+00:10:00,380 --> 00:10:03,620
+always releasing some backward incompatible changes.
+
+186
+00:10:03,620 --> 00:10:06,700
+And using version painting can make their code safe
+
+187
+00:10:06,700 --> 00:10:10,940
+and won't be accidentally broken by the backward incompatible
+
+188
+00:10:10,940 --> 00:10:13,420
+changes in the dependency packages.
+
+189
+00:10:13,420 --> 00:10:15,420
+But later, the user will find out
+
+190
+00:10:15,420 --> 00:10:18,180
+that using version painting isn't that good,
+
+191
+00:10:18,180 --> 00:10:21,380
+because that can make their package incompatible
+
+192
+00:10:21,380 --> 00:10:24,900
+with any other packages that require a different version
+
+193
+00:10:24,900 --> 00:10:27,020
+number of the same dependency.
+
+194
+00:10:27,020 --> 00:10:31,100
+And also, their dependency can get audited very soon,
+
+195
+00:10:31,100 --> 00:10:35,660
+so that they decided to change to use a version range.
+
+196
+00:10:35,660 --> 00:10:37,420
+At this point, the user is actually
+
+197
+00:10:37,420 --> 00:10:42,020
+doing all the right things, but they are still having trouble.
+
+198
+00:10:42,020 --> 00:10:44,540
+The first kind of problem is that the user
+
+199
+00:10:44,540 --> 00:10:47,300
+will have to use a very narrow version range.
+
+200
+00:10:47,300 --> 00:10:51,460
+For example, greater than 1.3, less than 1.4.
+
+201
+00:10:51,460 --> 00:10:54,620
+This is just slightly better than use version painting.
+
+202
+00:10:54,660 --> 00:10:57,980
+But as soon as a version 1.4 release comes out,
+
+203
+00:10:57,980 --> 00:10:59,580
+their dependency will get audited.
+
+204
+00:11:02,260 --> 00:11:04,900
+Even if the user changed to use a broad range,
+
+205
+00:11:04,900 --> 00:11:07,300
+there are still problems, because there will
+
+206
+00:11:07,300 --> 00:11:09,540
+be too many versions to support.
+
+207
+00:11:09,540 --> 00:11:11,740
+As we just mentioned, the user has no way
+
+208
+00:11:11,740 --> 00:11:15,660
+to figure out whether the latest version is backward compatible
+
+209
+00:11:15,660 --> 00:11:17,860
+or not, so that they will need to test
+
+210
+00:11:17,860 --> 00:11:20,420
+each single version between that broad range,
+
+211
+00:11:20,420 --> 00:11:24,060
+and that could be a lot of work.
+
+212
+00:11:24,060 --> 00:11:27,340
+If the user decided to exclude the newer versions,
+
+213
+00:11:27,340 --> 00:11:30,740
+a third problem will come, that they are not
+
+214
+00:11:30,740 --> 00:11:32,900
+supporting the latest version.
+
+215
+00:11:32,900 --> 00:11:38,500
+And this is actually the second most common reason
+
+216
+00:11:38,500 --> 00:11:41,060
+that caused diamond dependency problem,
+
+217
+00:11:41,060 --> 00:11:44,260
+because nearly all the newly created packages
+
+218
+00:11:44,260 --> 00:11:47,860
+will use the latest version of their dependencies.
+
+219
+00:11:47,860 --> 00:11:50,220
+And if your package doesn't support the latest
+
+220
+00:11:50,220 --> 00:11:52,900
+version of the dependency, that means
+
+221
+00:11:52,900 --> 00:11:56,460
+your package won't be able to work well with almost all
+
+222
+00:11:56,460 --> 00:11:58,780
+the newly created packages.
+
+223
+00:11:58,780 --> 00:12:01,500
+And also, the latest version of the dependencies
+
+224
+00:12:01,500 --> 00:12:06,300
+can contain some important bug fixes or security fixes,
+
+225
+00:12:06,300 --> 00:12:09,460
+and you don't want to miss out that kind of maintenance
+
+226
+00:12:09,460 --> 00:12:11,500
+updates.
+
+227
+00:12:11,500 --> 00:12:15,180
+Back to Brian to talk about the best practices to avoid diamond
+
+228
+00:12:15,180 --> 00:12:16,820
+dependency problem.
+
+229
+00:12:16,820 --> 00:12:18,580
+So everything isn't hopeless, though.
+
+230
+00:12:18,580 --> 00:12:20,340
+There are some things you can actually
+
+231
+00:12:20,340 --> 00:12:24,620
+do to minimize the chance of your users getting dependency
+
+232
+00:12:24,620 --> 00:12:25,780
+problems.
+
+233
+00:12:25,780 --> 00:12:30,100
+The first one is the easiest, but potentially the most
+
+234
+00:12:30,100 --> 00:12:30,980
+controversial.
+
+235
+00:12:30,980 --> 00:12:35,500
+So Angela asked you this question
+
+236
+00:12:35,500 --> 00:12:40,060
+before about whether bumping the least significant digit
+
+237
+00:12:40,060 --> 00:12:43,980
+in a virgin number is reasonable when you have a breaking change.
+
+238
+00:12:43,980 --> 00:12:46,940
+We all had this intuition that it wasn't.
+
+239
+00:12:46,940 --> 00:12:52,100
+And there's a specification called semantic versioning
+
+240
+00:12:52,100 --> 00:12:56,780
+that kind of describes what you should do instead.
+
+241
+00:12:56,780 --> 00:12:58,380
+So the specification is really short.
+
+242
+00:12:58,380 --> 00:13:03,780
+It's like nine points that are like three sentences each.
+
+243
+00:13:03,780 --> 00:13:04,860
+And I have the link there.
+
+244
+00:13:04,860 --> 00:13:07,100
+But I'll give you the TLDR version.
+
+245
+00:13:07,100 --> 00:13:09,460
+So you divide your version number
+
+246
+00:13:09,460 --> 00:13:12,860
+into three numbers separated by periods, the major version,
+
+247
+00:13:12,860 --> 00:13:15,980
+the minor version, and the patch version.
+
+248
+00:13:15,980 --> 00:13:18,100
+So when you make a breaking change,
+
+249
+00:13:18,100 --> 00:13:21,140
+you increment the major version, and you
+
+250
+00:13:21,140 --> 00:13:22,780
+reset the other digits.
+
+251
+00:13:22,780 --> 00:13:25,540
+So in Angela's example, you would
+
+252
+00:13:25,540 --> 00:13:29,900
+have gone from 4 point something point something to 5.00.
+
+253
+00:13:29,900 --> 00:13:31,580
+And then I think kind of intuitively,
+
+254
+00:13:31,580 --> 00:13:35,100
+we would all think that that's more reasonable to introduce
+
+255
+00:13:35,100 --> 00:13:37,060
+a breaking change.
+
+256
+00:13:37,060 --> 00:13:45,940
+If you add a backwards compatible functionality,
+
+257
+00:13:45,940 --> 00:13:47,980
+you bump the minor version.
+
+258
+00:13:47,980 --> 00:13:51,020
+So that's like adding a new feature
+
+259
+00:13:51,020 --> 00:13:54,580
+or adding some new optional behavior.
+
+260
+00:13:54,580 --> 00:13:56,500
+You can bump the minor version.
+
+261
+00:13:56,500 --> 00:14:01,060
+And finally, if you do some sort of security or bug fix
+
+262
+00:14:01,060 --> 00:14:04,980
+without breaking the API, then you
+
+263
+00:14:04,980 --> 00:14:09,380
+increment the patch version, so the least significant digit.
+
+264
+00:14:09,380 --> 00:14:11,860
+And the nice thing about doing this change,
+
+265
+00:14:11,860 --> 00:14:13,660
+supporting this with your packages,
+
+266
+00:14:13,660 --> 00:14:16,740
+is you don't have to coordinate with any one.
+
+267
+00:14:16,740 --> 00:14:20,220
+You just decide the versioning scheme for your package.
+
+268
+00:14:20,220 --> 00:14:21,140
+You just do it.
+
+269
+00:14:21,140 --> 00:14:22,980
+You don't have to talk to coordinate
+
+270
+00:14:22,980 --> 00:14:25,940
+with any other packages in the Python ecosystem.
+
+271
+00:14:28,940 --> 00:14:32,100
+And it also, if you advertise that you're doing this,
+
+272
+00:14:32,100 --> 00:14:35,940
+it's also a clear signal to your users
+
+273
+00:14:35,940 --> 00:14:38,780
+what the guarantees you're offering are.
+
+274
+00:14:38,780 --> 00:14:43,340
+So you've probably seen on some, like,
+
+275
+00:14:43,340 --> 00:14:49,260
+PyPI and GitHub pages, it'll say, like, we use semver.
+
+276
+00:14:49,260 --> 00:14:51,780
+And that's just telling the user that they
+
+277
+00:14:51,780 --> 00:14:53,020
+can count on this behavior.
+
+278
+00:14:57,820 --> 00:15:01,340
+This is an old joke you can just read.
+
+279
+00:15:01,340 --> 00:15:04,900
+So there's something called the Hiram's law, which is basically,
+
+280
+00:15:04,900 --> 00:15:09,300
+if enough people use an API and you change it,
+
+281
+00:15:09,300 --> 00:15:10,860
+it doesn't matter what the change is.
+
+282
+00:15:10,860 --> 00:15:13,020
+It's going to break someone.
+
+283
+00:15:13,020 --> 00:15:15,340
+Because people will start depending
+
+284
+00:15:15,340 --> 00:15:19,580
+on every bit of behavior that you offer.
+
+285
+00:15:19,580 --> 00:15:23,540
+And a lot of people object to semver because they say,
+
+286
+00:15:23,540 --> 00:15:25,980
+oh, you can't really be backwards compatible.
+
+287
+00:15:25,980 --> 00:15:27,440
+And if you think that way, I think
+
+288
+00:15:27,440 --> 00:15:30,380
+you're just letting the perfect be the enemy of the good.
+
+289
+00:15:30,380 --> 00:15:36,980
+So if your API offers one function
+
+290
+00:15:36,980 --> 00:15:38,820
+and you change its name, that is clearly
+
+291
+00:15:38,820 --> 00:15:40,780
+a backwards incompatible change.
+
+292
+00:15:40,780 --> 00:15:43,540
+You will break every single user of your package,
+
+293
+00:15:43,540 --> 00:15:46,300
+and you should bump the major version.
+
+294
+00:15:46,300 --> 00:15:50,980
+If you change some documentation string in your source code
+
+295
+00:15:50,980 --> 00:15:54,220
+and that breaks people, I think that's on them, not on you.
+
+296
+00:15:54,220 --> 00:15:56,100
+So just try and do the right thing.
+
+297
+00:15:56,100 --> 00:15:57,100
+Be reasonable.
+
+298
+00:15:57,100 --> 00:16:01,620
+And I think things will normally work out OK.
+
+299
+00:16:01,620 --> 00:16:03,340
+Back to Angela.
+
+300
+00:16:03,340 --> 00:16:05,100
+ANGELA LIU, CHIEF EDITOR, CREDITS, CREDITS
+
+301
+00:16:05,100 --> 00:16:06,900
+ANGELA LIU, CHIEF EDITOR, CREDITS
+
+302
+00:16:06,900 --> 00:16:08,980
+Although we semantic versioning, we
+
+303
+00:16:08,980 --> 00:16:11,380
+can safely bump the major version number
+
+304
+00:16:11,380 --> 00:16:14,220
+to release some backward incompatible changes.
+
+305
+00:16:14,220 --> 00:16:18,220
+But it is still not recommended to do that,
+
+306
+00:16:18,220 --> 00:16:21,780
+because that will create an API churn.
+
+307
+00:16:21,780 --> 00:16:24,380
+API churn is the backward compatible changes
+
+308
+00:16:24,380 --> 00:16:28,460
+that includes removing an API, renaming an API,
+
+309
+00:16:28,460 --> 00:16:32,060
+or changing the parameter list of an existing API.
+
+310
+00:16:32,060 --> 00:16:36,020
+All these three kinds of changes will require the user
+
+311
+00:16:36,020 --> 00:16:39,460
+to do some extra work to refactor their code in order
+
+312
+00:16:39,460 --> 00:16:43,300
+to, depending on the latest version of your package.
+
+313
+00:16:43,300 --> 00:16:47,380
+In here, this diagram used TensorFlow as an example.
+
+314
+00:16:47,380 --> 00:16:51,340
+As we all know that there are tons of users using TensorFlow.
+
+315
+00:16:51,340 --> 00:16:53,740
+And imagine if TensorFlow decided
+
+316
+00:16:53,740 --> 00:16:56,580
+to release a breaking change.
+
+317
+00:16:56,580 --> 00:16:59,780
+And if the user just upgrade to use the latest version
+
+318
+00:16:59,780 --> 00:17:03,620
+without doing any code change, their code will be broken.
+
+319
+00:17:03,620 --> 00:17:06,660
+And they will need to refactor their code in order
+
+320
+00:17:06,660 --> 00:17:10,380
+to use the latest version of TensorFlow again.
+
+321
+00:17:10,380 --> 00:17:13,980
+And if the owner of TensorFlow keeps releasing backward
+
+322
+00:17:13,980 --> 00:17:16,500
+incompatible changes, this cycle will
+
+323
+00:17:16,500 --> 00:17:19,220
+happen over and over again, which
+
+324
+00:17:19,220 --> 00:17:23,940
+creates a lot of extra work for the user.
+
+325
+00:17:23,940 --> 00:17:28,340
+So package owners should avoid creating API churn too often
+
+326
+00:17:28,340 --> 00:17:31,060
+and try to minimize the cost for the user
+
+327
+00:17:31,060 --> 00:17:34,100
+to use the latest version.
+
+328
+00:17:34,100 --> 00:17:38,900
+For example, if a package owner is going to rename an API,
+
+329
+00:17:38,900 --> 00:17:41,820
+they can still keep the old name of that API,
+
+330
+00:17:41,820 --> 00:17:43,940
+but mark it as deprecated.
+
+331
+00:17:43,940 --> 00:17:47,220
+So if the user continues to use the old name,
+
+332
+00:17:47,220 --> 00:17:49,820
+they will receive a deprecation warning.
+
+333
+00:17:49,820 --> 00:17:52,060
+That can allow some time for the user
+
+334
+00:17:52,060 --> 00:17:56,220
+to migrate to use the latest version instead of just
+
+335
+00:17:56,220 --> 00:17:59,020
+break their code.
+
+336
+00:17:59,020 --> 00:18:03,780
+Back to Brian to talk about using version ranges.
+
+337
+00:18:03,780 --> 00:18:06,780
+So this is plowing on with the machine learning example
+
+338
+00:18:06,780 --> 00:18:08,300
+I was using before.
+
+339
+00:18:08,300 --> 00:18:11,200
+So let's imagine I'm doing some machine learning stuff,
+
+340
+00:18:11,200 --> 00:18:13,660
+and I'm using this nice Adanet package.
+
+341
+00:18:13,660 --> 00:18:16,820
+It's a Google package, and I'm using it.
+
+342
+00:18:16,820 --> 00:18:20,700
+I'm building my model, and I'm just
+
+343
+00:18:20,700 --> 00:18:23,940
+showing you the setup file just for no particular reason.
+
+344
+00:18:23,940 --> 00:18:26,180
+And I developed my model, and now I
+
+345
+00:18:26,180 --> 00:18:30,620
+want to export it to Core ML, which is Apple's machine
+
+346
+00:18:30,620 --> 00:18:33,220
+learning framework, because I want to use this library
+
+347
+00:18:33,220 --> 00:18:34,900
+on my iPhone.
+
+348
+00:18:34,900 --> 00:18:39,620
+So I install Apple's Core ML tools.
+
+349
+00:18:39,620 --> 00:18:42,500
+But Apple and Google have conspired
+
+350
+00:18:42,500 --> 00:18:43,660
+to screw me over here.
+
+351
+00:18:43,660 --> 00:18:49,540
+So they both demand a very exact version of 6
+
+352
+00:18:49,540 --> 00:18:54,620
+that it's not possible to satisfy that constraint.
+
+353
+00:18:54,620 --> 00:18:58,300
+And this 6 is a very compatible package.
+
+354
+00:18:58,300 --> 00:19:00,260
+There is no reason why anyone needs
+
+355
+00:19:00,260 --> 00:19:05,060
+to depend on an exact minor version number.
+
+356
+00:19:05,060 --> 00:19:09,060
+So what you should try and do, or what they should have done,
+
+357
+00:19:09,060 --> 00:19:12,300
+and what you should do when you're doing your own packages,
+
+358
+00:19:12,300 --> 00:19:19,100
+is support a reasonable version range.
+
+359
+00:19:19,100 --> 00:19:23,860
+So as far as I could tell, 6 does not
+
+360
+00:19:23,860 --> 00:19:25,180
+support semantic versioning.
+
+361
+00:19:25,180 --> 00:19:28,420
+So I actually had to go and look at their release history
+
+362
+00:19:28,420 --> 00:19:31,340
+to see what kind of compatibility
+
+363
+00:19:31,340 --> 00:19:32,740
+6 provides with versions.
+
+364
+00:19:32,740 --> 00:19:35,300
+And it looks like they basically never
+
+365
+00:19:35,300 --> 00:19:36,900
+released a breaking change.
+
+366
+00:19:36,900 --> 00:19:41,340
+So in this case, we can just say, look, I need this version,
+
+367
+00:19:41,340 --> 00:19:43,980
+but any version after that is also fine.
+
+368
+00:19:43,980 --> 00:19:47,020
+And if both packages had done that,
+
+369
+00:19:47,020 --> 00:19:49,540
+now they'll be mutually compatible,
+
+370
+00:19:49,540 --> 00:19:51,380
+and they'll probably be compatible
+
+371
+00:19:51,380 --> 00:19:55,220
+with any other software that uses 6 that doesn't make
+
+372
+00:19:55,220 --> 00:19:59,180
+the version pinning mistake on the previous slide.
+
+373
+00:19:59,180 --> 00:20:02,740
+Now, it would have been even better if 6 had used SemVer,
+
+374
+00:20:02,740 --> 00:20:04,820
+because then we can just add another condition.
+
+375
+00:20:04,820 --> 00:20:08,700
+We can just say, I'll use anything after the version
+
+376
+00:20:08,700 --> 00:20:11,220
+that I need, but I don't want to support
+
+377
+00:20:11,300 --> 00:20:13,900
+I don't know that I won't be broken with the next version
+
+378
+00:20:13,900 --> 00:20:16,780
+bump, so I'll explicitly not support that.
+
+379
+00:20:16,780 --> 00:20:21,780
+And then if version 2 of 6 ever came out,
+
+380
+00:20:21,780 --> 00:20:25,220
+it would kind of be depressing if that ever happened.
+
+381
+00:20:25,220 --> 00:20:35,740
+Then we could upgrade.
+
+382
+00:20:36,220 --> 00:20:41,780
+We could change the we would locally relax this condition,
+
+383
+00:20:41,780 --> 00:20:43,780
+test, make sure that everything works,
+
+384
+00:20:43,780 --> 00:20:46,580
+and then we could start supporting the greater
+
+385
+00:20:46,580 --> 00:20:47,300
+than 2 version.
+
+386
+00:20:53,420 --> 00:20:54,980
+Once you stop pinning versions, you
+
+387
+00:20:54,980 --> 00:20:59,020
+do have a bit more of a testing burden, but it's not a big deal.
+
+388
+00:20:59,020 --> 00:21:03,060
+This might look like goop if you don't use
+
+389
+00:21:03,140 --> 00:21:08,820
+Knox for continuous integration, but CircleCI and Travis
+
+390
+00:21:08,820 --> 00:21:10,340
+also support this idea.
+
+391
+00:21:10,340 --> 00:21:14,340
+And the idea here is I want to test
+
+392
+00:21:14,340 --> 00:21:18,300
+with every supported Python version of my package.
+
+393
+00:21:18,300 --> 00:21:20,220
+That's the top line.
+
+394
+00:21:20,220 --> 00:21:24,820
+And I want to test with the earliest version of all
+
+395
+00:21:24,820 --> 00:21:26,860
+the packages that I depend on.
+
+396
+00:21:26,860 --> 00:21:29,740
+So by default, if you pip install a package,
+
+397
+00:21:29,740 --> 00:21:32,420
+it will install the latest versions
+
+398
+00:21:32,420 --> 00:21:35,300
+of your dependencies, which is great.
+
+399
+00:21:35,300 --> 00:21:38,380
+But for testing, you also want to make sure
+
+400
+00:21:38,380 --> 00:21:41,620
+that you don't introduce a breaking change
+
+401
+00:21:41,620 --> 00:21:44,700
+with an earlier version of your dependencies.
+
+402
+00:21:44,700 --> 00:21:47,740
+So if you look at the first line there,
+
+403
+00:21:47,740 --> 00:21:51,740
+I have like, Jinja 2 equals 2.9.0.
+
+404
+00:21:51,740 --> 00:21:54,140
+That would be what I want to explicitly test
+
+405
+00:21:54,140 --> 00:21:57,580
+with that version, because my setup file has greater
+
+406
+00:21:57,580 --> 00:22:00,300
+than or equal to that version.
+
+407
+00:22:00,300 --> 00:22:04,940
+So I just basically, in my, I've called this compatibility test.
+
+408
+00:22:04,940 --> 00:22:08,380
+In my compatibility test, I just install that early dependency
+
+409
+00:22:08,380 --> 00:22:11,700
+version, and then I just run my test as normal.
+
+410
+00:22:11,700 --> 00:22:16,260
+So this will ensure that I don't accidentally
+
+411
+00:22:16,260 --> 00:22:18,580
+introduce regression with a version
+
+412
+00:22:18,580 --> 00:22:21,980
+that I claim I support, because I don't develop
+
+413
+00:22:21,980 --> 00:22:25,780
+with old versions typically.
+
+414
+00:22:25,780 --> 00:22:27,700
+Back to Angela.
+
+415
+00:22:27,700 --> 00:22:29,460
+ANGELA LIU, CHIEF EDITOR, CREDITS, CREDITS
+
+416
+00:22:29,460 --> 00:22:30,780
+AND RANGE
+
+417
+00:22:30,780 --> 00:22:33,380
+Brian just talked about using version ranges.
+
+418
+00:22:33,380 --> 00:22:35,820
+Using version ranges is good, because it
+
+419
+00:22:35,820 --> 00:22:40,180
+can prevent the dependency version get audited very soon.
+
+420
+00:22:40,180 --> 00:22:43,380
+But we will still need to update the upper bound
+
+421
+00:22:43,380 --> 00:22:47,020
+of the version range to include any future version
+
+422
+00:22:47,020 --> 00:22:51,780
+number that isn't included in the version range before.
+
+423
+00:22:51,780 --> 00:22:54,860
+So let's talk about the relationship between the Apache
+
+424
+00:22:54,860 --> 00:22:57,620
+Beam and Google API Python client.
+
+425
+00:22:57,620 --> 00:23:01,740
+They have a common dependency called HTTP lib2.
+
+426
+00:23:01,740 --> 00:23:04,860
+And in here, it shows the relationship
+
+427
+00:23:04,860 --> 00:23:08,460
+between the two version ranges of the two packages.
+
+428
+00:23:08,460 --> 00:23:12,780
+The blue part represents the Apache Beam's requirement,
+
+429
+00:23:12,780 --> 00:23:16,420
+and the orange part represents the Google API Python client's
+
+430
+00:23:16,420 --> 00:23:18,660
+version range requirement.
+
+431
+00:23:18,660 --> 00:23:21,660
+The blue part represents the Apache Beam's requirement
+
+432
+00:23:21,660 --> 00:23:26,700
+for the latest version of HTTP lib2, that 0.12.3.
+
+433
+00:23:26,700 --> 00:23:30,460
+And the latest version falls into the orange part,
+
+434
+00:23:30,460 --> 00:23:32,500
+but isn't forced into the blue part.
+
+435
+00:23:32,500 --> 00:23:37,780
+That means the upper bound of Apache Beam
+
+436
+00:23:37,780 --> 00:23:41,780
+isn't including the latest version.
+
+437
+00:23:41,780 --> 00:23:43,020
+And there's a question.
+
+438
+00:23:43,020 --> 00:23:48,380
+Will PIP install a version in the overlapping range?
+
+439
+00:23:48,380 --> 00:23:51,500
+So if you have a version of the Apache Beam and Google API
+
+440
+00:23:51,500 --> 00:23:55,260
+Python client, the installation can happen successfully.
+
+441
+00:23:55,260 --> 00:23:59,220
+And PIP freeze shows that the actual version of HTTP lib2
+
+442
+00:23:59,220 --> 00:24:02,620
+get installed is 0.11.3, which is
+
+443
+00:24:02,620 --> 00:24:04,660
+the upper bound of Apache Beam.
+
+444
+00:24:04,660 --> 00:24:09,220
+And it satisfies both the two packages' requirements.
+
+445
+00:24:12,220 --> 00:24:15,820
+But what will happen if we switch the install order,
+
+446
+00:24:15,820 --> 00:24:18,820
+API Python client, and Apache Beam?
+
+447
+00:24:18,820 --> 00:24:20,940
+There will be a warning message saying
+
+448
+00:24:20,940 --> 00:24:25,380
+that the version of HTTP lib2 cannot satisfy
+
+449
+00:24:25,380 --> 00:24:27,660
+the requirement of Apache Beam.
+
+450
+00:24:27,660 --> 00:24:31,380
+And PIP freeze shows that the actual version of HTTP lib2
+
+451
+00:24:31,380 --> 00:24:36,460
+get installed is 0.12.3, which is the latest version.
+
+452
+00:24:36,460 --> 00:24:41,980
+And this is because PIP is resolving the dependency
+
+453
+00:24:41,980 --> 00:24:44,860
+version on a first-come, first-served basis.
+
+454
+00:24:44,900 --> 00:24:48,140
+So whether there will be a dependency conflict
+
+455
+00:24:48,140 --> 00:24:52,860
+depending on the PIP install order.
+
+456
+00:24:52,860 --> 00:24:55,300
+That's why, as a library author, we
+
+457
+00:24:55,300 --> 00:24:58,540
+should support the latest version of the dependencies.
+
+458
+00:24:58,540 --> 00:25:02,180
+Because as the example shows, the users
+
+459
+00:25:02,180 --> 00:25:05,140
+will be very confused if they see a dependency
+
+460
+00:25:05,140 --> 00:25:06,740
+conflict in that case.
+
+461
+00:25:06,740 --> 00:25:09,540
+Because most of them don't know that PIP
+
+462
+00:25:09,540 --> 00:25:12,220
+will resolve the dependency version on the first-come,
+
+463
+00:25:12,220 --> 00:25:14,060
+first-served basis.
+
+464
+00:25:14,060 --> 00:25:17,340
+And also, as we mentioned in the previous part,
+
+465
+00:25:17,340 --> 00:25:19,540
+newly created packages will certainly
+
+466
+00:25:19,540 --> 00:25:22,260
+use the latest version of the dependencies.
+
+467
+00:25:22,260 --> 00:25:24,800
+And that's important for your package
+
+468
+00:25:24,800 --> 00:25:28,060
+to work well with all the newly created packages.
+
+469
+00:25:28,060 --> 00:25:32,340
+And also, it's important to pick up the bug fixes and security
+
+470
+00:25:32,340 --> 00:25:36,380
+fixes in the latest version.
+
+471
+00:25:36,380 --> 00:25:39,700
+Here is a summary of the four best practices
+
+472
+00:25:39,700 --> 00:25:42,180
+we just talked about, which includes
+
+473
+00:25:42,180 --> 00:25:45,860
+using semantic versioning, avoid API churn,
+
+474
+00:25:45,860 --> 00:25:48,940
+support as large as a version range as possible
+
+475
+00:25:48,940 --> 00:25:51,900
+for your dependencies, and also support the latest
+
+476
+00:25:51,900 --> 00:25:54,100
+version of your dependencies.
+
+477
+00:25:54,100 --> 00:25:57,820
+That's all for our presentation.
+
+478
+00:25:57,820 --> 00:25:58,940
+Oh, sorry.
+
+479
+00:25:58,940 --> 00:25:59,440
+Thanks.
+
+480
+00:25:59,440 --> 00:25:59,940
+Thanks.
+
+481
+00:25:59,940 --> 00:26:08,420
+I was going to ask if there are any questions,
+
+482
+00:26:08,420 --> 00:26:10,340
+but it looks like that's being handled for us.
+
+483
+00:26:13,500 --> 00:26:14,300
+Is this on?
+
+484
+00:26:14,300 --> 00:26:15,100
+All right.
+
+485
+00:26:15,100 --> 00:26:17,340
+So we have some time for questions.
+
+486
+00:26:17,340 --> 00:26:20,340
+Please, if you have a comment, wait.
+
+487
+00:26:20,340 --> 00:26:21,500
+Meet them in the hallway.
+
+488
+00:26:21,500 --> 00:26:25,940
+If you have a question, now is the time to ask.
+
+489
+00:26:25,940 --> 00:26:27,700
+Yeah, if anyone wants to fight over
+
+490
+00:26:27,700 --> 00:26:30,060
+whether semantic versioning is a good idea or not,
+
+491
+00:26:30,060 --> 00:26:31,260
+we can talk in the hallway.
+
+492
+00:26:33,980 --> 00:26:36,100
+Not in the back.
+
+493
+00:26:36,100 --> 00:26:37,780
+I just had a quick question.
+
+494
+00:26:37,780 --> 00:26:41,300
+Does that pip install order matter in a requirements.txt file
+
+495
+00:26:41,300 --> 00:26:43,180
+as well, or is that only on the command line?
+
+496
+00:26:46,500 --> 00:26:48,660
+In the requirement.txt file?
+
+497
+00:26:48,660 --> 00:26:49,420
+Yeah.
+
+498
+00:26:49,420 --> 00:26:52,100
+Actually, if you use the requirements.txt file,
+
+499
+00:26:52,100 --> 00:26:54,340
+the actual install order is arbitrary,
+
+500
+00:26:54,340 --> 00:26:56,980
+and you don't have enough control for that.
+
+501
+00:26:56,980 --> 00:26:58,140
+OK, that's what I was saying.
+
+502
+00:26:58,140 --> 00:26:59,700
+Thank you.
+
+503
+00:26:59,700 --> 00:27:01,240
+That's actually pretty mind-bending,
+
+504
+00:27:01,240 --> 00:27:02,160
+if you think about it.
+
+505
+00:27:02,160 --> 00:27:04,740
+So the order that your dependencies are installed
+
+506
+00:27:04,740 --> 00:27:07,420
+if you use requirements is arbitrary.
+
+507
+00:27:07,420 --> 00:27:10,180
+So theoretically, you could install the same requirements
+
+508
+00:27:10,180 --> 00:27:14,100
+file twice and get a different set of dependencies installed.
+
+509
+00:27:14,100 --> 00:27:15,060
+That's what the docs say.
+
+510
+00:27:15,060 --> 00:27:21,500
+It's not true in practice, but that's what you should rely on.
+
+511
+00:27:21,500 --> 00:27:22,260
+Hi.
+
+512
+00:27:22,260 --> 00:27:26,300
+So I was wondering how automated dependency management tools
+
+513
+00:27:26,300 --> 00:27:32,540
+like PiUp fit into this framework, I guess?
+
+514
+00:27:32,540 --> 00:27:34,020
+Are they still useful?
+
+515
+00:27:34,020 --> 00:27:35,940
+You might have to be a bit closer to the mic.
+
+516
+00:27:35,940 --> 00:27:36,540
+We can hear you.
+
+517
+00:27:36,540 --> 00:27:36,980
+Sure.
+
+518
+00:27:36,980 --> 00:27:37,540
+You didn't get that.
+
+519
+00:27:37,540 --> 00:27:38,040
+OK.
+
+520
+00:27:38,040 --> 00:27:40,740
+I was wondering how automated dependency management tools
+
+521
+00:27:40,740 --> 00:27:44,260
+like PiUp fit into this.
+
+522
+00:27:44,260 --> 00:27:46,900
+There isn't really a tool for dependency management,
+
+523
+00:27:46,900 --> 00:27:50,220
+but if you want to check the dependency version
+
+524
+00:27:50,220 --> 00:27:53,380
+in your virtual environment, you can run pip check.
+
+525
+00:27:53,380 --> 00:27:55,700
+And if there are any dependency conflict,
+
+526
+00:27:55,700 --> 00:28:00,140
+there will be some warning message printout.
+
+527
+00:28:00,140 --> 00:28:01,580
+Can I add one thing to that?
+
+528
+00:28:01,580 --> 00:28:05,180
+If the user made a so if you're thinking about this
+
+529
+00:28:05,180 --> 00:28:09,340
+is what you should do as a package author, it doesn't really
+
+530
+00:28:09,340 --> 00:28:13,220
+if there is a tool that will do fancier dependency management,
+
+531
+00:28:13,220 --> 00:28:14,860
+I think you still shouldn't rely on that
+
+532
+00:28:14,860 --> 00:28:16,980
+because most people are still going to use pip
+
+533
+00:28:16,980 --> 00:28:21,540
+and they're still going to hit these issues.
+
+534
+00:28:21,540 --> 00:28:22,900
+Hi.
+
+535
+00:28:22,900 --> 00:28:25,180
+So you talked a little bit about how
+
+536
+00:28:25,180 --> 00:28:28,940
+pip isn't the greatest at dependency resolution sometimes.
+
+537
+00:28:28,940 --> 00:28:30,580
+But do you think there's anything
+
+538
+00:28:30,580 --> 00:28:34,860
+about the way Python does dependency management
+
+539
+00:28:34,860 --> 00:28:39,620
+and packaging that makes the impossible conflict more
+
+540
+00:28:39,620 --> 00:28:40,120
+common?
+
+541
+00:28:45,220 --> 00:28:47,260
+Yes.
+
+542
+00:28:47,260 --> 00:28:51,820
+So one problematic thing in Python,
+
+543
+00:28:51,820 --> 00:28:56,420
+and I'm not a packaging expert, is source distributions.
+
+544
+00:28:56,420 --> 00:29:01,940
+So you don't know like in general when
+
+545
+00:29:01,940 --> 00:29:04,420
+pip is downloading a package, it
+
+546
+00:29:04,420 --> 00:29:06,740
+doesn't know its transitive dependencies
+
+547
+00:29:06,740 --> 00:29:10,980
+until it's downloaded it and run the setup script that's in it.
+
+548
+00:29:10,980 --> 00:29:17,940
+So at the time that it's doing dependency resolution,
+
+549
+00:29:17,940 --> 00:29:20,020
+it could have already downloaded the package,
+
+550
+00:29:20,020 --> 00:29:23,940
+had to run it to check what the next level of dependencies are.
+
+551
+00:29:23,940 --> 00:29:27,900
+If you had, say, wheel only, like if Python only
+
+552
+00:29:27,900 --> 00:29:32,180
+supported wheel, then you could just, you know,
+
+553
+00:29:32,180 --> 00:29:36,020
+like the PyPI API actually will tell you
+
+554
+00:29:36,020 --> 00:29:39,460
+what the dependencies of wheels are without running any code
+
+555
+00:29:39,460 --> 00:29:43,340
+because that's just known at package creation time.
+
+556
+00:29:43,340 --> 00:29:45,780
+And then you could have more sophisticated tools
+
+557
+00:29:45,780 --> 00:29:48,460
+that just, you know, they make some API calls
+
+558
+00:29:48,460 --> 00:29:51,580
+and then do this resolution.
+
+559
+00:29:51,580 --> 00:29:53,460
+I actually was kind of an advocate of that
+
+560
+00:29:53,460 --> 00:29:55,460
+until I started talking to other people who
+
+561
+00:29:55,460 --> 00:29:59,500
+hate wheels for other unrelated reasons.
+
+562
+00:29:59,500 --> 00:30:01,620
+So I don't know what the path forward here is.
+
+563
+00:30:09,340 --> 00:30:10,540
+A lot of people aren't.
+
+564
+00:30:10,540 --> 00:30:13,180
+Oh, sorry.
+
+565
+00:30:13,180 --> 00:30:14,500
+I'm afraid we're out of time.
+
+566
+00:30:14,500 --> 00:30:18,740
+So if we could move all questions out to the hall.
+
+567
+00:30:18,740 --> 00:30:22,060
+Thank you very much, Brian and Angela.
+

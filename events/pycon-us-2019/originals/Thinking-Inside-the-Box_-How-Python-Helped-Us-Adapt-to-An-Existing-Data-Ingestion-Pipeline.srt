@@ -1,0 +1,644 @@
+1
+00:00:00,000 --> 00:00:09,360
+Thank you all for coming this morning. This is to introduce the first speaker, Eddie Schuman,
+
+2
+00:00:09,360 --> 00:00:16,320
+who will be speaking about thinking inside the box. Please welcome him.
+
+3
+00:00:16,320 --> 00:00:28,160
+Hello, everyone. So thank you for coming to my talk today about how our team used Python
+
+4
+00:00:28,160 --> 00:00:35,440
+to adapt to an existing data ingestion pipeline. I've been a software developer with Pacific
+
+5
+00:00:35,440 --> 00:00:42,200
+Northwest National Laboratory in southeastern Washington for about four years now. I've
+
+6
+00:00:42,200 --> 00:00:49,000
+used Python for the majority of that time and I've really fallen in love with the language.
+
+7
+00:00:49,000 --> 00:00:54,240
+So first an introduction to the talk. So the talk today is going to be about how we used
+
+8
+00:00:54,240 --> 00:01:00,760
+Python to ingest, that is process and standardize the raw radar data that we dealt with. It's not
+
+9
+00:01:00,760 --> 00:01:06,440
+going to be about the data itself, rather our particular use case and how we leveraged Python
+
+10
+00:01:06,440 --> 00:01:14,880
+to adapt to existing systems and constraints. So the project that I spend the majority of my
+
+11
+00:01:14,880 --> 00:01:22,480
+time on is for the atmospheric radiation measurement user facility, or ARM for short. So ARM is a key
+
+12
+00:01:22,480 --> 00:01:28,560
+contributor to national and international research efforts related to earth system changes. ARM was
+
+13
+00:01:28,560 --> 00:01:34,360
+started by the United States Department of Energy in 1989 and has grown to be managed by nine
+
+14
+00:01:34,360 --> 00:01:43,480
+national laboratories. So ARM has some extensive data collection efforts. It has six atmospheric
+
+15
+00:01:43,480 --> 00:01:48,800
+observatories collecting data from around the world and has had more than 30 past research
+
+16
+00:01:48,800 --> 00:01:55,560
+campaigns. The data is standardized and made available to researchers at no cost and ARM currently
+
+17
+00:01:55,560 --> 00:02:02,360
+has radar sites in Alaska, Oklahoma, the Azores in the Atlantic Ocean and Cordoba, Argentina.
+
+18
+00:02:02,360 --> 00:02:11,120
+So as for the radar instruments themselves, there are multiple radar types, multiple versions,
+
+19
+00:02:11,120 --> 00:02:17,200
+different frequency bands and they're provided by different vendors, which taken altogether means
+
+20
+00:02:17,200 --> 00:02:23,880
+that there's a wide variety of different data formats that we need to accommodate. So our job
+
+21
+00:02:23,880 --> 00:02:30,920
+for the radar industry is to process this data, standardize it and classify it by frequency band,
+
+22
+00:02:30,920 --> 00:02:41,040
+instrument type and scan strategy. So with a long-running data program means that we need
+
+23
+00:02:41,520 --> 00:02:48,560
+to adapt to some existing ARM systems and constraints. So the first system we need to work with is ADI,
+
+24
+00:02:48,560 --> 00:02:55,720
+the ARM data integrator, which processes most of ARM's data products. We need to set up process
+
+25
+00:02:55,720 --> 00:03:03,800
+definitions which define which ARM sites actually have radar data that we need to ingest. And we
+
+26
+00:03:03,800 --> 00:03:10,720
+need to create data object designs or DODs to define specifications for the output data,
+
+27
+00:03:10,720 --> 00:03:18,040
+such as the dimensions, variable names, variable metadata or product level metadata. And these data
+
+28
+00:03:18,040 --> 00:03:24,120
+object designs require review and approval by ARM's metadata group in order to make sure that they
+
+29
+00:03:24,120 --> 00:03:32,240
+meet ARM's standards and are actually useful for users. So the ADI system's functionality,
+
+30
+00:03:32,240 --> 00:03:38,480
+it features automatic data averaging or interpolation, enforces data standards and the
+
+31
+00:03:38,480 --> 00:03:44,480
+DOD specifications. It provides error checking and enforcement of variable dimensionality and
+
+32
+00:03:44,480 --> 00:03:50,680
+operationally the data integrator tracks which instrument data time intervals have already been
+
+33
+00:03:50,680 --> 00:03:58,080
+processed, preventing the operations team from accidentally re-ingesting the same data or ingesting
+
+34
+00:03:58,080 --> 00:04:07,000
+really old data. So some of the difficulties we faced while creating the radar ingest was that
+
+35
+00:04:07,000 --> 00:04:12,720
+we need unique readers for each of the instruments. We need to properly integrate the data integrator
+
+36
+00:04:12,720 --> 00:04:19,760
+into our workflow. We need to set up data design specifications and process definitions. We need
+
+37
+00:04:19,840 --> 00:04:25,840
+to consistently meet ARM's standards. And through it all, we wanted an understandable workflow and
+
+38
+00:04:25,840 --> 00:04:34,720
+code structure for future maintenance and development efforts. So with the setup of the
+
+39
+00:04:34,720 --> 00:04:41,360
+data design specifications, normally for our processes, we would set them up through a GUI
+
+40
+00:04:41,360 --> 00:04:46,960
+web application, which is fine for other data products, which may only have a couple of data
+
+41
+00:04:47,040 --> 00:04:54,720
+designed specifications. But the radar ingest would need more than 800 DODs. And a small change in
+
+42
+00:04:54,720 --> 00:05:00,000
+one of the ingests, such as changing a variable name or the units for a variable, would result in
+
+43
+00:05:00,000 --> 00:05:09,280
+needing to change over 180 of these in the worst case. So this is a quick snapshot of the radar
+
+44
+00:05:09,280 --> 00:05:15,520
+ingest workflow. So we start with the raw radar data on the left and work through the different
+
+45
+00:05:15,520 --> 00:05:21,680
+ingest components until it's ready to archive. We also include utilities and data definitions
+
+46
+00:05:21,680 --> 00:05:29,040
+that are referenced throughout the ingesting process. So first, I'm going to talk about how
+
+47
+00:05:29,040 --> 00:05:37,040
+we handled the data definitions and setting them up. So our solution for creating the data object
+
+48
+00:05:37,040 --> 00:05:43,200
+designs was what we call the Python radar toolbox. This toolbox is utilized across all the different
+
+49
+00:05:43,200 --> 00:05:48,800
+radar ingests. It contains scripts, helper functions and configuration files. But mainly,
+
+50
+00:05:48,800 --> 00:05:56,560
+it contains multiple JSON definition files in five main categories. Moments, variables, auxiliary
+
+51
+00:05:56,560 --> 00:06:01,760
+variables, global attributes, and auxiliary attributes. The moments we define as the most
+
+52
+00:06:02,800 --> 00:06:10,000
+data-intensive variables and are usually the most interesting to users. The auxiliary variables and
+
+53
+00:06:10,000 --> 00:06:15,520
+attributes are used by the radar technicians and engineers to diagnose issues with the radars or
+
+54
+00:06:15,520 --> 00:06:24,720
+the radar data. So a quick side note. So for each stage of talking about the implementation,
+
+55
+00:06:24,720 --> 00:06:29,120
+I'll reference some specific modules that were helpful for that stage in the process.
+
+56
+00:06:29,120 --> 00:06:36,400
+And they'll be covered in the top right banner. So first, we created a JSON definition file for
+
+57
+00:06:36,400 --> 00:06:42,800
+each one of those main categories that I mentioned before. So inside these are all the different
+
+58
+00:06:42,800 --> 00:06:48,960
+variables and attributes of that category that any of the radar ingests might possibly use.
+
+59
+00:06:48,960 --> 00:06:55,600
+And they create the DOD-required metadata, sorry, they define the DOD-required metadata
+
+60
+00:06:55,600 --> 00:07:00,880
+for that particular variable or attribute, such as the descriptive names, the data types,
+
+61
+00:07:00,880 --> 00:07:11,040
+the associated dimensions, or the units. We also have JSON definition files for each frequency
+
+62
+00:07:11,040 --> 00:07:16,800
+instrument combination. So these define the product-level metadata, such as the instrument
+
+63
+00:07:16,800 --> 00:07:22,560
+name, the valid scan strategies for that instrument, ADI process name, but they also contain a
+
+64
+00:07:22,560 --> 00:07:28,960
+categorized list of all the different variables and attributes from these previously mentioned
+
+65
+00:07:29,040 --> 00:07:36,480
+categories that are utilized by that particular data product, which helps us generating the DODs
+
+66
+00:07:36,480 --> 00:07:45,680
+later. So for the actual generating of the DODs, the ARM development system has a utility script
+
+67
+00:07:45,680 --> 00:07:51,440
+which is able to load Perl hash representations of the DOD definitions into the database.
+
+68
+00:07:52,160 --> 00:07:57,760
+So we can generate these data design files from these JSON definitions. Taken together,
+
+69
+00:07:57,760 --> 00:08:02,640
+we can take all the variables that were in the categories at the product-level definition
+
+70
+00:08:02,640 --> 00:08:07,680
+and then check their entries in the category-level definitions to fully flush out the data
+
+71
+00:08:07,680 --> 00:08:14,480
+specification. We then load them into the database one at a time. So for small updates,
+
+72
+00:08:14,480 --> 00:08:21,200
+like the variable name changing or update to data types, as I mentioned before, we can generate
+
+73
+00:08:21,200 --> 00:08:26,720
+hundreds of these DODs and load them into the database in less than a minute. This circumvents
+
+74
+00:08:26,720 --> 00:08:32,400
+navigating through hundreds of DODs through the web application and saving them one at a time,
+
+75
+00:08:32,400 --> 00:08:39,120
+which we found to be untenable. And then finally, we can go back to the web application to review
+
+76
+00:08:39,120 --> 00:08:45,040
+the DODs we generated to see if it triggered any of the web applications inbuilt checks before we
+
+77
+00:08:45,040 --> 00:08:52,080
+send it off for review. So throughout the generating process, we naturally use the JSON library
+
+78
+00:08:52,080 --> 00:08:57,760
+because it makes it effortless to read from the JSON files and load them into Python native dictionaries.
+
+79
+00:09:01,200 --> 00:09:07,360
+So we tried to design the toolbox with iterative growth in mind. So the Python Rader toolbox
+
+80
+00:09:07,360 --> 00:09:13,120
+also collects a variety of utilities shared across the ingest. As we noticed common functionality
+
+81
+00:09:13,120 --> 00:09:17,360
+between the different ingests, we tried to generalize it as much as possible to stick it
+
+82
+00:09:17,360 --> 00:09:23,120
+into the utility functions in Python Rader toolbox. So the toolbox grows more refined
+
+83
+00:09:23,120 --> 00:09:30,480
+and useful over time. As the JSON definitions are updated, fixes propagate across all future
+
+84
+00:09:30,480 --> 00:09:36,320
+ingest development and future releases. A couple of the helper scripts we created,
+
+85
+00:09:39,200 --> 00:09:44,560
+which updates instrument definition files according to the past metadata review feedback.
+
+86
+00:09:44,560 --> 00:09:50,320
+So new feedback from reviewers is applied into the script and then the script is run on all future
+
+87
+00:09:50,320 --> 00:09:56,320
+and updated ingest. The review process becomes streamlined over time as all the past feedback
+
+88
+00:09:56,320 --> 00:10:04,560
+has already been applied to the future ingest. So another script we created was set primary.py,
+
+89
+00:10:04,560 --> 00:10:09,920
+which interfaces with a database API to classify certain variables as primary measurements.
+
+90
+00:10:10,480 --> 00:10:16,000
+Arm data discovery and archival tools can direct users based off the most important measurements
+
+91
+00:10:16,000 --> 00:10:21,760
+to help them find the data they're most interested in. So for this stage in the toolbox,
+
+92
+00:10:22,400 --> 00:10:28,480
+once again, we used JSON to read in the definition files. We used arg parse for handling all of our
+
+93
+00:10:28,480 --> 00:10:34,160
+scripts command line arguments. We used request library to make calls to the APIs and we used
+
+94
+00:10:34,160 --> 00:10:42,000
+get pass for handling user credentials. So now I'm going to talk about the actual
+
+95
+00:10:42,000 --> 00:10:48,160
+ingest components themselves. So the first lowest level component is the reader component.
+
+96
+00:10:50,000 --> 00:10:56,720
+As I mentioned before, across the radars, there are different radars, vendors and software versions.
+
+97
+00:10:56,720 --> 00:11:02,880
+And even radars from the same vendor can have significantly varying data formats.
+
+98
+00:11:04,400 --> 00:11:10,880
+So the reader structure is designed to match the input data as much as possible using vendor data
+
+99
+00:11:10,880 --> 00:11:17,120
+structure and variable names. It effectively acts as a sort of documentation for the input data.
+
+100
+00:11:17,120 --> 00:11:21,200
+A developer should be able to look at the structures in the reader component and quickly
+
+101
+00:11:21,200 --> 00:11:26,560
+understand the structure of the underlying input data. So for the reader component,
+
+102
+00:11:27,200 --> 00:11:33,760
+one of our vendors outputs HDF5 raw files, so we read that in with H5Pi. But we mostly
+
+103
+00:11:33,760 --> 00:11:40,000
+use NumPy's from file function to read custom binary formats as most of the vendors prefer to
+
+104
+00:11:40,000 --> 00:11:48,960
+provide their own binary format. So the second middle component in the workflow is called the
+
+105
+00:11:48,960 --> 00:11:56,400
+standardizer. So for the standardizer, the over all structure matches between the different ingests.
+
+106
+00:11:56,400 --> 00:12:01,840
+It has the same functions and attributes available, especially the moments, variables,
+
+107
+00:12:01,840 --> 00:12:07,360
+auxiliary variables, global attributes and auxiliary attributes. The same five categories
+
+108
+00:12:07,360 --> 00:12:13,120
+that kept showing up in the definitions earlier. The inner workings of each function or attribute
+
+109
+00:12:13,120 --> 00:12:21,520
+can vary significantly. So the standardizer is designed to serve as a translation layer
+
+110
+00:12:21,520 --> 00:12:27,760
+between vendor structure to ARM standards on things such as names, units or other various metadata.
+
+111
+00:12:28,320 --> 00:12:33,680
+Sometimes it's as simple as categorizing and renaming a variable. Other times it might just
+
+112
+00:12:33,680 --> 00:12:38,320
+be unit conversion. The vendor might supply nanoseconds and we might want seconds. And
+
+113
+00:12:38,320 --> 00:12:43,920
+sometimes it says involved as calculating a new derived variable from multiple vendor supplied
+
+114
+00:12:43,920 --> 00:12:52,400
+variables and attributes. So for the standardizer, the end result should be that all variables and
+
+115
+00:12:52,400 --> 00:12:57,520
+attributes are categorized the same across all the ingests. The data is accessed nearly
+
+116
+00:12:57,520 --> 00:13:02,560
+identically for each ingest writer and all the variables and attributes from the instrument
+
+117
+00:13:02,560 --> 00:13:07,520
+definition JSON should be saved and matched the definition names in the standardizer.
+
+118
+00:13:09,120 --> 00:13:14,880
+So throughout the standardizer, we used NumPy for easy array handling and array based calculations.
+
+119
+00:13:15,440 --> 00:13:21,520
+And as ARM's data is usually in net CDF format, we used net CDF for type converters to prepare
+
+120
+00:13:21,520 --> 00:13:29,680
+the variables for writing. So the final highest level component in the radar ingest themselves
+
+121
+00:13:29,680 --> 00:13:38,000
+is the writer layer. So each writer for each of the ingests is nearly a clone of the others.
+
+122
+00:13:38,000 --> 00:13:44,000
+So we eventually want to create a generic writer that we can stick in the radar toolbox and use
+
+123
+00:13:44,000 --> 00:13:50,560
+across all the different ingests. So the writer sets up the data integrators input and output
+
+124
+00:13:50,560 --> 00:13:58,000
+interfaces. It runs the reader and standardizer components to read in and translate the raw data.
+
+125
+00:13:59,120 --> 00:14:05,600
+It uses the instrument's JSON definition files to verify that the expected entries do in fact exist.
+
+126
+00:14:06,400 --> 00:14:14,080
+It calls the ADI Python bindings to transfer the data into the ADI system. And then it tells the
+
+127
+00:14:14,080 --> 00:14:20,400
+data integrator to store the data set, at which point the data integration system performs ARM's
+
+128
+00:14:20,400 --> 00:14:25,760
+standard compliance checks, data quality checks. It verifies that the given data interval has not
+
+129
+00:14:25,760 --> 00:14:31,360
+been processed before. It saves the file into the ARM's file system and readies the files for
+
+130
+00:14:31,360 --> 00:14:36,880
+archival. And it logs any events that may have happened during ingest processing and sets the
+
+131
+00:14:36,880 --> 00:14:43,600
+operational status of the ingest. So for the writer component, we used custom ADI bindings
+
+132
+00:14:43,600 --> 00:14:49,840
+to interface with the data integrator. And once again, we used NumPy and NetCDF4
+
+133
+00:14:49,840 --> 00:14:54,080
+to prepare some of the product level variables and attributes for writing out.
+
+134
+00:14:58,000 --> 00:15:03,440
+So after we were done ingesting the data, we would inspect the data to make sure that everything was
+
+135
+00:15:03,440 --> 00:15:10,480
+processed and handled as we expected. So we would use NetCDF4, X-ray and NumPy to read in and
+
+136
+00:15:10,480 --> 00:15:17,840
+manipulate the data from the files. And we would use Matplotlib for easy and pretty visualizations.
+
+137
+00:15:18,400 --> 00:15:23,040
+And the whole thing was a bit easier to do consistently inside of a few Jupyter notebooks.
+
+138
+00:15:26,240 --> 00:15:34,160
+So a couple of reasons why we specifically chose Python. One of the things we wanted to do is be
+
+139
+00:15:34,160 --> 00:15:41,440
+consistent. The old set of radar ingest were written in a mixture of C, IDL and Python by a
+
+140
+00:15:41,440 --> 00:15:46,640
+variety of different developers with different coding styles and wildly varying structures.
+
+141
+00:15:47,200 --> 00:15:53,760
+So we wanted to consolidate it into one language to encourage code reuse and utility functionality.
+
+142
+00:15:56,080 --> 00:16:02,240
+The biggest draw for us for Python was the incredible flexibility that Python offers.
+
+143
+00:16:02,800 --> 00:16:08,400
+So it allowed us to use Python at all the stages in our development workflow. It allowed us to do
+
+144
+00:16:08,400 --> 00:16:14,720
+quick and dirty data inspection, one-off scripts, helper functions, configuration libraries, the bulk
+
+145
+00:16:14,720 --> 00:16:20,960
+of our data processing with NumPy, and Python continues to have emerging technologies and
+
+146
+00:16:20,960 --> 00:16:31,680
+libraries and a large pool of developers to help. Another draw of Python was readability.
+
+147
+00:16:32,240 --> 00:16:38,160
+You know Python was designed with readability in mind and described as almost pseudocode.
+
+148
+00:16:38,720 --> 00:16:44,560
+This means we can share code snippets with researchers and developers who may not have
+
+149
+00:16:44,560 --> 00:16:51,440
+even touched Python and still get constructive feedback on algorithms, workflow, or calculations
+
+150
+00:16:51,440 --> 00:16:56,800
+without them knowing the language. We can also share it with those familiar with Python
+
+151
+00:16:56,800 --> 00:17:01,040
+and the readability facilitates a quick understanding and a short onboarding for new
+
+152
+00:17:01,040 --> 00:17:11,040
+developers. And finally, familiarity. Our team members already had moderate to extensive Python
+
+153
+00:17:11,040 --> 00:17:16,160
+experience and many of our colleagues at the lab have been picking up Python because it's such an
+
+154
+00:17:16,160 --> 00:17:26,080
+incredibly popular language finally. It felt like a natural choice. So in conclusion, Python is
+
+155
+00:17:26,080 --> 00:17:32,160
+incredibly flexible. It has an immense utility for a wide variety of developers. It can be a
+
+156
+00:17:32,160 --> 00:17:37,680
+small part or the heavy workhorse for a large project. Our team found that its flexibility
+
+157
+00:17:37,680 --> 00:17:41,680
+helped us to adapt to a wide variety of required systems and constraints.
+
+158
+00:17:44,720 --> 00:17:49,360
+So we do want to eventually make the toolbox publicly available and we're working on it.
+
+159
+00:17:50,320 --> 00:17:55,680
+If you want to talk about the arm data pipeline or lessons learned, the radar ingest data,
+
+160
+00:17:56,720 --> 00:18:00,160
+share your experience or if you've got some cool library suggestions,
+
+161
+00:18:00,160 --> 00:18:11,360
+feel free to contact me at any time. So thank you for coming today.
+
