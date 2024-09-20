@@ -18,6 +18,7 @@ def run_whisper_for_event(pycon_event):
 
         if os.path.exists(filename[:-4] + '.srt'):
             print(f'Skipping {filename} because it has already been transcribed.')
+            continue
 
         print(f'Transcribing {filename}...')
         result = model.transcribe(filename)
